@@ -1,0 +1,13 @@
+stages:
+  - verify
+  - publish
+
+include:
+  - project: 'zurabm/ci-templates'
+    ref: v1.1.1
+    file:
+      - '/python/verify.yml'
+      - '/python/publish.yml'
+
+variables:
+  PYPI_PROJECT_NAME: "" # TODO: Fill this in later.
