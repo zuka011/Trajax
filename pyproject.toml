@@ -43,6 +43,7 @@ doc = [
     "typi>=0.1.1",
 ]
 test = [
+    "numtypes>=0.5.1",
     "pytest>=9.0.1",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
@@ -73,6 +74,9 @@ extend-select = ["RUF018"]
 "tests/**" = [
     "RUF018",  # Allow Walrus operator in asserts in tests
     "F841"     # Allow unused variables in tests
+]
+"**/accelerated.py" = [
+    "F722"  # Ignore syntax error in forward references for jaxtyping types
 ]
 
 [tool.pytest-watcher]

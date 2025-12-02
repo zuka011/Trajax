@@ -1,5 +1,5 @@
 #import "@preview/suiji:0.4.0": gen-rng-f, normal-f
-#import "@local/roboter:0.2.11": (
+#import "@local/roboter:0.2.13": (
   draw,
   curves,
   zero-inputs,
@@ -15,6 +15,7 @@
   bicycle-theme,
 )
 
+#let grid-color = gray.transparentize(80%)
 #let color-map = gradient.linear(
   ..color.map.plasma.map(it => it.transparentize(40%)),
 )
@@ -33,7 +34,7 @@
 
 #let other-robot = (
   index: 2,
-  position: (5, -0.5),
+  position: (6, 0),
   rotation: 10deg,
   color: red,
   visualizers: (),
@@ -95,7 +96,7 @@
 
 #let mppi-example-diagram(
   rollout-count: 12,
-  horizon: 10,
+  horizon: 12,
   ego: ego-robot,
 ) = {
   let initial-state = (ego.get-initial-state)(ego)
@@ -121,7 +122,8 @@
   )
 
   draw.diagram({
-    draw.grid((0, -2), (14, 3))
+    draw.grid((0, -2), (14, 3), color: grid-color)
+    draw.label((12, -0), [*$<-$ Desired Route*])
     draw.trajectory(
       curves.bezier(ego.position, (12, -2), (7, 0), (8, 1)),
       color: red.transparentize(50%),
@@ -141,7 +143,7 @@
 
 #let kinematic-bicycle-diagram() = {
   draw.diagram({
-    draw.grid((-3, -3), (11, 8), color: gray.transparentize(80%))
+    draw.grid((-3, -3), (11, 8), color: grid-color)
     kinematic-bicycle(
       rear-position: (5, 0),
       chassis-width: 3.5,

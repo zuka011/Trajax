@@ -390,6 +390,18 @@ wheels = [
 ]
 
 [[package]]
+name = "numtypes"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/28/bb4cc1d9c827a3c58b38d2db24ee79632e33429464c94796345452a4ec68/numtypes-0.5.1.tar.gz", hash = "sha256:fb361e94ad2f37c5e90e36f2d04c3b89396e94bd6c5d9dcc7efed60bfcdf966c", size = 32768581 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/fd/b3bd5bedad8a4a6bac55e49a303521715001f09a88b8427f83b4f148473f/numtypes-0.5.1-py3-none-any.whl", hash = "sha256:a5776720dfb4ae4bb6ce83ebb9ec3ba3d64d76808663c33cd5e438eecb0e75ff", size = 10567 },
+]
+
+[[package]]
 name = "opt-einsum"
 version = "3.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -657,13 +669,9 @@ name = "trajax"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "beartype" },
     { name = "jax" },
     { name = "jaxtyping" },
-]
-
-[package.optional-dependencies]
-type-checking = [
-    { name = "beartype" },
 ]
 
 [package.dev-dependencies]
@@ -676,6 +684,7 @@ doc = [
     { name = "typi" },
 ]
 test = [
+    { name = "numtypes" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -684,11 +693,10 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beartype", marker = "extra == 'type-checking'", specifier = ">=0.22.7" },
+    { name = "beartype", specifier = ">=0.22.7" },
     { name = "jax", specifier = ">=0.8.1" },
     { name = "jaxtyping", specifier = ">=0.3.3" },
 ]
-provides-extras = ["type-checking"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -698,6 +706,7 @@ dev = [
 ]
 doc = [{ name = "typi", specifier = ">=0.1.1" }]
 test = [
+    { name = "numtypes", specifier = ">=0.5.1" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
