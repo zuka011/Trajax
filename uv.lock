@@ -680,6 +680,7 @@ type-checking = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "beartype" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "ruff" },
@@ -705,6 +706,7 @@ provides-extras = ["type-checking"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "beartype", specifier = ">=0.22.8" },
     { name = "pre-commit", specifier = ">=4.5.0" },
     { name = "pyright", specifier = ">=1.1.407" },
     { name = "ruff", specifier = ">=0.14.7" },

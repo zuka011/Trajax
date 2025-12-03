@@ -20,7 +20,7 @@ from pytest import mark
     ["model", "inputs", "initial_state", "M", "T", "x_0", "y_0", "theta_0", "v_0"],
     [
         (
-            model := BicycleModel(time_step_size=0.1),
+            model := BicycleModel.create(time_step_size=0.1),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 3),
                 time_horizon=(T := 5),
@@ -38,7 +38,7 @@ from pytest import mark
             v_0,
         ),
         (
-            model := JaxBicycleModel(time_step_size=0.25),
+            model := JaxBicycleModel.create(time_step_size=0.25),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 3),
                 time_horizon=(T := 5),
@@ -99,7 +99,7 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     ],
     [
         (
-            model := BicycleModel(time_step_size=(dt := 0.25)),
+            model := BicycleModel.create(time_step_size=(dt := 0.25)),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 3),
                 time_horizon=(T := 4),
@@ -135,7 +135,7 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
             expected_v := array([[v_0] * M] * T, shape=(T, M)),
         ),
         (
-            model := JaxBicycleModel(time_step_size=(dt := 0.75)),
+            model := JaxBicycleModel.create(time_step_size=(dt := 0.75)),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 3),
                 time_horizon=(T := 2),
@@ -199,7 +199,7 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
     ],
     [  # Time step has to be small for 1st order integrators in these tests.
         (
-            model := BicycleModel(time_step_size=(dt := 0.001)),
+            model := BicycleModel.create(time_step_size=(dt := 0.001)),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 2),
                 time_horizon=(T := 20),
@@ -239,7 +239,7 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
             expected_v_final := array([v_0 + a * (T * dt)] * M, shape=(M,)),
         ),
         (  # Similar test but using JAX implementation
-            model := JaxBicycleModel(time_step_size=(dt := 0.001)),
+            model := JaxBicycleModel.create(time_step_size=(dt := 0.001)),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 3),
                 time_horizon=(T := 15),
@@ -305,7 +305,7 @@ T = clear_type
     [
         (
             # Reverse steering halfway through. Final orientation should be the same as start.
-            model := BicycleModel(time_step_size=0.5),
+            model := BicycleModel.create(time_step_size=0.5),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
@@ -317,7 +317,7 @@ T = clear_type
             expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (
-            model := JaxBicycleModel(time_step_size=0.25),
+            model := JaxBicycleModel.create(time_step_size=0.25),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
@@ -347,7 +347,7 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
     [
         (
             # Reverse acceleration halfway through. Final velocity should be the same as start.
-            model := BicycleModel(time_step_size=0.5),
+            model := BicycleModel.create(time_step_size=0.5),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array([2.0, 1.0, 0.5, -0.5, -1.0, -2.0], shape=(T := 6,)),
@@ -357,7 +357,7 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
             expected_final_v := array([v_0] * M, shape=(M,)),
         ),
         (
-            model := JaxBicycleModel(time_step_size=0.25),
+            model := JaxBicycleModel.create(time_step_size=0.25),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array([3.0, 1.0, 0.5, -0.5, -1.0, -3.0], shape=(T := 6,)),
@@ -392,7 +392,7 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
     [
         (
             # Reverse acceleration halfway through. Final position and orientation should be the same as start.
-            model := BicycleModel(time_step_size=0.5),
+            model := BicycleModel.create(time_step_size=0.5),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array(
@@ -409,7 +409,7 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
             expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (
-            model := JaxBicycleModel(time_step_size=0.25),
+            model := JaxBicycleModel.create(time_step_size=0.25),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 8),
                 acceleration=array(
@@ -445,25 +445,25 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
 @mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "time_step_size"],
-    [
+    [  # Time step and maximum steering angle must be small for 1st order integrators in these tests.
         (
-            model := BicycleModel(time_step_size=(dt := 0.5)),
+            model := BicycleModel.create(time_step_size=(dt := 0.1)),
             inputs := data.numpy.control_inputs(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 12)),
-                steering=np.random.uniform(-0.5, 0.5, size=(T,)),
+                steering=np.random.uniform(-0.1, 0.1, size=(T,)),
             ),
-            initial_state := data.numpy.state(x=4.0, y=5.0, theta=1.2, v=5.0),
+            initial_state := data.numpy.state(x=4.0, y=5.0, theta=1.2, v=2.0),
             time_step_size := dt,
         ),
         (
-            model := JaxBicycleModel(time_step_size=(dt := 0.25)),
+            model := JaxBicycleModel.create(time_step_size=(dt := 0.05)),
             inputs := data.jax.control_inputs(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 10)),
-                steering=np.random.uniform(-0.5, 0.5, size=(T,)),
+                steering=np.random.uniform(-0.2, 0.2, size=(T,)),
             ),
-            initial_state := data.jax.state(x=0.0, y=0.0, theta=np.pi / 2, v=4.0),
+            initial_state := data.jax.state(x=1.0, y=2.0, theta=np.pi / 2, v=2.0),
             time_step_size := dt,
         ),
     ],
@@ -511,28 +511,38 @@ async def test_that_displacement_is_consistent_with_velocity_state(
     ],
     [
         (
-            BicycleModel(time_step_size=0.5),
+            # Full circle with bicycle model:
+            # angular_velocity = v * tan(steering) / L
+            # For 2π rotation: T * dt * angular_velocity = 2π
+            # So steering = atan(2π / (T * dt * v / L))
+            BicycleModel.create(time_step_size=(dt := 0.1), wheelbase=(L := 2.0)),
             data.numpy.control_inputs(
                 rollout_count=(M := 2),
-                acceleration=array([0.0] * (T := 8), shape=(T,)),
-                steering=array([np.pi / 2] * (T := 8), shape=(T,)),
+                acceleration=array([0.0] * (T := 100), shape=(T,)),
+                steering=array(
+                    [steering := np.arctan(2 * np.pi / (T * dt * (v := 1.2) / L))] * T,
+                    shape=(T,),
+                ),
             ),
             data.numpy.state(
-                x=(x_0 := 2.4), y=(y_0 := 3.6), theta=(theta_0 := 0.0), v=1.0
+                x=(x_0 := 2.4), y=(y_0 := 3.6), theta=(theta_0 := 0.5), v=v
             ),
             x_0,
             y_0,
             theta_0,
         ),
-        (
-            JaxBicycleModel(time_step_size=0.25),
+        (  # Analogous test with JAX implementation
+            JaxBicycleModel.create(time_step_size=(dt := 0.05), wheelbase=(L := 1.5)),
             data.jax.control_inputs(
                 rollout_count=(M := 2),
-                acceleration=array([0.0] * (T := 16), shape=(T,)),
-                steering=array([np.pi / 2] * (T := 16), shape=(T,)),
+                acceleration=array([0.0] * (T := 200), shape=(T,)),
+                steering=array(
+                    [steering := np.arctan(2 * np.pi / (T * dt * (v := 1.4) / L))] * T,
+                    shape=(T,),
+                ),
             ),
             data.jax.state(
-                x=(x_0 := 1.0), y=(y_0 := 1.0), theta=(theta_0 := 0.0), v=1.0
+                x=(x_0 := 1.0), y=(y_0 := 1.0), theta=(theta_0 := 0.25), v=v
             ),
             x_0,
             y_0,
@@ -557,3 +567,237 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     assert np.allclose(final_x, expected_final_x, atol=0.5)
     assert np.allclose(final_y, expected_final_y, atol=0.5)
     assert np.all(compute.angular_distance(final_theta, expected_final_theta) < 0.1)
+
+
+@mark.asyncio
+@mark.parametrize(
+    ["model", "inputs", "initial_state", "time_step_size", "expected_angular_velocity"],
+    [
+        (
+            # Angular velocity = v * tan(steering) / wheelbase
+            model := BicycleModel.create(
+                time_step_size=(dt := 0.1), wheelbase=(L := 2.5)
+            ),
+            inputs := data.numpy.control_inputs(
+                rollout_count=(M := 1),
+                time_horizon=(T := 10),
+                acceleration=0.0,
+                steering=(delta := 0.5),
+            ),
+            initial_state := data.numpy.state(x=2.0, y=4.0, theta=5.0, v=(v := 2.0)),
+            dt,
+            expected_angular_velocity := v * np.tan(delta) / L,
+        ),
+        (  # Analogous test with JAX implementation
+            model := JaxBicycleModel.create(
+                time_step_size=(dt := 0.1), wheelbase=(L := 3.0)
+            ),
+            inputs := data.jax.control_inputs(
+                rollout_count=(M := 1),
+                time_horizon=(T := 10),
+                acceleration=0.0,
+                steering=(delta := 0.3),
+            ),
+            initial_state := data.jax.state(x=2.0, y=4.0, theta=8.0, v=(v := 4.0)),
+            dt,
+            expected_angular_velocity := v * np.tan(delta) / L,
+        ),
+    ],
+)
+async def test_that_angular_velocity_depends_on_wheelbase(
+    model: DynamicalModel,
+    inputs: ControlInputBatch,
+    initial_state: State,
+    time_step_size: float,
+    expected_angular_velocity: float,
+) -> None:
+    rollouts = await model.simulate(inputs, initial_state)
+
+    theta = rollouts.orientations()
+    theta_with_initial = np.insert(theta, 0, initial_state.theta, axis=0)
+    angular_velocities = np.diff(theta_with_initial, axis=0) / time_step_size
+
+    assert np.allclose(angular_velocities, expected_angular_velocity, atol=1e-6)
+
+
+@mark.asyncio
+@mark.parametrize(
+    ["model", "inputs", "initial_state", "max_speed", "min_speed"],
+    [
+        *[
+            (
+                model := BicycleModel.create(
+                    time_step_size=1.0, speed_limits=(v_min := -5.0, v_max := 10.0)
+                ),
+                inputs := data.numpy.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 20),
+                    acceleration=a,  # Without speed limits, v would reach T * a
+                    steering=0.4,
+                ),
+                initial_state := data.numpy.state(x=3.0, y=4.0, theta=0.2, v=2.0),
+                v_max,
+                v_min,
+            )
+            for a in [1.0, -1.0]
+        ],
+        *[
+            (
+                model := JaxBicycleModel.create(
+                    time_step_size=1.0, speed_limits=(v_min := -3.0, v_max := 8.0)
+                ),
+                inputs := data.jax.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 15),
+                    acceleration=a,
+                    steering=0.0,
+                ),
+                initial_state := data.jax.state(x=6.0, y=5.0, theta=0.4, v=2.0),
+                v_max,
+                v_min,
+            )
+            for a in [1.0, -2.0]
+        ],
+    ],
+)
+async def test_that_velocity_is_clamped_to_speed_limits(
+    model: DynamicalModel,
+    inputs: ControlInputBatch,
+    initial_state: State,
+    max_speed: float,
+    min_speed: float,
+) -> None:
+    rollouts = await model.simulate(inputs, initial_state)
+
+    velocities = rollouts.velocities()
+
+    assert np.all(velocities <= max_speed + 1e-6)
+    assert np.all(velocities >= min_speed - 1e-6)
+
+
+@mark.asyncio
+@mark.parametrize(
+    ["model", "inputs", "initial_state", "expected_theta_change"],
+    [
+        *[
+            (
+                # Steering input is larger than max_steering, but should be clipped
+                # angular velocity = v * tan(clipped_steering) / L
+                # So theta_change = angular_velocity * dt
+                model := BicycleModel.create(
+                    time_step_size=(dt := 1.0),
+                    wheelbase=(L := 1.0),
+                    steering_limits=(delta_min := -0.2, delta_max := 0.3),
+                ),
+                inputs := data.numpy.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 1),
+                    acceleration=0.0,
+                    steering=delta,
+                ),
+                initial_state := data.numpy.state(
+                    x=2.0, y=4.0, theta=2.0, v=(v := 1.0)
+                ),
+                expected_theta_change := (
+                    v * np.tan(delta_max if expected == "max" else delta_min) / L * dt
+                ),
+            )
+            for (delta, expected) in [(1.0, "max"), (-1.0, "min")]
+        ],
+        *[
+            (
+                model := JaxBicycleModel.create(
+                    time_step_size=(dt := 0.5),
+                    wheelbase=(L := 2.0),
+                    steering_limits=(delta_min := -0.3, delta_max := 0.4),
+                ),
+                inputs := data.jax.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 1),
+                    acceleration=0.0,
+                    steering=delta,
+                ),
+                initial_state := data.jax.state(x=2.0, y=4.0, theta=2.0, v=(v := 2.0)),
+                expected_theta_change := (
+                    v * np.tan(delta_max if expected == "max" else delta_min) / L * dt,
+                ),
+            )
+            for (delta, expected) in [(1.5, "max"), (-0.5, "min")]
+        ],
+    ],
+)
+async def test_that_steering_input_is_clipped_to_max_steering(
+    model: DynamicalModel,
+    inputs: ControlInputBatch,
+    initial_state: State,
+    expected_theta_change: float,
+) -> None:
+    rollouts = await model.simulate(inputs, initial_state)
+
+    final_theta = rollouts.orientations()[-1]
+    actual_theta_change = final_theta - initial_state.theta
+
+    assert np.allclose(actual_theta_change, expected_theta_change, atol=1e-6)
+
+
+@mark.asyncio
+@mark.parametrize(
+    ["model", "inputs", "initial_state", "expected_velocity"],
+    [
+        *[
+            (
+                # Acceleration input is larger than max_acceleration, but should be clipped
+                # So expected final velocity = v_0 + max_acceleration * dt
+                model := BicycleModel.create(
+                    time_step_size=(dt := 1.0),
+                    acceleration_limits=(a_min := -2.0, a_max := 3.0),
+                ),
+                inputs := data.numpy.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 1),
+                    acceleration=a,
+                    steering=0.0,
+                ),
+                initial_state := data.numpy.state(
+                    x=0.0, y=0.0, theta=0.0, v=(v_0 := 0.0)
+                ),
+                expected_velocity := (
+                    v_0 + (a_max if expected == "max" else a_min) * dt
+                ),
+            )
+            for (a, expected) in [(10.0, "max"), (-5.0, "min")]
+        ],
+        *[
+            (
+                model := JaxBicycleModel.create(
+                    time_step_size=(dt := 0.5),
+                    acceleration_limits=(a_min := -8.0, a_max := 4.0),
+                ),
+                inputs := data.jax.control_inputs(
+                    rollout_count=(M := 1),
+                    time_horizon=(T := 1),
+                    acceleration=a,
+                    steering=0.0,
+                ),
+                initial_state := data.jax.state(
+                    x=0.0, y=0.0, theta=0.0, v=(v_0 := 1.0)
+                ),
+                expected_velocity := (
+                    v_0 + (a_max if expected == "max" else a_min) * dt
+                ),
+            )
+            for (a, expected) in [(5.0, "max"), (-10.0, "min")]
+        ],
+    ],
+)
+async def test_that_acceleration_input_is_clipped_to_max_acceleration(
+    model: DynamicalModel,
+    inputs: ControlInputBatch,
+    initial_state: State,
+    expected_velocity: float,
+) -> None:
+    rollouts = await model.simulate(inputs, initial_state)
+
+    final_velocity = rollouts.velocities()[-1]
+
+    assert np.allclose(final_velocity, expected_velocity, atol=1e-6)

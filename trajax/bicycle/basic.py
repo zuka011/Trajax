@@ -79,9 +79,36 @@ class NumpyControlInputBatch[T: int, M: int]:
         return self.inputs.shape[0]
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class BicycleModel:
     time_step_size: float
+    wheelbase: float
+    speed_limits: tuple[float, float]
+    steering_limits: tuple[float, float]
+    acceleration_limits: tuple[float, float]
+
+    @staticmethod
+    def create(
+        *,
+        time_step_size: float,
+        wheelbase: float = 1.0,
+        speed_limits: tuple[float, float] | None = None,
+        steering_limits: tuple[float, float] | None = None,
+        acceleration_limits: tuple[float, float] | None = None,
+    ) -> "BicycleModel":
+        no_limits = (float("-inf"), float("inf"))
+
+        return BicycleModel(
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            speed_limits=speed_limits if speed_limits is not None else no_limits,
+            steering_limits=steering_limits
+            if steering_limits is not None
+            else no_limits,
+            acceleration_limits=acceleration_limits
+            if acceleration_limits is not None
+            else no_limits,
+        )
 
     async def simulate[T: int, M: int](
         self,
@@ -105,13 +132,19 @@ class BicycleModel:
         v = np.full(rollout_count, initial_state.v)
 
         for t in range(horizon):
-            acceleration = inputs.inputs[t, 0, :]
-            steering = inputs.inputs[t, 1, :]
+            acceleration = np.clip(
+                inputs.inputs[t, 0, :], self.min_acceleration, self.max_acceleration
+            )
+            steering = np.clip(
+                inputs.inputs[t, 1, :], self.min_steering, self.max_steering
+            )
 
             x = x + v * np.cos(theta) * self.time_step_size
             y = y + v * np.sin(theta) * self.time_step_size
-            theta = theta + steering * self.time_step_size
-            v = v + acceleration * self.time_step_size
+            theta = theta + v * np.tan(steering) / self.wheelbase * self.time_step_size
+            v = np.clip(
+                v + acceleration * self.time_step_size, self.min_speed, self.max_speed
+            )
 
             states[t, 0, :] = x
             states[t, 1, :] = y
@@ -123,3 +156,27 @@ class BicycleModel:
         )
 
         return NumpyStateBatch(states)
+
+    @property
+    def min_speed(self) -> float:
+        return self.speed_limits[0]
+
+    @property
+    def max_speed(self) -> float:
+        return self.speed_limits[1]
+
+    @property
+    def min_steering(self) -> float:
+        return self.steering_limits[0]
+
+    @property
+    def max_steering(self) -> float:
+        return self.steering_limits[1]
+
+    @property
+    def min_acceleration(self) -> float:
+        return self.acceleration_limits[0]
+
+    @property
+    def max_acceleration(self) -> float:
+        return self.acceleration_limits[1]

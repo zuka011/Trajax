@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from trajax.model import D_X, D_x, D_U, D_u, State, ControlInputBatch
 from trajax.type import jaxtyped
 
-from jaxtyping import Array, Float
+from jaxtyping import Array, Float, Scalar
 from numtypes import Array as NumpyArray, Dims
 
 import jax
@@ -89,9 +89,36 @@ class JaxControlInputBatch[T: int, M: int]:
         return cast(T, self.inputs.shape[0])
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class JaxBicycleModel:
     time_step_size: float
+    wheelbase: float
+    speed_limits: tuple[float, float]
+    steering_limits: tuple[float, float]
+    acceleration_limits: tuple[float, float]
+
+    @staticmethod
+    def create(
+        *,
+        time_step_size: float,
+        wheelbase: float = 1.0,
+        speed_limits: tuple[float, float] | None = None,
+        steering_limits: tuple[float, float] | None = None,
+        acceleration_limits: tuple[float, float] | None = None,
+    ) -> "JaxBicycleModel":
+        no_limits = (float("-inf"), float("inf"))
+
+        return JaxBicycleModel(
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            speed_limits=speed_limits if speed_limits is not None else no_limits,
+            steering_limits=steering_limits
+            if steering_limits is not None
+            else no_limits,
+            acceleration_limits=acceleration_limits
+            if acceleration_limits is not None
+            else no_limits,
+        )
 
     async def simulate[T: int, M: int](
         self,
@@ -117,27 +144,67 @@ class JaxBicycleModel:
         )
 
         return JaxStateBatch(
-            simulate_jit(inputs.inputs, initial, time_step_size=self.time_step_size)
+            simulate_jit(
+                inputs.inputs,
+                initial,
+                time_step_size=self.time_step_size,
+                wheelbase=self.wheelbase,
+                speed_limits=self.speed_limits,
+                steering_limits=self.steering_limits,
+                acceleration_limits=self.acceleration_limits,
+            )
         )
+
+    @property
+    def min_speed(self) -> float:
+        return self.speed_limits[0]
+
+    @property
+    def max_speed(self) -> float:
+        return self.speed_limits[1]
+
+    @property
+    def min_steering(self) -> float:
+        return self.steering_limits[0]
+
+    @property
+    def max_steering(self) -> float:
+        return self.steering_limits[1]
+
+    @property
+    def min_acceleration(self) -> float:
+        return self.acceleration_limits[0]
+
+    @property
+    def max_acceleration(self) -> float:
+        return self.acceleration_limits[1]
 
 
 @jax.jit
+@jaxtyped
 def simulate_jit(
     inputs: ControlInputBatchArray,
     initial: Float[Array, "4 M"],
     *,
-    time_step_size: float,
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+    speed_limits: tuple[Scalar, Scalar],
+    steering_limits: tuple[Scalar, Scalar],
+    acceleration_limits: tuple[Scalar, Scalar],
 ) -> StateBatchArray:
+    @jax.jit
+    @jaxtyped
     def step(
         state: Float[Array, "4 M"], control: Float[Array, "2 M"]
     ) -> tuple[Float[Array, "4 M"], Float[Array, "4 M"]]:
         x, y, theta, v = state[0], state[1], state[2], state[3]
-        acceleration, steering = control[0], control[1]
+        acceleration = jnp.clip(control[0], *acceleration_limits)
+        steering = jnp.clip(control[1], *steering_limits)
 
         new_x = x + v * jnp.cos(theta) * time_step_size
         new_y = y + v * jnp.sin(theta) * time_step_size
-        new_theta = theta + steering * time_step_size
-        new_v = v + acceleration * time_step_size
+        new_theta = theta + v * jnp.tan(steering) / wheelbase * time_step_size
+        new_v = jnp.clip(v + acceleration * time_step_size, *speed_limits)
 
         new_state = jnp.stack([new_x, new_y, new_theta, new_v])
         return new_state, new_state
