@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from trajax.model import D_x, D_X, D_u, State, ControlInputBatch
+from trajax.type import DataType
+from trajax.bicycle.model import D_x, D_X, D_u
 
 from numtypes import Array, Dims, D, shape_of
 import numpy as np
@@ -14,7 +15,7 @@ type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
 
 
 @dataclass(frozen=True)
-class NumpyState:
+class NumPyState:
     state: StateArray
 
     @property
@@ -35,10 +36,10 @@ class NumpyState:
 
 
 @dataclass(frozen=True)
-class NumpyStateBatch[T: int, M: int]:
+class NumPyStateBatch[T: int, M: int]:
     states: StateBatchArray[T, M]
 
-    def __array__(self, dtype: np.dtype | None = None) -> StateBatchArray[T, M]:
+    def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
         return self.states
 
     def orientations(self) -> Array[Dims[T, M]]:
@@ -48,15 +49,15 @@ class NumpyStateBatch[T: int, M: int]:
         return self.states[:, 3, :]
 
     @property
-    def positions(self) -> "NumpyPositions":
-        return NumpyPositions(state=self)
+    def positions(self) -> "NumPyPositions":
+        return NumPyPositions(state=self)
 
 
 @dataclass(frozen=True)
-class NumpyPositions[T: int, M: int]:
-    state: NumpyStateBatch[T, M]
+class NumPyPositions[T: int, M: int]:
+    state: NumPyStateBatch[T, M]
 
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D[2], M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
         return self.state.states[:, :2, :]
 
     def x(self) -> Array[Dims[T, M]]:
@@ -67,7 +68,7 @@ class NumpyPositions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class NumpyControlInputBatch[T: int, M: int]:
+class NumPyControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray[T, M]
 
     @property
@@ -80,7 +81,7 @@ class NumpyControlInputBatch[T: int, M: int]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class BicycleModel:
+class NumPyBicycleModel:
     time_step_size: float
     wheelbase: float
     speed_limits: tuple[float, float]
@@ -95,10 +96,10 @@ class BicycleModel:
         speed_limits: tuple[float, float] | None = None,
         steering_limits: tuple[float, float] | None = None,
         acceleration_limits: tuple[float, float] | None = None,
-    ) -> "BicycleModel":
+    ) -> "NumPyBicycleModel":
         no_limits = (float("-inf"), float("inf"))
 
-        return BicycleModel(
+        return NumPyBicycleModel(
             time_step_size=time_step_size,
             wheelbase=wheelbase,
             speed_limits=speed_limits if speed_limits is not None else no_limits,
@@ -111,17 +112,8 @@ class BicycleModel:
         )
 
     async def simulate[T: int, M: int](
-        self,
-        inputs: ControlInputBatch[T, M],
-        initial_state: State,
-    ) -> NumpyStateBatch[T, M]:
-        assert isinstance(inputs, NumpyControlInputBatch), (
-            "Only NumPy inputs are supported."
-        )
-        assert isinstance(initial_state, NumpyState), (
-            "Only NumPy initial states are supported."
-        )
-
+        self, inputs: NumPyControlInputBatch[T, M], initial_state: NumPyState
+    ) -> NumPyStateBatch[T, M]:
         horizon = inputs.horizon
         rollout_count = inputs.rollout_count
         states = np.zeros((horizon, 4, rollout_count))
@@ -155,7 +147,7 @@ class BicycleModel:
             states, matches=(horizon, D_X, rollout_count), name="simulated states"
         )
 
-        return NumpyStateBatch(states)
+        return NumPyStateBatch(states)
 
     @property
     def min_speed(self) -> float:

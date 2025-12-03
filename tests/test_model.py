@@ -1,18 +1,15 @@
-from trajax import (
-    DynamicalModel,
-    State,
-    ControlInputBatch,
-    BicycleModel,
-    JaxBicycleModel,
-)
+from trajax import bicycle, KinematicBicycleModel, NumPyBicycleModel, JaxBicycleModel
 
 from numtypes import array, Array
 import numpy as np
 
-from tests.dsl import data
-from tests.dsl.numeric import estimate, compute
-from tests.dsl.type import clear_type
+from tests.dsl import model as data, estimate, compute, clear_type
 from pytest import mark
+
+
+type ControlInputBatch = bicycle.ControlInputBatch
+type State = bicycle.State
+type StateBatch = bicycle.StateBatch
 
 
 @mark.asyncio
@@ -20,10 +17,10 @@ from pytest import mark
     ["model", "inputs", "initial_state", "M", "T", "x_0", "y_0", "theta_0", "v_0"],
     [
         (
-            model := BicycleModel.create(time_step_size=0.1),
-            inputs := data.numpy.control_inputs(
-                rollout_count=(M := 3),
+            model := NumPyBicycleModel.create(time_step_size=0.1),
+            inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 5),
+                rollout_count=(M := 3),
                 acceleration=0.0,
                 steering=0.0,
             ),
@@ -39,9 +36,9 @@ from pytest import mark
         ),
         (
             model := JaxBicycleModel.create(time_step_size=0.25),
-            inputs := data.jax.control_inputs(
-                rollout_count=(M := 3),
+            inputs := data.jax.control_input_batch(
                 time_horizon=(T := 5),
+                rollout_count=(M := 3),
                 acceleration=0.0,
                 steering=0.0,
             ),
@@ -57,10 +54,14 @@ from pytest import mark
         ),
     ],
 )
-async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     M: int,
     T: int,
     x_0: float,
@@ -99,10 +100,10 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     ],
     [
         (
-            model := BicycleModel.create(time_step_size=(dt := 0.25)),
-            inputs := data.numpy.control_inputs(
-                rollout_count=(M := 3),
+            model := NumPyBicycleModel.create(time_step_size=(dt := 0.25)),
+            inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 4),
+                rollout_count=(M := 3),
                 acceleration=0.0,
                 steering=0.0,
             ),
@@ -136,9 +137,9 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
         ),
         (
             model := JaxBicycleModel.create(time_step_size=(dt := 0.75)),
-            inputs := data.jax.control_inputs(
-                rollout_count=(M := 3),
+            inputs := data.jax.control_input_batch(
                 time_horizon=(T := 2),
+                rollout_count=(M := 3),
                 acceleration=0.0,
                 steering=0.0,
             ),
@@ -168,10 +169,14 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
         ),
     ],
 )
-async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     expected_x: Array,
     expected_y: Array,
     expected_theta: Array,
@@ -199,10 +204,10 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
     ],
     [  # Time step has to be small for 1st order integrators in these tests.
         (
-            model := BicycleModel.create(time_step_size=(dt := 0.001)),
-            inputs := data.numpy.control_inputs(
-                rollout_count=(M := 2),
+            model := NumPyBicycleModel.create(time_step_size=(dt := 0.001)),
+            inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 20),
+                rollout_count=(M := 2),
                 acceleration=(a := 1.0),
                 steering=0.0,
             ),
@@ -240,9 +245,9 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
         ),
         (  # Similar test but using JAX implementation
             model := JaxBicycleModel.create(time_step_size=(dt := 0.001)),
-            inputs := data.jax.control_inputs(
-                rollout_count=(M := 3),
+            inputs := data.jax.control_input_batch(
                 time_horizon=(T := 15),
+                rollout_count=(M := 3),
                 acceleration=(a := 2.0),
                 steering=0.0,
             ),
@@ -276,10 +281,14 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant(
         ),
     ],
 )
-async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     expected_x_final: Array,
     expected_y_final: Array,
     expected_theta: Array,
@@ -305,8 +314,8 @@ T = clear_type
     [
         (
             # Reverse steering halfway through. Final orientation should be the same as start.
-            model := BicycleModel.create(time_step_size=0.5),
-            inputs := data.numpy.control_inputs(
+            model := NumPyBicycleModel.create(time_step_size=0.5),
+            inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
                 steering=array([0.2, 0.4, 1.0, -1.0, -0.4, -0.2], shape=(T,)),
@@ -318,7 +327,7 @@ T = clear_type
         ),
         (
             model := JaxBicycleModel.create(time_step_size=0.25),
-            inputs := data.jax.control_inputs(
+            inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
                 steering=array([0.3, -0.6, 2.0, -2.0, 0.6, -0.3], shape=(T,)),
@@ -330,10 +339,14 @@ T = clear_type
         ),
     ],
 )
-async def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     expected_final_theta: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -347,8 +360,8 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
     [
         (
             # Reverse acceleration halfway through. Final velocity should be the same as start.
-            model := BicycleModel.create(time_step_size=0.5),
-            inputs := data.numpy.control_inputs(
+            model := NumPyBicycleModel.create(time_step_size=0.5),
+            inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([2.0, 1.0, 0.5, -0.5, -1.0, -2.0], shape=(T := 6,)),
                 steering=array([0.0] * T, shape=(T,)),
@@ -358,7 +371,7 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
         ),
         (
             model := JaxBicycleModel.create(time_step_size=0.25),
-            inputs := data.jax.control_inputs(
+            inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([3.0, 1.0, 0.5, -0.5, -1.0, -3.0], shape=(T := 6,)),
                 steering=array([0.0] * T, shape=(T,)),
@@ -368,10 +381,14 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
         ),
     ],
 )
-async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     expected_final_v: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -392,8 +409,8 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
     [
         (
             # Reverse acceleration halfway through. Final position and orientation should be the same as start.
-            model := BicycleModel.create(time_step_size=0.5),
-            inputs := data.numpy.control_inputs(
+            model := NumPyBicycleModel.create(time_step_size=0.5),
+            inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array(
                     [2.0, 1.0, 0.5, -0.5, -1.0, -2.0, -2.0, -1.0, -0.5, 0.5, 1.0, 2.0],
@@ -410,7 +427,7 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
         ),
         (
             model := JaxBicycleModel.create(time_step_size=0.25),
-            inputs := data.jax.control_inputs(
+            inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array(
                     [1.5, 1.0, 0.5, -0.5, -1.0, -1.5, -1.5, -1.0, -0.5, 0.5, 1.0, 1.5],
@@ -427,10 +444,14 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
         ),
     ],
 )
-async def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     expected_final_x: Array,
     expected_final_y: Array,
     expected_final_theta: Array,
@@ -447,8 +468,8 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
     ["model", "inputs", "initial_state", "time_step_size"],
     [  # Time step and maximum steering angle must be small for 1st order integrators in these tests.
         (
-            model := BicycleModel.create(time_step_size=(dt := 0.1)),
-            inputs := data.numpy.control_inputs(
+            model := NumPyBicycleModel.create(time_step_size=(dt := 0.1)),
+            inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 12)),
                 steering=np.random.uniform(-0.1, 0.1, size=(T,)),
@@ -458,7 +479,7 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
         ),
         (
             model := JaxBicycleModel.create(time_step_size=(dt := 0.05)),
-            inputs := data.jax.control_inputs(
+            inputs := data.jax.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 10)),
                 steering=np.random.uniform(-0.2, 0.2, size=(T,)),
@@ -468,10 +489,14 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
         ),
     ],
 )
-async def test_that_displacement_is_consistent_with_velocity_state(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_displacement_is_consistent_with_velocity_state[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     time_step_size: float,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -515,8 +540,10 @@ async def test_that_displacement_is_consistent_with_velocity_state(
             # angular_velocity = v * tan(steering) / L
             # For 2π rotation: T * dt * angular_velocity = 2π
             # So steering = atan(2π / (T * dt * v / L))
-            BicycleModel.create(time_step_size=(dt := 0.1), wheelbase=(L := 2.0)),
-            data.numpy.control_inputs(
+            model := NumPyBicycleModel.create(
+                time_step_size=(dt := 0.1), wheelbase=(L := 2.0)
+            ),
+            inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=array([0.0] * (T := 100), shape=(T,)),
                 steering=array(
@@ -524,16 +551,18 @@ async def test_that_displacement_is_consistent_with_velocity_state(
                     shape=(T,),
                 ),
             ),
-            data.numpy.state(
+            initial_state := data.numpy.state(
                 x=(x_0 := 2.4), y=(y_0 := 3.6), theta=(theta_0 := 0.5), v=v
             ),
-            x_0,
-            y_0,
-            theta_0,
+            expected_final_x := array([x_0] * M, shape=(M,)),
+            expected_final_y := array([y_0] * M, shape=(M,)),
+            expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (  # Analogous test with JAX implementation
-            JaxBicycleModel.create(time_step_size=(dt := 0.05), wheelbase=(L := 1.5)),
-            data.jax.control_inputs(
+            model := JaxBicycleModel.create(
+                time_step_size=(dt := 0.05), wheelbase=(L := 1.5)
+            ),
+            inputs := data.jax.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=array([0.0] * (T := 200), shape=(T,)),
                 steering=array(
@@ -541,22 +570,26 @@ async def test_that_displacement_is_consistent_with_velocity_state(
                     shape=(T,),
                 ),
             ),
-            data.jax.state(
+            initial_state := data.jax.state(
                 x=(x_0 := 1.0), y=(y_0 := 1.0), theta=(theta_0 := 0.25), v=v
             ),
-            x_0,
-            y_0,
-            theta_0,
+            expected_final_x := array([x_0] * M, shape=(M,)),
+            expected_final_y := array([y_0] * M, shape=(M,)),
+            expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
     ],
 )
-async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
-    expected_final_x: float,
-    expected_final_y: float,
-    expected_final_theta: float,
+async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
+    expected_final_x: Array,
+    expected_final_y: Array,
+    expected_final_theta: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
 
@@ -575,41 +608,45 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     [
         (
             # Angular velocity = v * tan(steering) / wheelbase
-            model := BicycleModel.create(
+            model := NumPyBicycleModel.create(
                 time_step_size=(dt := 0.1), wheelbase=(L := 2.5)
             ),
-            inputs := data.numpy.control_inputs(
-                rollout_count=(M := 1),
+            inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 10),
+                rollout_count=(M := 2),
                 acceleration=0.0,
                 steering=(delta := 0.5),
             ),
             initial_state := data.numpy.state(x=2.0, y=4.0, theta=5.0, v=(v := 2.0)),
             dt,
-            expected_angular_velocity := v * np.tan(delta) / L,
+            expected_angular_velocity := array([v * np.tan(delta) / L] * M, shape=(M,)),
         ),
         (  # Analogous test with JAX implementation
             model := JaxBicycleModel.create(
                 time_step_size=(dt := 0.1), wheelbase=(L := 3.0)
             ),
-            inputs := data.jax.control_inputs(
-                rollout_count=(M := 1),
+            inputs := data.jax.control_input_batch(
                 time_horizon=(T := 10),
+                rollout_count=(M := 4),
                 acceleration=0.0,
                 steering=(delta := 0.3),
             ),
             initial_state := data.jax.state(x=2.0, y=4.0, theta=8.0, v=(v := 4.0)),
             dt,
-            expected_angular_velocity := v * np.tan(delta) / L,
+            expected_angular_velocity := array([v * np.tan(delta) / L] * M, shape=(M,)),
         ),
     ],
 )
-async def test_that_angular_velocity_depends_on_wheelbase(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_angular_velocity_depends_on_wheelbase[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     time_step_size: float,
-    expected_angular_velocity: float,
+    expected_angular_velocity: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
 
@@ -626,12 +663,12 @@ async def test_that_angular_velocity_depends_on_wheelbase(
     [
         *[
             (
-                model := BicycleModel.create(
+                model := NumPyBicycleModel.create(
                     time_step_size=1.0, speed_limits=(v_min := -5.0, v_max := 10.0)
                 ),
-                inputs := data.numpy.control_inputs(
-                    rollout_count=(M := 1),
+                inputs := data.numpy.control_input_batch(
                     time_horizon=(T := 20),
+                    rollout_count=(M := 3),
                     acceleration=a,  # Without speed limits, v would reach T * a
                     steering=0.4,
                 ),
@@ -646,9 +683,9 @@ async def test_that_angular_velocity_depends_on_wheelbase(
                 model := JaxBicycleModel.create(
                     time_step_size=1.0, speed_limits=(v_min := -3.0, v_max := 8.0)
                 ),
-                inputs := data.jax.control_inputs(
-                    rollout_count=(M := 1),
+                inputs := data.jax.control_input_batch(
                     time_horizon=(T := 15),
+                    rollout_count=(M := 2),
                     acceleration=a,
                     steering=0.0,
                 ),
@@ -660,10 +697,14 @@ async def test_that_angular_velocity_depends_on_wheelbase(
         ],
     ],
 )
-async def test_that_velocity_is_clamped_to_speed_limits(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
+async def test_that_velocity_is_clamped_to_speed_limits[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
     max_speed: float,
     min_speed: float,
 ) -> None:
@@ -683,23 +724,28 @@ async def test_that_velocity_is_clamped_to_speed_limits(
             (
                 # Steering input is larger than max_steering, but should be clipped
                 # angular velocity = v * tan(clipped_steering) / L
-                # So theta_change = angular_velocity * dt
-                model := BicycleModel.create(
+                # Total theta_change = angular_velocity * dt * T
+                model := NumPyBicycleModel.create(
                     time_step_size=(dt := 1.0),
                     wheelbase=(L := 1.0),
                     steering_limits=(delta_min := -0.2, delta_max := 0.3),
                 ),
-                inputs := data.numpy.control_inputs(
-                    rollout_count=(M := 1),
-                    time_horizon=(T := 1),
+                inputs := data.numpy.control_input_batch(
+                    time_horizon=(T := 5),
+                    rollout_count=(M := 4),
                     acceleration=0.0,
                     steering=delta,
                 ),
                 initial_state := data.numpy.state(
                     x=2.0, y=4.0, theta=2.0, v=(v := 1.0)
                 ),
-                expected_theta_change := (
-                    v * np.tan(delta_max if expected == "max" else delta_min) / L * dt
+                expected_theta_change := array(
+                    [
+                        (v * np.tan(delta_max if expected == "max" else delta_min) / L)
+                        * (dt * T)
+                    ]
+                    * M,
+                    shape=(M,),
                 ),
             )
             for (delta, expected) in [(1.0, "max"), (-1.0, "min")]
@@ -711,26 +757,35 @@ async def test_that_velocity_is_clamped_to_speed_limits(
                     wheelbase=(L := 2.0),
                     steering_limits=(delta_min := -0.3, delta_max := 0.4),
                 ),
-                inputs := data.jax.control_inputs(
-                    rollout_count=(M := 1),
-                    time_horizon=(T := 1),
+                inputs := data.jax.control_input_batch(
+                    time_horizon=(T := 4),
+                    rollout_count=(M := 2),
                     acceleration=0.0,
                     steering=delta,
                 ),
                 initial_state := data.jax.state(x=2.0, y=4.0, theta=2.0, v=(v := 2.0)),
-                expected_theta_change := (
-                    v * np.tan(delta_max if expected == "max" else delta_min) / L * dt,
+                expected_theta_change := array(
+                    [
+                        (v * np.tan(delta_max if expected == "max" else delta_min) / L)
+                        * (dt * T)
+                    ]
+                    * M,
+                    shape=(M,),
                 ),
             )
             for (delta, expected) in [(1.5, "max"), (-0.5, "min")]
         ],
     ],
 )
-async def test_that_steering_input_is_clipped_to_max_steering(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
-    expected_theta_change: float,
+async def test_that_steering_input_is_clipped_to_max_steering[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
+    expected_theta_change: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
 
@@ -747,22 +802,23 @@ async def test_that_steering_input_is_clipped_to_max_steering(
         *[
             (
                 # Acceleration input is larger than max_acceleration, but should be clipped
-                # So expected final velocity = v_0 + max_acceleration * dt
-                model := BicycleModel.create(
+                # Total velocity change = clipped_acceleration * dt * T
+                model := NumPyBicycleModel.create(
                     time_step_size=(dt := 1.0),
                     acceleration_limits=(a_min := -2.0, a_max := 3.0),
                 ),
-                inputs := data.numpy.control_inputs(
-                    rollout_count=(M := 1),
-                    time_horizon=(T := 1),
+                inputs := data.numpy.control_input_batch(
+                    time_horizon=(T := 5),
+                    rollout_count=(M := 2),
                     acceleration=a,
                     steering=0.0,
                 ),
                 initial_state := data.numpy.state(
                     x=0.0, y=0.0, theta=0.0, v=(v_0 := 0.0)
                 ),
-                expected_velocity := (
-                    v_0 + (a_max if expected == "max" else a_min) * dt
+                expected_velocity := array(
+                    [v_0 + (a_max if expected == "max" else a_min) * dt * T] * M,
+                    shape=(M,),
                 ),
             )
             for (a, expected) in [(10.0, "max"), (-5.0, "min")]
@@ -773,28 +829,33 @@ async def test_that_steering_input_is_clipped_to_max_steering(
                     time_step_size=(dt := 0.5),
                     acceleration_limits=(a_min := -8.0, a_max := 4.0),
                 ),
-                inputs := data.jax.control_inputs(
-                    rollout_count=(M := 1),
-                    time_horizon=(T := 1),
+                inputs := data.jax.control_input_batch(
+                    time_horizon=(T := 5),
+                    rollout_count=(M := 2),
                     acceleration=a,
                     steering=0.0,
                 ),
                 initial_state := data.jax.state(
                     x=0.0, y=0.0, theta=0.0, v=(v_0 := 1.0)
                 ),
-                expected_velocity := (
-                    v_0 + (a_max if expected == "max" else a_min) * dt
+                expected_velocity := array(
+                    [v_0 + (a_max if expected == "max" else a_min) * dt * T] * M,
+                    shape=(M,),
                 ),
             )
             for (a, expected) in [(5.0, "max"), (-10.0, "min")]
         ],
     ],
 )
-async def test_that_acceleration_input_is_clipped_to_max_acceleration(
-    model: DynamicalModel,
-    inputs: ControlInputBatch,
-    initial_state: State,
-    expected_velocity: float,
+async def test_that_acceleration_input_is_clipped_to_max_acceleration[
+    ControlInputBatchT: ControlInputBatch,
+    StateT: State,
+    StateBatchT: StateBatch,
+](
+    model: KinematicBicycleModel[ControlInputBatchT, StateT, StateBatchT],
+    inputs: ControlInputBatchT,
+    initial_state: StateT,
+    expected_velocity: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
 

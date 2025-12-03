@@ -1,11 +1,11 @@
 from typing import cast
 from dataclasses import dataclass
 
-from trajax.model import D_X, D_x, D_U, D_u, State, ControlInputBatch
+from trajax.bicycle.model import D_X, D_x, D_U, D_u
 from trajax.type import jaxtyped
 
 from jaxtyping import Array, Float, Scalar
-from numtypes import Array as NumpyArray, Dims
+from numtypes import Array as NumPyArray, Dims
 
 import jax
 import jax.numpy as jnp
@@ -46,13 +46,13 @@ class JaxState:
 class JaxStateBatch[T: int, M: int]:
     states: StateBatchArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumpyArray[Dims[T, D_x, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_x, M]]:
         return np.asarray(self.states, dtype=dtype)
 
-    def orientations(self) -> NumpyArray[Dims[T, M]]:
+    def orientations(self) -> NumPyArray[Dims[T, M]]:
         return np.asarray(self.states[:, 2, :])
 
-    def velocities(self) -> NumpyArray[Dims[T, M]]:
+    def velocities(self) -> NumPyArray[Dims[T, M]]:
         return np.asarray(self.states[:, 3, :])
 
     @property
@@ -65,13 +65,13 @@ class JaxStateBatch[T: int, M: int]:
 class JaxPositions[T: int, M: int]:
     state: JaxStateBatch
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumpyArray[Dims[T, D_u, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
         return np.asarray(self.state.states[:, :2, :], dtype=dtype)
 
-    def x(self) -> NumpyArray[Dims[T, M]]:
+    def x(self) -> NumPyArray[Dims[T, M]]:
         return np.asarray(self.state.states[:, 0, :])
 
-    def y(self) -> NumpyArray[Dims[T, M]]:
+    def y(self) -> NumPyArray[Dims[T, M]]:
         return np.asarray(self.state.states[:, 1, :])
 
 
@@ -122,16 +122,9 @@ class JaxBicycleModel:
 
     async def simulate[T: int, M: int](
         self,
-        inputs: ControlInputBatch[T, M],
-        initial_state: State,
+        inputs: JaxControlInputBatch[T, M],
+        initial_state: JaxState,
     ) -> JaxStateBatch[T, M]:
-        assert isinstance(inputs, JaxControlInputBatch), (
-            "Only JAX inputs are supported."
-        )
-        assert isinstance(initial_state, JaxState), (
-            "Only JAX initial states are supported."
-        )
-
         rollout_count = inputs.rollout_count
 
         initial = jnp.stack(

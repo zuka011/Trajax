@@ -1,10 +1,9 @@
 from typing import overload
 
 from trajax import (
-    D_X,
-    D_U,
-    NumpyState,
-    NumpyControlInputBatch,
+    bicycle,
+    NumPyState,
+    NumPyControlInputBatch,
     JaxState,
     JaxControlInputBatch,
 )
@@ -17,31 +16,31 @@ import numpy as np
 class numpy:
     @overload
     @staticmethod
-    def control_inputs(
+    def control_input_batch[T: int, M: int](
         *,
-        rollout_count: int,
-        time_horizon: int,
+        time_horizon: T,
+        rollout_count: M,
         acceleration: float,
         steering: float,
-    ) -> NumpyControlInputBatch: ...
+    ) -> NumPyControlInputBatch[T, M]: ...
 
     @overload
     @staticmethod
-    def control_inputs[T: int](
+    def control_input_batch[T: int, M: int](
         *,
-        rollout_count: int,
+        rollout_count: M,
         acceleration: Array[Dims[T]],
         steering: Array[Dims[T]],
-    ) -> NumpyControlInputBatch: ...
+    ) -> NumPyControlInputBatch[T, M]: ...
 
     @staticmethod
-    def control_inputs(
+    def control_input_batch(
         *,
         rollout_count: int,
         time_horizon: int | None = None,
         acceleration: float | Array,
         steering: float | Array,
-    ) -> NumpyControlInputBatch:
+    ) -> NumPyControlInputBatch:
         match acceleration, steering:
             case np.ndarray(), np.ndarray():
                 assert time_horizon is None, (
@@ -58,16 +57,18 @@ class numpy:
                 ).transpose(2, 1, 0)
 
                 assert shape_of(
-                    inputs, matches=(T, D_U, rollout_count), name="control inputs"
+                    inputs,
+                    matches=(T, bicycle.D_U, rollout_count),
+                    name="control inputs",
                 )
 
-                return NumpyControlInputBatch(inputs)
+                return NumPyControlInputBatch(inputs)
             case float() | int(), float() | int():
                 assert time_horizon is not None, (
                     "time_horizon must be provided when passing constant inputs."
                 )
 
-                return NumpyControlInputBatch(
+                return NumPyControlInputBatch(
                     array(
                         [
                             [
@@ -76,7 +77,7 @@ class numpy:
                             ],
                         ]
                         * time_horizon,
-                        shape=(time_horizon, D_U, rollout_count),
+                        shape=(time_horizon, bicycle.D_U, rollout_count),
                     )
                 )
             case _:
@@ -86,32 +87,32 @@ class numpy:
                 )
 
     @staticmethod
-    def state(*, x: float, y: float, theta: float, v: float) -> NumpyState:
-        return NumpyState(array([x, y, theta, v], shape=(D_X,)))
+    def state(*, x: float, y: float, theta: float, v: float) -> NumPyState:
+        return NumPyState(array([x, y, theta, v], shape=(bicycle.D_X,)))
 
 
 class jax:
     @overload
     @staticmethod
-    def control_inputs(
+    def control_input_batch[T: int, M: int](
         *,
-        rollout_count: int,
-        time_horizon: int,
+        time_horizon: T,
+        rollout_count: M,
         acceleration: float,
         steering: float,
-    ) -> JaxControlInputBatch: ...
+    ) -> JaxControlInputBatch[T, M]: ...
 
     @overload
     @staticmethod
-    def control_inputs[T: int](
+    def control_input_batch[T: int, M: int](
         *,
-        rollout_count: int,
+        rollout_count: M,
         acceleration: Array[Dims[T]],
         steering: Array[Dims[T]],
-    ) -> JaxControlInputBatch: ...
+    ) -> JaxControlInputBatch[T, M]: ...
 
     @staticmethod
-    def control_inputs(
+    def control_input_batch(
         *,
         rollout_count: int,
         time_horizon: int | None = None,
@@ -120,7 +121,7 @@ class jax:
     ) -> JaxControlInputBatch:
         return JaxControlInputBatch(
             jnp.array(
-                numpy.control_inputs(
+                numpy.control_input_batch(
                     rollout_count=rollout_count,
                     time_horizon=time_horizon,  # type: ignore
                     acceleration=acceleration,  # type: ignore

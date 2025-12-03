@@ -1,7 +1,7 @@
 [project]
 name = "trajax"
 version = "0.1.0"
-description = "A library providing a performant implementation of MPPI, based on JAX."
+description = "A library providing a performant NumPy/JAX implementations of an MPPI controller."
 authors = [{ name = "Zurab Mujirishvili", email = "zurab.mujirishvili@fau.de" }]
 readme = "README.md"
 requires-python = ">=3.13"
@@ -24,14 +24,13 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "jax>=0.8.1",
-    "jaxtyping>=0.3.3",
+    "numtypes>=0.5.1",
+    "jax>=0.8.1", 
+    "jaxtyping>=0.3.3"
 ]
 
 [project.optional-dependencies]
-type-checking = [
-    "beartype>=0.22.8",
-]
+type-checking = ["beartype>=0.22.8"]
 
 [dependency-groups]
 dev = [
@@ -40,11 +39,8 @@ dev = [
     "ruff>=0.14.7",
     "beartype>=0.22.8",
 ]
-doc = [
-    "typi>=0.1.1",
-]
+doc = ["typi>=0.1.1"]
 test = [
-    "numtypes>=0.5.1",
     "pytest>=9.0.1",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
@@ -73,12 +69,11 @@ extend-select = ["RUF018"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-    "RUF018",  # Allow Walrus operator in asserts in tests
-    "F841"     # Allow unused variables in tests
+    "RUF018", # Allow Walrus operator in asserts in tests
+    "F841",   # Allow unused variables in tests
+    "F722",   # Ignore syntax error in forward references for jaxtyping types
 ]
-"**/accelerated.py" = [
-    "F722"  # Ignore syntax error in forward references for jaxtyping types
-]
+"**/accelerated.py" = ["F722"]
 
 [tool.pytest-watcher]
 now = "true"

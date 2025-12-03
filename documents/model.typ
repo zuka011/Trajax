@@ -24,7 +24,6 @@
 #let horizon = $T$
 #let planning-horizon = $T_("plan")$
 #let temperature = $lambda$
-#let perturbation = $bold(epsilon)$
 #let weight = $w$
 
 
@@ -50,8 +49,7 @@ The exact algorithm is as follows:
 
     + *while* task not completed *do*
       + *for* $#rollout=1$ *to* $#rollouts$ *do*
-        + $#perturbation _#rollout tilde #distribution$ #h(1fr) ➤ Sample control noise
-        + $#input _#rollout = #input + #perturbation _#rollout$ #h(1fr) ➤ Perturb nominal control sequence
+        + $#input _#rollout = "sample"(#input, #distribution)$ #h(1fr) ➤ Sample around nominal control sequence
         + $#state _#rollout = "simulate"(#input _#rollout, #state-single, #dynamics)$ #h(1fr) ➤ Simulate trajectory
         + $#cost-() _#rollout = #cost-($#input _#rollout$, $#state _#rollout$)$ #h(1fr) ➤ Compute trajectory cost
       + $#cost-()_min arrow.l limits(min) #cost-()_#rollout$ #h(1fr) ➤ Find minimum cost for $#rollout = 1, ..., #rollouts$
@@ -60,10 +58,13 @@ The exact algorithm is as follows:
       + *for* $#rollout=1$ *to* $#rollouts$ *do*
         + $#weight _#rollout arrow.l 1 / eta exp(-1 / #temperature (#cost-()_#rollout - #cost-()_min))$ #h(1fr) ➤ Compute importance weights
 
-      + $#input arrow.l sum_(#rollout=1)^(#rollouts) #weight _#rollout #input _#rollout$ #h(1fr) ➤ Update nominal control sequence
-      + $#state-single arrow.l "execute"(#input, #state-single, #planning-horizon)$ #h(1fr) ➤ Execute first #planning-horizon control actions
+      + $#input _("opt.") arrow.l sum_(#rollout=1)^(#rollouts) #weight _#rollout #input _#rollout$ #h(1fr) ➤ Compute optimal control sequence
+      + $#input arrow.l "update"(#input, #input _("opt."))$ #h(1fr) ➤ Update nominal control sequence
+      + $#state-single arrow.l "execute"(#input _("opt."), #state-single, #planning-horizon)$ #h(1fr) ➤ Execute first #planning-horizon control actions
       + $#input arrow.l {#input _(#planning-horizon:#horizon -1), "pad"(#input) }$ #h(1fr) ➤ Shift control sequence
   ]
+
+  $"sample"(dot), "update"(dot), "and" "pad"(dot)$ can vary based on the specific implementation.
 ]
 
 == Dynamical Model
