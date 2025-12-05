@@ -12,6 +12,10 @@ type D_u = D[2]
 
 
 class State(Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+        """Returns the state as a NumPy array."""
+        ...
+
     @property
     def x(self) -> float:
         """X position of the agent."""
@@ -67,6 +71,10 @@ class Positions[T: int = int, M: int = int](Protocol):
 
 
 class ControlInputBatch[T: int = int, M: int = int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+        """Returns the control inputs as a NumPy array."""
+        ...
+
     @property
     def rollout_count(self) -> M:
         """Number of rollouts in the batch."""

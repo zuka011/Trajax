@@ -1,5 +1,4 @@
 from .common import (
-    ControlInputSequence as ControlInputSequence,
     Costs as Costs,
     CostFunction as CostFunction,
     Sampler as Sampler,
@@ -8,3 +7,4 @@ from .common import (
 )
 from .basic import NumPyMppi as NumPyMppi
 from .accelerated import JaxMppi as JaxMppi
+from .factory import mppi as mppi, update as update, padding as padding

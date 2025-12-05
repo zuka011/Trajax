@@ -1,16 +1,13 @@
 from typing import Protocol
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.model import DynamicalModel, State, StateBatch, ControlInputBatch
-
-from numtypes import Array, Dims
-
-
-class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
-        """Returns the control input sequence as a NumPy array."""
-        ...
+from trajax.model import (
+    DynamicalModel,
+    State,
+    StateBatch,
+    ControlInputSequence,
+    ControlInputBatch,
+)
 
 
 class Costs(Protocol): ...
@@ -33,6 +30,7 @@ class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch](Protoc
 @dataclass(frozen=True)
 class Control[InputT: ControlInputSequence]:
     optimal: InputT
+    nominal: InputT
 
 
 class Mppi[
@@ -45,7 +43,9 @@ class Mppi[
     async def step(
         self,
         *,
-        model: DynamicalModel[ControlInputBatchT, StateT, StateBatchT],
+        model: DynamicalModel[
+            ControlInputSequenceT, ControlInputBatchT, StateT, StateBatchT
+        ],
         cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
@@ -56,3 +56,28 @@ class Mppi[
         control sequences.
         """
         ...
+
+
+class UpdateFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
+    def __call__(
+        self,
+        *,
+        nominal_input: ControlInputSequenceT,
+        optimal_input: ControlInputSequenceT,
+    ) -> ControlInputSequenceT:
+        """Updates the nominal control input sequence based on the optimal control input
+        sequence.
+        """
+        ...
+
+
+class NoUpdate:
+    """Returns the nominal input unchanged."""
+
+    def __call__[ControlInputSequenceT: ControlInputSequence](
+        self,
+        *,
+        nominal_input: ControlInputSequenceT,
+        optimal_input: ControlInputSequenceT,
+    ) -> ControlInputSequenceT:
+        return nominal_input

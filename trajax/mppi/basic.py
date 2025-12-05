@@ -1,53 +1,74 @@
 from typing import Protocol
+from dataclasses import dataclass
 
 from trajax.model import (
     DynamicalModel as AnyDynamicalModel,
     State,
     StateBatch,
+    ControlInputSequence as AnyControlInputSequence,
     ControlInputBatch,
 )
 from trajax.mppi.common import (
     Control,
+    NoUpdate,
+    UpdateFunction as AnyUpdateFunction,
     Sampler as AnySampler,
     CostFunction as AnyCostFunction,
-    ControlInputSequence as AnyControlInputSequence,
 )
 
 import numpy as np
 from numtypes import Array, Dims, shape_of
 
 
+class NumPyZeroPadding:
+    pass
+
+
+class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Protocol):
+    def similar(self, *, array: Array[Dims[T, D_u]]) -> "ControlInputSequence[T, D_u]":
+        """Creates a new control input sequence similar to this one but with the given
+        array as its data.
+        """
+        ...
+
+
+type DynamicalModel[T: int, D_u: int, D_x: int, M: int] = AnyDynamicalModel[
+    ControlInputSequence[T, D_u],
+    ControlInputBatch[T, D_u, M],
+    State[D_x],
+    StateBatch[T, D_x, M],
+]
+
+type Sampler[T: int, D_u: int, M: int] = AnySampler[
+    ControlInputSequence[T, D_u], ControlInputBatch[T, D_u, M]
+]
+
+type UpdateFunction[T: int, D_u: int] = AnyUpdateFunction[ControlInputSequence[T, D_u]]
+
+
+@dataclass(kw_only=True, frozen=True)
 class NumPyMppi:
-    class ControlInputSequence[T: int, D_u: int](
-        AnyControlInputSequence[T, D_u], Protocol
-    ):
-        def similar(
-            self, *, array: Array[Dims[T, D_u]]
-        ) -> "NumPyMppi.ControlInputSequence[T, D_u]":
-            """Creates a new control input sequence similar to this one but with the given
-            array as its data.
-            """
-            ...
-
-    type DynamicalModel[T: int, D_u: int, D_x: int, M: int] = AnyDynamicalModel[
-        ControlInputBatch[T, D_u, M],
-        State[D_x],
-        StateBatch[T, D_x, M],
-    ]
-
     type CostFunction[T: int, D_u: int, D_x: int, M: int] = AnyCostFunction[
-        ControlInputBatch[T, D_u, M],
-        StateBatch[T, D_x, M],
-        Array[Dims[T, M]],
+        ControlInputBatch[T, D_u, M], StateBatch[T, D_x, M], Array[Dims[T, M]]
     ]
 
-    type Sampler[T: int, D_u: int, M: int] = AnySampler[
-        NumPyMppi.ControlInputSequence[T, D_u], ControlInputBatch[T, D_u, M]
-    ]
+    planning_interval: int
+    update_function: UpdateFunction
 
     @staticmethod
-    def create() -> "NumPyMppi":
-        return NumPyMppi()
+    def create(
+        *,
+        planning_interval: int = 1,
+        update_function: UpdateFunction = NoUpdate(),
+        padding_function: ... = None,
+    ) -> "NumPyMppi":
+        """Creates a NumPy-based MPPI controller."""
+        return NumPyMppi(
+            planning_interval=planning_interval, update_function=update_function
+        )
+
+    def __post_init__(self) -> None:
+        assert self.planning_interval > 0, "Planning interval must be positive."
 
     async def step[T: int, D_u: int, D_x: int, M: int](
         self,
@@ -72,13 +93,28 @@ class NumPyMppi:
             costs_per_rollout, matches=(rollout_count,), name="costs per rollout"
         )
 
-        temperature = 1.0  # TODO: Make sure temperature is considered.
         min_cost = np.min(costs_per_rollout)
         exp_costs = np.exp((costs_per_rollout - min_cost) / (-temperature))
 
-        # normalizing_constant = exp_costs.sum() # TODO: Make sure weights are normalized.
-        weights = exp_costs  # / normalizing_constant
+        normalizing_constant = exp_costs.sum()
+        weights = exp_costs / normalizing_constant
 
         optimal_control = np.tensordot(samples, weights, axes=([2], [0]))
+        control_dimension = optimal_control.shape[1]
 
-        return Control(optimal=nominal_input.similar(array=optimal_control))
+        optimal_input = nominal_input.similar(array=optimal_control)
+        nominal_input = self.update_function(
+            nominal_input=nominal_input, optimal_input=optimal_input
+        )
+
+        shifted_control = np.concat(
+            [
+                np.asarray(nominal_input)[self.planning_interval :],
+                np.zeros((self.planning_interval, control_dimension)),
+            ],
+            axis=0,
+        )
+
+        return Control(
+            optimal=optimal_input, nominal=nominal_input.similar(array=shifted_control)
+        )

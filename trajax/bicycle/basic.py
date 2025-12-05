@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from trajax.type import DataType
-from trajax.bicycle.model import D_x, D_X, D_u
+from trajax.bicycle.common import D_x, D_X, D_u
 
 from numtypes import Array, Dims, D, shape_of
 import numpy as np
@@ -9,6 +9,7 @@ import numpy as np
 
 type StateArray = Array[Dims[D_x]]
 type ControlInputArray = Array[Dims[D_u]]
+type ControlInputSequenceArray[T: int] = Array[Dims[T, D_u]]
 
 type StateBatchArray[T: int, M: int] = Array[Dims[T, D_x, M]]
 type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
@@ -17,6 +18,9 @@ type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
 @dataclass(frozen=True)
 class NumPyState:
     state: StateArray
+
+    def __array__(self, dtype: DataType | None = None) -> StateArray:
+        return self.state
 
     @property
     def x(self) -> float:
@@ -68,8 +72,19 @@ class NumPyPositions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
+class NumPyControlInputSequence[T: int]:
+    inputs: ControlInputSequenceArray[T]
+
+    def __array__(self, dtype: DataType | None = None) -> ControlInputSequenceArray[T]:
+        return self.inputs
+
+
+@dataclass(frozen=True)
 class NumPyControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray[T, M]
+
+    def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
+        return self.inputs
 
     @property
     def rollout_count(self) -> M:
@@ -97,6 +112,7 @@ class NumPyBicycleModel:
         steering_limits: tuple[float, float] | None = None,
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "NumPyBicycleModel":
+        """Creates a kinematic bicycle model that uses NumPy for computations."""
         no_limits = (float("-inf"), float("inf"))
 
         return NumPyBicycleModel(
@@ -148,6 +164,13 @@ class NumPyBicycleModel:
         )
 
         return NumPyStateBatch(states)
+
+    async def step[T: int](
+        self, input: NumPyControlInputSequence[T], state: NumPyState
+    ) -> NumPyState:
+        raise NotImplementedError(
+            "Single step simulation is not implemented for NumPyBicycleModel."
+        )
 
     @property
     def min_speed(self) -> float:

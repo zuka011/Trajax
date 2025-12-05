@@ -146,6 +146,6 @@ class jax:
 
     @staticmethod
     def control_input_batch[T: int, D_u: int, M: int](
-        array: Array[Dims[T, D_u, M]],
+        array: Array[Dims[T, D_u, M]] | Float[JaxArray, "T D_u M"],
     ) -> SimpleJaxControlInputBatch[T, D_u, M]:
         return SimpleJaxControlInputBatch(jnp.asarray(array))

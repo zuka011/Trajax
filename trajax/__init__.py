@@ -1,9 +1,12 @@
 from . import bicycle as bicycle
+from . import samplers as samplers
 from .model import (
     DynamicalModel as DynamicalModel,
     State as State,
     StateBatch as StateBatch,
+    ControlInputSequence as ControlInputSequence,
     ControlInputBatch as ControlInputBatch,
+    model as model,
 )
 from .bicycle import (
     KinematicBicycleModel as KinematicBicycleModel,
@@ -16,9 +19,8 @@ from .bicycle import (
     JaxStateBatch as JaxStateBatch,
     JaxControlInputBatch as JaxControlInputBatch,
 )
-from .type import DataType as DataType
+from .type import DataType as DataType, jaxtyped as jaxtyped
 from .mppi import (
-    ControlInputSequence as ControlInputSequence,
     Costs as Costs,
     CostFunction as CostFunction,
     Sampler as Sampler,
@@ -26,4 +28,7 @@ from .mppi import (
     Mppi as Mppi,
     NumPyMppi as NumPyMppi,
     JaxMppi as JaxMppi,
+    mppi as mppi,
+    update as update,
+    padding as padding,
 )

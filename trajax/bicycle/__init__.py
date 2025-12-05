@@ -10,7 +10,7 @@ from .accelerated import (
     JaxControlInputBatch as JaxControlInputBatch,
     JaxBicycleModel as JaxBicycleModel,
 )
-from .model import (
+from .common import (
     D_X as D_X,
     D_U as D_U,
     State as State,

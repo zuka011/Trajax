@@ -17,6 +17,12 @@ class StateBatch[T: int = int, D_x: int = int, M: int = int](Protocol):
         ...
 
 
+class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
+        """Returns the control input sequence as a NumPy array."""
+        ...
+
+
 class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         """Returns the control inputs as a NumPy array."""
@@ -34,6 +40,7 @@ class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
 
 
 class DynamicalModel[
+    ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
     StateT: State,
     StateBatchT: StateBatch,
@@ -43,4 +50,9 @@ class DynamicalModel[
     ) -> StateBatchT:
         """Simulates the dynamical model over the given control inputs starting from the
         provided initial state."""
+        ...
+
+    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
+        """Simulates a single time step of the dynamical model given the control input and current
+        state."""
         ...

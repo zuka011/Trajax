@@ -1,8 +1,8 @@
 from typing import cast
 from dataclasses import dataclass
 
-from trajax.bicycle.model import D_X, D_x, D_U, D_u
 from trajax.type import jaxtyped
+from trajax.bicycle.common import D_X, D_x, D_U, D_u
 
 from jaxtyping import Array, Float, Scalar
 from numtypes import Array as NumPyArray, Dims
@@ -14,6 +14,7 @@ import numpy as np
 
 type StateArray = Float[Array, f"{D_X}"]
 type ControlInputArray = Float[Array, f"{D_U}"]
+type ControlInputSequenceArray = Float[Array, f"T {D_U}"]
 
 type StateBatchArray = Float[Array, f"T {D_X} M"]
 type ControlInputBatchArray = Float[Array, f"T {D_U} M"]
@@ -23,6 +24,9 @@ type ControlInputBatchArray = Float[Array, f"T {D_U} M"]
 @dataclass(frozen=True)
 class JaxState:
     state: StateArray
+
+    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[D_x]]:
+        return np.asarray(self.state, dtype=dtype)
 
     @property
     def x(self) -> float:
@@ -77,8 +81,20 @@ class JaxPositions[T: int, M: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
+class JaxControlInputSequence[T: int]:
+    inputs: ControlInputSequenceArray
+
+    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u]]:
+        return np.asarray(self.inputs, dtype=dtype)
+
+
+@jaxtyped
+@dataclass(frozen=True)
 class JaxControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray
+
+    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
+        return np.asarray(self.inputs, dtype=dtype)
 
     @property
     def rollout_count(self) -> M:
@@ -106,6 +122,7 @@ class JaxBicycleModel:
         steering_limits: tuple[float, float] | None = None,
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "JaxBicycleModel":
+        """Creates a kinematic bicycle model that uses JAX for computations."""
         no_limits = (float("-inf"), float("inf"))
 
         return JaxBicycleModel(
@@ -146,6 +163,13 @@ class JaxBicycleModel:
                 steering_limits=self.steering_limits,
                 acceleration_limits=self.acceleration_limits,
             )
+        )
+
+    async def step[T: int](
+        self, input: JaxControlInputSequence[T], state: JaxState
+    ) -> JaxState:
+        raise NotImplementedError(
+            "Single step simulation is not implemented for JaxBicycleModel."
         )
 
     @property
