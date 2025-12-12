@@ -1,6 +1,10 @@
 #import "@preview/lovelace:0.3.0": pseudocode-list, indent
-#import "examples.typ": mppi-example-diagram, kinematic-bicycle-diagram
-#import "@local/roboter:0.2.13": function, algorithm, definition, model, draw
+#import "examples.typ": (
+  mppi-example-diagram,
+  kinematic-bicycle-diagram,
+  tracking-error-diagram,
+)
+#import "@local/roboter:0.3.1": function, algorithm, definition, model, draw
 
 #set math.equation(numbering: "(1)", supplement: "eq.")
 
@@ -36,7 +40,7 @@ The idea is to randomly try out many different variations of a "guess" control s
 
 The exact algorithm is as follows:
 
-#algorithm(title: "MPPI Algorithm")[
+#algorithm(title: [MPPI Algorithm @Williams2015 @Williams2016])[
   #pseudocode-list(hooks: .5em)[
     + *Given:*
       - Dynamical model #dynamics, cost function #cost, sampling distribution #distribution
@@ -86,7 +90,7 @@ The state $#state-single := [x quad y quad theta quad v]$ of the robot is repres
 - $theta$: Heading angle (orientation) in radians
 - $v$: Velocity (speed) of the robot (corresponds to $v_r$ in the diagram)
 
-#model(title: "Kinematic Bicycle Model")[
+#model(title: [Kinematic Bicycle Model @Polack2017])[
   The continuous-time dynamics of the kinematic bicycle model are given as:
 
   $
@@ -142,6 +146,8 @@ Where $(dot)_t$ represents the value of $(dot)$ at time step $t$. A Euler integr
 #let dynamics-batch = dynamics-batch-(input-batch, state-single)
 #let cost-batch-(..args) = function(name: $bold(cal(J))$, ..args)
 #let cost-batch = cost-batch-(input-batch, state-batch)
+#let state-dimension = $D_x$
+#let control-dimension = $D_u$
 
 Since MPPI requires similar computations to be performed many times for each planning step, a parallel implementation will be significantly more performant than a sequential one. For this reason, it is more convenient to think of *batches* of states and inputs. Here's the corresponding notation:
 
@@ -154,8 +160,8 @@ Since MPPI requires similar computations to be performed many times for each pla
   )
 
   The dimensions of the inputs and states are as follows:
-  - $#input-batch in bb(R)^(#horizon times D_u times #rollouts)$, $D_u = 2$ is the dimension of the control input, and
-  - $#state-batch in bb(R)^(#horizon times D_x times #rollouts)$, $D_x = 4$ is the dimension of the state.
+  - $#input-batch in bb(R)^(#horizon times #control-dimension times #rollouts)$, $#control-dimension = 2$ is the dimension of the control input, and
+  - $#state-batch in bb(R)^(#horizon times #state-dimension times #rollouts)$, $#state-dimension = 4$ is the dimension of the state.
 ]
 
 Analogously, we can define a *batch cost function*:
@@ -168,3 +174,99 @@ Analogously, we can define a *batch cost function*:
     $#cost-batch-(input-batch, state-batch) = {#cost-($#input _1$, $#state _1$), #cost-($#input _2$, $#state _2$), ..., #cost-($#input _#rollouts$, $#state _#rollouts$)} = {#cost-() _1, #cost-() _2, ..., #cost-() _#rollouts} := #cost-batch-()$,
   )
 ]
+
+== Cost Functions
+
+When using MPPI to control the motion of a mobile robot, the terms of the cost function #cost can be split into the following categories:
+- *Tracking:* Costs that encourage the robot to follow a desired trajectory or reach a specific goal state.
+- *Safety:* Costs that discourage the robot from getting too close to obstacles, other robots, or unsafe areas.
+- *Comfort:* Costs that promote smooth and comfortable motion.
+
+=== Tracking Cost
+
+#let arc-length = $phi$
+#let arc-length-change = $beta$
+#let reference-trajectory = $#state _("ref")$
+#let reference-point = $#state-single _("ref")$
+#let reference-x = $x_("ref")$
+#let reference-y = $y_("ref")$
+#let reference-theta = $theta_("ref")$
+#let x-at-arc-length = $x_(#arc-length)$
+#let y-at-arc-length = $y_(#arc-length)$
+#let theta-at-arc-length = $theta_(#arc-length)$
+#let augmented-state-single = $#state-single _phi$
+#let augmented-input-single = $#input-single _phi$
+#let contouring-cost = $#cost-()_c$
+#let lag-cost = $#cost-()_l$
+#let progress-cost = $#cost-()_p$
+#let contouring-weight = $k_c$
+#let lag-weight = $k_l$
+#let contouring-error = $e_c$
+#let lag-error = $e_l$
+#let progress-weight = $k_p$
+
+The tracking cost requires a global reference trajectory that is to be followed. We can denote this trajectory as #reference-trajectory and assume it is given. A single point in this trajectory is expected to contain the position and heading of the robot at a specific time step, i.e. $#reference-point = [#reference-x quad #reference-y quad #reference-theta]$.
+
+#definition(title: [Contouring & Lag Cost @Liniger2015])[
+  The *contouring* and *lag* costs penalize the robot for being far from a nominal point corresponding to $#arc-length in [0, L]$ along the reference trajectory #reference-trajectory. For these cost terms, the parameterization (arc length) #arc-length of the reference trajectory is a virtual state that moves along #reference-trajectory with a velocity $#arc-length-change := dot(#arc-length)$. Additionally, #arc-length-change is also a control input to be optimized by the MPPI planner. The state and control input spaces are therefore augmented as follows:
+
+  - $#augmented-state-single := [- #state-single - quad #arc-length]$, #state-single is the original robot state, and
+  - $#augmented-input-single := [- #input-single - quad #arc-length-change]$, #input-single is the original robot control input.
+
+  The dynamics of #arc-length can be simply integrated as $#arc-length _(t + 1) = #arc-length _t + #arc-length-change _t dot #delta-t$. Additionally, it is important that #reference-trajectory is parameterized by #arc-length in such a way that the position and heading at a given #arc-length can be efficiently queried. These queried quantities are denoted as:
+
+  #align(
+    center,
+    $#x-at-arc-length := #reference-x (#arc-length), quad #y-at-arc-length := #reference-y (#arc-length), quad #theta-at-arc-length := #reference-theta (#arc-length)$,
+  )
+
+  The *contouring error* #contouring-error and *lag error* #lag-error are defined as the orthogonal and parallel distances, respectively, between the robot's current position $(x, y)$ and the reference point $(#x-at-arc-length, #y-at-arc-length)$ along the direction defined by #theta-at-arc-length. This is illustrated in @tracking-error-figure.
+
+  #align(
+    center,
+    $#contouring-error = sin(#theta-at-arc-length) (x - #x-at-arc-length) - cos(#theta-at-arc-length) (y - #y-at-arc-length) \
+      #lag-error = - cos(#theta-at-arc-length) (x - #x-at-arc-length) - sin(#theta-at-arc-length) (y - #y-at-arc-length)$,
+  )
+
+  Finally, the *contouring cost* #contouring-cost and *lag cost* #lag-cost are defined as:
+
+  $
+    #contouring-cost = #contouring-weight dot #contouring-error^2, quad
+    #lag-cost = #lag-weight dot #lag-error^2
+  $ <contouring-lag-cost-equations>
+
+  where $#contouring-weight, #lag-weight > 0$ are weighting factors.
+]
+
+#figure(
+  tracking-error-diagram(),
+  caption: [A sample Bézier curve (black) representing a desired path. The robot's current position has a contour tracking error $e_c$ and a lag tracking error $e_l$ relative to a nominal point (green) on the path. The red markers show the nominal points corresponding to different arc lengths $phi$.],
+) <tracking-error-figure>
+
+#definition(title: [Progress Cost @Liniger2015])[
+  Since the costs given by @contouring-lag-cost-equations alone do not encourage progress along the reference trajectory, an additional *progress cost* #progress-cost needs to be added. This cost is defined as:
+
+  $
+    #progress-cost = - #progress-weight dot #arc-length-change / #delta-t
+  $ <progress-cost-equation>
+
+  where $#progress-weight > 0$ is a weighting factor.
+]
+
+=== Comfort Cost
+
+#let smoothing-cost = $#cost-()_s$
+#let input-change = $Delta #input-single$
+#let input-smooth-weight = $K_u$
+
+#definition(title: [Control Smoothing Cost @Liniger2015])[
+  To prevent erratic control behavior a *smoothing cost* #smoothing-cost can be used, which penalizes the rate of change of the control inputs.
+
+  Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost is then defined as:
+
+  $
+    #smoothing-cost = sum_t^(#horizon) || #input-smooth-weight #input-change _t||^2
+  $ <smoothing-cost-equation>
+]
+
+#bibliography("references.bib")

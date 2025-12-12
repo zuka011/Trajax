@@ -1,5 +1,6 @@
 #import "@preview/suiji:0.4.0": gen-rng-f, normal-f
-#import "@local/roboter:0.2.13": (
+#import "@preview/cetz:0.4.2"
+#import "@local/roboter:0.3.1": (
   draw,
   curves,
   zero-inputs,
@@ -94,6 +95,8 @@
   ),
 )
 
+#let tracking-ego-robot = (..ego-robot, rotation: 30deg)
+
 #let mppi-example-diagram(
   rollout-count: 12,
   horizon: 12,
@@ -125,7 +128,7 @@
     draw.grid((0, -2), (14, 3), color: grid-color)
     draw.label((12, -0), [*$<-$ Desired Route*])
     draw.trajectory(
-      curves.bezier(ego.position, (12, -2), (7, 0), (8, 1)),
+      curves.bezier(start: ego.position, end: (12, -2), c1: (7, 0), c2: (8, 1)),
       color: red.transparentize(50%),
     )
 
@@ -149,6 +152,189 @@
       chassis-width: 3.5,
       heading: 45deg,
       theme: bicycle-theme(angle: red, velocity: blue),
+    )
+  })
+}
+
+#let nominal-point-marker(
+  arc-length: 0.0,
+  reference-point: (0, 0),
+  reference-heading: 0deg,
+  reference-line-length: 4.0,
+  reference-color: black,
+  nominal-point-color: green.darken(25%),
+) = {
+  let (reference-x, reference-y) = reference-point
+
+  let reference-line-start = (
+    reference-x - reference-line-length * calc.cos(reference-heading),
+    reference-y - reference-line-length * calc.sin(reference-heading),
+  )
+  let reference-line-end = (
+    reference-x + reference-line-length * calc.cos(reference-heading),
+    reference-y + reference-line-length * calc.sin(reference-heading),
+  )
+
+  draw.line(
+    reference-line-start,
+    reference-line-end,
+    color: reference-color.transparentize(90%),
+  )
+  draw.angle-arc(
+    reference-point,
+    start: 0deg,
+    stop: reference-heading,
+    radius: 3.0,
+    reference-length: 3.5,
+    color: nominal-point-color,
+    label-content: $theta_phi$,
+    label-radius-offset: 0.35,
+    show-reference-lines: true,
+    position-is-center: true,
+  )
+  draw.markers(
+    (reference-point,),
+    color: nominal-point-color,
+    size: 0.25,
+    marker-type: "o",
+  )
+  draw.label(
+    reference-point,
+    text(fill: nominal-point-color, $(x_phi, y_phi)$),
+    offset: (-0.1, 0.5),
+  )
+  draw.label(
+    reference-point,
+    text(fill: nominal-point-color, $phi = #arc-length$),
+    offset: (0.0, -0.5),
+  )
+}
+
+#let tracking-errors(
+  ego: tracking-ego-robot,
+  reference-point: (0, 0),
+  reference-heading: 0deg,
+  contour-color: orange.darken(10%),
+  lag-color: blue.darken(25%),
+) = {
+  let (robot-x, robot-y) = ego.position
+  let (reference-x, reference-y) = reference-point
+  let delta-x = robot-x - reference-x
+  let delta-y = robot-y - reference-y
+
+  let contouring-error = (
+    calc.sin(reference-heading) * delta-x
+      - calc.cos(reference-heading) * delta-y
+  )
+  let lag-error = (
+    -calc.cos(reference-heading) * delta-x
+      - calc.sin(reference-heading) * delta-y
+  )
+
+  let contouring-endpoint = (
+    robot-x - contouring-error * calc.sin(reference-heading),
+    robot-y + contouring-error * calc.cos(reference-heading),
+  )
+
+  draw.line(
+    ego.position,
+    contouring-endpoint,
+    color: contour-color.transparentize(25%),
+    dash: "solid",
+    label-content: text(fill: contour-color, $e_l$),
+    label-offset: (-0.3, 0),
+  )
+
+  draw.line(
+    contouring-endpoint,
+    reference-point,
+    color: lag-color.transparentize(25%),
+    dash: "solid",
+    label-content: text(fill: lag-color, $e_c$),
+    label-offset: (0, 0.3),
+  )
+
+  draw.markers(
+    (contouring-endpoint,),
+    size: 0.1,
+    color: black,
+  )
+}
+
+#let arc-length-markers(
+  arc-lengths: (0.0,),
+  curve: (
+    start: (0, 1),
+    end: (9, 3),
+    c1: (2, 5),
+    c2: (6, 5),
+  ),
+  color: red.darken(25%),
+) = {
+  for arc-length in arc-lengths {
+    let point = curves.cubic-bezier-at(arc-length, ..curve)
+
+    draw.markers(
+      (point,),
+      color: color,
+      size: 0.2,
+    )
+    draw.label(
+      point,
+      text(size: 8pt, fill: color, $phi = #arc-length$),
+      offset: (0, -0.4),
+    )
+  }
+}
+
+#let tracking-error-diagram(
+  ego: tracking-ego-robot,
+  curve: (
+    start: (0, 1),
+    end: (9, 3),
+    c1: (2, 5),
+    c2: (6, 5),
+  ),
+  arc-length: 0.45,
+  arc-length-examples: (0, 0.3, 0.9),
+  extend-reference-line-by: 4.0,
+  contour-color: orange.darken(10%),
+  lag-color: blue.darken(25%),
+  nominal-point-color: green.darken(25%),
+  reference-color: black,
+  arc-length-marker-color: red.darken(25%),
+) = {
+  let reference-point = curves.cubic-bezier-at(arc-length, ..curve)
+  let reference-heading = curves.cubic-bezier-angle-at(arc-length, ..curve)
+  let path-points = curves.bezier(..curve, samples: 50)
+
+  draw.diagram({
+    draw.grid((-0.5, 0), (10, 6), color: grid-color)
+
+    draw.trajectory(path-points, color: reference-color, dash: "solid")
+    visualize-robot(ego)
+
+    nominal-point-marker(
+      arc-length: arc-length,
+      reference-point: reference-point,
+      reference-heading: reference-heading,
+      reference-line-length: extend-reference-line-by,
+      reference-color: reference-color,
+      nominal-point-color: nominal-point-color,
+    )
+
+    tracking-errors(
+      ego: ego,
+      reference-point: reference-point,
+      reference-heading: reference-heading,
+      contour-color: contour-color,
+      lag-color: lag-color,
+    )
+
+    arc-length-markers(
+      arc-lengths: arc-length-examples,
+      curve: curve,
+      color: arc-length-marker-color,
     )
   })
 }

@@ -1,3 +1,23 @@
+@misc{Williams2015,
+  title         = {Model Predictive Path Integral Control using Covariance Variable Importance Sampling},
+  author        = {Grady Williams and Andrew Aldrich and Evangelos Theodorou},
+  year          = {2015},
+  eprint        = {1509.01149},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.SY},
+  url           = {https://arxiv.org/abs/1509.01149}
+}
+@inproceedings{Williams2016,
+  author        = {Williams, Grady and Drews, Paul and Goldfain, Brian and Rehg, James M. and Theodorou, Evangelos A.},
+  booktitle     = {2016 IEEE International Conference on Robotics and Automation (ICRA)},
+  title         = {Aggressive driving with model predictive path integral control},
+  year          = {2016},
+  volume        = {},
+  number        = {},
+  pages         = {1433--1440},
+  keywords      = {Trajectory;Optimal control;Entropy;Vehicles;Prediction algorithms;Q measurement;Stochastic processes},
+  doi           = {10.1109/ICRA.2016.7487277}
+}
 @inproceedings{Polack2017,
   author        = {Polack, Philip and Altch\'{e}, Florent and d'Andr\'{e}a-Novel, Brigitte and de La Fortelle, Arnaud},
   booktitle     = {2017 IEEE Intelligent Vehicles Symposium (IV)},
@@ -9,12 +29,18 @@
   keywords      = {Planning;Bicycles;Trajectory;Wheels;Kinematics;Computational modeling;Vehicle dynamics},
   doi           = {10.1109/IVS.2017.7995816}
 }
-@misc{Williams2015,
-  title         = {Model Predictive Path Integral Control using Covariance Variable Importance Sampling},
-  author        = {Grady Williams and Andrew Aldrich and Evangelos Theodorou},
-  year          = {2015},
-  eprint        = {1509.01149},
-  archiveprefix = {arXiv},
-  primaryclass  = {cs.SY},
-  url           = {https://arxiv.org/abs/1509.01149}
+@article{Liniger2015,
+  author        = {Liniger, Alexander and Domahidi, Alexander and Morari, Manfred},
+  title         = {Optimization-based autonomous racing of 1:43 scale RC cars},
+  journal       = {Optimal Control Applications and Methods},
+  volume        = {36},
+  number        = {5},
+  pages         = {628--647},
+  keywords      = {autonomous racing, vehicle control, drift control, fast model predictive control, nonlinear model predictive control, nonlinear receding horizon control},
+  doi           = {https://doi.org/10.1002/oca.2123},
+  url           = {https://onlinelibrary.wiley.com/doi/abs/10.1002/oca.2123},
+  eprint        = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/oca.2123},
+  abstract      = {Summary This paper describes autonomous racing of RC race cars based on mathematical optimization. Using a dynamical model of the vehicle, control inputs are computed by receding horizon based controllers, where the objective is to maximize progress on the track subject to the requirement of staying on the track and avoiding opponents. Two different control formulations are presented. The first controller employs a two-level structure, consisting of a path planner and a nonlinear model predictive controller (NMPC) for tracking. The second controller combines both tasks in one nonlinear optimization problem (NLP) following the ideas of contouring control. Linear time varying models obtained by linearization are used to build local approximations of the control NLPs in the form of convex quadratic programs (QPs) at each sampling time. The resulting QPs have a typical MPC structure and can be solved in the range of milliseconds by recent structure exploiting solvers, which is key to the real-time feasibility of the overall control scheme. Obstacle avoidance is incorporated by means of a high-level corridor planner based on dynamic programming, which generates convex constraints for the controllers according to the current position of opponents and the track layout. The control performance is investigated experimentally using 1:43 scale RC race cars, driven at speeds of more than 3\hspace{0.167em}m/s and in operating regions with saturated rear tire forces (drifting). The algorithms run at 50\hspace{0.167em}Hz sampling rate on embedded computing platforms, demonstrating the real-time feasibility and high performance of optimization-based approaches for autonomous racing. Copyright \textcopyright{} 2014 John Wiley \& Sons, Ltd.},
+  year          = {2015}
 }
+// https://arxiv.org/pdf/2001.03093 Reference for CVM
