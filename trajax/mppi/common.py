@@ -1,6 +1,7 @@
 from typing import Protocol
 from dataclasses import dataclass
 
+from trajax.type import DataType
 from trajax.model import (
     DynamicalModel,
     State,
@@ -9,8 +10,13 @@ from trajax.model import (
     ControlInputBatch,
 )
 
+from numtypes import Array, Dims
 
-class Costs(Protocol): ...
+
+class Costs[T: int = int, M: int = int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+        """Returns the control inputs as a NumPy array."""
+        ...
 
 
 class CostFunction[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs](

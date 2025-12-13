@@ -1,19 +1,29 @@
 from typing import Final
 from dataclasses import dataclass
 
+from trajax import types
+
 import numpy as np
 import jax.numpy as jnp
 
-from tests.dsl.mppi import (
-    SimpleNumPyControlInputSequence,
-    SimpleNumPyControlInputBatch,
-    SimpleNumPyState,
-    SimpleNumPyStateBatch,
-    SimpleJaxControlInputSequence,
-    SimpleJaxControlInputBatch,
-    SimpleJaxState,
-    SimpleJaxStateBatch,
+
+type NumpyState[D_x: int] = types.numpy.basic.State[D_x]
+type NumpyStateBatch[T: int, D_x: int, M: int] = types.numpy.basic.StateBatch[T, D_x, M]
+type NumpyControlInputSequence[T: int, D_u: int] = (
+    types.numpy.basic.ControlInputSequence[T, D_u]
 )
+type NumpyControlInputBatch[T: int, D_u: int, M: int] = (
+    types.numpy.basic.ControlInputBatch[T, D_u, M]
+)
+
+type JaxState[D_x: int] = types.jax.basic.State[D_x]
+type JaxStateBatch[T: int, D_x: int, M: int] = types.jax.basic.StateBatch[T, D_x, M]
+type JaxControlInputSequence[T: int, D_u: int] = types.jax.basic.ControlInputSequence[
+    T, D_u
+]
+type JaxControlInputBatch[T: int, D_u: int, M: int] = types.jax.basic.ControlInputBatch[
+    T, D_u, M
+]
 
 
 @dataclass(frozen=True)
@@ -33,27 +43,27 @@ class NumPyIntegratorModel:
 
     async def simulate[T: int, D_u: int, D_x: int, M: int](
         self,
-        inputs: SimpleNumPyControlInputBatch[T, D_u, M],
-        initial_state: SimpleNumPyState[D_x],
-    ) -> SimpleNumPyStateBatch[T, D_x, M]:
+        inputs: NumpyControlInputBatch[T, D_u, M],
+        initial_state: NumpyState[D_x],
+    ) -> NumpyStateBatch[T, D_x, M]:
         controls = np.asarray(inputs)
         initial = np.asarray(initial_state)
 
         states = initial[:, None] + np.cumsum(controls * self.time_step, axis=0)
 
-        return SimpleNumPyStateBatch(array=states)
+        return types.numpy.basic.state_batch(array=states)
 
     async def step[T: int, D_u: int, D_x: int](
         self,
-        input: SimpleNumPyControlInputSequence[T, D_u],
-        state: SimpleNumPyState[D_x],
-    ) -> SimpleNumPyState[D_x]:
+        input: NumpyControlInputSequence[T, D_u],
+        state: NumpyState[D_x],
+    ) -> NumpyState[D_x]:
         controls = np.asarray(input)
         current_state = np.asarray(state)
 
         new_state = current_state + controls[0] * self.time_step
 
-        return SimpleNumPyState(array=new_state)
+        return types.numpy.basic.state(array=new_state)
 
 
 @dataclass(frozen=True)
@@ -66,27 +76,27 @@ class JaxIntegratorModel:
 
     async def simulate(
         self,
-        inputs: SimpleJaxControlInputBatch,
-        initial_state: SimpleJaxState,
-    ) -> SimpleJaxStateBatch:
+        inputs: JaxControlInputBatch,
+        initial_state: JaxState,
+    ) -> JaxStateBatch:
         controls = inputs.array
         initial = initial_state.array
 
         states = initial[:, None] + jnp.cumsum(controls * self.time_step, axis=0)
 
-        return SimpleJaxStateBatch(array=states)
+        return types.jax.basic.state_batch(array=states)
 
     async def step(
         self,
-        input: SimpleJaxControlInputSequence,
-        state: SimpleJaxState,
-    ) -> SimpleJaxState:
+        input: JaxControlInputSequence,
+        state: JaxState,
+    ) -> JaxState:
         controls = input.array
         current_state = state.array
 
         new_state = current_state + controls[0] * self.time_step
 
-        return SimpleJaxState(array=new_state)
+        return types.jax.basic.state(array=new_state)
 
 
 class integrator:

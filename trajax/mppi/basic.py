@@ -17,6 +17,7 @@ from trajax.mppi.common import (
     FilterFunction as AnyFilterFunction,
     Sampler as AnySampler,
     CostFunction as AnyCostFunction,
+    Costs,
 )
 
 import numpy as np
@@ -56,7 +57,7 @@ type FilterFunction[T: int, D_u: int] = AnyFilterFunction[ControlInputSequence[T
 @dataclass(kw_only=True, frozen=True)
 class NumPyMppi:
     type CostFunction[T: int, D_u: int, D_x: int, M: int] = AnyCostFunction[
-        ControlInputBatch[T, D_u, M], StateBatch[T, D_x, M], Array[Dims[T, M]]
+        ControlInputBatch[T, D_u, M], StateBatch[T, D_x, M], Costs[T, M]
     ]
 
     class ZeroPadding:

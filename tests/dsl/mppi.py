@@ -1,159 +1,53 @@
-from dataclasses import dataclass
-from typing import cast
-
-from trajax.type import DataType, jaxtyped
+from trajax import types
 
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims
 import jax.numpy as jnp
-import numpy as np
-
-
-@dataclass(frozen=True)
-class SimpleNumPyState[D_x: int]:
-    array: Array[Dims[D_x]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
-        return self.array
-
-
-@dataclass(frozen=True)
-class SimpleNumPyStateBatch[T: int, D_x: int, M: int]:
-    array: Array[Dims[T, D_x, M]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
-        return self.array
-
-
-@dataclass(frozen=True)
-class SimpleNumPyControlInputSequence[T: int, D_u: int]:
-    array: Array[Dims[T, D_u]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
-        return self.array
-
-    def similar[L: int](
-        self, *, array: Array[Dims[L, D_u]]
-    ) -> "SimpleNumPyControlInputSequence[L, D_u]":
-        return SimpleNumPyControlInputSequence(array=array)
-
-    @property
-    def dimension(self) -> D_u:
-        return self.array.shape[1]
-
-
-@dataclass(frozen=True)
-class SimpleNumPyControlInputBatch[T: int, D_u: int, M: int]:
-    array: Array[Dims[T, D_u, M]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
-        return self.array
-
-    @property
-    def time_horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def rollout_count(self) -> M:
-        return self.array.shape[2]
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class SimpleJaxState[D_x: int]:
-    array: Float[JaxArray, "D_x"]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
-        return np.asarray(self.array, dtype=dtype)
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class SimpleJaxStateBatch[T: int, D_x: int, M: int]:
-    array: Float[JaxArray, "T D_x M"]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
-        return np.asarray(self.array, dtype=dtype)
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class SimpleJaxControlInputSequence[T: int, D_u: int]:
-    array: Float[JaxArray, "T D_u"]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
-        return np.asarray(self.array, dtype=dtype)
-
-    def similar[L: int](
-        self, *, array: Float[JaxArray, "L D_u"], length: L
-    ) -> "SimpleJaxControlInputSequence[L, D_u]":
-        return SimpleJaxControlInputSequence[L, D_u](array=array)
-
-    @property
-    def dimension(self) -> D_u:
-        return cast(D_u, self.array.shape[1])
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class SimpleJaxControlInputBatch[T: int, D_u: int, M: int]:
-    array: Float[JaxArray, "T D_u M"]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
-        return np.asarray(self.array, dtype=dtype)
-
-    @property
-    def time_horizon(self) -> T:
-        return cast(T, self.array.shape[0])
-
-    @property
-    def rollout_count(self) -> M:
-        return cast(M, self.array.shape[2])
 
 
 class numpy:
     @staticmethod
-    def state[D_x: int](array: Array[Dims[D_x]]) -> SimpleNumPyState[D_x]:
-        return SimpleNumPyState(array)
+    def state[D_x: int](array: Array[Dims[D_x]]) -> types.numpy.basic.State[D_x]:
+        return types.numpy.basic.state(array)
 
     @staticmethod
     def state_batch[T: int, D_x: int, M: int](
         array: Array[Dims[T, D_x, M]],
-    ) -> SimpleNumPyStateBatch[T, D_x, M]:
-        return SimpleNumPyStateBatch(array)
+    ) -> types.numpy.basic.StateBatch[T, D_x, M]:
+        return types.numpy.basic.state_batch(array)
 
     @staticmethod
     def control_input_sequence[T: int, D_u: int](
         array: Array[Dims[T, D_u]],
-    ) -> SimpleNumPyControlInputSequence[T, D_u]:
-        return SimpleNumPyControlInputSequence(array)
+    ) -> types.numpy.basic.ControlInputSequence[T, D_u]:
+        return types.numpy.basic.control_input_sequence(array)
 
     @staticmethod
     def control_input_batch[T: int, D_u: int, M: int](
         array: Array[Dims[T, D_u, M]],
-    ) -> SimpleNumPyControlInputBatch[T, D_u, M]:
-        return SimpleNumPyControlInputBatch(array)
+    ) -> types.numpy.basic.ControlInputBatch[T, D_u, M]:
+        return types.numpy.basic.control_input_batch(array)
 
 
 class jax:
     @staticmethod
-    def state[D_x: int](array: Array[Dims[D_x]]) -> SimpleJaxState[D_x]:
-        return SimpleJaxState(jnp.asarray(array))
+    def state[D_x: int](array: Array[Dims[D_x]]) -> types.jax.basic.State[D_x]:
+        return types.jax.basic.state(jnp.asarray(array))
 
     @staticmethod
     def state_batch[T: int, D_x: int, M: int](
         array: Array[Dims[T, D_x, M]],
-    ) -> SimpleJaxStateBatch[T, D_x, M]:
-        return SimpleJaxStateBatch(jnp.asarray(array))
+    ) -> types.jax.basic.StateBatch[T, D_x, M]:
+        return types.jax.basic.state_batch(jnp.asarray(array))
 
     @staticmethod
     def control_input_sequence[T: int, D_u: int](
         array: Array[Dims[T, D_u]],
-    ) -> SimpleJaxControlInputSequence[T, D_u]:
-        return SimpleJaxControlInputSequence(jnp.asarray(array))
+    ) -> types.jax.basic.ControlInputSequence[T, D_u]:
+        return types.jax.basic.control_input_sequence(jnp.asarray(array))
 
     @staticmethod
     def control_input_batch[T: int, D_u: int, M: int](
         array: Array[Dims[T, D_u, M]] | Float[JaxArray, "T D_u M"],
-    ) -> SimpleJaxControlInputBatch[T, D_u, M]:
-        return SimpleJaxControlInputBatch(jnp.asarray(array))
+    ) -> types.jax.basic.ControlInputBatch[T, D_u, M]:
+        return types.jax.basic.control_input_batch(jnp.asarray(array))

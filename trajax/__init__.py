@@ -20,6 +20,14 @@ from .bicycle import (
     JaxControlInputBatch as JaxControlInputBatch,
 )
 from .type import DataType as DataType, jaxtyped as jaxtyped
+from .types import types as types
+from .trajectory import (
+    trajectory as trajectory,
+    Trajectory as Trajectory,
+    PathParameters as PathParameters,
+    ReferencePoints as ReferencePoints,
+)
+from .costs import costs as costs
 from .mppi import (
     Costs as Costs,
     CostFunction as CostFunction,

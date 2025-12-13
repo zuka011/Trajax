@@ -157,7 +157,7 @@
 }
 
 #let nominal-point-marker(
-  arc-length: 0.0,
+  path-parameter: 0.0,
   reference-point: (0, 0),
   reference-heading: 0deg,
   reference-line-length: 4.0,
@@ -205,7 +205,7 @@
   )
   draw.label(
     reference-point,
-    text(fill: nominal-point-color, $phi = #arc-length$),
+    text(fill: nominal-point-color, $phi = #path-parameter$),
     offset: (0.0, -0.5),
   )
 }
@@ -261,8 +261,8 @@
   )
 }
 
-#let arc-length-markers(
-  arc-lengths: (0.0,),
+#let path-parameter-markers(
+  path-parameters: (0.0,),
   curve: (
     start: (0, 1),
     end: (9, 3),
@@ -271,8 +271,8 @@
   ),
   color: red.darken(25%),
 ) = {
-  for arc-length in arc-lengths {
-    let point = curves.cubic-bezier-at(arc-length, ..curve)
+  for path-parameter in path-parameters {
+    let point = curves.cubic-bezier-at(path-parameter, ..curve)
 
     draw.markers(
       (point,),
@@ -281,7 +281,7 @@
     )
     draw.label(
       point,
-      text(size: 8pt, fill: color, $phi = #arc-length$),
+      text(size: 8pt, fill: color, $phi = #path-parameter$),
       offset: (0, -0.4),
     )
   }
@@ -295,17 +295,17 @@
     c1: (2, 5),
     c2: (6, 5),
   ),
-  arc-length: 0.45,
-  arc-length-examples: (0, 0.3, 0.9),
+  path-parameter: 0.45,
+  path-parameter-examples: (0, 0.3, 0.9),
   extend-reference-line-by: 4.0,
   contour-color: orange.darken(10%),
   lag-color: blue.darken(25%),
   nominal-point-color: green.darken(25%),
   reference-color: black,
-  arc-length-marker-color: red.darken(25%),
+  path-parameter-marker-color: red.darken(25%),
 ) = {
-  let reference-point = curves.cubic-bezier-at(arc-length, ..curve)
-  let reference-heading = curves.cubic-bezier-angle-at(arc-length, ..curve)
+  let reference-point = curves.cubic-bezier-at(path-parameter, ..curve)
+  let reference-heading = curves.cubic-bezier-angle-at(path-parameter, ..curve)
   let path-points = curves.bezier(..curve, samples: 50)
 
   draw.diagram({
@@ -315,7 +315,7 @@
     visualize-robot(ego)
 
     nominal-point-marker(
-      arc-length: arc-length,
+      path-parameter: path-parameter,
       reference-point: reference-point,
       reference-heading: reference-heading,
       reference-line-length: extend-reference-line-by,
@@ -331,10 +331,10 @@
       lag-color: lag-color,
     )
 
-    arc-length-markers(
-      arc-lengths: arc-length-examples,
+    path-parameter-markers(
+      path-parameters: path-parameter-examples,
       curve: curve,
-      color: arc-length-marker-color,
+      color: path-parameter-marker-color,
     )
   })
 }

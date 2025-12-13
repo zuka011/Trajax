@@ -18,6 +18,7 @@ from trajax.mppi.common import (
     FilterFunction as AnyFilterFunction,
     Sampler as AnySampler,
     CostFunction as AnyCostFunction,
+    Costs as AnyCosts,
 )
 
 from jaxtyping import Array, Float, Scalar
@@ -82,10 +83,16 @@ class JaxMppi:
             """Returns the underlying JAX array representing the state batch."""
             ...
 
+    class Costs[T: int, M: int](AnyCosts[T, M], Protocol):
+        @property
+        def array(self) -> Float[Array, "T M"]:
+            """Returns the underlying JAX array representing the costs."""
+            ...
+
     type CostFunction[T: int, D_u: int, D_x: int, M: int] = AnyCostFunction[
         "JaxMppi.ControlInputBatch[T, D_u, M]",
         "JaxMppi.StateBatch[T, D_x, M]",
-        Float[Array, "T M"],
+        "JaxMppi.Costs[T, M]",
     ]
 
     class ZeroPadding:
@@ -133,7 +140,9 @@ class JaxMppi:
         rollouts = await model.simulate(inputs=samples, initial_state=initial_state)
         costs = cost_function(inputs=samples, states=rollouts)
 
-        optimal_control = compute_weighted_control(samples.array, costs, temperature)
+        optimal_control = compute_weighted_control(
+            samples.array, costs.array, temperature
+        )
         optimal_input = self.filter_function(
             optimal_input=nominal_input.similar(
                 array=optimal_control, length=optimal_control.shape[0]

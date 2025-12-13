@@ -16,6 +16,16 @@ class StateBatch[T: int = int, D_x: int = int, M: int = int](Protocol):
         """Returns the states as a NumPy array."""
         ...
 
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the state batch."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts in the batch."""
+        ...
+
 
 class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:

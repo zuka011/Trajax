@@ -26,7 +26,7 @@
 #let rollouts = $M$
 #let rollout = $m$
 #let horizon = $T$
-#let planning-horizon = $T_("plan")$
+#let planning-horizon = $P$
 #let temperature = $lambda$
 #let weight = $w$
 
@@ -178,22 +178,22 @@ Analogously, we can define a *batch cost function*:
 == Cost Functions
 
 When using MPPI to control the motion of a mobile robot, the terms of the cost function #cost can be split into the following categories:
-- *Tracking:* Costs that encourage the robot to follow a desired trajectory or reach a specific goal state.
-- *Safety:* Costs that discourage the robot from getting too close to obstacles, other robots, or unsafe areas.
+- *Tracking:* Costs that encourage the robot to follow a desired trajectory or reach a specific goal.
+- *Safety:* Costs that discourage the robot from getting too close to obstacles, or unsafe areas.
 - *Comfort:* Costs that promote smooth and comfortable motion.
 
 === Tracking Cost
 
-#let arc-length = $phi$
-#let arc-length-change = $beta$
+#let path-parameter = $phi$
+#let path-parameter-change = $beta$
 #let reference-trajectory = $#state _("ref")$
 #let reference-point = $#state-single _("ref")$
 #let reference-x = $x_("ref")$
 #let reference-y = $y_("ref")$
 #let reference-theta = $theta_("ref")$
-#let x-at-arc-length = $x_(#arc-length)$
-#let y-at-arc-length = $y_(#arc-length)$
-#let theta-at-arc-length = $theta_(#arc-length)$
+#let x-at-arc-length = $x_(#path-parameter)$
+#let y-at-arc-length = $y_(#path-parameter)$
+#let theta-at-arc-length = $theta_(#path-parameter)$
 #let augmented-state-single = $#state-single _phi$
 #let augmented-input-single = $#input-single _phi$
 #let contouring-cost = $#cost-()_c$
@@ -208,16 +208,16 @@ When using MPPI to control the motion of a mobile robot, the terms of the cost f
 The tracking cost requires a global reference trajectory that is to be followed. We can denote this trajectory as #reference-trajectory and assume it is given. A single point in this trajectory is expected to contain the position and heading of the robot at a specific time step, i.e. $#reference-point = [#reference-x quad #reference-y quad #reference-theta]$.
 
 #definition(title: [Contouring & Lag Cost @Liniger2015])[
-  The *contouring* and *lag* costs penalize the robot for being far from a nominal point corresponding to $#arc-length in [0, L]$ along the reference trajectory #reference-trajectory. For these cost terms, the parameterization (arc length) #arc-length of the reference trajectory is a virtual state that moves along #reference-trajectory with a velocity $#arc-length-change := dot(#arc-length)$. Additionally, #arc-length-change is also a control input to be optimized by the MPPI planner. The state and control input spaces are therefore augmented as follows:
+  The *contouring* and *lag* costs penalize the robot for being far from a nominal point corresponding to $#path-parameter in [0, L]$ along the reference trajectory #reference-trajectory. For these cost terms, the parameterization #path-parameter of the reference trajectory is a virtual state that moves along #reference-trajectory with a velocity $#path-parameter-change := dot(#path-parameter)$. Additionally, #path-parameter-change is also a control input to be optimized by the MPPI planner. The state and control input spaces are therefore augmented as follows:
 
-  - $#augmented-state-single := [- #state-single - quad #arc-length]$, #state-single is the original robot state, and
-  - $#augmented-input-single := [- #input-single - quad #arc-length-change]$, #input-single is the original robot control input.
+  - $#augmented-state-single := [- #state-single - quad #path-parameter]$, #state-single is the original robot state, and
+  - $#augmented-input-single := [- #input-single - quad #path-parameter-change]$, #input-single is the original robot control input.
 
-  The dynamics of #arc-length can be simply integrated as $#arc-length _(t + 1) = #arc-length _t + #arc-length-change _t dot #delta-t$. Additionally, it is important that #reference-trajectory is parameterized by #arc-length in such a way that the position and heading at a given #arc-length can be efficiently queried. These queried quantities are denoted as:
+  The dynamics of #path-parameter can be simply integrated as $#path-parameter _(t + 1) = #path-parameter _t + #path-parameter-change _t dot #delta-t$. Additionally, it is important that #reference-trajectory is parameterized by #path-parameter in such a way that the position and heading at a given #path-parameter can be efficiently queried. These queried quantities are denoted as:
 
   #align(
     center,
-    $#x-at-arc-length := #reference-x (#arc-length), quad #y-at-arc-length := #reference-y (#arc-length), quad #theta-at-arc-length := #reference-theta (#arc-length)$,
+    $#x-at-arc-length := #reference-x (#path-parameter), quad #y-at-arc-length := #reference-y (#path-parameter), quad #theta-at-arc-length := #reference-theta (#path-parameter)$,
   )
 
   The *contouring error* #contouring-error and *lag error* #lag-error are defined as the orthogonal and parallel distances, respectively, between the robot's current position $(x, y)$ and the reference point $(#x-at-arc-length, #y-at-arc-length)$ along the direction defined by #theta-at-arc-length. This is illustrated in @tracking-error-figure.
@@ -240,18 +240,20 @@ The tracking cost requires a global reference trajectory that is to be followed.
 
 #figure(
   tracking-error-diagram(),
-  caption: [A sample Bézier curve (black) representing a desired path. The robot's current position has a contour tracking error $e_c$ and a lag tracking error $e_l$ relative to a nominal point (green) on the path. The red markers show the nominal points corresponding to different arc lengths $phi$.],
+  caption: [The black curve represents the desired path. The robot's current position has a contour error $e_c$ and a lag error $e_l$ relative to a nominal point (green) on the path. The red markers show the nominal points corresponding to different values of the path parameterization $#path-parameter in [0, 1]$.],
 ) <tracking-error-figure>
 
 #definition(title: [Progress Cost @Liniger2015])[
   Since the costs given by @contouring-lag-cost-equations alone do not encourage progress along the reference trajectory, an additional *progress cost* #progress-cost needs to be added. This cost is defined as:
 
   $
-    #progress-cost = - #progress-weight dot #arc-length-change / #delta-t
+    #progress-cost = - #progress-weight dot #path-parameter-change / #delta-t
   $ <progress-cost-equation>
 
   where $#progress-weight > 0$ is a weighting factor.
 ]
+
+The progress cost given by @progress-cost-equation pushes #path-parameter to move forward along the reference trajectory as fast as possible, pulling the robot along with it. Simultaneously, the contouring and lag costs given by @contouring-lag-cost-equations also pull the #path-parameter back, preventing it from moving too far ahead of the robot. If the weights #contouring-weight, #lag-weight and #progress-weight are chosen appropriately, the robot will try to follow the reference trajectory closely and maximize its progress along it.
 
 === Comfort Cost
 
