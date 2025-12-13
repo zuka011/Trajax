@@ -1,8 +1,8 @@
 from typing import Final
 
-from .basic import NumPyMppi, NumPyZeroPadding
-from .accelerated import JaxMppi, JaxZeroPadding
-from .common import NoUpdate
+from .basic import NumPyMppi
+from .accelerated import JaxMppi
+from .common import NoUpdate, UseOptimalControlUpdate
 
 
 class mppi:
@@ -13,14 +13,16 @@ class mppi:
 class update:
     class numpy:
         no_update: Final = NoUpdate
+        use_optimal_control: Final = UseOptimalControlUpdate
 
     class jax:
         no_update: Final = NoUpdate
+        use_optimal_control: Final = UseOptimalControlUpdate
 
 
 class padding:
     class numpy:
-        zero: Final = NumPyZeroPadding
+        zero: Final = NumPyMppi.ZeroPadding
 
     class jax:
-        zero: Final = JaxZeroPadding
+        zero: Final = JaxMppi.ZeroPadding

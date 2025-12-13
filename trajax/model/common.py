@@ -22,6 +22,11 @@ class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
         """Returns the control input sequence as a NumPy array."""
         ...
 
+    @property
+    def dimension(self) -> D_u:
+        """Control input dimension."""
+        ...
+
 
 class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:

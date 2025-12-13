@@ -1,27 +1,3 @@
-# ==========================================
-# 2. Numerical Stability
-# ==========================================
-# [ ] test_should_not_overflow_when_sample_cost_differences_are_very_large
-#     - Ensures log_sum_exp trick is working for huge costs.
-
-# [ ] test_should_not_underflow_when_sample_cost_differences_are_very_small
-#     - Ensures division by zero doesn't occur when all costs are nearly identical.
-
-# [ ] test_should_return_non_zero_and_finite_trajectory
-#     - Basic smoke test ensuring outputs are not NaN/Inf.
-
-# ==========================================
-# 4. Strategies & Interfaces
-# ==========================================
-# [ ] test_should_pass_evaluation_key_to_cost_function
-#     - Verifies API contract with the Cost module (e.g. JAX PRNG keys).
-
-# [ ] test_should_not_throw_errors_when_using_the_specified_sampling_strategy
-#     - Verifies API contract with various Sampler implementations.
-
-# [ ] test_should_use_specified_update_strategy_when_updating_initial_control
-#     - Verifies logic for padding/decaying the control sequence
-
 from trajax import (
     State,
     StateBatch,
@@ -523,13 +499,13 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
                 to_batch=data.numpy.control_input_batch,
                 seed=42,
             ),
-            current_state := data.numpy.state(array([5.0, 5.0], shape=(D_x := 2,))),
+            current_state := data.numpy.state(array([224.0, 52.0], shape=(D_x := 2,))),
             nominal_input := data.numpy.control_input_sequence(
                 np.zeros((T := 10, D_u := 2))
             ),
             temperature := 1.0,
             max_iterations := 100,
-            convergence_threshold := 0.25,
+            convergence_threshold := 0.1,
         ),
         (
             mppi := create_mppi.jax(),
@@ -541,13 +517,13 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
                 to_batch=data.jax.control_input_batch,
                 key=jrandom.PRNGKey(42),
             ),
-            current_state := data.jax.state(array([5.0, 5.0], shape=(D_x := 2,))),
+            current_state := data.jax.state(array([45.0, 125.0], shape=(D_x := 2,))),
             nominal_input := data.jax.control_input_sequence(
                 np.zeros((T := 10, D_u := 2))
             ),
             temperature := 1.0,
             max_iterations := 100,
-            convergence_threshold := 0.25,
+            convergence_threshold := 0.1,
         ),
     ],
 )
@@ -592,4 +568,561 @@ async def test_that_mppi_converges_to_target_state[
     assert (final_distance := np.linalg.norm(current_state)) < convergence_threshold, (
         f"MPPI did not converge to origin. "
         f"Final distance: {final_distance:.4f}, threshold: {convergence_threshold}"
+    )
+
+
+@mark.asyncio
+@mark.parametrize(
+    [
+        "mppi",
+        "cost_function",
+        "nominal_input",
+        "initial_state",
+        "sampled_inputs",
+        "rollouts",
+    ],
+    [
+        (
+            mppi := create_mppi.numpy(),
+            cost_function := costs.numpy.energy(),
+            nominal_input := data.numpy.control_input_sequence(
+                np.zeros((T := 2, D_u := 1))
+            ),
+            initial_state := data.numpy.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.numpy.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            sample_1 := [[1e-5], [1e-5]],
+                            sample_2 := [[2.0], [2.0]],
+                            sample_3 := [[3e10], [3e10]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T, D_u, M := 3),
+                )
+            ),
+            rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
+        ),
+        (
+            mppi := create_mppi.jax(),
+            cost_function := costs.jax.energy(),
+            nominal_input := data.jax.control_input_sequence(
+                np.zeros((T := 2, D_u := 1))
+            ),
+            initial_state := data.jax.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.jax.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            sample_1 := [[1e-5], [1e-5]],
+                            sample_2 := [[2.0], [2.0]],
+                            sample_3 := [[3e10], [3e10]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T, D_u, M := 3),
+                )
+            ),
+            rollouts := data.jax.state_batch(np.zeros((T, D_x, M))),
+        ),
+    ],
+)
+async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very_large[
+    StateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    nominal_input: ControlInputSequenceT,
+    initial_state: StateT,
+    sampled_inputs: ControlInputBatchT,
+    rollouts: StateBatchT,
+) -> None:
+    sampler = stubs.Sampler.returns(sampled_inputs, when_nominal_input_is=nominal_input)
+    model = stubs.DynamicalModel.returns(
+        rollouts,
+        when_control_inputs_are=sampled_inputs,
+        and_initial_state_is=initial_state,
+    )
+
+    control = await mppi.step(
+        model=model,
+        cost_function=cost_function,
+        sampler=sampler,
+        temperature=1e-10,
+        nominal_input=nominal_input,
+        initial_state=initial_state,
+    )
+
+    assert np.all(np.isfinite(control.optimal)), (
+        f"Optimal control contains non-finite values: {control.optimal}"
+    )
+
+
+@mark.asyncio
+@mark.parametrize(
+    [
+        "mppi",
+        "cost_function",
+        "nominal_input",
+        "initial_state",
+        "sampled_inputs",
+        "rollouts",
+    ],
+    [
+        (
+            mppi := create_mppi.numpy(),
+            cost_function := costs.numpy.energy(),
+            nominal_input := data.numpy.control_input_sequence(
+                np.zeros((T := 2, D_u := 1))
+            ),
+            initial_state := data.numpy.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.numpy.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            sample_1 := [[1.0], [1.0]],
+                            sample_2 := [[1.0], [1.0]],
+                            sample_3 := [[1.0], [1.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T, D_u, M := 3),
+                )
+            ),
+            rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
+        ),
+        (
+            mppi := create_mppi.jax(),
+            cost_function := costs.jax.energy(),
+            nominal_input := data.jax.control_input_sequence(
+                np.zeros((T := 2, D_u := 1))
+            ),
+            initial_state := data.jax.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.jax.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            sample_1 := [[1.0], [1.0]],
+                            sample_2 := [[1.0], [1.0]],
+                            sample_3 := [[1.0], [1.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T, D_u, M := 3),
+                )
+            ),
+            rollouts := data.jax.state_batch(np.zeros((T, D_x, M))),
+        ),
+    ],
+)
+async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_very_small[
+    StateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    nominal_input: ControlInputSequenceT,
+    initial_state: StateT,
+    sampled_inputs: ControlInputBatchT,
+    rollouts: StateBatchT,
+) -> None:
+    sampler = stubs.Sampler.returns(sampled_inputs, when_nominal_input_is=nominal_input)
+    model = stubs.DynamicalModel.returns(
+        rollouts,
+        when_control_inputs_are=sampled_inputs,
+        and_initial_state_is=initial_state,
+    )
+
+    control = await mppi.step(
+        model=model,
+        cost_function=cost_function,
+        sampler=sampler,
+        temperature=1.0,
+        nominal_input=nominal_input,
+        initial_state=initial_state,
+    )
+
+    assert np.all(np.isfinite(control.optimal)), (
+        f"Optimal control contains non-finite values: {control.optimal}"
+    )
+    assert not np.allclose(control.optimal, 0.0), (
+        f"Optimal control is unexpectedly zero: {control.optimal}"
+    )
+
+
+@mark.asyncio
+@mark.parametrize(
+    [
+        "mppi",
+        "cost_function",
+        "nominal_input",
+        "initial_state",
+        "sampled_inputs",
+        "rollouts",
+        "expected_updated_input",
+    ],
+    [
+        (
+            mppi := create_mppi.numpy(
+                update_function=(
+                    update_function := stubs.UpdateFunction.returns(
+                        data.numpy.control_input_sequence(
+                            array([[9.0, 9.0], [10.0, 10.0]], shape=(T := 2, D_u := 2))
+                        ),
+                        when_nominal_input_is=(
+                            nominal_input := data.numpy.control_input_sequence(
+                                array([[2.0, 3.0], [1.0, 2.0]], shape=(T, D_u))
+                            )
+                        ),
+                        and_optimal_input_is=data.numpy.control_input_sequence(
+                            sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
+                        ),
+                    )
+                ),
+            ),
+            cost_function := costs.numpy.energy(),
+            nominal_input,
+            initial_state := data.numpy.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.numpy.control_input_batch(
+                array(
+                    np.array([sample]).transpose(1, 2, 0).tolist(),
+                    shape=(T, D_u, M := 1),
+                )
+            ),
+            rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
+            # Should also be shifted
+            expected_updated_input := data.numpy.control_input_sequence(
+                array([[10.0, 10.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+        ),
+        (
+            mppi := create_mppi.jax(
+                update_function=(
+                    update_function := stubs.UpdateFunction.returns(
+                        data.jax.control_input_sequence(
+                            array([[10.0, 10.0], [1.0, 1.0]], shape=(T := 2, D_u := 2))
+                        ),
+                        when_nominal_input_is=(
+                            nominal_input := data.jax.control_input_sequence(
+                                array([[2.0, 4.0], [1.0, 1.0]], shape=(T, D_u))
+                            )
+                        ),
+                        and_optimal_input_is=data.jax.control_input_sequence(
+                            sample := array([[2.0, 12.0], [21.0, 21.0]], shape=(T, D_u))
+                        ),
+                    )
+                ),
+            ),
+            cost_function := costs.jax.energy(),
+            nominal_input,
+            initial_state := data.jax.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.jax.control_input_batch(
+                array(
+                    np.array([sample]).transpose(1, 2, 0).tolist(),
+                    shape=(T, D_u, M := 1),
+                )
+            ),
+            rollouts := data.jax.state_batch(np.zeros((T, D_x, M))),
+            expected_updated_input := data.jax.control_input_sequence(
+                array([[1.0, 1.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+        ),
+    ],
+)
+async def test_that_mppi_uses_update_function_to_update_nominal_input[
+    StateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    nominal_input: ControlInputSequenceT,
+    initial_state: StateT,
+    sampled_inputs: ControlInputBatchT,
+    rollouts: StateBatchT,
+    expected_updated_input: ControlInputSequenceT,
+) -> None:
+    sampler = stubs.Sampler.returns(sampled_inputs, when_nominal_input_is=nominal_input)
+    model = stubs.DynamicalModel.returns(
+        rollouts,
+        when_control_inputs_are=sampled_inputs,
+        and_initial_state_is=initial_state,
+    )
+
+    control = await mppi.step(
+        model=model,
+        cost_function=cost_function,
+        sampler=sampler,
+        temperature=1.0,
+        nominal_input=nominal_input,
+        initial_state=initial_state,
+    )
+
+    assert np.allclose(control.nominal, expected_updated_input), (
+        f"Expected nominal input to be updated to {expected_updated_input}, "
+        f"but got {control.nominal} instead."
+    )
+
+
+@mark.asyncio
+@mark.parametrize(
+    [
+        "mppi",
+        "cost_function",
+        "nominal_input",
+        "initial_state",
+        "sampled_inputs",
+        "rollouts",
+        "expected_nominal_control",
+    ],
+    [
+        (
+            mppi := create_mppi.numpy(
+                planning_interval=(padding_size := 2),
+                update_function=update.numpy.no_update(),
+                padding_function=(
+                    padding_function := stubs.PaddingFunction.returns(
+                        data.numpy.control_input_sequence(
+                            array(
+                                [[12.0, 16.0], [17.0, 18.0]],
+                                shape=(padding_size, D_u := 2),
+                            )
+                        ),
+                        when_nominal_input_is=(
+                            nominal_input := data.numpy.control_input_sequence(
+                                array(
+                                    [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
+                                    shape=(T := 4, D_u),
+                                )
+                            )
+                        ),
+                        and_padding_size_is=padding_size,
+                    )
+                ),
+            ),
+            cost_function := costs.numpy.energy(),
+            nominal_input,
+            initial_state := data.numpy.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.numpy.control_input_batch(
+                np.random.uniform(low=-1.0, high=1.0, size=(T, D_u, M := 3))  # type: ignore
+            ),
+            rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
+            expected_nominal_control := data.numpy.control_input_sequence(
+                array(
+                    [[5.0, 6.0], [7.0, 8.0], [12.0, 16.0], [17.0, 18.0]], shape=(T, D_u)
+                )
+            ),
+        ),
+        (
+            mppi := create_mppi.jax(
+                planning_interval=(padding_size := 3),
+                update_function=update.jax.no_update(),
+                padding_function=(
+                    padding_function := stubs.PaddingFunction.returns(
+                        data.jax.control_input_sequence(
+                            array(
+                                [[9.0, 10.0], [11.0, 12.0], [13.0, 14.0]],
+                                shape=(padding_size, D_u := 2),
+                            )
+                        ),
+                        when_nominal_input_is=(
+                            nominal_input := data.jax.control_input_sequence(
+                                array(
+                                    [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
+                                    shape=(T := 4, D_u),
+                                )
+                            )
+                        ),
+                        and_padding_size_is=padding_size,
+                    )
+                ),
+            ),
+            cost_function := costs.jax.energy(),
+            nominal_input,
+            initial_state := data.jax.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.jax.control_input_batch(
+                np.random.uniform(low=-1.0, high=1.0, size=(T, D_u, M := 3))  # type: ignore
+            ),
+            rollouts := data.jax.state_batch(np.zeros((T, D_x, M))),
+            expected_nominal_control := data.jax.control_input_sequence(
+                array(
+                    [[7.0, 8.0], [9.0, 10.0], [11.0, 12.0], [13.0, 14.0]],
+                    shape=(T, D_u),
+                )
+            ),
+        ),
+    ],
+)
+async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
+    StateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    nominal_input: ControlInputSequenceT,
+    initial_state: StateT,
+    sampled_inputs: ControlInputBatchT,
+    rollouts: StateBatchT,
+    expected_nominal_control: ControlInputSequenceT,
+) -> None:
+    sampler = stubs.Sampler.returns(sampled_inputs, when_nominal_input_is=nominal_input)
+    model = stubs.DynamicalModel.returns(
+        rollouts,
+        when_control_inputs_are=sampled_inputs,
+        and_initial_state_is=initial_state,
+    )
+
+    control = await mppi.step(
+        model=model,
+        cost_function=cost_function,
+        sampler=sampler,
+        temperature=1.0,
+        nominal_input=nominal_input,
+        initial_state=initial_state,
+    )
+
+    assert np.allclose(control.nominal, expected_nominal_control), (
+        f"Expected nominal input to be padded with custom values, "
+        f"but got {control.nominal} instead of {expected_nominal_control}."
+    )
+
+
+@mark.asyncio
+@mark.parametrize(
+    [
+        "mppi",
+        "cost_function",
+        "nominal_input",
+        "initial_state",
+        "sampled_inputs",
+        "rollouts",
+        "expected_optimal_control",
+        "expected_nominal_control",
+    ],
+    [
+        (
+            mppi := create_mppi.numpy(
+                update_function=update.numpy.use_optimal_control(),
+                filter_function=(
+                    filter_function := stubs.FilterFunction.returns(
+                        expected_optimal_control := data.numpy.control_input_sequence(
+                            array(
+                                [[10.0, 20.0], [30.0, 40.0]], shape=(T := 2, D_u := 2)
+                            )
+                        ),
+                        when_optimal_input_is=data.numpy.control_input_sequence(
+                            sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
+                        ),
+                    )
+                ),
+            ),
+            cost_function := costs.numpy.energy(),
+            nominal_input := data.numpy.control_input_sequence(
+                array([[0.0, 0.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+            initial_state := data.numpy.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.numpy.control_input_batch(
+                array(
+                    np.array([sample]).transpose(1, 2, 0).tolist(),
+                    shape=(T, D_u, M := 1),
+                )
+            ),
+            rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
+            expected_optimal_control,
+            # Since we are directly updating to the optimal control, nominal should be shifted optimal control.
+            expected_nominal_control := data.numpy.control_input_sequence(
+                array([[30.0, 40.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+        ),
+        (
+            mppi := create_mppi.jax(
+                update_function=update.jax.use_optimal_control(),
+                filter_function=(
+                    filter_function := stubs.FilterFunction.returns(
+                        expected_optimal_control := data.jax.control_input_sequence(
+                            array(
+                                [[50.0, 60.0], [70.0, 80.0]], shape=(T := 2, D_u := 2)
+                            )
+                        ),
+                        when_optimal_input_is=data.jax.control_input_sequence(
+                            sample := array([[5.0, 6.0], [7.0, 8.0]], shape=(T, D_u))
+                        ),
+                    )
+                ),
+            ),
+            cost_function := costs.jax.energy(),
+            nominal_input := data.jax.control_input_sequence(
+                array([[0.0, 0.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+            initial_state := data.jax.state(array([0.0], shape=(D_x := 1,))),
+            sampled_inputs := data.jax.control_input_batch(
+                array(
+                    np.array([sample]).transpose(1, 2, 0).tolist(),
+                    shape=(T, D_u, M := 1),
+                )
+            ),
+            rollouts := data.jax.state_batch(np.zeros((T, D_x, M))),
+            expected_optimal_control,
+            expected_nominal_control := data.jax.control_input_sequence(
+                array([[70.0, 80.0], [0.0, 0.0]], shape=(T, D_u))
+            ),
+        ),
+    ],
+)
+async def test_that_mppi_uses_filter_function_to_filter_optimal_control[
+    StateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    nominal_input: ControlInputSequenceT,
+    initial_state: StateT,
+    sampled_inputs: ControlInputBatchT,
+    rollouts: StateBatchT,
+    expected_optimal_control: ControlInputSequenceT,
+    expected_nominal_control: ControlInputSequenceT,
+) -> None:
+    sampler = stubs.Sampler.returns(sampled_inputs, when_nominal_input_is=nominal_input)
+    model = stubs.DynamicalModel.returns(
+        rollouts,
+        when_control_inputs_are=sampled_inputs,
+        and_initial_state_is=initial_state,
+    )
+
+    control = await mppi.step(
+        model=model,
+        cost_function=cost_function,
+        sampler=sampler,
+        temperature=1.0,
+        nominal_input=nominal_input,
+        initial_state=initial_state,
+    )
+
+    assert np.allclose(control.optimal, expected_optimal_control), (
+        f"Expected optimal control to be filtered, "
+        f"but got {control.optimal} instead of {expected_optimal_control}."
+    )
+    assert np.allclose(control.nominal, expected_nominal_control), (
+        f"Expected nominal control to be {expected_nominal_control}, "
+        f"but got {control.nominal} instead."
     )

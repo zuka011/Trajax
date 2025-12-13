@@ -71,6 +71,22 @@ class UpdateFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
         ...
 
 
+class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequence](
+    Protocol
+):
+    def __call__(self, *, nominal_input: NominalT, padding_size: int) -> PaddingT:
+        """Generates padding values for the shifted nominal control input sequence."""
+        ...
+
+
+class FilterFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
+    def __call__(
+        self, *, optimal_input: ControlInputSequenceT
+    ) -> ControlInputSequenceT:
+        """Filters the optimal control input after it is computed."""
+        ...
+
+
 class NoUpdate:
     """Returns the nominal input unchanged."""
 
@@ -81,3 +97,24 @@ class NoUpdate:
         optimal_input: ControlInputSequenceT,
     ) -> ControlInputSequenceT:
         return nominal_input
+
+
+class UseOptimalControlUpdate:
+    """Sets the nominal input to the optimal input."""
+
+    def __call__[ControlInputSequenceT: ControlInputSequence](
+        self,
+        *,
+        nominal_input: ControlInputSequenceT,
+        optimal_input: ControlInputSequenceT,
+    ) -> ControlInputSequenceT:
+        return optimal_input
+
+
+class NoFilter:
+    """Returns the optimal input unchanged."""
+
+    def __call__[ControlInputSequenceT: ControlInputSequence](
+        self, *, optimal_input: ControlInputSequenceT
+    ) -> ControlInputSequenceT:
+        return optimal_input

@@ -11,8 +11,11 @@ from trajax.model import (
 )
 from trajax.mppi.common import (
     Control,
-    NoUpdate,
+    UseOptimalControlUpdate,
+    NoFilter,
     UpdateFunction as AnyUpdateFunction,
+    PaddingFunction as AnyPaddingFunction,
+    FilterFunction as AnyFilterFunction,
     Sampler as AnySampler,
     CostFunction as AnyCostFunction,
 )
@@ -23,14 +26,10 @@ import jax
 import jax.numpy as jnp
 
 
-class JaxZeroPadding:
-    pass
-
-
 class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Protocol):
-    def similar(
-        self, *, array: Float[Array, "T D_u"]
-    ) -> "ControlInputSequence[T, D_u]":
+    def similar[L: int](
+        self, *, array: Float[Array, "L D_u"], length: L
+    ) -> "ControlInputSequence[L, D_u]":
         """Returns a new control input sequence similar to this one but using the provided array."""
         ...
 
@@ -60,6 +59,12 @@ type Sampler[T: int, D_u: int, M: int] = AnySampler[
 
 type UpdateFunction[T: int, D_u: int] = AnyUpdateFunction[ControlInputSequence[T, D_u]]
 
+type PaddingFunction[T: int, P: int, D_u: int] = AnyPaddingFunction[
+    ControlInputSequence[T, D_u], ControlInputSequence[P, D_u]
+]
+
+type FilterFunction[T: int, D_u: int] = AnyFilterFunction[ControlInputSequence[T, D_u]]
+
 
 @dataclass(kw_only=True, frozen=True)
 class JaxMppi:
@@ -83,19 +88,32 @@ class JaxMppi:
         Float[Array, "T M"],
     ]
 
+    class ZeroPadding:
+        def __call__[T: int, P: int, D_u: int](
+            self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: P
+        ) -> ControlInputSequence[P, D_u]:
+            padding_array = jnp.zeros((padding_size, nominal_input.array.shape[1]))
+            return nominal_input.similar(array=padding_array, length=padding_size)
+
     planning_interval: int
     update_function: UpdateFunction
+    padding_function: PaddingFunction
+    filter_function: FilterFunction
 
     @staticmethod
     def create(
         *,
         planning_interval: int = 1,
-        update_function: UpdateFunction = NoUpdate(),
-        padding_function: ... = None,
+        update_function: UpdateFunction = UseOptimalControlUpdate(),
+        padding_function: PaddingFunction = ZeroPadding(),
+        filter_function: FilterFunction = NoFilter(),
     ) -> "JaxMppi":
         """Creates a JAX-based MPPI controller."""
         return JaxMppi(
-            planning_interval=planning_interval, update_function=update_function
+            planning_interval=planning_interval,
+            update_function=update_function,
+            padding_function=padding_function,
+            filter_function=filter_function,
         )
 
     async def step[T: int, D_u: int, D_x: int, M: int](
@@ -116,21 +134,29 @@ class JaxMppi:
         costs = cost_function(inputs=samples, states=rollouts)
 
         optimal_control = compute_weighted_control(samples.array, costs, temperature)
-        control_dimension = optimal_control.shape[1]
+        optimal_input = self.filter_function(
+            optimal_input=nominal_input.similar(
+                array=optimal_control, length=optimal_control.shape[0]
+            )
+        )
 
-        optimal_input = nominal_input.similar(array=optimal_control)
         nominal_input = self.update_function(
             nominal_input=nominal_input, optimal_input=optimal_input
         )
 
         shifted_control = shift_control_left(
             nominal_input.array,
+            padding_array=self.padding_function(
+                nominal_input=nominal_input, padding_size=self.planning_interval
+            ).array,
             planning_interval=self.planning_interval,
-            control_dimension=control_dimension,
         )
 
         return Control(
-            optimal=optimal_input, nominal=nominal_input.similar(array=shifted_control)
+            optimal=optimal_input,
+            nominal=nominal_input.similar(
+                array=shifted_control, length=shifted_control.shape[0]
+            ),
         )
 
 
@@ -148,10 +174,12 @@ def compute_weighted_control(
     return jnp.tensordot(samples, weights, axes=([2], [0]))
 
 
-@jax.jit(static_argnames=("planning_interval", "control_dimension"))
+@jax.jit(static_argnames=("planning_interval",))
 @jaxtyped
 def shift_control_left(
-    control: Float[Array, "T D_u"], *, planning_interval: int, control_dimension: int
+    control: Float[Array, "T D_u"],
+    *,
+    padding_array: Float[Array, "P D_u"],
+    planning_interval: int,
 ) -> Float[Array, "T D_u"]:
-    zeros = jnp.zeros((planning_interval, control_dimension), dtype=control.dtype)
-    return jnp.concatenate([control[planning_interval:], zeros], axis=0)
+    return jnp.concatenate([control[planning_interval:], padding_array], axis=0)

@@ -62,13 +62,13 @@ The exact algorithm is as follows:
       + *for* $#rollout=1$ *to* $#rollouts$ *do*
         + $#weight _#rollout arrow.l 1 / eta exp(-1 / #temperature (#cost-()_#rollout - #cost-()_min))$ #h(1fr) ➤ Compute importance weights
 
-      + $#input _("opt.") arrow.l sum_(#rollout=1)^(#rollouts) #weight _#rollout #input _#rollout$ #h(1fr) ➤ Compute optimal control sequence
+      + $#input _("opt.") arrow.l "filter"(sum_(#rollout=1)^(#rollouts) #weight _#rollout #input _#rollout)$ #h(1fr) ➤ Compute optimal control sequence
       + $#input arrow.l "update"(#input, #input _("opt."))$ #h(1fr) ➤ Update nominal control sequence
       + $#state-single arrow.l "execute"(#input _("opt."), #state-single, #planning-horizon)$ #h(1fr) ➤ Execute first #planning-horizon control actions
       + $#input arrow.l {#input _(#planning-horizon:#horizon -1), "pad"(#input) }$ #h(1fr) ➤ Shift control sequence
   ]
 
-  $"sample"(dot), "update"(dot), "and" "pad"(dot)$ can vary based on the specific implementation.
+  $"sample"(dot), "filter"(dot), "update"(dot), "and" "pad"(dot)$ can vary based on the specific implementation.
 ]
 
 == Dynamical Model

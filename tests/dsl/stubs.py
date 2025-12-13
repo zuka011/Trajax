@@ -27,6 +27,94 @@ class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch]:
 
 
 @dataclass(frozen=True)
+class UpdateFunction[SequenceT: ControlInputSequence]:
+    expected_nominal_input: SequenceT
+    expected_optimal_input: SequenceT
+    result: SequenceT
+
+    @staticmethod
+    def returns[S: ControlInputSequence](
+        result: S,
+        *,
+        when_nominal_input_is: S,
+        and_optimal_input_is: S,
+    ) -> "UpdateFunction[S]":
+        return UpdateFunction(
+            expected_nominal_input=when_nominal_input_is,
+            expected_optimal_input=and_optimal_input_is,
+            result=result,
+        )
+
+    def __call__(
+        self, *, nominal_input: SequenceT, optimal_input: SequenceT
+    ) -> SequenceT:
+        assert np.array_equal(self.expected_nominal_input, nominal_input), (
+            f"UpdateFunction received an unexpected nominal input. "
+            f"Expected: {self.expected_nominal_input}, Got: {nominal_input}"
+        )
+        assert np.allclose(self.expected_optimal_input, optimal_input, atol=1e-6), (
+            f"UpdateFunction received an unexpected optimal input. "
+            f"Expected: {self.expected_optimal_input}, Got: {optimal_input}"
+        )
+        return self.result
+
+
+@dataclass(frozen=True)
+class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequence]:
+    expected_nominal_input: NominalT
+    expected_padding_size: int
+    result: PaddingT
+
+    @staticmethod
+    def returns[N: ControlInputSequence, P: ControlInputSequence](
+        result: P,
+        *,
+        when_nominal_input_is: N,
+        and_padding_size_is: int,
+    ) -> "PaddingFunction[N, P]":
+        return PaddingFunction(
+            expected_nominal_input=when_nominal_input_is,
+            expected_padding_size=and_padding_size_is,
+            result=result,
+        )
+
+    def __call__(self, *, nominal_input: NominalT, padding_size: int) -> PaddingT:
+        assert np.array_equal(self.expected_nominal_input, nominal_input), (
+            f"PaddingFunction received an unexpected nominal input. "
+            f"Expected: {self.expected_nominal_input}, Got: {nominal_input}"
+        )
+        assert self.expected_padding_size == padding_size, (
+            f"PaddingFunction received an unexpected padding size. "
+            f"Expected: {self.expected_padding_size}, Got: {padding_size}"
+        )
+        return self.result
+
+
+@dataclass(frozen=True)
+class FilterFunction[SequenceT: ControlInputSequence]:
+    expected_optimal_input: SequenceT
+    result: SequenceT
+
+    @staticmethod
+    def returns[S: ControlInputSequence](
+        result: S,
+        *,
+        when_optimal_input_is: S,
+    ) -> "FilterFunction[S]":
+        return FilterFunction(
+            expected_optimal_input=when_optimal_input_is,
+            result=result,
+        )
+
+    def __call__(self, *, optimal_input: SequenceT) -> SequenceT:
+        assert np.allclose(self.expected_optimal_input, optimal_input, atol=1e-6), (
+            f"FilterFunction received an unexpected optimal input. "
+            f"Expected: {self.expected_optimal_input}, Got: {optimal_input}"
+        )
+        return self.result
+
+
+@dataclass(frozen=True)
 class DynamicalModel[
     ControlInputBatchT: ControlInputBatch,
     StateT: State,

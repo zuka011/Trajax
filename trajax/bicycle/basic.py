@@ -78,6 +78,8 @@ class NumPyControlInputSequence[T: int]:
     def __array__(self, dtype: DataType | None = None) -> ControlInputSequenceArray[T]:
         return self.inputs
 
+    # TODO: Add methods: `similar` and `dimension`
+
 
 @dataclass(frozen=True)
 class NumPyControlInputBatch[T: int, M: int]:

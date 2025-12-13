@@ -10,8 +10,11 @@ from trajax.model import (
 )
 from trajax.mppi.common import (
     Control,
-    NoUpdate,
+    UseOptimalControlUpdate,
+    NoFilter,
     UpdateFunction as AnyUpdateFunction,
+    PaddingFunction as AnyPaddingFunction,
+    FilterFunction as AnyFilterFunction,
     Sampler as AnySampler,
     CostFunction as AnyCostFunction,
 )
@@ -20,12 +23,10 @@ import numpy as np
 from numtypes import Array, Dims, shape_of
 
 
-class NumPyZeroPadding:
-    pass
-
-
 class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Protocol):
-    def similar(self, *, array: Array[Dims[T, D_u]]) -> "ControlInputSequence[T, D_u]":
+    def similar[L: int](
+        self, *, array: Array[Dims[L, D_u]]
+    ) -> "ControlInputSequence[L, D_u]":
         """Creates a new control input sequence similar to this one but with the given
         array as its data.
         """
@@ -45,6 +46,12 @@ type Sampler[T: int, D_u: int, M: int] = AnySampler[
 
 type UpdateFunction[T: int, D_u: int] = AnyUpdateFunction[ControlInputSequence[T, D_u]]
 
+type PaddingFunction[T: int, P: int, D_u: int] = AnyPaddingFunction[
+    ControlInputSequence[T, D_u], ControlInputSequence[P, D_u]
+]
+
+type FilterFunction[T: int, D_u: int] = AnyFilterFunction[ControlInputSequence[T, D_u]]
+
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyMppi:
@@ -52,19 +59,35 @@ class NumPyMppi:
         ControlInputBatch[T, D_u, M], StateBatch[T, D_x, M], Array[Dims[T, M]]
     ]
 
+    class ZeroPadding:
+        def __call__[T: int, P: int, D_u: int](
+            self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: P
+        ) -> ControlInputSequence[P, D_u]:
+            array = np.zeros(shape := (padding_size, nominal_input.dimension))
+
+            assert shape_of(array, matches=shape, name="padding array")
+
+            return nominal_input.similar(array=array)
+
     planning_interval: int
     update_function: UpdateFunction
+    padding_function: PaddingFunction
+    filter_function: FilterFunction
 
     @staticmethod
     def create(
         *,
         planning_interval: int = 1,
-        update_function: UpdateFunction = NoUpdate(),
-        padding_function: ... = None,
+        update_function: UpdateFunction = UseOptimalControlUpdate(),
+        padding_function: PaddingFunction = ZeroPadding(),
+        filter_function: FilterFunction = NoFilter(),
     ) -> "NumPyMppi":
         """Creates a NumPy-based MPPI controller."""
         return NumPyMppi(
-            planning_interval=planning_interval, update_function=update_function
+            planning_interval=planning_interval,
+            update_function=update_function,
+            padding_function=padding_function,
+            filter_function=filter_function,
         )
 
     def __post_init__(self) -> None:
@@ -100,9 +123,10 @@ class NumPyMppi:
         weights = exp_costs / normalizing_constant
 
         optimal_control = np.tensordot(samples, weights, axes=([2], [0]))
-        control_dimension = optimal_control.shape[1]
+        optimal_input = self.filter_function(
+            optimal_input=nominal_input.similar(array=optimal_control)
+        )
 
-        optimal_input = nominal_input.similar(array=optimal_control)
         nominal_input = self.update_function(
             nominal_input=nominal_input, optimal_input=optimal_input
         )
@@ -110,7 +134,11 @@ class NumPyMppi:
         shifted_control = np.concat(
             [
                 np.asarray(nominal_input)[self.planning_interval :],
-                np.zeros((self.planning_interval, control_dimension)),
+                np.asarray(
+                    self.padding_function(
+                        nominal_input=nominal_input, padding_size=self.planning_interval
+                    )
+                ),
             ],
             axis=0,
         )

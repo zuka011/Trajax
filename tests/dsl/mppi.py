@@ -32,10 +32,14 @@ class SimpleNumPyControlInputSequence[T: int, D_u: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return self.array
 
-    def similar(
-        self, *, array: Array[Dims[T, D_u]]
-    ) -> "SimpleNumPyControlInputSequence[T, D_u]":
+    def similar[L: int](
+        self, *, array: Array[Dims[L, D_u]]
+    ) -> "SimpleNumPyControlInputSequence[L, D_u]":
         return SimpleNumPyControlInputSequence(array=array)
+
+    @property
+    def dimension(self) -> D_u:
+        return self.array.shape[1]
 
 
 @dataclass(frozen=True)
@@ -80,10 +84,14 @@ class SimpleJaxControlInputSequence[T: int, D_u: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return np.asarray(self.array, dtype=dtype)
 
-    def similar(
-        self, *, array: Float[JaxArray, "T D_u"]
-    ) -> "SimpleJaxControlInputSequence[T, D_u]":
-        return SimpleJaxControlInputSequence[T, D_u](array=array)
+    def similar[L: int](
+        self, *, array: Float[JaxArray, "L D_u"], length: L
+    ) -> "SimpleJaxControlInputSequence[L, D_u]":
+        return SimpleJaxControlInputSequence[L, D_u](array=array)
+
+    @property
+    def dimension(self) -> D_u:
+        return cast(D_u, self.array.shape[1])
 
 
 @jaxtyped
