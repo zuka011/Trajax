@@ -1,4 +1,4 @@
-from trajax import bicycle, KinematicBicycleModel, model as create_model
+from trajax import types, KinematicBicycleModel, model as create_model
 
 from numtypes import array, Array
 import numpy as np
@@ -7,9 +7,9 @@ from tests.dsl import model as data, estimate, compute, clear_type
 from pytest import mark
 
 
-type ControlInputBatch = bicycle.ControlInputBatch
-type State = bicycle.State
-type StateBatch = bicycle.StateBatch
+type ControlInputBatch = types.bicycle.ControlInputBatch
+type State = types.bicycle.State
+type StateBatch = types.bicycle.StateBatch
 
 
 @mark.asyncio

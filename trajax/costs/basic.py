@@ -7,7 +7,7 @@ from trajax.trajectory import Trajectory
 from trajax.mppi import Costs
 
 import numpy as np
-from numtypes import Array, Dim2
+from numtypes import Array, Dims, Dim2
 
 
 type PathParameters[T: int = int, M: int = int] = types.numpy.PathParameters[T, M]
@@ -52,7 +52,7 @@ class ContouringCost[StateT: StateBatch]:
 
         Args:
             reference: The reference trajectory to follow.
-            path_parameter_extractor: Extracts the path parameters from state batch.
+            path_parameter_extractor: Extracts the path parameters from a state batch.
             position_extractor: Extracts the (x, y) positions from a state batch.
             weight: The weight of the contouring cost.
         """
@@ -94,7 +94,7 @@ class LagCost[StateT: StateBatch]:
 
         Args:
             reference: The reference trajectory to follow.
-            path_parameter_extractor: Extracts the path parameters from state batch.
+            path_parameter_extractor: Extracts the path parameters from a state batch.
             position_extractor: Extracts the (x, y) positions from a state batch.
             weight: The weight of the lag cost.
         """
@@ -135,7 +135,7 @@ class ProgressCost[InputT: ControlInputBatch]:
         """Creates a progress cost implemented with NumPy.
 
         Args:
-            path_velocity_extractor: Extracts the path velocities from control input batch.
+            path_velocity_extractor: Extracts the path velocities from a control input batch.
             time_step_size: The time step size between states.
             weight: The weight of the progress cost.
         """
@@ -153,3 +153,31 @@ class ProgressCost[InputT: ControlInputBatch]:
         return types.numpy.basic.costs(
             -self.weight * path_velocities * self.time_step_size
         )
+
+
+@dataclass(kw_only=True, frozen=True)
+class ControlSmoothingCost[D_u: int]:
+    weights: Array[Dims[D_u]]
+
+    @staticmethod
+    def create[D_u_: int](
+        *,
+        weights: Array[Dims[D_u_]],
+    ) -> "ControlSmoothingCost[D_u_]":
+        """Creates a control smoothing cost implemented with NumPy.
+
+        Args:
+            weights: The weights for each control input dimension.
+        """
+        return ControlSmoothingCost(weights=weights)
+
+    def __call__[T: int, M: int](
+        self, *, inputs: ControlInputBatch[T, D_u, M], states: StateBatch[T, int, M]
+    ) -> Costs[T, M]:
+        input_array = np.asarray(inputs)
+        diffs = np.diff(input_array, axis=0, prepend=input_array[0:1, :, :])
+        squared_diffs = diffs**2
+        weighted_squared_diffs = squared_diffs * self.weights[np.newaxis, :, np.newaxis]
+        cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)
+
+        return types.numpy.basic.costs(cost_per_time_step)

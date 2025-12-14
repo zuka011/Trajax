@@ -16,7 +16,7 @@ type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
 
 
 @dataclass(frozen=True)
-class NumPyState:
+class State:
     state: StateArray
 
     def __array__(self, dtype: DataType | None = None) -> StateArray:
@@ -40,7 +40,7 @@ class NumPyState:
 
 
 @dataclass(frozen=True)
-class NumPyStateBatch[T: int, M: int]:
+class StateBatch[T: int, M: int]:
     states: StateBatchArray[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
@@ -53,13 +53,13 @@ class NumPyStateBatch[T: int, M: int]:
         return self.states[:, 3, :]
 
     @property
-    def positions(self) -> "NumPyPositions":
-        return NumPyPositions(state=self)
+    def positions(self) -> "Positions":
+        return Positions(state=self)
 
 
 @dataclass(frozen=True)
-class NumPyPositions[T: int, M: int]:
-    state: NumPyStateBatch[T, M]
+class Positions[T: int, M: int]:
+    state: StateBatch[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
         return self.state.states[:, :2, :]
@@ -72,7 +72,7 @@ class NumPyPositions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class NumPyControlInputSequence[T: int]:
+class ControlInputSequence[T: int]:
     inputs: ControlInputSequenceArray[T]
 
     def __array__(self, dtype: DataType | None = None) -> ControlInputSequenceArray[T]:
@@ -82,7 +82,7 @@ class NumPyControlInputSequence[T: int]:
 
 
 @dataclass(frozen=True)
-class NumPyControlInputBatch[T: int, M: int]:
+class ControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
@@ -130,8 +130,8 @@ class NumPyBicycleModel:
         )
 
     async def simulate[T: int, M: int](
-        self, inputs: NumPyControlInputBatch[T, M], initial_state: NumPyState
-    ) -> NumPyStateBatch[T, M]:
+        self, inputs: ControlInputBatch[T, M], initial_state: State
+    ) -> StateBatch[T, M]:
         horizon = inputs.horizon
         rollout_count = inputs.rollout_count
         states = np.zeros((horizon, 4, rollout_count))
@@ -165,11 +165,9 @@ class NumPyBicycleModel:
             states, matches=(horizon, D_X, rollout_count), name="simulated states"
         )
 
-        return NumPyStateBatch(states)
+        return StateBatch(states)
 
-    async def step[T: int](
-        self, input: NumPyControlInputSequence[T], state: NumPyState
-    ) -> NumPyState:
+    async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
         raise NotImplementedError(
             "Single step simulation is not implemented for NumPyBicycleModel."
         )

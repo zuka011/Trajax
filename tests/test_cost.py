@@ -9,6 +9,7 @@ from trajax import (
 )
 
 import numpy as np
+import jax.numpy as jnp
 from numtypes import array
 
 from tests.dsl import mppi as data, clear_type
@@ -865,3 +866,206 @@ def test_that_progress_cost_rewards_velocity[
 
     assert np.all(0 > J_slow), "Progress cost should be negative (a reward)."
     assert np.all(J_slow > J_fast), "Higher path velocity should yield higher reward."
+
+
+@mark.parametrize(
+    [
+        "cost",
+        "inputs",
+        "states",
+        "zero_jerk_indices",
+        "equal_jerk_indices",
+        "increasing_jerk_indices",
+    ],
+    [
+        (
+            cost := costs.numpy.comfort.control_smoothing(
+                weights=array([1.0, 0.5, 0.2], shape=(D_u := 3,))
+            ),
+            inputs := data.numpy.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            # Constant High: [10, 10, 10] -> Diff is [0, 0]
+                            [[10, 10, 10], [10, 10, 10], [10, 10, 10]],
+                            # Oscillating: [1, -1, 1] -> Diff is [-2, 2] -> Non-zero Cost
+                            [[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]],
+                            # Constant Zero: [0, 0, 0] -> Diff is [0, 0]
+                            [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                            # Wildly Changing: [5, -5, 5] -> Diff is [-10, 10] -> Higher Cost
+                            [[5.0, 5.0, 5.0], [-5.0, -5.0, -5.0], [5.0, 5.0, 5.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T := 3, D_u, M := 4),
+                )
+            ),
+            states := data.numpy.state_batch(
+                np.zeros((T, D_x := 2, M))  # type: ignore
+            ),
+            zero_jerk_indices := [(1, 0), (2, 0), (1, 2), (2, 2)],
+            equal_jerk_indices := [(1, 1), (2, 1)],
+            increasing_jerk_indices := [(1, 0), (1, 1), (1, 3)],
+        ),
+        (
+            cost := costs.jax.comfort.control_smoothing(
+                weights=array([1.0, 0.5, 0.2], shape=(D_u := 3,))
+            ),
+            inputs := data.jax.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            # Constant High: [10, 10, 10] -> Diff is [0, 0]
+                            [[10, 10, 10], [10, 10, 10], [10, 10, 10]],
+                            # Oscillating: [1, -1, 1] -> Diff is [-2, 2] -> Non-zero Cost
+                            [[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]],
+                            # Constant Zero: [0, 0, 0] -> Diff is [0, 0]
+                            [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                            # Wildly Changing: [5, -5, 5] -> Diff is [-10, 10] -> Higher Cost
+                            [[5.0, 5.0, 5.0], [-5.0, -5.0, -5.0], [5.0, 5.0, 5.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T := 3, D_u, M := 4),
+                )
+            ),
+            states := data.jax.state_batch(
+                np.zeros((T, D_x := 2, M))  # type: ignore
+            ),
+            zero_jerk_indices := [(1, 0), (2, 0), (1, 2), (2, 2)],
+            equal_jerk_indices := [(1, 1), (2, 1)],
+            increasing_jerk_indices := [(1, 0), (1, 1), (1, 3)],
+        ),
+    ],
+)
+def test_that_control_smoothing_cost_increases_with_higher_jerk[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    zero_jerk_indices: list[tuple[int, int]],
+    equal_jerk_indices: list[tuple[int, int]],
+    increasing_jerk_indices: list[tuple[int, int]],
+) -> None:
+    J = np.asarray(cost(inputs=inputs, states=states))
+
+    assert np.allclose(J[0, :], 0.0), (
+        f"Cost for the first time step should be zero as there is no prior input. Got costs: {J}"
+    )
+    assert all([J[i, j] == 0.0 for i, j in zero_jerk_indices]), (
+        f"Cost should be zero for constant inputs. Got costs: {J}"
+    )
+    assert all(
+        [
+            J[i, j] == J[next_i, next_j]
+            for (i, j), (next_i, next_j) in zip(
+                equal_jerk_indices, equal_jerk_indices[1:]
+            )
+        ]
+    ), f"Cost should be equal for same input changes. Got costs: {J}"
+    assert all(
+        [
+            J[i, j] < J[next_i, next_j]
+            for (i, j), (next_i, next_j) in zip(
+                increasing_jerk_indices, increasing_jerk_indices[1:]
+            )
+        ]
+    ), f"Cost should increase with higher input changes. Got costs: {J}"
+
+
+@mark.parametrize(
+    [
+        "cost",
+        "inputs",
+        "states",
+        "low_cost_indices",
+        "high_cost_indices",
+    ],
+    [
+        (
+            cost := costs.numpy.comfort.control_smoothing(
+                weights=array([1.0, 10.0], shape=(D_u := 2,))
+            ),
+            inputs := data.numpy.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            # Batch 0: Change only in Dim 0 (Low Weight)
+                            # [0,0] -> [1,0] -> [2,0] ...
+                            [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]],
+                            # Batch 1: Change only in Dim 1 (High Weight)
+                            # [0,0] -> [0,1] -> [0,2] ...
+                            # Note: The magnitude of change (1.0) is identical to Batch 0.
+                            [[0.0, 0.0], [0.0, 1.0], [0.0, 2.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T := 3, D_u, M := 2),
+                )
+            ),
+            states := data.numpy.state_batch(
+                np.zeros((T, D_x := 2, M))  # type: ignore
+            ),
+            low_cost_indices := [(1, 0), (2, 0)],
+            high_cost_indices := [(1, 1), (2, 1)],
+        ),
+        (
+            cost := costs.jax.comfort.control_smoothing(
+                weights=jnp.array([1.0, 10.0]), dimensions=(D_u := 2)
+            ),
+            inputs := data.jax.control_input_batch(
+                array(
+                    np.array(
+                        [
+                            # Batch 0: Change only in Dim 0 (Low Weight)
+                            # [0,0] -> [1,0] -> [2,0] ...
+                            [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]],
+                            # Batch 1: Change only in Dim 1 (High Weight)
+                            # [0,0] -> [0,1] -> [0,2] ...
+                            # Note: The magnitude of change (1.0) is identical to Batch 0.
+                            [[0.0, 0.0], [0.0, 1.0], [0.0, 2.0]],
+                        ]
+                    )
+                    .transpose(1, 2, 0)
+                    .tolist(),
+                    shape=(T := 3, D_u, M := 2),
+                )
+            ),
+            states := data.jax.state_batch(
+                np.zeros((T, D_x := 2, M))  # type: ignore
+            ),
+            low_cost_indices := [(1, 0), (2, 0)],
+            high_cost_indices := [(1, 1), (2, 1)],
+        ),
+    ],
+)
+def test_that_control_smoothing_cost_respects_dimension_weights[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    low_cost_indices: list[tuple[int, int]],
+    high_cost_indices: list[tuple[int, int]],
+) -> None:
+    J = np.asarray(cost(inputs=inputs, states=states))
+
+    assert all(
+        [
+            J[low_i, low_j] < J[high_i, high_j]
+            for (low_i, low_j), (high_i, high_j) in zip(
+                low_cost_indices, high_cost_indices
+            )
+        ]
+    ), (
+        f"Cost should be higher for changes in dimensions with higher weights. "
+        f"Got costs: {J}"
+    )

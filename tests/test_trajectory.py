@@ -8,11 +8,7 @@ from pytest import mark
 
 
 @mark.parametrize(
-    [
-        "trajectory",
-        "path_parameters",
-        "expected",
-    ],
+    ["trajectory", "path_parameters", "expected"],
     [
         (
             trajectory.numpy.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10),

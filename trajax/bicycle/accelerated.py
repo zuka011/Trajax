@@ -22,7 +22,7 @@ type ControlInputBatchArray = Float[Array, f"T {D_U} M"]
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxState:
+class State:
     state: StateArray
 
     def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[D_x]]:
@@ -47,7 +47,7 @@ class JaxState:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxStateBatch[T: int, M: int]:
+class StateBatch[T: int, M: int]:
     states: StateBatchArray
 
     def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_x, M]]:
@@ -60,14 +60,14 @@ class JaxStateBatch[T: int, M: int]:
         return np.asarray(self.states[:, 3, :])
 
     @property
-    def positions(self) -> "JaxPositions[T, M]":
-        return JaxPositions(state=self)
+    def positions(self) -> "Positions[T, M]":
+        return Positions(state=self)
 
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxPositions[T: int, M: int]:
-    state: JaxStateBatch
+class Positions[T: int, M: int]:
+    state: StateBatch
 
     def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
         return np.asarray(self.state.states[:, :2, :], dtype=dtype)
@@ -81,7 +81,7 @@ class JaxPositions[T: int, M: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxControlInputSequence[T: int]:
+class ControlInputSequence[T: int]:
     inputs: ControlInputSequenceArray
 
     def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u]]:
@@ -90,7 +90,7 @@ class JaxControlInputSequence[T: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxControlInputBatch[T: int, M: int]:
+class ControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray
 
     def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
@@ -139,9 +139,9 @@ class JaxBicycleModel:
 
     async def simulate[T: int, M: int](
         self,
-        inputs: JaxControlInputBatch[T, M],
-        initial_state: JaxState,
-    ) -> JaxStateBatch[T, M]:
+        inputs: ControlInputBatch[T, M],
+        initial_state: State,
+    ) -> StateBatch[T, M]:
         rollout_count = inputs.rollout_count
 
         initial = jnp.stack(
@@ -153,7 +153,7 @@ class JaxBicycleModel:
             ]
         )
 
-        return JaxStateBatch(
+        return StateBatch(
             simulate_jit(
                 inputs.inputs,
                 initial,
@@ -165,9 +165,7 @@ class JaxBicycleModel:
             )
         )
 
-    async def step[T: int](
-        self, input: JaxControlInputSequence[T], state: JaxState
-    ) -> JaxState:
+    async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
         raise NotImplementedError(
             "Single step simulation is not implemented for JaxBicycleModel."
         )

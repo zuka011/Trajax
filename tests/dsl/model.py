@@ -1,16 +1,19 @@
 from typing import overload
 
-from trajax import (
-    bicycle,
-    NumPyState,
-    NumPyControlInputBatch,
-    JaxState,
-    JaxControlInputBatch,
-)
+from trajax import types
 
 from numtypes import array, Array, Dims, shape_of
 import jax.numpy as jnp
 import numpy as np
+
+
+type NumPyState = types.numpy.bicycle.State
+type NumPyControlInputBatch[T: int, M: int] = types.numpy.bicycle.ControlInputBatch[
+    T, M
+]
+
+type JaxState = types.jax.bicycle.State
+type JaxControlInputBatch[T: int, M: int] = types.jax.bicycle.ControlInputBatch[T, M]
 
 
 class numpy:
@@ -58,17 +61,17 @@ class numpy:
 
                 assert shape_of(
                     inputs,
-                    matches=(T, bicycle.D_U, rollout_count),
+                    matches=(T, types.bicycle.D_U, rollout_count),
                     name="control inputs",
                 )
 
-                return NumPyControlInputBatch(inputs)
+                return types.numpy.bicycle.control_input_batch(inputs)
             case float() | int(), float() | int():
                 assert time_horizon is not None, (
                     "time_horizon must be provided when passing constant inputs."
                 )
 
-                return NumPyControlInputBatch(
+                return types.numpy.bicycle.control_input_batch(
                     array(
                         [
                             [
@@ -77,7 +80,7 @@ class numpy:
                             ],
                         ]
                         * time_horizon,
-                        shape=(time_horizon, bicycle.D_U, rollout_count),
+                        shape=(time_horizon, types.bicycle.D_U, rollout_count),
                     )
                 )
             case _:
@@ -88,7 +91,9 @@ class numpy:
 
     @staticmethod
     def state(*, x: float, y: float, theta: float, v: float) -> NumPyState:
-        return NumPyState(array([x, y, theta, v], shape=(bicycle.D_X,)))
+        return types.numpy.bicycle.state(
+            array([x, y, theta, v], shape=(types.bicycle.D_X,))
+        )
 
 
 class jax:
@@ -119,7 +124,7 @@ class jax:
         acceleration: float | Array,
         steering: float | Array,
     ) -> JaxControlInputBatch:
-        return JaxControlInputBatch(
+        return types.jax.bicycle.control_input_batch(
             jnp.array(
                 numpy.control_input_batch(
                     rollout_count=rollout_count,
@@ -132,4 +137,4 @@ class jax:
 
     @staticmethod
     def state(*, x: float, y: float, theta: float, v: float) -> JaxState:
-        return JaxState(jnp.array([x, y, theta, v]))
+        return types.jax.bicycle.state(jnp.array([x, y, theta, v]))
