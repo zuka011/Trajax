@@ -741,6 +741,60 @@ M = clear_type
             )
             for tracking_cost in (costs.jax.tracking.contouring, costs.jax.tracking.lag)
         ],
+        *[
+            (
+                inputs := data.numpy.control_input_batch(
+                    np.ones((T := 2, D_u := 2, M := 2))
+                ),
+                states := data.numpy.state_batch(
+                    np.random.uniform(size=(T, 3, M))  # type: ignore
+                ),
+                low_weight_cost := costs.numpy.tracking.progress(
+                    path_velocity_extractor=(
+                        path_velocity_extractor := lambda u: np.asarray(u)[:, 1]
+                    ),
+                    time_step_size=low_time_step_size,
+                    weight=low_weight,
+                ),
+                high_weight_cost := costs.numpy.tracking.progress(
+                    path_velocity_extractor=path_velocity_extractor,
+                    time_step_size=high_time_step_size,
+                    weight=high_weight,
+                ),
+            )
+            for (low_time_step_size, high_time_step_size, low_weight, high_weight) in (
+                (0.1, 0.1, 1.0, 10.0),
+                # Increasing the time step size should also increase cost
+                (0.1, 1.0, 1.0, 1.0),
+            )
+        ],
+        *[
+            (
+                inputs := data.jax.control_input_batch(
+                    np.ones((T := 2, D_u := 2, M := 2))
+                ),
+                states := data.jax.state_batch(
+                    np.random.uniform(size=(T, 3, M))  # type: ignore
+                ),
+                low_weight_cost := costs.jax.tracking.progress(
+                    path_velocity_extractor=(
+                        path_velocity_extractor := lambda u: u.array[:, 1]
+                    ),
+                    time_step_size=low_time_step_size,
+                    weight=low_weight,
+                ),
+                high_weight_cost := costs.jax.tracking.progress(
+                    path_velocity_extractor=path_velocity_extractor,  # type: ignore
+                    time_step_size=high_time_step_size,
+                    weight=high_weight,
+                ),
+            )
+            for (low_time_step_size, high_time_step_size, low_weight, high_weight) in (
+                (0.1, 0.1, 1.0, 10.0),
+                # Increasing the time step size should also increase cost
+                (0.1, 1.0, 1.0, 1.0),
+            )
+        ],
     ],
 )
 def test_that_cost_increases_with_weight[
@@ -753,10 +807,61 @@ def test_that_cost_increases_with_weight[
     low_weight_cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     high_weight_cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
 ) -> None:
-    J_low = np.asarray(low_weight_cost(inputs=inputs, states=states))
-    J_high = np.asarray(high_weight_cost(inputs=inputs, states=states))
+    J_low = np.abs(low_weight_cost(inputs=inputs, states=states))
+    J_high = np.abs(high_weight_cost(inputs=inputs, states=states))
 
     assert np.all(J_high > J_low), (
-        f"Cost should increase with weight. Got low weight costs: {J_low}, "
+        f"Absolute value of cost should increase with weight. Got low weight costs: {J_low}, "
         f"high weight costs: {J_high}"
     )
+
+
+@mark.parametrize(
+    ["cost", "inputs_slow", "inputs_fast", "states"],
+    [
+        (
+            cost := costs.numpy.tracking.progress(
+                path_velocity_extractor=lambda u: np.asarray(u)[:, 1],
+                time_step_size=0.1,
+                weight=1.0,
+            ),
+            inputs_slow := data.numpy.control_input_batch(
+                np.full((T := 2, D_u := 2, M := 2), 2.0)
+            ),
+            inputs_fast := data.numpy.control_input_batch(
+                np.full((T, D_u, M), 4.0)  # type: ignore
+            ),
+            # Irrelevant for this test.
+            states := data.numpy.state_batch(np.zeros((T, D_x := 2, M))),
+        ),
+        (
+            cost := costs.jax.tracking.progress(
+                path_velocity_extractor=lambda u: u.array[:, 1],
+                time_step_size=0.1,
+                weight=1.0,
+            ),
+            inputs_slow := data.jax.control_input_batch(
+                np.full((T := 2, D_u := 2, M := 2), 2.0)
+            ),
+            inputs_fast := data.jax.control_input_batch(
+                np.full((T, D_u, M), 4.0)  # type: ignore
+            ),
+            states := data.jax.state_batch(np.zeros((T, D_x := 2, M))),
+        ),
+    ],
+)
+def test_that_progress_cost_rewards_velocity[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    inputs_slow: ControlInputBatchT,
+    inputs_fast: ControlInputBatchT,
+    states: StateBatchT,
+) -> None:
+    J_slow = np.asarray(cost(inputs=inputs_slow, states=states))
+    J_fast = np.asarray(cost(inputs=inputs_fast, states=states))
+
+    assert np.all(0 > J_slow), "Progress cost should be negative (a reward)."
+    assert np.all(J_slow > J_fast), "Higher path velocity should yield higher reward."

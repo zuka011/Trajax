@@ -247,13 +247,13 @@ The tracking cost requires a global reference trajectory that is to be followed.
   Since the costs given by @contouring-lag-cost-equations alone do not encourage progress along the reference trajectory, an additional *progress cost* #progress-cost needs to be added. This cost is defined as:
 
   $
-    #progress-cost = - #progress-weight dot #path-parameter-change / #delta-t
+    #progress-cost = - #progress-weight dot #path-parameter-change #delta-t
   $ <progress-cost-equation>
 
   where $#progress-weight > 0$ is a weighting factor.
 ]
 
-The progress cost given by @progress-cost-equation pushes #path-parameter to move forward along the reference trajectory as fast as possible, pulling the robot along with it. Simultaneously, the contouring and lag costs given by @contouring-lag-cost-equations also pull the #path-parameter back, preventing it from moving too far ahead of the robot. If the weights #contouring-weight, #lag-weight and #progress-weight are chosen appropriately, the robot will try to follow the reference trajectory closely and maximize its progress along it.
+The progress cost given by @progress-cost-equation pushes #path-parameter to move forward along the reference trajectory as fast as possible, pulling the robot along with it. Simultaneously, the contouring and lag costs given by @contouring-lag-cost-equations also pull the #path-parameter back, preventing it from moving too far ahead of the robot. If the weights #contouring-weight, #lag-weight and #progress-weight are chosen appropriately, the robot will try to follow the reference trajectory closely and maximize progress.
 
 === Comfort Cost
 
@@ -267,7 +267,7 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
   Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost is then defined as:
 
   $
-    #smoothing-cost = sum_t^(#horizon) || #input-smooth-weight #input-change _t||^2
+    #smoothing-cost = sum_t^(#horizon) || #input-smooth-weight #input-change _t ||^2
   $ <smoothing-cost-equation>
 ]
 

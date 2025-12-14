@@ -16,37 +16,39 @@ type Positions[T: int = int, M: int = int] = types.jax.Positions[T, M]
 type ReferencePoints[T: int = int, M: int = int] = types.jax.ReferencePoints[T, M]
 
 
-class ParameterExtractor[D_x: int](Protocol):
-    def __call__[T: int, M: int](
-        self, states: JaxMppi.StateBatch[T, D_x, M]
-    ) -> PathParameters[T, M]:
+class PathParameterExtractor[StateT: JaxMppi.StateBatch](Protocol):
+    def __call__(self, states: StateT, /) -> PathParameters:
         """Extracts path parameters from a batch of states."""
         ...
 
 
-class PositionExtractor[D_x: int](Protocol):
-    def __call__[T: int, M: int](
-        self, states: JaxMppi.StateBatch[T, D_x, M]
-    ) -> Positions[T, M]:
+class PathVelocityExtractor[InputT: JaxMppi.ControlInputBatch](Protocol):
+    def __call__(self, inputs: InputT, /) -> JaxArray:
+        """Extracts path velocities from a batch of control inputs."""
+        ...
+
+
+class PositionExtractor[StateT: JaxMppi.StateBatch](Protocol):
+    def __call__(self, states: StateT, /) -> Positions:
         """Extracts (x, y) positions from a batch of states."""
         ...
 
 
 @dataclass(kw_only=True, frozen=True)
-class ContouringCost[D_x: int]:
+class ContouringCost[StateT: JaxMppi.StateBatch]:
     reference: Trajectory[PathParameters, ReferencePoints]
-    path_parameter_extractor: ParameterExtractor[D_x]
-    position_extractor: PositionExtractor[D_x]
+    path_parameter_extractor: PathParameterExtractor[StateT]
+    position_extractor: PositionExtractor[StateT]
     weight: float
 
     @staticmethod
-    def create[D_x_: int = int](
+    def create[S: JaxMppi.StateBatch](
         *,
         reference: Trajectory[PathParameters, ReferencePoints],
-        path_parameter_extractor: ParameterExtractor[D_x_],
-        position_extractor: PositionExtractor[D_x_],
+        path_parameter_extractor: PathParameterExtractor[S],
+        position_extractor: PositionExtractor[S],
         weight: float,
-    ) -> "ContouringCost[D_x_]":
+    ) -> "ContouringCost[S]":
         """Creates a contouring cost implemented with JAX.
 
         Args:
@@ -63,10 +65,7 @@ class ContouringCost[D_x: int]:
         )
 
     def __call__[T: int, M: int](
-        self,
-        *,
-        inputs: JaxMppi.ControlInputBatch[T, int, M],
-        states: JaxMppi.StateBatch[T, D_x, M],
+        self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
     ) -> JaxMppi.Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading
@@ -85,20 +84,20 @@ class ContouringCost[D_x: int]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class LagCost[D_x: int]:
+class LagCost[StateT: JaxMppi.StateBatch]:
     reference: Trajectory[PathParameters, ReferencePoints]
-    path_parameter_extractor: ParameterExtractor[D_x]
-    position_extractor: PositionExtractor[D_x]
+    path_parameter_extractor: PathParameterExtractor[StateT]
+    position_extractor: PositionExtractor[StateT]
     weight: float
 
     @staticmethod
-    def create[D_x_: int = int](
+    def create[S: JaxMppi.StateBatch](
         *,
         reference: Trajectory[PathParameters, ReferencePoints],
-        path_parameter_extractor: ParameterExtractor[D_x_],
-        position_extractor: PositionExtractor[D_x_],
+        path_parameter_extractor: PathParameterExtractor[S],
+        position_extractor: PositionExtractor[S],
         weight: float,
-    ) -> "LagCost[D_x_]":
+    ) -> "LagCost[S]":
         """Creates a lag cost implemented with JAX.
 
         Args:
@@ -115,10 +114,7 @@ class LagCost[D_x: int]:
         )
 
     def __call__[T: int, M: int](
-        self,
-        *,
-        inputs: JaxMppi.ControlInputBatch[T, int, M],
-        states: JaxMppi.StateBatch[T, D_x, M],
+        self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
     ) -> JaxMppi.Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading
@@ -131,6 +127,46 @@ class LagCost[D_x: int]:
                 y=positions.y,
                 x_ref=ref_points.x,
                 y_ref=ref_points.y,
+                weight=self.weight,
+            )
+        )
+
+
+@dataclass(kw_only=True, frozen=True)
+class ProgressCost[InputT: JaxMppi.ControlInputBatch]:
+    path_velocity_extractor: PathVelocityExtractor[InputT]
+    time_step_size: float
+    weight: float
+
+    @staticmethod
+    def create[I: JaxMppi.ControlInputBatch](
+        *,
+        path_velocity_extractor: PathVelocityExtractor[I],
+        time_step_size: float,
+        weight: float,
+    ) -> "ProgressCost[I]":
+        """Creates a progress cost implemented with JAX.
+
+        Args:
+            path_velocity_extractor: Extracts path velocities from control input batch.
+            time_step_size: The time step size used in the trajectory simulation.
+            weight: The weight of the progress cost.
+        """
+        return ProgressCost(
+            path_velocity_extractor=path_velocity_extractor,
+            time_step_size=time_step_size,
+            weight=weight,
+        )
+
+    def __call__[T: int, M: int](
+        self, *, inputs: InputT, states: JaxMppi.StateBatch[T, int, M]
+    ) -> JaxMppi.Costs[T, M]:
+        path_velocities = self.path_velocity_extractor(inputs)
+
+        return types.jax.basic.costs(
+            progress_cost(
+                path_velocities=path_velocities,
+                time_step_size=self.time_step_size,
                 weight=self.weight,
             )
         )
@@ -165,3 +201,11 @@ def lag_cost(
     # TODO: Add test to make sure error has correct sign.
     error = jnp.cos(heading) * (x - x_ref) + jnp.sin(heading) * (y - y_ref)
     return weight * error**2
+
+
+@jax.jit
+@jaxtyped
+def progress_cost(
+    *, path_velocities: Float[JaxArray, "T M"], time_step_size: Scalar, weight: Scalar
+) -> Float[JaxArray, "T M"]:
+    return -weight * path_velocities * time_step_size
