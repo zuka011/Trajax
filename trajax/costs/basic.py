@@ -65,11 +65,11 @@ class ContouringCost[StateT: StateBatch]:
 
     def __call__(self, *, inputs: ControlInputBatch, states: StateT) -> Costs:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
-        heading = ref_points.heading
+        heading = ref_points.heading()
         positions = self.position_extractor(states)
 
-        error = np.sin(heading) * (positions.x - ref_points.x) - np.cos(heading) * (
-            positions.y - ref_points.y
+        error = np.sin(heading) * (positions.x - ref_points.x()) - np.cos(heading) * (
+            positions.y - ref_points.y()
         )
 
         return types.numpy.basic.costs(self.weight * error**2)
@@ -109,11 +109,11 @@ class LagCost[StateT: StateBatch]:
         self, *, inputs: ControlInputBatch[T, int, M], states: StateT
     ) -> Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
-        heading = ref_points.heading
+        heading = ref_points.heading()
         positions = self.position_extractor(states)
 
-        error = np.cos(heading) * (positions.x - ref_points.x) + np.sin(heading) * (
-            positions.y - ref_points.y
+        error = np.cos(heading) * (positions.x - ref_points.x()) + np.sin(heading) * (
+            positions.y - ref_points.y()
         )
 
         return types.numpy.basic.costs(self.weight * error**2)

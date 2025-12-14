@@ -69,7 +69,7 @@ class ContouringCost[StateT: JaxMppi.StateBatch]:
         self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
     ) -> JaxMppi.Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
-        heading = ref_points.heading
+        heading = ref_points.heading_array
         positions = self.position_extractor(states)
 
         return types.jax.basic.costs(
@@ -77,8 +77,8 @@ class ContouringCost[StateT: JaxMppi.StateBatch]:
                 heading=heading,
                 x=positions.x,
                 y=positions.y,
-                x_ref=ref_points.x,
-                y_ref=ref_points.y,
+                x_ref=ref_points.x_array,
+                y_ref=ref_points.y_array,
                 weight=self.weight,
             )
         )
@@ -118,7 +118,7 @@ class LagCost[StateT: JaxMppi.StateBatch]:
         self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
     ) -> JaxMppi.Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
-        heading = ref_points.heading
+        heading = ref_points.heading_array
         positions = self.position_extractor(states)
 
         return types.jax.basic.costs(
@@ -126,8 +126,8 @@ class LagCost[StateT: JaxMppi.StateBatch]:
                 heading=heading,
                 x=positions.x,
                 y=positions.y,
-                x_ref=ref_points.x,
-                y_ref=ref_points.y,
+                x_ref=ref_points.x_array,
+                y_ref=ref_points.y_array,
                 weight=self.weight,
             )
         )

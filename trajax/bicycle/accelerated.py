@@ -4,20 +4,20 @@ from dataclasses import dataclass
 from trajax.type import jaxtyped
 from trajax.bicycle.common import D_X, D_x, D_U, D_u
 
-from jaxtyping import Array, Float, Scalar
-from numtypes import Array as NumPyArray, Dims
+from jaxtyping import Array as JaxArray, Float, Scalar
+from numtypes import Array, Dims
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 
-type StateArray = Float[Array, f"{D_X}"]
-type ControlInputArray = Float[Array, f"{D_U}"]
-type ControlInputSequenceArray = Float[Array, f"T {D_U}"]
+type StateArray = Float[JaxArray, f"{D_X}"]
+type ControlInputArray = Float[JaxArray, f"{D_U}"]
+type ControlInputSequenceArray = Float[JaxArray, f"T {D_U}"]
 
-type StateBatchArray = Float[Array, f"T {D_X} M"]
-type ControlInputBatchArray = Float[Array, f"T {D_U} M"]
+type StateBatchArray = Float[JaxArray, f"T {D_X} M"]
+type ControlInputBatchArray = Float[JaxArray, f"T {D_U} M"]
 
 
 @jaxtyped
@@ -25,7 +25,7 @@ type ControlInputBatchArray = Float[Array, f"T {D_U} M"]
 class State:
     state: StateArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[D_x]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[D_x]]:
         return np.asarray(self.state, dtype=dtype)
 
     @property
@@ -50,13 +50,13 @@ class State:
 class StateBatch[T: int, M: int]:
     states: StateBatchArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_x, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_x, M]]:
         return np.asarray(self.states, dtype=dtype)
 
-    def orientations(self) -> NumPyArray[Dims[T, M]]:
+    def orientations(self) -> Array[Dims[T, M]]:
         return np.asarray(self.states[:, 2, :])
 
-    def velocities(self) -> NumPyArray[Dims[T, M]]:
+    def velocities(self) -> Array[Dims[T, M]]:
         return np.asarray(self.states[:, 3, :])
 
     @property
@@ -69,13 +69,13 @@ class StateBatch[T: int, M: int]:
 class Positions[T: int, M: int]:
     state: StateBatch
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
         return np.asarray(self.state.states[:, :2, :], dtype=dtype)
 
-    def x(self) -> NumPyArray[Dims[T, M]]:
+    def x(self) -> Array[Dims[T, M]]:
         return np.asarray(self.state.states[:, 0, :])
 
-    def y(self) -> NumPyArray[Dims[T, M]]:
+    def y(self) -> Array[Dims[T, M]]:
         return np.asarray(self.state.states[:, 1, :])
 
 
@@ -84,7 +84,7 @@ class Positions[T: int, M: int]:
 class ControlInputSequence[T: int]:
     inputs: ControlInputSequenceArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u]]:
         return np.asarray(self.inputs, dtype=dtype)
 
 
@@ -93,7 +93,7 @@ class ControlInputSequence[T: int]:
 class ControlInputBatch[T: int, M: int]:
     inputs: ControlInputBatchArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> NumPyArray[Dims[T, D_u, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
         return np.asarray(self.inputs, dtype=dtype)
 
     @property
@@ -199,7 +199,7 @@ class JaxBicycleModel:
 @jaxtyped
 def simulate_jit(
     inputs: ControlInputBatchArray,
-    initial: Float[Array, "4 M"],
+    initial: Float[JaxArray, "4 M"],
     *,
     time_step_size: Scalar,
     wheelbase: Scalar,
@@ -210,8 +210,8 @@ def simulate_jit(
     @jax.jit
     @jaxtyped
     def step(
-        state: Float[Array, "4 M"], control: Float[Array, "2 M"]
-    ) -> tuple[Float[Array, "4 M"], Float[Array, "4 M"]]:
+        state: Float[JaxArray, "4 M"], control: Float[JaxArray, "2 M"]
+    ) -> tuple[Float[JaxArray, "4 M"], Float[JaxArray, "4 M"]]:
         x, y, theta, v = state[0], state[1], state[2], state[3]
         acceleration = jnp.clip(control[0], *acceleration_limits)
         steering = jnp.clip(control[1], *steering_limits)
