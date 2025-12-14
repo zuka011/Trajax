@@ -12,6 +12,10 @@ class BasicState[D_x: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         return self.array
 
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[0]
+
 
 @dataclass(frozen=True)
 class BasicStateBatch[T: int, D_x: int, M: int]:

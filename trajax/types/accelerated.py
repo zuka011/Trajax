@@ -16,6 +16,10 @@ class BasicState[D_x: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         return np.asarray(self.array, dtype=dtype)
 
+    @property
+    def dimension(self) -> D_x:
+        return cast(D_x, self.array.shape[0])
+
 
 @jaxtyped
 @dataclass(frozen=True)

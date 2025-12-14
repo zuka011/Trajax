@@ -10,6 +10,11 @@ class State[D_x: int = int](Protocol):
         """Returns the state as a NumPy array."""
         ...
 
+    @property
+    def dimension(self) -> D_x:
+        """Returns the dimension of the state."""
+        ...
+
 
 class StateBatch[T: int = int, D_x: int = int, M: int = int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:

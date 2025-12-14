@@ -9,6 +9,7 @@ from trajax import (
     CostFunction,
     ControlInputSequence,
     mppi as create_mppi,
+    model as create_model,
     update,
     padding,
     samplers,
@@ -18,7 +19,7 @@ import numpy as np
 import jax.random as jrandom
 from numtypes import array
 
-from tests.dsl import mppi as data, integrator, costs, stubs, clear_type
+from tests.dsl import mppi as data, costs, stubs, clear_type
 from pytest import mark
 
 
@@ -492,7 +493,7 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
         (
             mppi := create_mppi.numpy(),
             cost_function := costs.numpy.quadratic_distance_to_origin(),
-            model := integrator.numpy(time_step_size=0.1),
+            model := create_model.numpy.integrator(time_step_size=0.1),
             sampler := samplers.sampler.numpy(
                 standard_deviation=5.0,
                 rollout_count=200,
@@ -510,7 +511,7 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
         (
             mppi := create_mppi.jax(),
             cost_function := costs.jax.quadratic_distance_to_origin(),
-            model := integrator.jax(time_step_size=0.1),
+            model := create_model.jax.integrator(time_step_size=0.1),
             sampler := samplers.sampler.jax(
                 standard_deviation=5.0,
                 rollout_count=200,

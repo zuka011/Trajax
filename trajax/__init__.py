@@ -7,6 +7,7 @@ from .model import (
     ControlInputBatch as ControlInputBatch,
     model as model,
 )
+from .integrator import IntegratorModel as IntegratorModel
 from .bicycle import (
     NumPyBicycleModel as NumPyBicycleModel,
     JaxBicycleModel as JaxBicycleModel,
