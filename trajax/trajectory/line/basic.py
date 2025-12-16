@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
+from trajax.trajectory.common import Trajectory
 from trajax.trajectory.basic import PathParameters, ReferencePoints
 
-import numpy as np
 from numtypes import shape_of
+
+import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyLineTrajectory:
+class NumpyLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
     start: tuple[float, float]
     end: tuple[float, float]
 

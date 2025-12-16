@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from trajax.trajectory.common import Trajectory
 from trajax.trajectory.basic import PathParameters, ReferencePoints
 
 import numpy as np
@@ -11,7 +12,7 @@ type PointArray = Array[Dims[int, D[2]]]
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyWaypointsTrajectory:
+class NumpyWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
     length: float
     reference_points: Array[Dim1]
     spline_x: CubicSpline

@@ -1,8 +1,8 @@
-from typing import cast
+from typing import cast, Any
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.bicycle.common import D_X, D_x, D_U, D_u
+from trajax.model.bicycle.common import D_X, D_x, D_U, D_u, KinematicBicycleModel
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims
@@ -18,6 +18,9 @@ type ControlInputSequenceArray = Float[JaxArray, f"T {D_U}"]
 
 type StateBatchArray = Float[JaxArray, f"T {D_X} M"]
 type ControlInputBatchArray = Float[JaxArray, f"T {D_U} M"]
+
+type StatesAtTimeStep = Float[JaxArray, f"{D_X} M"]
+type ControlInputsAtTimeStep = Float[JaxArray, f"{D_U} M"]
 
 
 @jaxtyped
@@ -45,6 +48,15 @@ class State:
         return float(self.state[3])
 
 
+@dataclass(kw_only=True, frozen=True)
+class StateSequence[T: int]:
+    batch: "StateBatch[T, Any]"
+    rollout: int
+
+    def step(self, index: int) -> State:
+        return State(self.batch.states[index, :, self.rollout])
+
+
 @jaxtyped
 @dataclass(frozen=True)
 class StateBatch[T: int, M: int]:
@@ -58,6 +70,9 @@ class StateBatch[T: int, M: int]:
 
     def velocities(self) -> Array[Dims[T, M]]:
         return np.asarray(self.states[:, 3, :])
+
+    def rollout(self, index: int) -> StateSequence[T]:
+        return StateSequence(batch=self, rollout=index)
 
     @property
     def positions(self) -> "Positions[T, M]":
@@ -84,29 +99,45 @@ class Positions[T: int, M: int]:
 class ControlInputSequence[T: int]:
     inputs: ControlInputSequenceArray
 
+    @staticmethod
+    def zeroes[T_: int](horizon: T_) -> "ControlInputSequence[T_]":
+        return ControlInputSequence(jnp.zeros((horizon, D_U)))
+
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u]]:
         return np.asarray(self.inputs, dtype=dtype)
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class ControlInputBatch[T: int, M: int]:
-    inputs: ControlInputBatchArray
-
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
-        return np.asarray(self.inputs, dtype=dtype)
-
-    @property
-    def rollout_count(self) -> M:
-        return cast(M, self.inputs.shape[2])
 
     @property
     def horizon(self) -> T:
         return cast(T, self.inputs.shape[0])
 
+    @property
+    def dimension(self) -> D_u:
+        return cast(D_u, self.inputs.shape[1])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class ControlInputBatch[T: int, M: int]:
+    array: ControlInputBatchArray
+
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
+        return np.asarray(self.array, dtype=dtype)
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self.array.shape[2])
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
 
 @dataclass(kw_only=True, frozen=True)
-class JaxBicycleModel:
+class JaxBicycleModel(
+    KinematicBicycleModel[
+        State, State, StateBatch, ControlInputSequence, ControlInputBatch
+    ]
+):
     time_step_size: float
     wheelbase: float
     speed_limits: tuple[float, float]
@@ -138,9 +169,7 @@ class JaxBicycleModel:
         )
 
     async def simulate[T: int, M: int](
-        self,
-        inputs: ControlInputBatch[T, M],
-        initial_state: State,
+        self, inputs: ControlInputBatch[T, M], initial_state: State
     ) -> StateBatch[T, M]:
         rollout_count = inputs.rollout_count
 
@@ -154,8 +183,8 @@ class JaxBicycleModel:
         )
 
         return StateBatch(
-            simulate_jit(
-                inputs.inputs,
+            simulate(
+                inputs.array,
                 initial,
                 time_step_size=self.time_step_size,
                 wheelbase=self.wheelbase,
@@ -166,8 +195,16 @@ class JaxBicycleModel:
         )
 
     async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
-        raise NotImplementedError(
-            "Single step simulation is not implemented for JaxBicycleModel."
+        return State(
+            step(
+                state.state.reshape(-1, 1),
+                input.inputs[0].reshape(-1, 1),
+                time_step_size=self.time_step_size,
+                wheelbase=self.wheelbase,
+                speed_limits=self.speed_limits,
+                steering_limits=self.steering_limits,
+                acceleration_limits=self.acceleration_limits,
+            )[:, 0]
         )
 
     @property
@@ -197,9 +234,9 @@ class JaxBicycleModel:
 
 @jax.jit
 @jaxtyped
-def simulate_jit(
+def simulate(
     inputs: ControlInputBatchArray,
-    initial: Float[JaxArray, "4 M"],
+    initial: StatesAtTimeStep,
     *,
     time_step_size: Scalar,
     wheelbase: Scalar,
@@ -209,20 +246,44 @@ def simulate_jit(
 ) -> StateBatchArray:
     @jax.jit
     @jaxtyped
-    def step(
-        state: Float[JaxArray, "4 M"], control: Float[JaxArray, "2 M"]
-    ) -> tuple[Float[JaxArray, "4 M"], Float[JaxArray, "4 M"]]:
-        x, y, theta, v = state[0], state[1], state[2], state[3]
-        acceleration = jnp.clip(control[0], *acceleration_limits)
-        steering = jnp.clip(control[1], *steering_limits)
-
-        new_x = x + v * jnp.cos(theta) * time_step_size
-        new_y = y + v * jnp.sin(theta) * time_step_size
-        new_theta = theta + v * jnp.tan(steering) / wheelbase * time_step_size
-        new_v = jnp.clip(v + acceleration * time_step_size, *speed_limits)
-
-        new_state = jnp.stack([new_x, new_y, new_theta, new_v])
+    def do_step(
+        state: StatesAtTimeStep, control: ControlInputsAtTimeStep
+    ) -> tuple[StatesAtTimeStep, StatesAtTimeStep]:
+        new_state = step(
+            state,
+            control,
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            speed_limits=speed_limits,
+            steering_limits=steering_limits,
+            acceleration_limits=acceleration_limits,
+        )
         return new_state, new_state
 
-    _, states = jax.lax.scan(step, initial, inputs)
+    _, states = jax.lax.scan(do_step, initial, inputs)
     return states
+
+
+@jax.jit
+@jaxtyped
+def step(
+    state: StatesAtTimeStep,
+    control: ControlInputsAtTimeStep,
+    *,
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+    speed_limits: tuple[Scalar, Scalar],
+    steering_limits: tuple[Scalar, Scalar],
+    acceleration_limits: tuple[Scalar, Scalar],
+) -> StatesAtTimeStep:
+    x, y, theta, v = state[0], state[1], state[2], state[3]
+    a, delta = control[0], control[1]
+    acceleration = jnp.clip(a, *acceleration_limits)
+    steering = jnp.clip(delta, *steering_limits)
+
+    new_x = x + v * jnp.cos(theta) * time_step_size
+    new_y = y + v * jnp.sin(theta) * time_step_size
+    new_theta = theta + v * jnp.tan(steering) / wheelbase * time_step_size
+    new_v = jnp.clip(v + acceleration * time_step_size, *speed_limits)
+
+    return jnp.stack([new_x, new_y, new_theta, new_v])

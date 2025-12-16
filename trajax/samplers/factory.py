@@ -1,6 +1,6 @@
 from typing import Final
 
-from trajax.gaussian import NumPyGaussianSampler, JaxGaussianSampler
+from trajax.samplers.gaussian import NumPyGaussianSampler, JaxGaussianSampler
 
 
 class sampler:

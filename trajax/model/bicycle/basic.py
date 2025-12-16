@@ -1,0 +1,354 @@
+from typing import Self, overload, cast, Any
+from dataclasses import dataclass
+
+from trajax.type import DataType
+from trajax.mppi.basic import (
+    State as AnyState,
+    StateBatch as AnyStateBatch,
+    ControlInputSequence as AnyControlInputSequence,
+    ControlInputBatch as AnyControlInputBatch,
+)
+from trajax.model.bicycle.common import D_x, D_X, D_u, D_U, KinematicBicycleModel
+
+from numtypes import Array, Dims, D, shape_of, array
+
+import numpy as np
+
+
+type StateArray = Array[Dims[D_x]]
+type ControlInputArray = Array[Dims[D_u]]
+type ControlInputSequenceArray[T: int] = Array[Dims[T, D_u]]
+
+type StateBatchArray[T: int, M: int] = Array[Dims[T, D_x, M]]
+type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
+
+type StatesAtTimeStep[M: int] = Array[Dims[D_x, M]]
+type ControlInputsAtTimeStep[M: int] = Array[Dims[D_u, M]]
+
+
+@dataclass(frozen=True)
+class State(AnyState[D_x]):
+    array: StateArray
+
+    @staticmethod
+    def create(*, x: float, y: float, heading: float, speed: float) -> "State":
+        """Creates a NumPy bicycle state from individual state components."""
+        return State(array=array([x, y, heading, speed], shape=(D_X,)))
+
+    def __array__(self, dtype: DataType | None = None) -> StateArray:
+        return self.array
+
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[0]
+
+    @property
+    def x(self) -> float:
+        """Returns the x position component."""
+        return self.array[0]
+
+    @property
+    def y(self) -> float:
+        """Returns the y position component."""
+        return self.array[1]
+
+    @property
+    def theta(self) -> float:
+        """Returns the orientation (heading) component."""
+        return self.array[2]
+
+    @property
+    def v(self) -> float:
+        """Returns the speed (velocity magnitude) component."""
+        return self.array[3]
+
+
+@dataclass(kw_only=True, frozen=True)
+class StateSequence[T: int]:
+    batch: "StateBatch[T, Any]"
+    rollout: int
+
+    def step(self, index: int) -> State:
+        return State(self.batch.array[index, :, self.rollout])
+
+
+@dataclass(frozen=True)
+class StateBatch[T: int, M: int](AnyStateBatch[T, D_x, M]):
+    array: StateBatchArray[T, M]
+
+    def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
+        return self.array
+
+    def orientations(self) -> Array[Dims[T, M]]:
+        return self.array[:, 2, :]
+
+    def velocities(self) -> Array[Dims[T, M]]:
+        return self.array[:, 3, :]
+
+    def rollout(self, index: int) -> StateSequence[T]:
+        return StateSequence(batch=self, rollout=index)
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[1]
+
+    @property
+    def rollout_count(self) -> M:
+        return self.array.shape[2]
+
+    @property
+    def positions(self) -> "Positions":
+        return Positions(array=self)
+
+
+@dataclass(frozen=True)
+class Positions[T: int, M: int]:
+    array: StateBatch[T, M]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
+        return self.array.array[:, :2, :]
+
+    def x(self) -> Array[Dims[T, M]]:
+        return self.array.array[:, 0, :]
+
+    def y(self) -> Array[Dims[T, M]]:
+        return self.array.array[:, 1, :]
+
+
+@dataclass(frozen=True)
+class ControlInputSequence[T: int](
+    # NOTE: Using [T, D_u] is too tough for the type checker.
+    AnyControlInputSequence[T, int]
+):
+    array: ControlInputSequenceArray[T]
+
+    @staticmethod
+    def zeroes[T_: int](horizon: T_) -> "ControlInputSequence[T_]":
+        """Creates a zeroed control input sequence for the given horizon."""
+        array = np.zeros((horizon, D_U))
+
+        assert shape_of(array, matches=(horizon, D_U))
+
+        return ControlInputSequence(array)
+
+    def __array__(self, dtype: DataType | None = None) -> ControlInputSequenceArray[T]:
+        return self.array
+
+    @overload
+    def similar(self, *, array: Array[Dims[T, int]]) -> Self: ...
+
+    @overload
+    def similar[L: int](
+        self, *, array: Array[Dims[L, int]], length: L
+    ) -> "ControlInputSequence[L]": ...
+
+    def similar[L: int](
+        self, *, array: Array[Dims[L, int]], length: L | None = None
+    ) -> "Self | ControlInputSequence[L]":
+        # NOTE: "Wrong" cast to silence the type checker.
+        effective_length = cast(T, length if length is not None else array.shape[0])
+
+        assert shape_of(
+            array, matches=(effective_length, self.dimension), name="similar array"
+        )
+
+        return self.__class__(array)
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_u:
+        return self.array.shape[1]
+
+
+@dataclass(frozen=True)
+class ControlInputBatch[T: int, M: int](AnyControlInputBatch[T, D_u, M]):
+    array: ControlInputBatchArray[T, M]
+
+    def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_u:
+        return self.array.shape[1]
+
+    @property
+    def rollout_count(self) -> M:
+        return self.array.shape[2]
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyBicycleModel(
+    KinematicBicycleModel[
+        State, State, StateBatch, ControlInputSequence, ControlInputBatch
+    ]
+):
+    time_step_size: float
+    wheelbase: float
+    speed_limits: tuple[float, float]
+    steering_limits: tuple[float, float]
+    acceleration_limits: tuple[float, float]
+
+    @staticmethod
+    def create(
+        *,
+        time_step_size: float,
+        wheelbase: float = 1.0,
+        speed_limits: tuple[float, float] | None = None,
+        steering_limits: tuple[float, float] | None = None,
+        acceleration_limits: tuple[float, float] | None = None,
+    ) -> "NumPyBicycleModel":
+        """Creates a kinematic bicycle model that uses NumPy for computations."""
+        no_limits = (float("-inf"), float("inf"))
+
+        return NumPyBicycleModel(
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            speed_limits=speed_limits if speed_limits is not None else no_limits,
+            steering_limits=steering_limits
+            if steering_limits is not None
+            else no_limits,
+            acceleration_limits=acceleration_limits
+            if acceleration_limits is not None
+            else no_limits,
+        )
+
+    async def simulate[T: int, M: int](
+        self, inputs: ControlInputBatch[T, M], initial_state: State
+    ) -> StateBatch[T, M]:
+        rollout_count = inputs.rollout_count
+
+        initial = np.stack(
+            [
+                np.full(rollout_count, initial_state.x),
+                np.full(rollout_count, initial_state.y),
+                np.full(rollout_count, initial_state.theta),
+                np.full(rollout_count, initial_state.v),
+            ]
+        )
+
+        return StateBatch(
+            simulate(
+                inputs.array,
+                initial,
+                time_step_size=self.time_step_size,
+                wheelbase=self.wheelbase,
+                speed_limits=self.speed_limits,
+                steering_limits=self.steering_limits,
+                acceleration_limits=self.acceleration_limits,
+            )
+        )
+
+    async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
+        state_as_rollouts = state.array.reshape(-1, 1)
+        first_input = input.array[0].reshape(-1, 1)
+
+        assert shape_of(
+            state_as_rollouts, matches=(D_X, 1), name="state reshaped for step"
+        )
+        assert shape_of(
+            first_input, matches=(D_U, 1), name="first control input reshaped for step"
+        )
+
+        return State(
+            step(
+                state_as_rollouts,
+                first_input,
+                time_step_size=self.time_step_size,
+                wheelbase=self.wheelbase,
+                speed_limits=self.speed_limits,
+                steering_limits=self.steering_limits,
+                acceleration_limits=self.acceleration_limits,
+            )[:, 0]
+        )
+
+    @property
+    def min_speed(self) -> float:
+        return self.speed_limits[0]
+
+    @property
+    def max_speed(self) -> float:
+        return self.speed_limits[1]
+
+    @property
+    def min_steering(self) -> float:
+        return self.steering_limits[0]
+
+    @property
+    def max_steering(self) -> float:
+        return self.steering_limits[1]
+
+    @property
+    def min_acceleration(self) -> float:
+        return self.acceleration_limits[0]
+
+    @property
+    def max_acceleration(self) -> float:
+        return self.acceleration_limits[1]
+
+
+def simulate[T: int, M: int](
+    inputs: ControlInputBatchArray[T, M],
+    initial: StatesAtTimeStep[M],
+    *,
+    time_step_size: float,
+    wheelbase: float,
+    speed_limits: tuple[float, float],
+    steering_limits: tuple[float, float],
+    acceleration_limits: tuple[float, float],
+) -> StateBatchArray[T, M]:
+    horizon = inputs.shape[0]
+    rollout_count = inputs.shape[2]
+    states = np.zeros((horizon, D_X, rollout_count))
+    current = initial
+
+    for t in range(horizon):
+        current = step(
+            current,
+            inputs[t],
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            speed_limits=speed_limits,
+            steering_limits=steering_limits,
+            acceleration_limits=acceleration_limits,
+        )
+        states[t] = current
+
+    assert shape_of(
+        states, matches=(horizon, D_X, rollout_count), name="simulated states"
+    )
+
+    return states
+
+
+def step[M: int](
+    state: StatesAtTimeStep[M],
+    control: ControlInputsAtTimeStep[M],
+    *,
+    time_step_size: float,
+    wheelbase: float,
+    speed_limits: tuple[float, float],
+    steering_limits: tuple[float, float],
+    acceleration_limits: tuple[float, float],
+) -> StatesAtTimeStep[M]:
+    x, y, theta, v = state[0], state[1], state[2], state[3]
+    a, delta = control[0], control[1]
+    acceleration = np.clip(a, *acceleration_limits)
+    steering = np.clip(delta, *steering_limits)
+
+    new_x = x + v * np.cos(theta) * time_step_size
+    new_y = y + v * np.sin(theta) * time_step_size
+    new_theta = theta + v * np.tan(steering) / wheelbase * time_step_size
+    new_v = np.clip(v + acceleration * time_step_size, *speed_limits)
+
+    return np.stack([new_x, new_y, new_theta, new_v])

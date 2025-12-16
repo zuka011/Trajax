@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Self
 from dataclasses import dataclass
 
 from trajax.type import DataType
@@ -18,6 +18,20 @@ class Costs[T: int = int, M: int = int](Protocol):
         """Returns the control inputs as a NumPy array."""
         ...
 
+    def zero(self) -> Self:
+        """Returns zero costs similar to this one."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the costs."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts the costs correspond to."""
+        ...
+
 
 class CostFunction[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs](
     Protocol
@@ -27,9 +41,16 @@ class CostFunction[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs]
         ...
 
 
-class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch](Protocol):
+class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch, M: int = int](
+    Protocol
+):
     def sample(self, *, around: SequenceT) -> BatchT:
         """Samples a batch of control input sequences around the given nominal input."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts the sampler generates."""
         ...
 
 
@@ -40,9 +61,10 @@ class Control[InputT: ControlInputSequence]:
 
 
 class Mppi[
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
+    ControlInputSequenceT: ControlInputSequence,  # Invariant
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](Protocol):
@@ -50,13 +72,13 @@ class Mppi[
         self,
         *,
         model: DynamicalModel[
-            ControlInputSequenceT, ControlInputBatchT, StateT, StateBatchT
+            InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
         ],
         cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,
-        initial_state: StateT,
+        initial_state: InStateT,
     ) -> Control[ControlInputSequenceT]:
         """Runs one iteration of the MPPI algorithm to compute the next optimal and nominal
         control sequences.
@@ -64,7 +86,9 @@ class Mppi[
         ...
 
 
-class UpdateFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
+class UpdateFunction[
+    ControlInputSequenceT: ControlInputSequence  # Invariant
+](Protocol):
     def __call__(
         self,
         *,
@@ -85,7 +109,9 @@ class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequ
         ...
 
 
-class FilterFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
+class FilterFunction[
+    ControlInputSequenceT: ControlInputSequence  # Invariant
+](Protocol):
     def __call__(
         self, *, optimal_input: ControlInputSequenceT
     ) -> ControlInputSequenceT:
@@ -93,10 +119,10 @@ class FilterFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
         ...
 
 
-class NoUpdate:
+class NoUpdate[ControlInputSequenceT: ControlInputSequence]:
     """Returns the nominal input unchanged."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__(
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -105,10 +131,10 @@ class NoUpdate:
         return nominal_input
 
 
-class UseOptimalControlUpdate:
+class UseOptimalControlUpdate[ControlInputSequenceT: ControlInputSequence]:
     """Sets the nominal input to the optimal input."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__(
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -117,10 +143,10 @@ class UseOptimalControlUpdate:
         return optimal_input
 
 
-class NoFilter:
+class NoFilter[ControlInputSequenceT: ControlInputSequence]:
     """Returns the optimal input unchanged."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__(
         self, *, optimal_input: ControlInputSequenceT
     ) -> ControlInputSequenceT:
         return optimal_input

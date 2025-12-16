@@ -1,18 +1,15 @@
 from typing import Protocol
 from dataclasses import dataclass
 
-from trajax.types import types
+from trajax.mppi import CostFunction
 from trajax.model import ControlInputBatch, StateBatch
 from trajax.trajectory import Trajectory
-from trajax.mppi import Costs
+from trajax.trajectory.basic import PathParameters, ReferencePoints, Positions
+from trajax.states.simple.basic import Costs
 
-import numpy as np
 from numtypes import Array, Dims, Dim2
 
-
-type PathParameters[T: int = int, M: int = int] = types.numpy.PathParameters[T, M]
-type Positions[T: int = int, M: int = int] = types.numpy.Positions[T, M]
-type ReferencePoints[T: int = int, M: int = int] = types.numpy.ReferencePoints[T, M]
+import numpy as np
 
 
 class PathParameterExtractor[StateT: StateBatch](Protocol):
@@ -34,7 +31,9 @@ class PositionExtractor[StateT: StateBatch](Protocol):
 
 
 @dataclass(kw_only=True, frozen=True)
-class ContouringCost[StateT: StateBatch]:
+class ContouringCost[StateT: StateBatch](
+    CostFunction[ControlInputBatch, StateT, Costs]
+):
     reference: Trajectory[PathParameters, ReferencePoints]
     path_parameter_extractor: PathParameterExtractor[StateT]
     position_extractor: PositionExtractor[StateT]
@@ -72,11 +71,11 @@ class ContouringCost[StateT: StateBatch]:
             positions.y - ref_points.y()
         )
 
-        return types.numpy.basic.costs(self.weight * error**2)
+        return Costs(self.weight * error**2)
 
 
 @dataclass(kw_only=True, frozen=True)
-class LagCost[StateT: StateBatch]:
+class LagCost[StateT: StateBatch](CostFunction[ControlInputBatch, StateT, Costs]):
     reference: Trajectory[PathParameters, ReferencePoints]
     path_parameter_extractor: PathParameterExtractor[StateT]
     position_extractor: PositionExtractor[StateT]
@@ -116,11 +115,11 @@ class LagCost[StateT: StateBatch]:
             positions.y - ref_points.y()
         )
 
-        return types.numpy.basic.costs(self.weight * error**2)
+        return Costs(self.weight * error**2)
 
 
 @dataclass(kw_only=True, frozen=True)
-class ProgressCost[InputT: ControlInputBatch]:
+class ProgressCost[InputT: ControlInputBatch](CostFunction[InputT, StateBatch, Costs]):
     path_velocity_extractor: PathVelocityExtractor[InputT]
     time_step_size: float
     weight: float
@@ -150,13 +149,13 @@ class ProgressCost[InputT: ControlInputBatch]:
     ) -> Costs[T, M]:
         path_velocities = self.path_velocity_extractor(inputs)
 
-        return types.numpy.basic.costs(
-            -self.weight * path_velocities * self.time_step_size
-        )
+        return Costs(-self.weight * path_velocities * self.time_step_size)
 
 
 @dataclass(kw_only=True, frozen=True)
-class ControlSmoothingCost[D_u: int]:
+class ControlSmoothingCost[D_u: int](
+    CostFunction[ControlInputBatch[int, D_u, int], StateBatch, Costs]
+):
     weights: Array[Dims[D_u]]
 
     @staticmethod
@@ -180,4 +179,4 @@ class ControlSmoothingCost[D_u: int]:
         weighted_squared_diffs = squared_diffs * self.weights[np.newaxis, :, np.newaxis]
         cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)
 
-        return types.numpy.basic.costs(cost_per_time_step)
+        return Costs(cost_per_time_step)

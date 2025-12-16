@@ -8,9 +8,10 @@ from trajax import (
     costs,
 )
 
+from numtypes import array
+
 import numpy as np
 import jax.numpy as jnp
-from numtypes import array
 
 from tests.dsl import mppi as data, clear_type
 from pytest import mark

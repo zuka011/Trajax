@@ -1,26 +1,31 @@
 from typing import Final
 from dataclasses import dataclass
 
-from trajax.types import types
+from trajax.states.simple.basic import (
+    State as SimpleState,
+    StateBatch as SimpleStateBatch,
+)
+from trajax.model.integrator.common import (
+    IntegratorModel,
+    State,
+    ControlInputSequence,
+    ControlInputBatch,
+)
+
+from numtypes import Array, Dims
 
 import numpy as np
-from numtypes import Array, Dims
 
 
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
-type State[D_x: int] = types.numpy.basic.State[D_x]
-type StateBatch[T: int, D_x: int, M: int] = types.numpy.basic.StateBatch[T, D_x, M]
-type ControlInputSequence[T: int, D_u: int] = types.numpy.basic.ControlInputSequence[
-    T, D_u
-]
-type ControlInputBatch[T: int, D_u: int, M: int] = types.numpy.basic.ControlInputBatch[
-    T, D_u, M
-]
-
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyIntegratorModel:
+class NumPyIntegratorModel(
+    IntegratorModel[
+        State, SimpleState, SimpleStateBatch, ControlInputSequence, ControlInputBatch
+    ]
+):
     time_step: float
     state_limits: tuple[float, float]
     velocity_limits: tuple[float, float]
@@ -54,11 +59,11 @@ class NumPyIntegratorModel:
 
     async def simulate[T: int, D_u: int, D_x: int, M: int](
         self, inputs: ControlInputBatch[T, D_u, M], initial_state: State[D_x]
-    ) -> StateBatch[T, D_x, M]:
+    ) -> SimpleStateBatch[T, D_x, M]:
         initial = np.asarray(initial_state)
         clipped_inputs = np.clip(inputs, *self.velocity_limits)
 
-        return types.numpy.basic.state_batch(
+        return SimpleStateBatch(
             simulate_with_state_limits(
                 inputs=clipped_inputs,
                 initial_state=initial,
@@ -73,7 +78,7 @@ class NumPyIntegratorModel:
 
     async def step[T: int, D_u: int, D_x: int](
         self, input: ControlInputSequence[T, D_u], state: State[D_x]
-    ) -> State[D_x]:
+    ) -> SimpleState[D_x]:
         controls = np.asarray(input)
         current_state = np.asarray(state)
 
@@ -82,7 +87,7 @@ class NumPyIntegratorModel:
             current_state + clipped_control * self.time_step, *self.state_limits
         )
 
-        return types.numpy.basic.state(array=new_state)
+        return SimpleState(array=new_state)
 
     @property
     def has_state_limits(self) -> bool:

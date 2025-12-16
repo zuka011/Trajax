@@ -115,7 +115,9 @@ async def test_that_mppi_favors_samples_with_lower_costs[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     temperature: float,
     nominal_input: ControlInputSequenceT,
@@ -245,7 +247,9 @@ async def test_that_mppi_shifts_control_sequence_left_when_replanning[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -356,7 +360,9 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -443,7 +449,9 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -495,14 +503,14 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
             cost_function := costs.numpy.quadratic_distance_to_origin(),
             model := create_model.numpy.integrator(time_step_size=0.1),
             sampler := samplers.sampler.numpy(
-                standard_deviation=5.0,
+                standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),
                 rollout_count=200,
                 to_batch=data.numpy.control_input_batch,
                 seed=42,
             ),
             current_state := data.numpy.state(array([224.0, 52.0], shape=(D_x := 2,))),
             nominal_input := data.numpy.control_input_sequence(
-                np.zeros((T := 10, D_u := 2))
+                np.zeros((T := 10, D_u))
             ),
             temperature := 1.0,
             max_iterations := 100,
@@ -513,15 +521,13 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
             cost_function := costs.jax.quadratic_distance_to_origin(),
             model := create_model.jax.integrator(time_step_size=0.1),
             sampler := samplers.sampler.jax(
-                standard_deviation=5.0,
+                standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),
                 rollout_count=200,
                 to_batch=data.jax.control_input_batch,
                 key=jrandom.PRNGKey(42),
             ),
             current_state := data.jax.state(array([45.0, 125.0], shape=(D_x := 2,))),
-            nominal_input := data.jax.control_input_sequence(
-                np.zeros((T := 10, D_u := 2))
-            ),
+            nominal_input := data.jax.control_input_sequence(np.zeros((T := 10, D_u))),
             temperature := 1.0,
             max_iterations := 100,
             convergence_threshold := 0.1,
@@ -535,10 +541,12 @@ async def test_that_mppi_converges_to_target_state[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     model: DynamicalModel[
-        ControlInputSequenceT, ControlInputBatchT, StateT, StateBatchT
+        StateT, StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
     current_state: StateT,
@@ -638,7 +646,9 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -732,7 +742,9 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -777,21 +789,19 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
     [
         (
             mppi := create_mppi.numpy(
-                update_function=(
-                    update_function := stubs.UpdateFunction.returns(
-                        data.numpy.control_input_sequence(
-                            array([[9.0, 9.0], [10.0, 10.0]], shape=(T := 2, D_u := 2))
-                        ),
-                        when_nominal_input_is=(
-                            nominal_input := data.numpy.control_input_sequence(
-                                array([[2.0, 3.0], [1.0, 2.0]], shape=(T, D_u))
-                            )
-                        ),
-                        and_optimal_input_is=data.numpy.control_input_sequence(
-                            sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
-                        ),
-                    )
-                ),
+                update_function=stubs.UpdateFunction.returns(
+                    data.numpy.control_input_sequence(
+                        array([[9.0, 9.0], [10.0, 10.0]], shape=(T := 2, D_u := 2))
+                    ),
+                    when_nominal_input_is=(
+                        nominal_input := data.numpy.control_input_sequence(
+                            array([[2.0, 3.0], [1.0, 2.0]], shape=(T, D_u))
+                        )
+                    ),
+                    and_optimal_input_is=data.numpy.control_input_sequence(
+                        sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
+                    ),
+                )
             ),
             cost_function := costs.numpy.energy(),
             nominal_input,
@@ -810,21 +820,19 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
         ),
         (
             mppi := create_mppi.jax(
-                update_function=(
-                    update_function := stubs.UpdateFunction.returns(
-                        data.jax.control_input_sequence(
-                            array([[10.0, 10.0], [1.0, 1.0]], shape=(T := 2, D_u := 2))
-                        ),
-                        when_nominal_input_is=(
-                            nominal_input := data.jax.control_input_sequence(
-                                array([[2.0, 4.0], [1.0, 1.0]], shape=(T, D_u))
-                            )
-                        ),
-                        and_optimal_input_is=data.jax.control_input_sequence(
-                            sample := array([[2.0, 12.0], [21.0, 21.0]], shape=(T, D_u))
-                        ),
-                    )
-                ),
+                update_function=stubs.UpdateFunction.returns(
+                    data.jax.control_input_sequence(
+                        array([[10.0, 10.0], [1.0, 1.0]], shape=(T := 2, D_u := 2))
+                    ),
+                    when_nominal_input_is=(
+                        nominal_input := data.jax.control_input_sequence(
+                            array([[2.0, 4.0], [1.0, 1.0]], shape=(T, D_u))
+                        )
+                    ),
+                    and_optimal_input_is=data.jax.control_input_sequence(
+                        sample := array([[2.0, 12.0], [21.0, 21.0]], shape=(T, D_u))
+                    ),
+                )
             ),
             cost_function := costs.jax.energy(),
             nominal_input,
@@ -849,7 +857,9 @@ async def test_that_mppi_uses_update_function_to_update_nominal_input[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -879,6 +889,11 @@ async def test_that_mppi_uses_update_function_to_update_nominal_input[
     )
 
 
+T = clear_type
+D_u = clear_type
+padding_size = clear_type
+
+
 @mark.asyncio
 @mark.parametrize(
     [
@@ -891,28 +906,26 @@ async def test_that_mppi_uses_update_function_to_update_nominal_input[
         "expected_nominal_control",
     ],
     [
-        (
+        (  #
             mppi := create_mppi.numpy(
-                planning_interval=(padding_size := 2),
+                planning_interval=(padding_size := int(2)),
                 update_function=update.numpy.no_update(),
-                padding_function=(
-                    padding_function := stubs.PaddingFunction.returns(
-                        data.numpy.control_input_sequence(
+                padding_function=stubs.PaddingFunction.returns(
+                    data.numpy.control_input_sequence(
+                        array(
+                            [[12.0, 16.0], [17.0, 18.0]],
+                            shape=(padding_size, D_u := int(2)),
+                        )
+                    ),
+                    when_nominal_input_is=(
+                        nominal_input := data.numpy.control_input_sequence(
                             array(
-                                [[12.0, 16.0], [17.0, 18.0]],
-                                shape=(padding_size, D_u := 2),
+                                [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
+                                shape=(T := 4, D_u),
                             )
-                        ),
-                        when_nominal_input_is=(
-                            nominal_input := data.numpy.control_input_sequence(
-                                array(
-                                    [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
-                                    shape=(T := 4, D_u),
-                                )
-                            )
-                        ),
-                        and_padding_size_is=padding_size,
-                    )
+                        )
+                    ),
+                    and_padding_size_is=padding_size,
                 ),
             ),
             cost_function := costs.numpy.energy(),
@@ -932,24 +945,22 @@ async def test_that_mppi_uses_update_function_to_update_nominal_input[
             mppi := create_mppi.jax(
                 planning_interval=(padding_size := 3),
                 update_function=update.jax.no_update(),
-                padding_function=(
-                    padding_function := stubs.PaddingFunction.returns(
-                        data.jax.control_input_sequence(
+                padding_function=stubs.PaddingFunction.returns(
+                    data.jax.control_input_sequence(
+                        array(
+                            [[9.0, 10.0], [11.0, 12.0], [13.0, 14.0]],
+                            shape=(padding_size, D_u := 2),
+                        )
+                    ),
+                    when_nominal_input_is=(
+                        nominal_input := data.jax.control_input_sequence(
                             array(
-                                [[9.0, 10.0], [11.0, 12.0], [13.0, 14.0]],
-                                shape=(padding_size, D_u := 2),
+                                [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
+                                shape=(T := 4, D_u),
                             )
-                        ),
-                        when_nominal_input_is=(
-                            nominal_input := data.jax.control_input_sequence(
-                                array(
-                                    [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]],
-                                    shape=(T := 4, D_u),
-                                )
-                            )
-                        ),
-                        and_padding_size_is=padding_size,
-                    )
+                        )
+                    ),
+                    and_padding_size_is=padding_size,
                 ),
             ),
             cost_function := costs.jax.energy(),
@@ -975,7 +986,9 @@ async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
@@ -1005,6 +1018,10 @@ async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
     )
 
 
+T = clear_type
+D_u = clear_type
+
+
 @mark.asyncio
 @mark.parametrize(
     [
@@ -1021,17 +1038,16 @@ async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
         (
             mppi := create_mppi.numpy(
                 update_function=update.numpy.use_optimal_control(),
-                filter_function=(
-                    filter_function := stubs.FilterFunction.returns(
-                        expected_optimal_control := data.numpy.control_input_sequence(
-                            array(
-                                [[10.0, 20.0], [30.0, 40.0]], shape=(T := 2, D_u := 2)
-                            )
-                        ),
-                        when_optimal_input_is=data.numpy.control_input_sequence(
-                            sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
-                        ),
-                    )
+                filter_function=stubs.FilterFunction.returns(
+                    expected_optimal_control := data.numpy.control_input_sequence(
+                        array(
+                            [[10.0, 20.0], [30.0, 40.0]],
+                            shape=(T := int(2), D_u := int(2)),
+                        )
+                    ),
+                    when_optimal_input_is=data.numpy.control_input_sequence(
+                        sample := array([[1.0, 2.0], [3.0, 4.0]], shape=(T, D_u))
+                    ),
                 ),
             ),
             cost_function := costs.numpy.energy(),
@@ -1055,17 +1071,13 @@ async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
         (
             mppi := create_mppi.jax(
                 update_function=update.jax.use_optimal_control(),
-                filter_function=(
-                    filter_function := stubs.FilterFunction.returns(
-                        expected_optimal_control := data.jax.control_input_sequence(
-                            array(
-                                [[50.0, 60.0], [70.0, 80.0]], shape=(T := 2, D_u := 2)
-                            )
-                        ),
-                        when_optimal_input_is=data.jax.control_input_sequence(
-                            sample := array([[5.0, 6.0], [7.0, 8.0]], shape=(T, D_u))
-                        ),
-                    )
+                filter_function=stubs.FilterFunction.returns(
+                    expected_optimal_control := data.jax.control_input_sequence(
+                        array([[50.0, 60.0], [70.0, 80.0]], shape=(T := 2, D_u := 2))
+                    ),
+                    when_optimal_input_is=data.jax.control_input_sequence(
+                        sample := array([[5.0, 6.0], [7.0, 8.0]], shape=(T, D_u))
+                    ),
                 ),
             ),
             cost_function := costs.jax.energy(),
@@ -1094,7 +1106,9 @@ async def test_that_mppi_uses_filter_function_to_filter_optimal_control[
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](
-    mppi: Mppi[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT],
+    mppi: Mppi[
+        StateT, State, StateBatchT, ControlInputSequenceT, ControlInputBatchT, CostsT
+    ],
     cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,

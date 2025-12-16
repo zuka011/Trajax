@@ -3,6 +3,7 @@ from typing import overload
 from trajax import types
 
 from numtypes import array, Array, Dims, shape_of
+
 import jax.numpy as jnp
 import numpy as np
 
@@ -91,9 +92,7 @@ class numpy:
 
     @staticmethod
     def state(*, x: float, y: float, theta: float, v: float) -> NumPyState:
-        return types.numpy.bicycle.state(
-            array([x, y, theta, v], shape=(types.bicycle.D_X,))
-        )
+        return types.numpy.bicycle.state(x=x, y=y, heading=theta, speed=v)
 
 
 class jax:
@@ -131,7 +130,7 @@ class jax:
                     time_horizon=time_horizon,  # type: ignore
                     acceleration=acceleration,  # type: ignore
                     steering=steering,  # type: ignore
-                ).inputs
+                ).array
             )
         )
 

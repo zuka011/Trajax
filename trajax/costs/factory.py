@@ -12,10 +12,24 @@ from trajax.costs.accelerated import (
     ProgressCost as JaxProgressCost,
     ControlSmoothingCost as JaxControlSmoothingCost,
 )
+from trajax.costs.combined import CombinedCost, NumPyCostSumFunction
+from trajax.mppi.common import ControlInputBatch, StateBatch, CostFunction
+from trajax.mppi.basic import Costs as NumPyCosts
 
 
 class costs:
     class numpy:
+        @staticmethod
+        def combined[
+            ControlInputBatchT: ControlInputBatch,
+            StateBatchT: StateBatch,
+            CostsT: NumPyCosts,
+        ](
+            *costs: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        ) -> CombinedCost[ControlInputBatchT, StateBatchT, CostsT]:
+            """Creates a NumPy cost function combining all given cost functions by summation."""
+            return CombinedCost(costs=list(costs), sum=NumPyCostSumFunction())
+
         class tracking:
             contouring: Final = NumPyContouringCost.create
             lag: Final = NumPyLagCost.create

@@ -5,13 +5,9 @@ from .model import (
     StateBatch as StateBatch,
     ControlInputSequence as ControlInputSequence,
     ControlInputBatch as ControlInputBatch,
-    model as model,
-)
-from .integrator import IntegratorModel as IntegratorModel
-from .bicycle import (
-    NumPyBicycleModel as NumPyBicycleModel,
-    JaxBicycleModel as JaxBicycleModel,
+    IntegratorModel as IntegratorModel,
     KinematicBicycleModel as KinematicBicycleModel,
+    model as model,
 )
 from .trajectory import (
     Trajectory as Trajectory,
@@ -19,12 +15,19 @@ from .trajectory import (
     ReferencePoints as ReferencePoints,
     trajectory as trajectory,
 )
-from .costs import costs as costs
+from .costs import costs as costs, CombinedCost as CombinedCost
 from .samplers import sampler as sampler
+from .states import (
+    AugmentedModel as AugmentedModel,
+    AugmentedSampler as AugmentedSampler,
+)
 from .mppi import (
     Costs as Costs,
     CostFunction as CostFunction,
     Sampler as Sampler,
+    UpdateFunction as UpdateFunction,
+    PaddingFunction as PaddingFunction,
+    FilterFunction as FilterFunction,
     Control as Control,
     Mppi as Mppi,
     NumPyMppi as NumPyMppi,

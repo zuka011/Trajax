@@ -3,10 +3,12 @@ from trajax import (
     IntegratorModel,
     State,
     StateBatch,
+    ControlInputSequence,
     ControlInputBatch,
 )
 
 from numtypes import array
+
 import numpy as np
 
 from tests.dsl import mppi as data, clear_type
@@ -94,13 +96,17 @@ from pytest import mark
     ],
 )
 async def test_that_integration_is_exact_for_constant_inputs[
-    ControlInputBatchT: ControlInputBatch,
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
 ](
-    model: IntegratorModel[ControlInputBatchT, StateT, StateBatchT],
+    model: IntegratorModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
     inputs: ControlInputBatchT,
-    initial_state: StateT,
+    initial_state: InStateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -151,13 +157,17 @@ M = clear_type
     ],
 )
 async def test_that_zero_velocity_results_in_standstill[
-    ControlInputBatchT: ControlInputBatch,
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
 ](
-    model: IntegratorModel[ControlInputBatchT, StateT, StateBatchT],
+    model: IntegratorModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
     inputs: ControlInputBatchT,
-    initial_state: StateT,
+    initial_state: InStateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -255,13 +265,17 @@ async def test_that_zero_velocity_results_in_standstill[
     ],
 )
 async def test_that_state_limits_are_respected_during_integration[
-    ControlInputBatchT: ControlInputBatch,
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
 ](
-    model: IntegratorModel[ControlInputBatchT, StateT, StateBatchT],
+    model: IntegratorModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
     inputs: ControlInputBatchT,
-    initial_state: StateT,
+    initial_state: InStateT,
     state_min: float,
     state_max: float,
     expected_final_state: StateBatchT,
@@ -382,13 +396,17 @@ async def test_that_state_limits_are_respected_during_integration[
     ],
 )
 async def test_that_velocity_limits_are_respected_during_integration[
-    ControlInputBatchT: ControlInputBatch,
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
 ](
-    model: IntegratorModel[ControlInputBatchT, StateT, StateBatchT],
+    model: IntegratorModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
     inputs: ControlInputBatchT,
-    initial_state: StateT,
+    initial_state: InStateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)

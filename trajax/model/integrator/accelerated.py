@@ -1,31 +1,37 @@
-from typing import Protocol
+from typing import Protocol, Final
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.types import types
-from trajax.model import (
-    State as AnyState,
-    ControlInputBatch as AnyControlInputBatch,
-    ControlInputSequence as AnyControlInputSequence,
+from trajax.states.simple.accelerated import (
+    State as SimpleState,
+    StateBatch as SimpleStateBatch,
 )
+from trajax.model.integrator.common import (
+    IntegratorModel,
+    State as AnyState,
+    ControlInputSequence as AnyControlInputSequence,
+    ControlInputBatch as AnyControlInputBatch,
+)
+
+from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array as JaxArray, Float, Scalar
 
 
-type BasicState[D_x: int] = types.jax.basic.State[D_x]
-type BasicStateBatch[T: int, D_x: int, M: int] = types.jax.basic.StateBatch[T, D_x, M]
+NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 
-class State[D_x: int](AnyState[D_x], Protocol):
+class State[D_x: int = int](AnyState[D_x], Protocol):
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
         """Returns the underlying JAX array."""
         ...
 
 
-class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Protocol):
+class ControlInputSequence[T: int = int, D_u: int = int](
+    AnyControlInputSequence[T, D_u], Protocol
+):
     @property
     def array(self) -> Float[JaxArray, "T D_u"]:
         """Returns the underlying JAX array."""
@@ -37,7 +43,7 @@ class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Pr
         ...
 
 
-class ControlInputBatch[T: int, D_u: int, M: int](
+class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
     AnyControlInputBatch[T, D_u, M], Protocol
 ):
     @property
@@ -47,7 +53,11 @@ class ControlInputBatch[T: int, D_u: int, M: int](
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxIntegratorModel:
+class JaxIntegratorModel(
+    IntegratorModel[
+        State, SimpleState, SimpleStateBatch, ControlInputSequence, ControlInputBatch
+    ]
+):
     time_step: float
     state_limits: tuple[float, float]
     velocity_limits: tuple[float, float]
@@ -71,20 +81,19 @@ class JaxIntegratorModel:
             state_limits: Optional tuple of (min, max) limits for the state values.
             velocity_limits: Optional tuple of (min, max) limits for the velocity inputs.
         """
-        no_limits = (float("-inf"), float("inf"))
 
         return JaxIntegratorModel(
             time_step=time_step_size,
-            state_limits=state_limits if state_limits is not None else no_limits,
+            state_limits=state_limits if state_limits is not None else NO_LIMITS,
             velocity_limits=velocity_limits
             if velocity_limits is not None
-            else no_limits,
+            else NO_LIMITS,
         )
 
     async def simulate[T: int, D_u: int, D_x: int, M: int](
         self, inputs: ControlInputBatch[T, D_u, M], initial_state: State[D_x]
-    ) -> BasicStateBatch[T, D_x, M]:
-        return types.jax.basic.state_batch(
+    ) -> SimpleStateBatch[T, D_x, M]:
+        return SimpleStateBatch(
             integrator_simulate(
                 controls=inputs.array,
                 initial_state=initial_state.array,
@@ -98,8 +107,8 @@ class JaxIntegratorModel:
 
     async def step[T: int, D_u: int, D_x: int](
         self, input: ControlInputSequence[T, D_u], state: State[D_x]
-    ) -> BasicState[D_x]:
-        return types.jax.basic.state(
+    ) -> SimpleState[D_x]:
+        return SimpleState(
             integrator_step(
                 control=input.array,
                 state=state.array,

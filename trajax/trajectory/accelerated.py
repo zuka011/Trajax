@@ -4,15 +4,16 @@ from dataclasses import dataclass
 from trajax.type import jaxtyped
 from trajax.trajectory.common import D_r, D_R
 
-import jax
-import jax.numpy as jnp
-import numpy as np
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims, D
 
+import jax
+import jax.numpy as jnp
+import numpy as np
+
 
 @dataclass(frozen=True)
-class PathParameters[T: int, M: int]:
+class PathParameters[T: int = int, M: int = int]:
     array: Float[JaxArray, "T M"]
 
     @overload
@@ -54,7 +55,7 @@ class PathParameters[T: int, M: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class Positions[T: int, M: int]:
+class Positions[T: int = int, M: int = int]:
     x: Float[JaxArray, "T M"]
     y: Float[JaxArray, "T M"]
 
@@ -74,7 +75,7 @@ class Positions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class ReferencePoints[T: int, M: int]:
+class ReferencePoints[T: int = int, M: int = int]:
     array: Float[JaxArray, f"T {D_R} M"]
 
     @overload

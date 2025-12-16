@@ -1,8 +1,8 @@
 from typing import Final
 
-from .basic import NumPyMppi
-from .accelerated import JaxMppi
-from .common import NoUpdate, UseOptimalControlUpdate
+from trajax.mppi.basic import NumPyMppi, ZeroPadding as NumPyZeroPadding
+from trajax.mppi.accelerated import JaxMppi, ZeroPadding as JaxZeroPadding
+from trajax.mppi.common import NoUpdate, UseOptimalControlUpdate
 
 
 class mppi:
@@ -22,7 +22,7 @@ class update:
 
 class padding:
     class numpy:
-        zero: Final = NumPyMppi.ZeroPadding
+        zero: Final = NumPyZeroPadding
 
     class jax:
-        zero: Final = JaxMppi.ZeroPadding
+        zero: Final = JaxZeroPadding

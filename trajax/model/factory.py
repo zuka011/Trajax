@@ -1,7 +1,7 @@
 from typing import Final
 
-from trajax.integrator import NumPyIntegratorModel, JaxIntegratorModel
-from trajax.bicycle import NumPyBicycleModel, JaxBicycleModel
+from trajax.model.integrator import NumPyIntegratorModel, JaxIntegratorModel
+from trajax.model.bicycle import NumPyBicycleModel, JaxBicycleModel
 
 
 class model:

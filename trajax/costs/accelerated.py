@@ -2,48 +2,48 @@ from typing import Protocol, overload, cast
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.types import types
+from trajax.mppi import CostFunction
 from trajax.trajectory import Trajectory
-from trajax.mppi import JaxMppi
+from trajax.trajectory.accelerated import PathParameters, ReferencePoints, Positions
+from trajax.mppi.accelerated import ControlInputBatch, StateBatch
+from trajax.states.simple.accelerated import Costs
 
-import jax
-import jax.numpy as jnp
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims
 
-
-type PathParameters[T: int = int, M: int = int] = types.jax.PathParameters[T, M]
-type Positions[T: int = int, M: int = int] = types.jax.Positions[T, M]
-type ReferencePoints[T: int = int, M: int = int] = types.jax.ReferencePoints[T, M]
+import jax
+import jax.numpy as jnp
 
 
-class PathParameterExtractor[StateT: JaxMppi.StateBatch](Protocol):
+class PathParameterExtractor[StateT: StateBatch](Protocol):
     def __call__(self, states: StateT, /) -> PathParameters:
         """Extracts path parameters from a batch of states."""
         ...
 
 
-class PathVelocityExtractor[InputT: JaxMppi.ControlInputBatch](Protocol):
-    def __call__(self, inputs: InputT, /) -> JaxArray:
+class PathVelocityExtractor[InputT: ControlInputBatch](Protocol):
+    def __call__(self, inputs: InputT, /) -> Float[JaxArray, "T M"]:
         """Extracts path velocities from a batch of control inputs."""
         ...
 
 
-class PositionExtractor[StateT: JaxMppi.StateBatch](Protocol):
+class PositionExtractor[StateT: StateBatch](Protocol):
     def __call__(self, states: StateT, /) -> Positions:
         """Extracts (x, y) positions from a batch of states."""
         ...
 
 
 @dataclass(kw_only=True, frozen=True)
-class ContouringCost[StateT: JaxMppi.StateBatch]:
+class ContouringCost[StateT: StateBatch](
+    CostFunction[ControlInputBatch, StateT, Costs]
+):
     reference: Trajectory[PathParameters, ReferencePoints]
     path_parameter_extractor: PathParameterExtractor[StateT]
     position_extractor: PositionExtractor[StateT]
     weight: float
 
     @staticmethod
-    def create[S: JaxMppi.StateBatch](
+    def create[S: StateBatch](
         *,
         reference: Trajectory[PathParameters, ReferencePoints],
         path_parameter_extractor: PathParameterExtractor[S],
@@ -66,13 +66,13 @@ class ContouringCost[StateT: JaxMppi.StateBatch]:
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
-    ) -> JaxMppi.Costs[T, M]:
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateT
+    ) -> Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading_array
         positions = self.position_extractor(states)
 
-        return types.jax.basic.costs(
+        return Costs(
             contour_cost(
                 heading=heading,
                 x=positions.x,
@@ -85,14 +85,14 @@ class ContouringCost[StateT: JaxMppi.StateBatch]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class LagCost[StateT: JaxMppi.StateBatch]:
+class LagCost[StateT: StateBatch](CostFunction[ControlInputBatch, StateT, Costs]):
     reference: Trajectory[PathParameters, ReferencePoints]
     path_parameter_extractor: PathParameterExtractor[StateT]
     position_extractor: PositionExtractor[StateT]
     weight: float
 
     @staticmethod
-    def create[S: JaxMppi.StateBatch](
+    def create[S: StateBatch](
         *,
         reference: Trajectory[PathParameters, ReferencePoints],
         path_parameter_extractor: PathParameterExtractor[S],
@@ -115,13 +115,13 @@ class LagCost[StateT: JaxMppi.StateBatch]:
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: JaxMppi.ControlInputBatch[T, int, M], states: StateT
-    ) -> JaxMppi.Costs[T, M]:
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateT
+    ) -> Costs[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading_array
         positions = self.position_extractor(states)
 
-        return types.jax.basic.costs(
+        return Costs(
             lag_cost(
                 heading=heading,
                 x=positions.x,
@@ -134,13 +134,13 @@ class LagCost[StateT: JaxMppi.StateBatch]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class ProgressCost[InputT: JaxMppi.ControlInputBatch]:
+class ProgressCost[InputT: ControlInputBatch](CostFunction[InputT, StateBatch, Costs]):
     path_velocity_extractor: PathVelocityExtractor[InputT]
     time_step_size: float
     weight: float
 
     @staticmethod
-    def create[I: JaxMppi.ControlInputBatch](
+    def create[I: ControlInputBatch](
         *,
         path_velocity_extractor: PathVelocityExtractor[I],
         time_step_size: float,
@@ -160,11 +160,11 @@ class ProgressCost[InputT: JaxMppi.ControlInputBatch]:
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: InputT, states: JaxMppi.StateBatch[T, int, M]
-    ) -> JaxMppi.Costs[T, M]:
+        self, *, inputs: InputT, states: StateBatch[T, int, M]
+    ) -> Costs[T, M]:
         path_velocities = self.path_velocity_extractor(inputs)
 
-        return types.jax.basic.costs(
+        return Costs(
             progress_cost(
                 path_velocities=path_velocities,
                 time_step_size=self.time_step_size,
@@ -175,15 +175,16 @@ class ProgressCost[InputT: JaxMppi.ControlInputBatch]:
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class ControlSmoothingCost[D_u: int]:
+class ControlSmoothingCost[D_u: int](
+    CostFunction[ControlInputBatch[int, D_u, int], StateBatch, Costs]
+):
     weights: Float[JaxArray, "D_u"]
     dimensions: D_u
 
     @overload
     @staticmethod
     def create[D_u_: int](
-        *,
-        weights: Array[Dims[D_u_]],
+        *, weights: Array[Dims[D_u_]]
     ) -> "ControlSmoothingCost[D_u_]":
         """Creates a control smoothing cost implemented with JAX.
 
@@ -195,9 +196,7 @@ class ControlSmoothingCost[D_u: int]:
     @overload
     @staticmethod
     def create[D_u_: int](
-        *,
-        weights: Float[JaxArray, "D_u_"],
-        dimensions: D_u_,
+        *, weights: Float[JaxArray, "D_u_"], dimensions: D_u_
     ) -> "ControlSmoothingCost[D_u_]":
         """Creates a control smoothing cost implemented with JAX.
 
@@ -219,14 +218,9 @@ class ControlSmoothingCost[D_u: int]:
         return ControlSmoothingCost(weights=jnp.asarray(weights), dimensions=dimensions)
 
     def __call__[T: int, M: int](
-        self,
-        *,
-        inputs: JaxMppi.ControlInputBatch[T, D_u, M],
-        states: JaxMppi.StateBatch[T, int, M],
-    ) -> JaxMppi.Costs[T, M]:
-        return types.jax.basic.costs(
-            control_smoothing_cost(inputs=inputs.array, weights=self.weights)
-        )
+        self, *, inputs: ControlInputBatch[T, D_u, M], states: StateBatch[T, int, M]
+    ) -> Costs[T, M]:
+        return Costs(control_smoothing_cost(inputs=inputs.array, weights=self.weights))
 
 
 @jax.jit

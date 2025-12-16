@@ -2,6 +2,9 @@ from .common import (
     Costs as Costs,
     CostFunction as CostFunction,
     Sampler as Sampler,
+    UpdateFunction as UpdateFunction,
+    PaddingFunction as PaddingFunction,
+    FilterFunction as FilterFunction,
     Control as Control,
     Mppi as Mppi,
 )

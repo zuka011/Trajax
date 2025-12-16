@@ -2,6 +2,7 @@ from typing import cast
 from dataclasses import dataclass
 
 from numtypes import Array, Shape, Dims, shape_of
+
 import numpy as np
 
 

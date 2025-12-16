@@ -1,16 +1,17 @@
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.trajectory.common import D_R
+from trajax.trajectory.common import D_R, Trajectory
 from trajax.trajectory.accelerated import PathParameters, ReferencePoints, stack
+
+from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array as JaxArray, Float, Scalar
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxLineTrajectory:
+class JaxLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
     start: tuple[float, float]
     end: tuple[float, float]
 

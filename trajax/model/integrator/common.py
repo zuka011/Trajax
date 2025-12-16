@@ -74,7 +74,7 @@ class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
         ...
 
 
-class DynamicalModel[
+class IntegratorModel[
     InStateT: State,
     OutStateT: State,
     StateBatchT: StateBatch,
@@ -84,11 +84,11 @@ class DynamicalModel[
     async def simulate(
         self, inputs: ControlInputBatchT, initial_state: InStateT
     ) -> StateBatchT:
-        """Simulates the dynamical model over the given control inputs starting from the
-        provided initial state."""
+        """Simulates a single integrator model over the given control inputs starting from the
+        initial state."""
         ...
 
     async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
-        """Simulates a single time step of the dynamical model given the control input and current
-        state."""
+        """Simulates a single time step of the integrator model given the control input and
+        current state."""
         ...

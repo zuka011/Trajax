@@ -1,12 +1,24 @@
 from dataclasses import dataclass
 
-from trajax import State, StateBatch, ControlInputBatch, ControlInputSequence
+from trajax import (
+    State,
+    StateBatch,
+    ControlInputBatch,
+    ControlInputSequence,
+    Sampler as SamplerLike,
+    UpdateFunction as UpdateFunctionLike,
+    PaddingFunction as PaddingFunctionLike,
+    FilterFunction as FilterFunctionLike,
+    DynamicalModel as DynamicalModelLike,
+)
 
 import numpy as np
 
 
 @dataclass(frozen=True)
-class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch]:
+class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch](
+    SamplerLike[SequenceT, BatchT]
+):
     samples: BatchT
     expected_nominal_input: SequenceT
 
@@ -25,9 +37,13 @@ class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch]:
         )
         return self.samples
 
+    @property
+    def rollout_count(self) -> int:
+        return self.samples.rollout_count
+
 
 @dataclass(frozen=True)
-class UpdateFunction[SequenceT: ControlInputSequence]:
+class UpdateFunction[SequenceT: ControlInputSequence](UpdateFunctionLike[SequenceT]):
     expected_nominal_input: SequenceT
     expected_optimal_input: SequenceT
     result: SequenceT
@@ -60,7 +76,9 @@ class UpdateFunction[SequenceT: ControlInputSequence]:
 
 
 @dataclass(frozen=True)
-class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequence]:
+class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequence](
+    PaddingFunctionLike[NominalT, PaddingT]
+):
     expected_nominal_input: NominalT
     expected_padding_size: int
     result: PaddingT
@@ -91,7 +109,7 @@ class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequ
 
 
 @dataclass(frozen=True)
-class FilterFunction[SequenceT: ControlInputSequence]:
+class FilterFunction[SequenceT: ControlInputSequence](FilterFunctionLike[SequenceT]):
     expected_optimal_input: SequenceT
     result: SequenceT
 
@@ -116,18 +134,28 @@ class FilterFunction[SequenceT: ControlInputSequence]:
 
 @dataclass(frozen=True)
 class DynamicalModel[
-    ControlInputBatchT: ControlInputBatch,
-    StateT: State,
+    InStateT: State,
+    OutStateT: State,
     StateBatchT: StateBatch,
-]:
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+](
+    DynamicalModelLike[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ]
+):
     rollouts: StateBatchT
     expected_control_inputs: ControlInputBatchT
-    expected_initial_state: StateT
+    expected_initial_state: InStateT
 
     @staticmethod
-    def returns[SB: StateBatch, CIB: ControlInputBatch, S: State](
+    def returns[
+        S: State,
+        SB: StateBatch,
+        CIB: ControlInputBatch,
+    ](
         rollouts: SB, *, when_control_inputs_are: CIB, and_initial_state_is: S
-    ) -> "DynamicalModel[CIB, S, SB]":
+    ) -> "DynamicalModel[S, State, SB, ControlInputSequence, CIB]":
         return DynamicalModel(
             rollouts=rollouts,
             expected_control_inputs=when_control_inputs_are,
@@ -135,7 +163,7 @@ class DynamicalModel[
         )
 
     async def simulate(
-        self, inputs: ControlInputBatchT, initial_state: StateT
+        self, inputs: ControlInputBatchT, initial_state: InStateT
     ) -> StateBatchT:
         assert np.array_equal(self.expected_control_inputs, inputs), (
             f"Dynamical model received unexpected control inputs. "
@@ -147,5 +175,5 @@ class DynamicalModel[
         )
         return self.rollouts
 
-    async def step(self, input: ControlInputSequence, state: StateT) -> StateT:
+    async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")

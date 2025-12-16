@@ -2,16 +2,17 @@ from typing import overload
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.trajectory.common import D_R
+from trajax.trajectory.common import D_R, Trajectory
 from trajax.trajectory.accelerated import PathParameters, ReferencePoints, stack
 from trajax.trajectory.waypoints.basic import NumpyWaypointsTrajectory
+
+from scipy.interpolate import CubicSpline
+from jaxtyping import Array as JaxArray, Float
+from numtypes import Array, Dims, D
 
 import jax
 import jax.numpy as jnp
 import numpy as np
-from scipy.interpolate import CubicSpline
-from jaxtyping import Array as JaxArray, Float
-from numtypes import Array, Dims, D
 
 
 type PointArray = Array[Dims[int, D[2]]]
@@ -20,7 +21,7 @@ type JaxPointArray = Float[JaxArray, "N 2"]
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class JaxWaypointsTrajectory:
+class JaxWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
     length: float
     reference_points: Float[JaxArray, "N"]
     coefficients_x: Float[JaxArray, "N-1 4"]

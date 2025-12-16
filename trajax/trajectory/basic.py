@@ -2,12 +2,13 @@ from dataclasses import dataclass
 
 from trajax.trajectory.common import D_r, D_R
 
-import numpy as np
 from numtypes import array, Array, Dims
+
+import numpy as np
 
 
 @dataclass(frozen=True)
-class PathParameters[T: int, M: int]:
+class PathParameters[T: int = int, M: int = int]:
     array: Array[Dims[T, M]]
 
     def __array__(self) -> Array[Dims[T, M]]:
@@ -23,7 +24,7 @@ class PathParameters[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class Positions[T: int, M: int]:
+class Positions[T: int = int, M: int = int]:
     x: Array[Dims[T, M]]
     y: Array[Dims[T, M]]
 
@@ -38,7 +39,7 @@ class Positions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class ReferencePoints[T: int, M: int]:
+class ReferencePoints[T: int = int, M: int = int]:
     array: Array[Dims[T, D_r, M]]
 
     @staticmethod

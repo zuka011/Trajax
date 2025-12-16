@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Self, overload
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
@@ -10,6 +10,7 @@ from trajax.model import (
     DynamicalModel as AnyDynamicalModel,
 )
 from trajax.mppi.common import (
+    Mppi,
     Control,
     UseOptimalControlUpdate,
     NoFilter,
@@ -21,100 +22,145 @@ from trajax.mppi.common import (
     Costs as AnyCosts,
 )
 
-from jaxtyping import Array, Float, Scalar
+from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
 
 
-class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u], Protocol):
-    def similar[L: int](
-        self, *, array: Float[Array, "L D_u"], length: L
-    ) -> "ControlInputSequence[L, D_u]":
-        """Returns a new control input sequence similar to this one but using the provided array."""
-        ...
-
+class State[D_x: int = int](AnyState[D_x], Protocol):
     @property
-    def array(self) -> Float[Array, "T D_u"]:
-        """Returns the underlying JAX array representing the control input sequence."""
-        ...
-
-
-class State[D_x: int](AnyState[D_x], Protocol):
-    @property
-    def array(self) -> Float[Array, "D_x"]:
+    def array(self) -> Float[JaxArray, "D_x"]:
         """Returns the underlying JAX array representing the state."""
         ...
 
 
-type DynamicalModel[T: int, D_u: int, D_x: int, M: int] = AnyDynamicalModel[
-    ControlInputSequence[T, D_u],
-    "JaxMppi.ControlInputBatch[T, D_u, M]",
-    State[D_x],
-    "JaxMppi.StateBatch[T, D_x, M]",
+class StateBatch[T: int = int, D_x: int = int, M: int = int](
+    AnyStateBatch[T, D_x, M], Protocol
+):
+    @property
+    def array(self) -> Float[JaxArray, "T D_x M"]:
+        """Returns the underlying JAX array representing the state batch."""
+        ...
+
+
+class ControlInputSequence[T: int = int, D_u: int = int](
+    AnyControlInputSequence[T, D_u], Protocol
+):
+    @overload
+    def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self:
+        """Creates a new control input sequence similar to this one but with the given
+        array as its data.
+        """
+        ...
+
+    @overload
+    def similar[L: int](
+        self, *, array: Float[JaxArray, "L D_u"], length: L
+    ) -> "ControlInputSequence[L, D_u]":
+        """Returns a new control input sequence similar to this one but using the provided array.
+        The length of the new sequence may differ from the original."""
+        ...
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_u"]:
+        """Returns the underlying JAX array representing the control input sequence."""
+        ...
+
+
+class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
+    AnyControlInputBatch[T, D_u, M], Protocol
+):
+    @property
+    def array(self) -> Float[JaxArray, "T D_u M"]:
+        """Returns the underlying JAX array representing the control input batch."""
+        ...
+
+
+class Costs[T: int = int, M: int = int](AnyCosts[T, M], Protocol):
+    @property
+    def array(self) -> Float[JaxArray, "T M"]:
+        """Returns the underlying JAX array representing the costs."""
+        ...
+
+
+type DynamicalModel[
+    InStateT: State,
+    OutStateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+] = AnyDynamicalModel[
+    InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
 ]
 
-type Sampler[T: int, D_u: int, M: int] = AnySampler[
-    ControlInputSequence[T, D_u], "JaxMppi.ControlInputBatch[T, D_u, M]"
+type Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch] = AnySampler[
+    SequenceT, BatchT
 ]
 
-type UpdateFunction[T: int, D_u: int] = AnyUpdateFunction[ControlInputSequence[T, D_u]]
+type CostFunction[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+] = AnyCostFunction[ControlInputBatchT, StateBatchT, CostsT]
 
-type PaddingFunction[T: int, P: int, D_u: int] = AnyPaddingFunction[
-    ControlInputSequence[T, D_u], ControlInputSequence[P, D_u]
-]
+type UpdateFunction[C: ControlInputSequence] = AnyUpdateFunction[C]
 
-type FilterFunction[T: int, D_u: int] = AnyFilterFunction[ControlInputSequence[T, D_u]]
+type PaddingFunction[N: ControlInputSequence, P: ControlInputSequence] = (
+    AnyPaddingFunction[N, P]
+)
+
+type FilterFunction[C: ControlInputSequence] = AnyFilterFunction[C]
+
+
+class ZeroPadding[T: int = int, D_u: int = int, L: int = int]:
+    def __call__(
+        self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: L
+    ) -> ControlInputSequence[L, D_u]:
+        padding_array = jnp.zeros((padding_size, nominal_input.array.shape[1]))
+        return nominal_input.similar(array=padding_array, length=padding_size)
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxMppi:
-    class ControlInputBatch[T: int, D_u: int, M: int](
-        AnyControlInputBatch[T, D_u, M], Protocol
-    ):
-        @property
-        def array(self) -> Float[Array, "T D_u M"]:
-            """Returns the underlying JAX array representing the control input batch."""
-            ...
-
-    class StateBatch[T: int, D_x: int, M: int](AnyStateBatch[T, D_x, M], Protocol):
-        @property
-        def array(self) -> Float[Array, "T D_x M"]:
-            """Returns the underlying JAX array representing the state batch."""
-            ...
-
-    class Costs[T: int, M: int](AnyCosts[T, M], Protocol):
-        @property
-        def array(self) -> Float[Array, "T M"]:
-            """Returns the underlying JAX array representing the costs."""
-            ...
-
-    type CostFunction[T: int, D_u: int, D_x: int, M: int] = AnyCostFunction[
-        "JaxMppi.ControlInputBatch[T, D_u, M]",
-        "JaxMppi.StateBatch[T, D_x, M]",
-        "JaxMppi.Costs[T, M]",
+class JaxMppi[
+    InStateT: State,
+    OutStateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputPaddingT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    CostsT: Costs,
+](
+    Mppi[
+        InStateT,
+        OutStateT,
+        StateBatchT,
+        ControlInputSequenceT,
+        ControlInputBatchT,
+        CostsT,
     ]
-
-    class ZeroPadding:
-        def __call__[T: int, P: int, D_u: int](
-            self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: P
-        ) -> ControlInputSequence[P, D_u]:
-            padding_array = jnp.zeros((padding_size, nominal_input.array.shape[1]))
-            return nominal_input.similar(array=padding_array, length=padding_size)
-
+):
     planning_interval: int
-    update_function: UpdateFunction
-    padding_function: PaddingFunction
-    filter_function: FilterFunction
+    update_function: UpdateFunction[ControlInputSequenceT]
+    padding_function: PaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
+    filter_function: FilterFunction[ControlInputSequenceT]
 
     @staticmethod
-    def create(
+    def create[
+        IS: State = State,
+        OS: State = State,
+        SB: StateBatch = StateBatch,
+        CIS: ControlInputSequence = ControlInputSequence,
+        CIP: ControlInputSequence = ControlInputSequence,
+        CIB: ControlInputBatch = ControlInputBatch,
+        C: Costs = Costs,
+    ](
         *,
         planning_interval: int = 1,
-        update_function: UpdateFunction = UseOptimalControlUpdate(),
-        padding_function: PaddingFunction = ZeroPadding(),
-        filter_function: FilterFunction = NoFilter(),
-    ) -> "JaxMppi":
+        update_function: UpdateFunction[CIS] = UseOptimalControlUpdate(),
+        padding_function: PaddingFunction[CIS, CIP] = ZeroPadding(),
+        filter_function: FilterFunction[CIS] = NoFilter(),
+    ) -> "JaxMppi[IS, OS, SB, CIS, CIP, CIB, C]":
         """Creates a JAX-based MPPI controller."""
         return JaxMppi(
             planning_interval=planning_interval,
@@ -123,16 +169,21 @@ class JaxMppi:
             filter_function=filter_function,
         )
 
-    async def step[T: int, D_u: int, D_x: int, M: int](
+    def __post_init__(self) -> None:
+        assert self.planning_interval > 0, "Planning interval must be positive."
+
+    async def step(
         self,
         *,
-        model: DynamicalModel[T, D_u, D_x, M],
-        cost_function: CostFunction[T, D_u, D_x, M],
-        sampler: Sampler[T, D_u, M],
+        model: DynamicalModel[
+            InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        ],
+        cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
-        nominal_input: ControlInputSequence[T, D_u],
-        initial_state: State[D_x],
-    ) -> Control[ControlInputSequence[T, D_u]]:
+        nominal_input: ControlInputSequenceT,
+        initial_state: InStateT,
+    ) -> Control[ControlInputSequenceT]:
         assert temperature > 0.0, "Temperature must be positive."
 
         samples = sampler.sample(around=nominal_input)
@@ -144,9 +195,7 @@ class JaxMppi:
             samples.array, costs.array, temperature
         )
         optimal_input = self.filter_function(
-            optimal_input=nominal_input.similar(
-                array=optimal_control, length=optimal_control.shape[0]
-            )
+            optimal_input=nominal_input.similar(array=optimal_control)
         )
 
         nominal_input = self.update_function(
@@ -162,18 +211,17 @@ class JaxMppi:
         )
 
         return Control(
-            optimal=optimal_input,
-            nominal=nominal_input.similar(
-                array=shifted_control, length=shifted_control.shape[0]
-            ),
+            optimal=optimal_input, nominal=nominal_input.similar(array=shifted_control)
         )
 
 
 @jax.jit
 @jaxtyped
 def compute_weighted_control(
-    samples: Float[Array, "T D_u M"], costs: Float[Array, "T M"], temperature: Scalar
-) -> Float[Array, "T D_u"]:
+    samples: Float[JaxArray, "T D_u M"],
+    costs: Float[JaxArray, "T M"],
+    temperature: Scalar,
+) -> Float[JaxArray, "T D_u"]:
     total_costs = jnp.sum(costs, axis=0)
     min_cost = jnp.min(total_costs)
     exp_costs = jnp.exp((total_costs - min_cost) / (-temperature))
@@ -186,9 +234,9 @@ def compute_weighted_control(
 @jax.jit(static_argnames=("planning_interval",))
 @jaxtyped
 def shift_control_left(
-    control: Float[Array, "T D_u"],
+    control: Float[JaxArray, "T D_u"],
     *,
-    padding_array: Float[Array, "P D_u"],
+    padding_array: Float[JaxArray, "P D_u"],
     planning_interval: int,
-) -> Float[Array, "T D_u"]:
+) -> Float[JaxArray, "T D_u"]:
     return jnp.concatenate([control[planning_interval:], padding_array], axis=0)
