@@ -4,5 +4,8 @@ from trajax.samplers.gaussian import NumPyGaussianSampler, JaxGaussianSampler
 
 
 class sampler:
-    numpy: Final = NumPyGaussianSampler.create
-    jax: Final = JaxGaussianSampler.create
+    class numpy:
+        gaussian: Final = NumPyGaussianSampler.create
+
+    class jax:
+        gaussian: Final = JaxGaussianSampler.create

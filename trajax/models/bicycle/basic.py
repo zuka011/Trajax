@@ -2,44 +2,54 @@ from typing import Self, overload, cast, Any
 from dataclasses import dataclass
 
 from trajax.type import DataType
-from trajax.mppi.basic import (
-    State as AnyState,
-    StateBatch as AnyStateBatch,
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
+from trajax.mppi import (
+    NumPyState,
+    NumPyStateBatch,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
 )
-from trajax.model.bicycle.common import D_x, D_X, D_u, D_U, KinematicBicycleModel
+from trajax.models.bicycle.common import (
+    BicycleD_x,
+    BICYCLE_D_X,
+    BicycleD_u,
+    BICYCLE_D_U,
+    BicycleModel,
+)
 
 from numtypes import Array, Dims, D, shape_of, array
 
 import numpy as np
 
 
-type StateArray = Array[Dims[D_x]]
-type ControlInputArray = Array[Dims[D_u]]
-type ControlInputSequenceArray[T: int] = Array[Dims[T, D_u]]
+type StateArray = Array[Dims[BicycleD_x]]
+type ControlInputArray = Array[Dims[BicycleD_u]]
+type ControlInputSequenceArray[T: int] = Array[Dims[T, BicycleD_u]]
 
-type StateBatchArray[T: int, M: int] = Array[Dims[T, D_x, M]]
-type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, D_u, M]]
+type StateBatchArray[T: int, M: int] = Array[Dims[T, BicycleD_x, M]]
+type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, BicycleD_u, M]]
 
-type StatesAtTimeStep[M: int] = Array[Dims[D_x, M]]
-type ControlInputsAtTimeStep[M: int] = Array[Dims[D_u, M]]
+type StatesAtTimeStep[M: int] = Array[Dims[BicycleD_x, M]]
+type ControlInputsAtTimeStep[M: int] = Array[Dims[BicycleD_u, M]]
 
 
 @dataclass(frozen=True)
-class State(AnyState[D_x]):
+class NumPyBicycleState(NumPyState[BicycleD_x]):
     array: StateArray
 
     @staticmethod
-    def create(*, x: float, y: float, heading: float, speed: float) -> "State":
+    def create(
+        *, x: float, y: float, heading: float, speed: float
+    ) -> "NumPyBicycleState":
         """Creates a NumPy bicycle state from individual state components."""
-        return State(array=array([x, y, heading, speed], shape=(D_X,)))
+        return NumPyBicycleState(
+            array=array([x, y, heading, speed], shape=(BICYCLE_D_X,))
+        )
 
     def __array__(self, dtype: DataType | None = None) -> StateArray:
         return self.array
 
     @property
-    def dimension(self) -> D_x:
+    def dimension(self) -> BicycleD_x:
         return self.array.shape[0]
 
     @property
@@ -64,16 +74,16 @@ class State(AnyState[D_x]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class StateSequence[T: int]:
-    batch: "StateBatch[T, Any]"
+class StateSequence:
+    batch: "NumPyBicycleStateBatch[Any, Any]"
     rollout: int
 
-    def step(self, index: int) -> State:
-        return State(self.batch.array[index, :, self.rollout])
+    def step(self, index: int) -> NumPyBicycleState:
+        return NumPyBicycleState(self.batch.array[index, :, self.rollout])
 
 
 @dataclass(frozen=True)
-class StateBatch[T: int, M: int](AnyStateBatch[T, D_x, M]):
+class NumPyBicycleStateBatch[T: int, M: int](NumPyStateBatch[T, BicycleD_x, M]):
     array: StateBatchArray[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
@@ -85,7 +95,7 @@ class StateBatch[T: int, M: int](AnyStateBatch[T, D_x, M]):
     def velocities(self) -> Array[Dims[T, M]]:
         return self.array[:, 3, :]
 
-    def rollout(self, index: int) -> StateSequence[T]:
+    def rollout(self, index: int) -> StateSequence:
         return StateSequence(batch=self, rollout=index)
 
     @property
@@ -93,7 +103,7 @@ class StateBatch[T: int, M: int](AnyStateBatch[T, D_x, M]):
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> D_x:
+    def dimension(self) -> BicycleD_x:
         return self.array.shape[1]
 
     @property
@@ -101,13 +111,13 @@ class StateBatch[T: int, M: int](AnyStateBatch[T, D_x, M]):
         return self.array.shape[2]
 
     @property
-    def positions(self) -> "Positions":
-        return Positions(array=self)
+    def positions(self) -> "NumPyBicyclePositions":
+        return NumPyBicyclePositions(array=self)
 
 
 @dataclass(frozen=True)
-class Positions[T: int, M: int]:
-    array: StateBatch[T, M]
+class NumPyBicyclePositions[T: int, M: int]:
+    array: NumPyBicycleStateBatch[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
         return self.array.array[:, :2, :]
@@ -120,35 +130,34 @@ class Positions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
-class ControlInputSequence[T: int](
-    # NOTE: Using [T, D_u] is too tough for the type checker.
-    AnyControlInputSequence[T, int]
+class NumPyBicycleControlInputSequence[T: int](
+    NumPyControlInputSequence[T, BicycleD_u]
 ):
     array: ControlInputSequenceArray[T]
 
     @staticmethod
-    def zeroes[T_: int](horizon: T_) -> "ControlInputSequence[T_]":
+    def zeroes[T_: int](horizon: T_) -> "NumPyBicycleControlInputSequence[T_]":
         """Creates a zeroed control input sequence for the given horizon."""
-        array = np.zeros((horizon, D_U))
+        array = np.zeros((horizon, BICYCLE_D_U))
 
-        assert shape_of(array, matches=(horizon, D_U))
+        assert shape_of(array, matches=(horizon, BICYCLE_D_U))
 
-        return ControlInputSequence(array)
+        return NumPyBicycleControlInputSequence(array)
 
     def __array__(self, dtype: DataType | None = None) -> ControlInputSequenceArray[T]:
         return self.array
 
     @overload
-    def similar(self, *, array: Array[Dims[T, int]]) -> Self: ...
+    def similar(self, *, array: Array[Dims[T, BicycleD_u]]) -> Self: ...
 
     @overload
     def similar[L: int](
-        self, *, array: Array[Dims[L, int]], length: L
-    ) -> "ControlInputSequence[L]": ...
+        self, *, array: Array[Dims[L, BicycleD_u]], length: L
+    ) -> "NumPyBicycleControlInputSequence[L]": ...
 
     def similar[L: int](
-        self, *, array: Array[Dims[L, int]], length: L | None = None
-    ) -> "Self | ControlInputSequence[L]":
+        self, *, array: Array[Dims[L, BicycleD_u]], length: L | None = None
+    ) -> "Self | NumPyBicycleControlInputSequence[L]":
         # NOTE: "Wrong" cast to silence the type checker.
         effective_length = cast(T, length if length is not None else array.shape[0])
 
@@ -163,12 +172,14 @@ class ControlInputSequence[T: int](
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> D_u:
+    def dimension(self) -> BicycleD_u:
         return self.array.shape[1]
 
 
 @dataclass(frozen=True)
-class ControlInputBatch[T: int, M: int](AnyControlInputBatch[T, D_u, M]):
+class NumPyBicycleControlInputBatch[T: int, M: int](
+    NumPyControlInputBatch[T, BicycleD_u, M]
+):
     array: ControlInputBatchArray[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
@@ -179,7 +190,7 @@ class ControlInputBatch[T: int, M: int](AnyControlInputBatch[T, D_u, M]):
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> D_u:
+    def dimension(self) -> BicycleD_u:
         return self.array.shape[1]
 
     @property
@@ -189,8 +200,12 @@ class ControlInputBatch[T: int, M: int](AnyControlInputBatch[T, D_u, M]):
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyBicycleModel(
-    KinematicBicycleModel[
-        State, State, StateBatch, ControlInputSequence, ControlInputBatch
+    BicycleModel[
+        NumPyBicycleState,
+        NumPyBicycleState,
+        NumPyBicycleStateBatch,
+        NumPyBicycleControlInputSequence,
+        NumPyBicycleControlInputBatch,
     ]
 ):
     time_step_size: float
@@ -224,8 +239,10 @@ class NumPyBicycleModel(
         )
 
     async def simulate[T: int, M: int](
-        self, inputs: ControlInputBatch[T, M], initial_state: State
-    ) -> StateBatch[T, M]:
+        self,
+        inputs: NumPyBicycleControlInputBatch[T, M],
+        initial_state: NumPyBicycleState,
+    ) -> NumPyBicycleStateBatch[T, M]:
         rollout_count = inputs.rollout_count
 
         initial = np.stack(
@@ -237,7 +254,7 @@ class NumPyBicycleModel(
             ]
         )
 
-        return StateBatch(
+        return NumPyBicycleStateBatch(
             simulate(
                 inputs.array,
                 initial,
@@ -249,18 +266,22 @@ class NumPyBicycleModel(
             )
         )
 
-    async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
+    async def step[T: int](
+        self, input: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
+    ) -> NumPyBicycleState:
         state_as_rollouts = state.array.reshape(-1, 1)
         first_input = input.array[0].reshape(-1, 1)
 
         assert shape_of(
-            state_as_rollouts, matches=(D_X, 1), name="state reshaped for step"
+            state_as_rollouts, matches=(BICYCLE_D_X, 1), name="state reshaped for step"
         )
         assert shape_of(
-            first_input, matches=(D_U, 1), name="first control input reshaped for step"
+            first_input,
+            matches=(BICYCLE_D_U, 1),
+            name="first control input reshaped for step",
         )
 
-        return State(
+        return NumPyBicycleState(
             step(
                 state_as_rollouts,
                 first_input,
@@ -309,7 +330,7 @@ def simulate[T: int, M: int](
 ) -> StateBatchArray[T, M]:
     horizon = inputs.shape[0]
     rollout_count = inputs.shape[2]
-    states = np.zeros((horizon, D_X, rollout_count))
+    states = np.zeros((horizon, BICYCLE_D_X, rollout_count))
     current = initial
 
     for t in range(horizon):
@@ -325,7 +346,7 @@ def simulate[T: int, M: int](
         states[t] = current
 
     assert shape_of(
-        states, matches=(horizon, D_X, rollout_count), name="simulated states"
+        states, matches=(horizon, BICYCLE_D_X, rollout_count), name="simulated states"
     )
 
     return states

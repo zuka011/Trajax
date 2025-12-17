@@ -1,3 +1,4 @@
+#import "@preview/zero:0.5.0": num
 #import "@preview/suiji:0.4.0": gen-rng-f, normal-f
 #import "@preview/cetz:0.4.2"
 #import "@local/roboter:0.3.1": (
@@ -216,6 +217,7 @@
   reference-heading: 0deg,
   contour-color: orange.darken(10%),
   lag-color: blue.darken(25%),
+  info-position: (0, 5),
 ) = {
   let (robot-x, robot-y) = ego.position
   let (reference-x, reference-y) = reference-point
@@ -259,6 +261,16 @@
     size: 0.1,
     color: black,
   )
+
+  draw.label(
+    info-position,
+    [
+      #set text(size: 8pt)
+      $#text(fill: contour-color, $e_c = #num(contouring-error, digits: 2)$) \
+        #text(fill: lag-color, $e_l = #num(lag-error, digits: 2)$)$
+    ],
+    offset: (0, 0),
+  )
 }
 
 #let path-parameter-markers(
@@ -295,6 +307,7 @@
     c1: (2, 5),
     c2: (6, 5),
   ),
+  info-position: (0.5, 5),
   path-parameter: 0.45,
   path-parameter-examples: (0, 0.3, 0.9),
   extend-reference-line-by: 4.0,
@@ -329,6 +342,7 @@
       reference-heading: reference-heading,
       contour-color: contour-color,
       lag-color: lag-color,
+      info-position: info-position,
     )
 
     path-parameter-markers(

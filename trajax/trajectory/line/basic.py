@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from trajax.trajectory.common import Trajectory
-from trajax.trajectory.basic import PathParameters, ReferencePoints
+from trajax.trajectory.basic import NumPyPathParameters, NumPyReferencePoints
 
 from numtypes import shape_of
 
@@ -9,7 +9,7 @@ import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
+class NumpyLineTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
     start: tuple[float, float]
     end: tuple[float, float]
 
@@ -32,9 +32,9 @@ class NumpyLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
             heading=np.arctan2(delta_y, delta_x),
         )
 
-    def query[L: int, M: int](
-        self, parameters: PathParameters[L, M]
-    ) -> ReferencePoints[L, M]:
+    def query[T: int, M: int](
+        self, parameters: NumPyPathParameters[T, M]
+    ) -> NumPyReferencePoints[T, M]:
         T, M = parameters.horizon, parameters.rollout_count
         normalized = np.asarray(parameters) / self.length
         x = self.start[0] + normalized * self.delta_x
@@ -45,4 +45,4 @@ class NumpyLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
         assert shape_of(y, matches=(T, M), name="y")
         assert shape_of(heading, matches=(T, M), name="heading")
 
-        return ReferencePoints.create(x=x, y=y, heading=heading)
+        return NumPyReferencePoints.create(x=x, y=y, heading=heading)

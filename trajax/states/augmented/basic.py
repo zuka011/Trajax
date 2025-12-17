@@ -2,40 +2,145 @@ from typing import Self, overload, cast
 from dataclasses import dataclass
 
 from trajax.type import DataType
-from trajax.mppi.basic import (
-    ControlInputSequence,
+from trajax.mppi import (
+    NumPyState,
+    NumPyStateBatch,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
 )
 from trajax.states.augmented.common import (
-    AugmentedControlInputSequence as AnyAugmentedControlInputSequence,
+    AugmentedState,
+    AugmentedStateBatch,
+    AugmentedControlInputSequence,
+    AugmentedControlInputBatch,
 )
-from trajax.states.augmented.base import BaseAugmentedControlInputSequence
+from trajax.states.augmented.base import (
+    BaseAugmentedState,
+    BaseAugmentedStateBatch,
+    BaseAugmentedControlInputSequence,
+    BaseAugmentedControlInputBatch,
+)
 
 from numtypes import Array, Dims
 
 
 @dataclass(frozen=True)
-class AugmentedControlInputSequence[
-    PhysicalT: ControlInputSequence,
-    VirtualT: ControlInputSequence,
-    T: int = int,
-    D_u: int = int,
-](ControlInputSequence[T, D_u]):
-    inner: AnyAugmentedControlInputSequence[PhysicalT, VirtualT, T, D_u]
+class NumPyAugmentedState[P: NumPyState, V: NumPyState, D_x: int](
+    AugmentedState[P, V, D_x]
+):
+    inner: AugmentedState[P, V, D_x]
+
+    @staticmethod
+    def of[P_: NumPyState, V_: NumPyState, D_x_: int = int](
+        *,
+        physical: P_,
+        virtual: V_,
+        dimension: D_x_ | None = None,
+    ) -> "NumPyAugmentedState[P_, V_, D_x_]":
+        return NumPyAugmentedState(
+            BaseAugmentedState.of(
+                physical=physical, virtual=virtual, dimension=dimension
+            )
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+        return self.inner.__array__(dtype=dtype)
+
+    @property
+    def physical(self) -> P:
+        return self.inner.physical
+
+    @property
+    def virtual(self) -> V:
+        return self.inner.virtual
+
+    @property
+    def dimension(self) -> D_x:
+        return self.inner.dimension
+
+
+@dataclass(frozen=True)
+class NumPyAugmentedStateBatch[
+    P: NumPyStateBatch,
+    V: NumPyStateBatch,
+    T: int,
+    D_x: int,
+    M: int,
+](AugmentedStateBatch[P, V, T, D_x, M]):
+    inner: AugmentedStateBatch[P, V, T, D_x, M]
 
     @staticmethod
     def of[
-        P: ControlInputSequence,
-        V: ControlInputSequence,
+        P_: NumPyStateBatch,
+        V_: NumPyStateBatch,
+        T_: int = int,
+        D_x_: int = int,
+        M_: int = int,
+    ](
+        *,
+        physical: P_,
+        virtual: V_,
+        horizon: T_ | None = None,
+        dimension: D_x_ | None = None,
+        rollout_count: M_ | None = None,
+    ) -> "NumPyAugmentedStateBatch[P_, V_, T_, D_x_, M_]":
+        return NumPyAugmentedStateBatch(
+            BaseAugmentedStateBatch.of(
+                physical=physical,
+                virtual=virtual,
+                horizon=horizon,
+                dimension=dimension,
+                rollout_count=rollout_count,
+            )
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
+        return self.inner.__array__(dtype=dtype)
+
+    @property
+    def physical(self) -> P:
+        return self.inner.physical
+
+    @property
+    def virtual(self) -> V:
+        return self.inner.virtual
+
+    @property
+    def horizon(self) -> T:
+        return self.inner.horizon
+
+    @property
+    def dimension(self) -> D_x:
+        return self.inner.dimension
+
+    @property
+    def rollout_count(self) -> M:
+        return self.inner.rollout_count
+
+
+@dataclass(frozen=True)
+class NumPyAugmentedControlInputSequence[
+    P: NumPyControlInputSequence,
+    V: NumPyControlInputSequence,
+    T: int,
+    D_u: int,
+](AugmentedControlInputSequence[P, V, T, D_u]):
+    inner: AugmentedControlInputSequence[P, V, T, D_u]
+
+    @staticmethod
+    def of[
+        P_: NumPyControlInputSequence,
+        V_: NumPyControlInputSequence,
         T_: int = int,
         D_u_: int = int,
     ](
         *,
-        physical: P,
-        virtual: V,
+        physical: P_,
+        virtual: V_,
         horizon: T_ | None = None,
         dimension: D_u_ | None = None,
-    ) -> "AugmentedControlInputSequence[P, V, T_, D_u_]":
-        return AugmentedControlInputSequence(
+    ) -> "NumPyAugmentedControlInputSequence[P_, V_, T_, D_u_]":
+        return NumPyAugmentedControlInputSequence(
             BaseAugmentedControlInputSequence.of(
                 physical=physical, virtual=virtual, horizon=horizon, dimension=dimension
             )
@@ -50,11 +155,11 @@ class AugmentedControlInputSequence[
     @overload
     def similar[L: int](
         self, *, array: Array[Dims[L, D_u]], length: L
-    ) -> "AugmentedControlInputSequence[PhysicalT, VirtualT, L, D_u]": ...
+    ) -> "NumPyAugmentedControlInputSequence[P, V, L, D_u]": ...
 
     def similar[L: int](
         self, *, array: Array[Dims[T, D_u]], length: L | None = None
-    ) -> "Self | AugmentedControlInputSequence[PhysicalT, VirtualT, L, D_u]":
+    ) -> "Self | NumPyAugmentedControlInputSequence[P, V, L, D_u]":
         return self.__class__(
             BaseAugmentedControlInputSequence.of(
                 physical=self.inner.physical.similar(
@@ -70,11 +175,11 @@ class AugmentedControlInputSequence[
         )
 
     @property
-    def physical(self) -> PhysicalT:
+    def physical(self) -> P:
         return self.inner.physical
 
     @property
-    def virtual(self) -> VirtualT:
+    def virtual(self) -> V:
         return self.inner.virtual
 
     @property
@@ -86,81 +191,60 @@ class AugmentedControlInputSequence[
         return self.inner.dimension
 
 
-# @dataclass(kw_only=True, frozen=True)
-# class AugmentedSampler[
-#     PhysicalSequenceT: ControlInputSequence,
-#     PhysicalBatchT: ControlInputBatch,
-#     VirtualSequenceT: ControlInputSequence,
-#     VirtualBatchT: ControlInputBatch,
-#     T: int = int,
-#     D_u: int = int,
-#     M: int = int,
-# ](
-#     Sampler[
-#         AugmentedControlInputSequence[PhysicalSequenceT, VirtualSequenceT, T, D_u],
-#         AugmentedControlInputBatch[PhysicalBatchT, VirtualBatchT, T, D_u, M],
-#     ]
-# ):
-#     physical: Sampler[PhysicalSequenceT, PhysicalBatchT]
-#     virtual: Sampler[VirtualSequenceT, VirtualBatchT]
+@dataclass(frozen=True)
+class NumPyAugmentedControlInputBatch[
+    P: NumPyControlInputBatch,
+    V: NumPyControlInputBatch,
+    T: int,
+    D_u: int,
+    M: int,
+](AugmentedControlInputBatch[P, V, T, D_u, M]):
+    inner: AugmentedControlInputBatch[P, V, T, D_u, M]
 
-#     _rollout_count: M
+    @staticmethod
+    def of[
+        P_: NumPyControlInputBatch,
+        V_: NumPyControlInputBatch,
+        T_: int = int,
+        D_u_: int = int,
+        M_: int = int,
+    ](
+        *,
+        physical: P_,
+        virtual: V_,
+        horizon: T_ | None = None,
+        dimension: D_u_ | None = None,
+        rollout_count: M_ | None = None,
+    ) -> "NumPyAugmentedControlInputBatch[P_, V_, T_, D_u_, M_]":
+        return NumPyAugmentedControlInputBatch(
+            BaseAugmentedControlInputBatch.of(
+                physical=physical,
+                virtual=virtual,
+                horizon=horizon,
+                dimension=dimension,
+                rollout_count=rollout_count,
+            )
+        )
 
-#     @staticmethod
-#     def of[
-#         PS: ControlInputSequence,
-#         PB: ControlInputBatch,
-#         VS: ControlInputSequence,
-#         VB: ControlInputBatch,
-#         T_: int = int,
-#         D_u_: int = int,
-#         M_: int = int,
-#     ](
-#         *,
-#         physical: Sampler[PS, PB, M_],
-#         virtual: Sampler[VS, VB, M_],
-#         horizon: T_ | None = None,
-#         dimension: D_u_ | None = None,
-#         rollout_count: M_ | None = None,
-#     ) -> "AugmentedSampler[PS, PB, VS, VB, T_, D_u_, M_]":
-#         return AugmentedSampler(
-#             physical=physical,
-#             virtual=virtual,
-#             _rollout_count=cast(
-#                 M_,
-#                 rollout_count if rollout_count is not None else physical.rollout_count,
-#             ),
-#         )
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+        return self.inner.__array__(dtype=dtype)
 
-#     def __post_init__(self) -> None:
-#         assert (
-#             self.rollout_count
-#             == self.physical.rollout_count
-#             == self.virtual.rollout_count
-#         ), (
-#             f"Rollout count mismatch in {self.__class__.__name__}: "
-#             f"expected {self.rollout_count}, got "
-#             f"{self.physical.rollout_count} (physical) and {self.virtual.rollout_count} (virtual)"
-#         )
+    @property
+    def physical(self) -> P:
+        return self.inner.physical
 
-#     def sample(
-#         self,
-#         *,
-#         around: AugmentedControlInputSequence[
-#             PhysicalSequenceT, VirtualSequenceT, T, D_u
-#         ],
-#     ) -> AugmentedControlInputBatch[PhysicalBatchT, VirtualBatchT, T, D_u, M]:
-#         physical_batch = self.physical.sample(around=around.physical)
-#         virtual_batch = self.virtual.sample(around=around.virtual)
+    @property
+    def virtual(self) -> V:
+        return self.inner.virtual
 
-#         return AugmentedControlInputBatch.of(
-#             physical=physical_batch,
-#             virtual=virtual_batch,
-#             horizon=around.horizon,
-#             dimension=around.dimension,
-#             rollout_count=self.rollout_count,
-#         )
+    @property
+    def horizon(self) -> T:
+        return self.inner.horizon
 
-#     @property
-#     def rollout_count(self) -> M:
-#         return self._rollout_count
+    @property
+    def dimension(self) -> D_u:
+        return self.inner.dimension
+
+    @property
+    def rollout_count(self) -> M:
+        return self.inner.rollout_count

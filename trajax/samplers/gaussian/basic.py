@@ -1,16 +1,15 @@
 from typing import Protocol
 from dataclasses import dataclass
 
-from trajax.model import ControlInputSequence, ControlInputBatch
-from trajax.mppi import Sampler
+from trajax.mppi import NumPyControlInputSequence, NumPyControlInputBatch, NumPySampler
 
 from numtypes import Array, Dims
 
 import numpy as np
 
 
-class ControlInputBatchCreator[
-    ControlInputBatchT: ControlInputBatch,
+class NumPyControlInputBatchCreator[
+    ControlInputBatchT: NumPyControlInputBatch,
     D_u: int = int,
     M: int = int,
 ](Protocol):
@@ -20,21 +19,23 @@ class ControlInputBatchCreator[
 
 
 @dataclass(frozen=True)
-class NumPyGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int](
-    Sampler[ControlInputSequence, BatchT, M]
-):
+class NumPyGaussianSampler[
+    BatchT: NumPyControlInputBatch,
+    D_u: int = int,
+    M: int = int,
+](NumPySampler[NumPyControlInputSequence, BatchT]):
     standard_deviation: Array[Dims[D_u]]
-    to_batch: ControlInputBatchCreator[BatchT, D_u, M]
+    to_batch: NumPyControlInputBatchCreator[BatchT, D_u, M]
     rng: np.random.Generator
 
     _rollout_count: M
 
     @staticmethod
-    def create[B: ControlInputBatch, D_u_: int, M_: int](
+    def create[B: NumPyControlInputBatch, D_u_: int, M_: int](
         *,
         standard_deviation: Array[Dims[D_u_]],
         rollout_count: M_,
-        to_batch: ControlInputBatchCreator[B, D_u_, M_],
+        to_batch: NumPyControlInputBatchCreator[B, D_u_, M_],
         seed: int,
     ) -> "NumPyGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
@@ -47,7 +48,7 @@ class NumPyGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = i
             _rollout_count=rollout_count,
         )
 
-    def sample(self, *, around: ControlInputSequence) -> BatchT:
+    def sample(self, *, around: NumPyControlInputSequence) -> BatchT:
         nominal = np.asarray(around)
         time_horizon, control_dimension = nominal.shape
 

@@ -1,8 +1,20 @@
-from typing import cast, Any
+from typing import cast, Any, overload, Self
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.model.bicycle.common import D_X, D_x, D_U, D_u, KinematicBicycleModel
+from trajax.mppi import (
+    JaxState,
+    JaxStateBatch,
+    JaxControlInputSequence,
+    JaxControlInputBatch,
+)
+from trajax.models.bicycle.common import (
+    BICYCLE_D_X,
+    BicycleD_x,
+    BICYCLE_D_U,
+    BicycleD_u,
+    BicycleModel,
+)
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims
@@ -12,116 +24,169 @@ import jax.numpy as jnp
 import numpy as np
 
 
-type StateArray = Float[JaxArray, f"{D_X}"]
-type ControlInputArray = Float[JaxArray, f"{D_U}"]
-type ControlInputSequenceArray = Float[JaxArray, f"T {D_U}"]
+type StateArray = Float[JaxArray, f"{BICYCLE_D_X}"]
+type ControlInputArray = Float[JaxArray, f"{BICYCLE_D_U}"]
+type ControlInputSequenceArray = Float[JaxArray, f"T {BICYCLE_D_U}"]
 
-type StateBatchArray = Float[JaxArray, f"T {D_X} M"]
-type ControlInputBatchArray = Float[JaxArray, f"T {D_U} M"]
+type StateBatchArray = Float[JaxArray, f"T {BICYCLE_D_X} M"]
+type ControlInputBatchArray = Float[JaxArray, f"T {BICYCLE_D_U} M"]
 
-type StatesAtTimeStep = Float[JaxArray, f"{D_X} M"]
-type ControlInputsAtTimeStep = Float[JaxArray, f"{D_U} M"]
+type StatesAtTimeStep = Float[JaxArray, f"{BICYCLE_D_X} M"]
+type ControlInputsAtTimeStep = Float[JaxArray, f"{BICYCLE_D_U} M"]
 
 
 @jaxtyped
 @dataclass(frozen=True)
-class State:
-    state: StateArray
+class JaxBicycleState(JaxState[BicycleD_x]):
+    _array: StateArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[D_x]]:
-        return np.asarray(self.state, dtype=dtype)
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[BicycleD_x]]:
+        return np.asarray(self.array, dtype=dtype)
+
+    @property
+    def array(self) -> StateArray:
+        return self._array
+
+    @property
+    def dimension(self) -> BicycleD_x:
+        return cast(BicycleD_x, self.array.shape[0])
 
     @property
     def x(self) -> float:
-        return float(self.state[0])
+        return float(self.array[0])
 
     @property
     def y(self) -> float:
-        return float(self.state[1])
+        return float(self.array[1])
 
     @property
     def theta(self) -> float:
-        return float(self.state[2])
+        return float(self.array[2])
 
     @property
     def v(self) -> float:
-        return float(self.state[3])
+        return float(self.array[3])
 
 
 @dataclass(kw_only=True, frozen=True)
-class StateSequence[T: int]:
-    batch: "StateBatch[T, Any]"
+class StateSequence:
+    batch: "JaxBicycleStateBatch[Any, Any]"
     rollout: int
 
-    def step(self, index: int) -> State:
-        return State(self.batch.states[index, :, self.rollout])
+    def step(self, index: int) -> JaxBicycleState:
+        return JaxBicycleState(self.batch.array[index, :, self.rollout])
 
 
 @jaxtyped
 @dataclass(frozen=True)
-class StateBatch[T: int, M: int]:
-    states: StateBatchArray
+class JaxBicycleStateBatch[T: int, M: int](JaxStateBatch[T, BicycleD_x, M]):
+    _array: StateBatchArray
 
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_x, M]]:
-        return np.asarray(self.states, dtype=dtype)
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_x, M]]:
+        return np.asarray(self.array, dtype=dtype)
 
     def orientations(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.states[:, 2, :])
+        return np.asarray(self.array[:, 2, :])
 
     def velocities(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.states[:, 3, :])
+        return np.asarray(self.array[:, 3, :])
 
-    def rollout(self, index: int) -> StateSequence[T]:
+    def rollout(self, index: int) -> StateSequence:
         return StateSequence(batch=self, rollout=index)
 
     @property
-    def positions(self) -> "Positions[T, M]":
-        return Positions(state=self)
+    def array(self) -> StateBatchArray:
+        return self._array
 
-
-@jaxtyped
-@dataclass(frozen=True)
-class Positions[T: int, M: int]:
-    state: StateBatch
-
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
-        return np.asarray(self.state.states[:, :2, :], dtype=dtype)
-
-    def x(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.state.states[:, 0, :])
-
-    def y(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.state.states[:, 1, :])
-
-
-@jaxtyped
-@dataclass(frozen=True)
-class ControlInputSequence[T: int]:
-    inputs: ControlInputSequenceArray
-
-    @staticmethod
-    def zeroes[T_: int](horizon: T_) -> "ControlInputSequence[T_]":
-        return ControlInputSequence(jnp.zeros((horizon, D_U)))
-
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u]]:
-        return np.asarray(self.inputs, dtype=dtype)
+    @property
+    def positions(self) -> "JaxBicyclePositions[T, M]":
+        return JaxBicyclePositions(array=self)
 
     @property
     def horizon(self) -> T:
-        return cast(T, self.inputs.shape[0])
+        return cast(T, self.array.shape[0])
 
     @property
-    def dimension(self) -> D_u:
-        return cast(D_u, self.inputs.shape[1])
+    def dimension(self) -> BicycleD_x:
+        return cast(BicycleD_x, self.array.shape[1])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self.array.shape[2])
 
 
 @jaxtyped
 @dataclass(frozen=True)
-class ControlInputBatch[T: int, M: int]:
-    array: ControlInputBatchArray
+class JaxBicyclePositions[T: int, M: int]:
+    array: JaxBicycleStateBatch
 
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, D_u, M]]:
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u, M]]:
+        return np.asarray(self.array.array[:, :2, :], dtype=dtype)
+
+    def x(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array.array[:, 0, :])
+
+    def y(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array.array[:, 1, :])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleControlInputSequence[T: int](JaxControlInputSequence[T, BicycleD_u]):
+    _array: ControlInputSequenceArray
+
+    @staticmethod
+    def zeroes[T_: int](horizon: T_) -> "JaxBicycleControlInputSequence[T_]":
+        return JaxBicycleControlInputSequence(jnp.zeros((horizon, BICYCLE_D_U)))
+
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u]]:
         return np.asarray(self.array, dtype=dtype)
+
+    @overload
+    def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
+
+    @overload
+    def similar[L: int](
+        self, *, array: Float[JaxArray, "L D_u"], length: L
+    ) -> "JaxBicycleControlInputSequence[L]": ...
+
+    def similar[L: int](
+        self, *, array: Float[JaxArray, "L D_u"], length: L | None = None
+    ) -> Self | "JaxBicycleControlInputSequence[L]":
+        expected_length = length if length is not None else array.shape[0]
+
+        assert array.shape == (expected := (expected_length, BICYCLE_D_U)), (
+            f"Array shape {array.shape} does not match expected shape {expected}."
+        )
+
+        return self.__class__(array)
+
+    @property
+    def array(self) -> ControlInputSequenceArray:
+        return self._array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> BicycleD_u:
+        return cast(BicycleD_u, self.array.shape[1])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleControlInputBatch[T: int, M: int](
+    JaxControlInputBatch[T, BicycleD_u, M]
+):
+    _array: ControlInputBatchArray
+
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u, M]]:
+        return np.asarray(self.array, dtype=dtype)
+
+    @property
+    def array(self) -> ControlInputBatchArray:
+        return self._array
 
     @property
     def rollout_count(self) -> M:
@@ -134,8 +199,12 @@ class ControlInputBatch[T: int, M: int]:
 
 @dataclass(kw_only=True, frozen=True)
 class JaxBicycleModel(
-    KinematicBicycleModel[
-        State, State, StateBatch, ControlInputSequence, ControlInputBatch
+    BicycleModel[
+        JaxBicycleState,
+        JaxBicycleState,
+        JaxBicycleStateBatch,
+        JaxBicycleControlInputSequence,
+        JaxBicycleControlInputBatch,
     ]
 ):
     time_step_size: float
@@ -169,8 +238,8 @@ class JaxBicycleModel(
         )
 
     async def simulate[T: int, M: int](
-        self, inputs: ControlInputBatch[T, M], initial_state: State
-    ) -> StateBatch[T, M]:
+        self, inputs: JaxBicycleControlInputBatch[T, M], initial_state: JaxBicycleState
+    ) -> JaxBicycleStateBatch[T, M]:
         rollout_count = inputs.rollout_count
 
         initial = jnp.stack(
@@ -182,7 +251,7 @@ class JaxBicycleModel(
             ]
         )
 
-        return StateBatch(
+        return JaxBicycleStateBatch(
             simulate(
                 inputs.array,
                 initial,
@@ -194,11 +263,13 @@ class JaxBicycleModel(
             )
         )
 
-    async def step[T: int](self, input: ControlInputSequence[T], state: State) -> State:
-        return State(
+    async def step[T: int](
+        self, input: JaxBicycleControlInputSequence[T], state: JaxBicycleState
+    ) -> JaxBicycleState:
+        return JaxBicycleState(
             step(
-                state.state.reshape(-1, 1),
-                input.inputs[0].reshape(-1, 1),
+                state.array.reshape(-1, 1),
+                input.array[0].reshape(-1, 1),
                 time_step_size=self.time_step_size,
                 wheelbase=self.wheelbase,
                 speed_limits=self.speed_limits,

@@ -2,14 +2,13 @@ from typing import cast, Self, overload
 from dataclasses import dataclass
 
 from trajax.type import DataType, jaxtyped
-from trajax.mppi.accelerated import (
-    State as AnyState,
-    StateBatch as AnyStateBatch,
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
-    Costs as AnyCosts,
+from trajax.mppi import (
+    JaxState,
+    JaxStateBatch,
+    JaxControlInputSequence,
+    JaxControlInputBatch,
+    JaxCosts,
 )
-
 
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims
@@ -20,7 +19,7 @@ import jax.numpy as jnp
 
 @jaxtyped
 @dataclass(frozen=True)
-class State[D_x: int](AnyState[D_x]):
+class JaxSimpleState[D_x: int](JaxState[D_x]):
     _array: Float[JaxArray, "D_x"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
@@ -37,7 +36,7 @@ class State[D_x: int](AnyState[D_x]):
 
 @jaxtyped
 @dataclass(frozen=True)
-class StateBatch[T: int, D_x: int, M: int](AnyStateBatch[T, D_x, M]):
+class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     _array: Float[JaxArray, "T D_x M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
@@ -62,7 +61,7 @@ class StateBatch[T: int, D_x: int, M: int](AnyStateBatch[T, D_x, M]):
 
 @jaxtyped
 @dataclass(frozen=True)
-class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
+class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T, D_u]):
     _array: Float[JaxArray, "T D_u"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
@@ -74,11 +73,11 @@ class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
     @overload
     def similar[L: int](
         self, *, array: Float[JaxArray, "L D_u"], length: L
-    ) -> "ControlInputSequence[L, D_u]": ...
+    ) -> "JaxSimpleControlInputSequence[L, D_u]": ...
 
     def similar[L: int](
         self, *, array: Float[JaxArray, "L D_u"], length: L | None = None
-    ) -> "Self | ControlInputSequence[L, D_u]":
+    ) -> "Self | JaxSimpleControlInputSequence[L, D_u]":
         length = length if length is not None else cast(L, array.shape[0])
 
         assert array.shape[0] == length, (
@@ -102,7 +101,9 @@ class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
 
 @jaxtyped
 @dataclass(frozen=True)
-class ControlInputBatch[T: int, D_u: int, M: int](AnyControlInputBatch[T, D_u, M]):
+class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
+    JaxControlInputBatch[T, D_u, M]
+):
     _array: Float[JaxArray, "T D_u M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
@@ -127,7 +128,7 @@ class ControlInputBatch[T: int, D_u: int, M: int](AnyControlInputBatch[T, D_u, M
 
 @jaxtyped
 @dataclass(frozen=True)
-class Costs[T: int, M: int](AnyCosts[T, M]):
+class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
     _array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:

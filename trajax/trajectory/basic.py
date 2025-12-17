@@ -8,7 +8,7 @@ import numpy as np
 
 
 @dataclass(frozen=True)
-class PathParameters[T: int = int, M: int = int]:
+class NumPyPathParameters[T: int, M: int]:
     array: Array[Dims[T, M]]
 
     def __array__(self) -> Array[Dims[T, M]]:
@@ -24,7 +24,7 @@ class PathParameters[T: int = int, M: int = int]:
 
 
 @dataclass(frozen=True)
-class Positions[T: int = int, M: int = int]:
+class NumPyPositions[T: int, M: int]:
     x: Array[Dims[T, M]]
     y: Array[Dims[T, M]]
 
@@ -33,13 +33,13 @@ class Positions[T: int = int, M: int = int]:
         *,
         x: Array[Dims[T_, M_]],
         y: Array[Dims[T_, M_]],
-    ) -> "Positions[T_, M_]":
+    ) -> "NumPyPositions[T_, M_]":
         """Creates a NumPy positions instance from x and y coordinate arrays."""
-        return Positions(x=x, y=y)
+        return NumPyPositions(x=x, y=y)
 
 
 @dataclass(frozen=True)
-class ReferencePoints[T: int = int, M: int = int]:
+class NumPyReferencePoints[T: int, M: int]:
     array: Array[Dims[T, D_r, M]]
 
     @staticmethod
@@ -48,10 +48,10 @@ class ReferencePoints[T: int = int, M: int = int]:
         x: Array[Dims[T_, M_]],
         y: Array[Dims[T_, M_]],
         heading: Array[Dims[T_, M_]],
-    ) -> "ReferencePoints[T_, M_]":
+    ) -> "NumPyReferencePoints[T_, M_]":
         """Creates a NumPy reference points instance from x, y, and heading arrays."""
         T, M = x.shape
-        return ReferencePoints(
+        return NumPyReferencePoints(
             array=array(
                 np.stack([x, y, heading], axis=-1).transpose(0, 2, 1).tolist(),
                 shape=(T, D_R, M),

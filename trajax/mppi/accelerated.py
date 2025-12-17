@@ -1,25 +1,23 @@
-from typing import Protocol, Self, overload
+from typing import Protocol, Self, overload, cast
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.model import (
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
-    State as AnyState,
-    StateBatch as AnyStateBatch,
-    DynamicalModel as AnyDynamicalModel,
-)
 from trajax.mppi.common import (
+    State,
+    StateBatch,
+    ControlInputSequence,
+    ControlInputBatch,
+    DynamicalModel,
+    Costs,
+    CostFunction,
+    Sampler,
     Mppi,
     Control,
     UseOptimalControlUpdate,
     NoFilter,
-    UpdateFunction as AnyUpdateFunction,
-    PaddingFunction as AnyPaddingFunction,
-    FilterFunction as AnyFilterFunction,
-    Sampler as AnySampler,
-    CostFunction as AnyCostFunction,
-    Costs as AnyCosts,
+    UpdateFunction,
+    PaddingFunction,
+    FilterFunction,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -28,25 +26,21 @@ import jax
 import jax.numpy as jnp
 
 
-class State[D_x: int = int](AnyState[D_x], Protocol):
+class JaxState[D_x: int](State[D_x], Protocol):
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
         """Returns the underlying JAX array representing the state."""
         ...
 
 
-class StateBatch[T: int = int, D_x: int = int, M: int = int](
-    AnyStateBatch[T, D_x, M], Protocol
-):
+class JaxStateBatch[T: int, D_x: int, M: int](StateBatch[T, D_x, M], Protocol):
     @property
     def array(self) -> Float[JaxArray, "T D_x M"]:
         """Returns the underlying JAX array representing the state batch."""
         ...
 
 
-class ControlInputSequence[T: int = int, D_u: int = int](
-    AnyControlInputSequence[T, D_u], Protocol
-):
+class JaxControlInputSequence[T: int, D_u: int](ControlInputSequence[T, D_u], Protocol):
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self:
         """Creates a new control input sequence similar to this one but with the given
@@ -57,7 +51,7 @@ class ControlInputSequence[T: int = int, D_u: int = int](
     @overload
     def similar[L: int](
         self, *, array: Float[JaxArray, "L D_u"], length: L
-    ) -> "ControlInputSequence[L, D_u]":
+    ) -> "JaxControlInputSequence[L, D_u]":
         """Returns a new control input sequence similar to this one but using the provided array.
         The length of the new sequence may differ from the original."""
         ...
@@ -68,8 +62,8 @@ class ControlInputSequence[T: int = int, D_u: int = int](
         ...
 
 
-class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
-    AnyControlInputBatch[T, D_u, M], Protocol
+class JaxControlInputBatch[T: int, D_u: int, M: int](
+    ControlInputBatch[T, D_u, M], Protocol
 ):
     @property
     def array(self) -> Float[JaxArray, "T D_u M"]:
@@ -77,108 +71,114 @@ class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
         ...
 
 
-class Costs[T: int = int, M: int = int](AnyCosts[T, M], Protocol):
+class JaxCosts[T: int, M: int](Costs[T, M], Protocol):
     @property
     def array(self) -> Float[JaxArray, "T M"]:
         """Returns the underlying JAX array representing the costs."""
         ...
 
 
-type DynamicalModel[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
-] = AnyDynamicalModel[
-    InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-]
-
-type Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch] = AnySampler[
-    SequenceT, BatchT
-]
-
-type CostFunction[
-    ControlInputBatchT: ControlInputBatch,
-    StateBatchT: StateBatch,
-    CostsT: Costs,
-] = AnyCostFunction[ControlInputBatchT, StateBatchT, CostsT]
-
-type UpdateFunction[C: ControlInputSequence] = AnyUpdateFunction[C]
-
-type PaddingFunction[N: ControlInputSequence, P: ControlInputSequence] = (
-    AnyPaddingFunction[N, P]
-)
-
-type FilterFunction[C: ControlInputSequence] = AnyFilterFunction[C]
+class JaxDynamicalModel[
+    InStateT: JaxState,
+    OutStateT: JaxState,
+    StateBatchT: JaxStateBatch,
+    ControlInputSequenceT: JaxControlInputSequence,
+    ControlInputBatchT: JaxControlInputBatch,
+](
+    DynamicalModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
+    Protocol,
+): ...
 
 
-class ZeroPadding[T: int = int, D_u: int = int, L: int = int]:
+class JaxSampler[SequenceT: JaxControlInputSequence, BatchT: JaxControlInputBatch](
+    Sampler[SequenceT, BatchT], Protocol
+): ...
+
+
+class JaxCostFunction[
+    ControlInputBatchT: JaxControlInputBatch,
+    StateBatchT: JaxStateBatch,
+    CostsT: JaxCosts,
+](CostFunction[ControlInputBatchT, StateBatchT, CostsT], Protocol): ...
+
+
+class JaxUpdateFunction[C: JaxControlInputSequence](UpdateFunction[C], Protocol): ...
+
+
+class JaxPaddingFunction[N: JaxControlInputSequence, P: JaxControlInputSequence](
+    PaddingFunction[N, P], Protocol
+): ...
+
+
+class JaxFilterFunction[C: JaxControlInputSequence](FilterFunction[C], Protocol): ...
+
+
+class JaxZeroPadding[T: int, D_u: int, L: int]:
     def __call__(
-        self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: L
-    ) -> ControlInputSequence[L, D_u]:
+        self, *, nominal_input: JaxControlInputSequence[T, D_u], padding_size: L
+    ) -> JaxControlInputSequence[L, D_u]:
         padding_array = jnp.zeros((padding_size, nominal_input.array.shape[1]))
         return nominal_input.similar(array=padding_array, length=padding_size)
 
 
 @dataclass(kw_only=True, frozen=True)
 class JaxMppi[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputPaddingT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
-    CostsT: Costs,
+    ControlInputSequenceT: JaxControlInputSequence,
+    ControlInputPaddingT: JaxControlInputSequence,
 ](
     Mppi[
-        InStateT,
-        OutStateT,
-        StateBatchT,
+        JaxState,
+        JaxState,
+        JaxStateBatch,
         ControlInputSequenceT,
-        ControlInputBatchT,
-        CostsT,
+        JaxControlInputBatch,
+        JaxCosts,
     ]
 ):
     planning_interval: int
-    update_function: UpdateFunction[ControlInputSequenceT]
-    padding_function: PaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
-    filter_function: FilterFunction[ControlInputSequenceT]
+    update_function: JaxUpdateFunction[ControlInputSequenceT]
+    padding_function: JaxPaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
+    filter_function: JaxFilterFunction[ControlInputSequenceT]
 
     @staticmethod
     def create[
-        IS: State = State,
-        OS: State = State,
-        SB: StateBatch = StateBatch,
-        CIS: ControlInputSequence = ControlInputSequence,
-        CIP: ControlInputSequence = ControlInputSequence,
-        CIB: ControlInputBatch = ControlInputBatch,
-        C: Costs = Costs,
+        CIS: JaxControlInputSequence = JaxControlInputSequence,
+        CIP: JaxControlInputSequence = JaxControlInputSequence,
     ](
         *,
         planning_interval: int = 1,
-        update_function: UpdateFunction[CIS] = UseOptimalControlUpdate(),
-        padding_function: PaddingFunction[CIS, CIP] = ZeroPadding(),
-        filter_function: FilterFunction[CIS] = NoFilter(),
-    ) -> "JaxMppi[IS, OS, SB, CIS, CIP, CIB, C]":
+        update_function: JaxUpdateFunction[CIS] | None = None,
+        padding_function: JaxPaddingFunction[CIS, CIP] | None = None,
+        filter_function: JaxFilterFunction[CIS] | None = None,
+    ) -> "JaxMppi[CIS, CIP]":
         """Creates a JAX-based MPPI controller."""
         return JaxMppi(
             planning_interval=planning_interval,
-            update_function=update_function,
-            padding_function=padding_function,
-            filter_function=filter_function,
+            update_function=update_function
+            or cast(JaxUpdateFunction[CIS], UseOptimalControlUpdate()),
+            padding_function=padding_function
+            or cast(JaxPaddingFunction[CIS, CIP], JaxZeroPadding()),
+            filter_function=filter_function or cast(JaxFilterFunction[CIS], NoFilter()),
         )
 
     def __post_init__(self) -> None:
         assert self.planning_interval > 0, "Planning interval must be positive."
 
-    async def step(
+    async def step[
+        InStateT: JaxState,
+        OutStateT: JaxState,
+        StateBatchT: JaxStateBatch,
+        ControlInputBatchT: JaxControlInputBatch,
+        CostsT: JaxCosts,
+    ](
         self,
         *,
         model: DynamicalModel[
             InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
         ],
-        cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        cost_function: JaxCostFunction[ControlInputBatchT, StateBatchT, CostsT],
         sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,

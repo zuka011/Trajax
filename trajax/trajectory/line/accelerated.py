@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from trajax.type import jaxtyped
 from trajax.trajectory.common import D_R, Trajectory
-from trajax.trajectory.accelerated import PathParameters, ReferencePoints, stack
+from trajax.trajectory.accelerated import JaxPathParameters, JaxReferencePoints, stack
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 
@@ -11,7 +11,7 @@ import jax.numpy as jnp
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
+class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
     start: tuple[float, float]
     end: tuple[float, float]
 
@@ -35,9 +35,9 @@ class JaxLineTrajectory(Trajectory[PathParameters, ReferencePoints]):
         )
 
     def query[T: int, M: int](
-        self, parameters: PathParameters[T, M]
-    ) -> ReferencePoints[T, M]:
-        return ReferencePoints(
+        self, parameters: JaxPathParameters[T, M]
+    ) -> JaxReferencePoints[T, M]:
+        return JaxReferencePoints(
             query(
                 parameters=parameters.array,
                 length=self.length,

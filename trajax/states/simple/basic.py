@@ -2,12 +2,12 @@ from typing import Self, overload, cast
 from dataclasses import dataclass
 
 from trajax.type import DataType
-from trajax.mppi.basic import (
-    State as AnyState,
-    StateBatch as AnyStateBatch,
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
-    Costs as AnyCosts,
+from trajax.mppi import (
+    NumPyState,
+    NumPyStateBatch,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
+    NumPyCosts,
 )
 
 import numpy as np
@@ -15,7 +15,7 @@ from numtypes import Array, Dims, shape_of
 
 
 @dataclass(frozen=True)
-class State[D_x: int](AnyState[D_x]):
+class NumPySimpleState[D_x: int](NumPyState[D_x]):
     array: Array[Dims[D_x]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
@@ -27,7 +27,7 @@ class State[D_x: int](AnyState[D_x]):
 
 
 @dataclass(frozen=True)
-class StateBatch[T: int, D_x: int, M: int](AnyStateBatch[T, D_x, M]):
+class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]):
     array: Array[Dims[T, D_x, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
@@ -47,19 +47,21 @@ class StateBatch[T: int, D_x: int, M: int](AnyStateBatch[T, D_x, M]):
 
 
 @dataclass(frozen=True)
-class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
+class NumPySimpleControlInputSequence[T: int, D_u: int](
+    NumPyControlInputSequence[T, D_u]
+):
     array: Array[Dims[T, D_u]]
 
     @staticmethod
     def zeroes[T_: int, D_u_: int](
         horizon: T_, dimension: D_u_
-    ) -> "ControlInputSequence[T_, D_u_]":
+    ) -> "NumPySimpleControlInputSequence[T_, D_u_]":
         """Creates a zeroed control input sequence for the given horizon."""
         array = np.zeros((horizon, dimension))
 
         assert shape_of(array, matches=(horizon, dimension))
 
-        return ControlInputSequence(array)
+        return NumPySimpleControlInputSequence(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return self.array
@@ -70,11 +72,11 @@ class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
     @overload
     def similar[L: int](
         self, *, array: Array[Dims[L, D_u]], length: L
-    ) -> "ControlInputSequence[L, D_u]": ...
+    ) -> "NumPySimpleControlInputSequence[L, D_u]": ...
 
     def similar[L: int](
         self, *, array: Array[Dims[L, D_u]], length: L | None = None
-    ) -> "Self | ControlInputSequence[L, D_u]":
+    ) -> "Self | NumPySimpleControlInputSequence[L, D_u]":
         assert length is None or length == array.shape[0], (
             f"Length mismatch: expected {length}, got {array.shape[0]}"
         )
@@ -92,7 +94,9 @@ class ControlInputSequence[T: int, D_u: int](AnyControlInputSequence[T, D_u]):
 
 
 @dataclass(frozen=True)
-class ControlInputBatch[T: int, D_u: int, M: int](AnyControlInputBatch[T, D_u, M]):
+class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
+    NumPyControlInputBatch[T, D_u, M]
+):
     array: Array[Dims[T, D_u, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
@@ -112,7 +116,7 @@ class ControlInputBatch[T: int, D_u: int, M: int](AnyControlInputBatch[T, D_u, M
 
 
 @dataclass(frozen=True)
-class Costs[T: int = int, M: int = int](AnyCosts[T, M]):
+class NumPySimpleCosts[T: int = int, M: int = int](NumPyCosts[T, M]):
     array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:

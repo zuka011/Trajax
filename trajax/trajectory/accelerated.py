@@ -13,14 +13,14 @@ import numpy as np
 
 
 @dataclass(frozen=True)
-class PathParameters[T: int = int, M: int = int]:
+class JaxPathParameters[T: int, M: int]:
     array: Float[JaxArray, "T M"]
 
     @overload
     @staticmethod
     def create[T_: int, M_: int](
         array: Array[Dims[T_, M_]],
-    ) -> "PathParameters[T_, M_]":
+    ) -> "JaxPathParameters[T_, M_]":
         """Creates a JAX path parameters instance from a NumPy array."""
         ...
 
@@ -28,7 +28,7 @@ class PathParameters[T: int = int, M: int = int]:
     @staticmethod
     def create[T_: int, M_: int](
         array: Float[JaxArray, "T M"], *, horizon: T_, rollout_count: M_
-    ) -> "PathParameters[T_, M_]":
+    ) -> "JaxPathParameters[T_, M_]":
         """Creates a JAX path parameters instance from a JAX array."""
         ...
 
@@ -38,8 +38,8 @@ class PathParameters[T: int = int, M: int = int]:
         *,
         horizon: T_ | None = None,
         rollout_count: M_ | None = None,
-    ) -> "PathParameters[T_, M_]":
-        return PathParameters(array=jnp.asarray(array))
+    ) -> "JaxPathParameters[T_, M_]":
+        return JaxPathParameters(array=jnp.asarray(array))
 
     def __array__(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array)
@@ -55,7 +55,7 @@ class PathParameters[T: int = int, M: int = int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class Positions[T: int = int, M: int = int]:
+class JaxPositions[T: int, M: int]:
     x: Float[JaxArray, "T M"]
     y: Float[JaxArray, "T M"]
 
@@ -66,16 +66,16 @@ class Positions[T: int = int, M: int = int]:
         y: Float[JaxArray, "T M"],
         horizon: T_,
         rollout_count: M_,
-    ) -> "Positions[T_, M_]":
+    ) -> "JaxPositions[T_, M_]":
         """Creates a JAX positions instance from x and y coordinate arrays."""
-        return Positions(x=x, y=y)
+        return JaxPositions(x=x, y=y)
 
     def __array__(self) -> Array[Dims[T, D[2], M]]:
         return np.asarray(jnp.stack([self.x, self.y], axis=-1).transpose(0, 2, 1))
 
 
 @dataclass(frozen=True)
-class ReferencePoints[T: int = int, M: int = int]:
+class JaxReferencePoints[T: int, M: int]:
     array: Float[JaxArray, f"T {D_R} M"]
 
     @overload
@@ -85,7 +85,7 @@ class ReferencePoints[T: int = int, M: int = int]:
         x: Array[Dims[T_, M_]],
         y: Array[Dims[T_, M_]],
         heading: Array[Dims[T_, M_]],
-    ) -> "ReferencePoints[T_, M_]":
+    ) -> "JaxReferencePoints[T_, M_]":
         """Creates a JAX reference points instance from NumPy arrays."""
         ...
 
@@ -98,7 +98,7 @@ class ReferencePoints[T: int = int, M: int = int]:
         heading: Float[JaxArray, "T M"],
         horizon: T_,
         rollout_count: M_,
-    ) -> "ReferencePoints[T_, M_]":
+    ) -> "JaxReferencePoints[T_, M_]":
         """Creates a JAX reference points instance from JAX arrays."""
         ...
 
@@ -110,8 +110,8 @@ class ReferencePoints[T: int = int, M: int = int]:
         heading: Array[Dims[T_, M_]] | Float[JaxArray, "T M"],
         horizon: T_ | None = None,
         rollout_count: M_ | None = None,
-    ) -> "ReferencePoints[T_, M_]":
-        return ReferencePoints(
+    ) -> "JaxReferencePoints[T_, M_]":
+        return JaxReferencePoints(
             array=stack(
                 x=jnp.asarray(x), y=jnp.asarray(y), heading=jnp.asarray(heading)
             )

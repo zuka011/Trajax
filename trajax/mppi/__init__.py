@@ -1,4 +1,9 @@
 from .common import (
+    State as State,
+    StateBatch as StateBatch,
+    ControlInputSequence as ControlInputSequence,
+    ControlInputBatch as ControlInputBatch,
+    DynamicalModel as DynamicalModel,
     Costs as Costs,
     CostFunction as CostFunction,
     Sampler as Sampler,
@@ -8,6 +13,32 @@ from .common import (
     Control as Control,
     Mppi as Mppi,
 )
-from .basic import NumPyMppi as NumPyMppi
-from .accelerated import JaxMppi as JaxMppi
+from .basic import (
+    NumPyState as NumPyState,
+    NumPyStateBatch as NumPyStateBatch,
+    NumPyControlInputSequence as NumPyControlInputSequence,
+    NumPyControlInputBatch as NumPyControlInputBatch,
+    NumPyCosts as NumPyCosts,
+    NumPyDynamicalModel as NumPyDynamicalModel,
+    NumPySampler as NumPySampler,
+    NumPyCostFunction as NumPyCostFunction,
+    NumPyUpdateFunction as NumPyUpdateFunction,
+    NumPyPaddingFunction as NumPyPaddingFunction,
+    NumPyFilterFunction as NumPyFilterFunction,
+    NumPyMppi as NumPyMppi,
+)
+from .accelerated import (
+    JaxState as JaxState,
+    JaxStateBatch as JaxStateBatch,
+    JaxControlInputSequence as JaxControlInputSequence,
+    JaxControlInputBatch as JaxControlInputBatch,
+    JaxCosts as JaxCosts,
+    JaxDynamicalModel as JaxDynamicalModel,
+    JaxSampler as JaxSampler,
+    JaxCostFunction as JaxCostFunction,
+    JaxUpdateFunction as JaxUpdateFunction,
+    JaxPaddingFunction as JaxPaddingFunction,
+    JaxFilterFunction as JaxFilterFunction,
+    JaxMppi as JaxMppi,
+)
 from .factory import mppi as mppi, update as update, padding as padding

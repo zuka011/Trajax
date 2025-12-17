@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from trajax.trajectory.common import Trajectory
-from trajax.trajectory.basic import PathParameters, ReferencePoints
+from trajax.trajectory.basic import NumPyPathParameters, NumPyReferencePoints
 
 import numpy as np
 from numtypes import Array, Dims, Dim1, D, shape_of
@@ -12,7 +12,7 @@ type PointArray = Array[Dims[int, D[2]]]
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
+class NumpyWaypointsTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
     length: float
     reference_points: Array[Dim1]
     spline_x: CubicSpline
@@ -45,9 +45,9 @@ class NumpyWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
             spline_y=spline_y,
         )
 
-    def query[L: int, M: int](
-        self, parameters: PathParameters[L, M]
-    ) -> ReferencePoints[L, M]:
+    def query[T: int, M: int](
+        self, parameters: NumPyPathParameters[T, M]
+    ) -> NumPyReferencePoints[T, M]:
         T, M = parameters.horizon, parameters.rollout_count
         s = np.asarray(parameters)
 
@@ -66,7 +66,7 @@ class NumpyWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
         assert shape_of(y, matches=(T, M), name="y")
         assert shape_of(heading, matches=(T, M), name="heading")
 
-        return ReferencePoints.create(x=x, y=y, heading=heading)
+        return NumPyReferencePoints.create(x=x, y=y, heading=heading)
 
 
 def compute_path_parameters(*, x: Array[Dim1], y: Array[Dim1]) -> Array[Dim1]:

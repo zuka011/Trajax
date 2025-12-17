@@ -38,7 +38,7 @@ from pytest import mark
     ],
     [
         (
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.energy(),
             temperature := 0.1,  # Low temperature, optimal should be close to best.
             nominal_input := data.numpy.control_input_sequence(
@@ -73,7 +73,7 @@ from pytest import mark
             tolerance := 1e-3,  # Allow some tolerance, since T not that small.
         ),
         (  # Analogous test case for JAX implementation.
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.energy(),
             temperature := 0.1,
             nominal_input := data.jax.control_input_sequence(
@@ -162,7 +162,7 @@ T = clear_type
     ],
     [
         (
-            mppi := create_mppi.numpy(
+            mppi := create_mppi.numpy.base(
                 planning_interval=3,
                 update_function=update.numpy.no_update(),
                 padding_function=padding.numpy.zero(),
@@ -200,7 +200,7 @@ T = clear_type
             ),
         ),
         (
-            mppi := create_mppi.jax(
+            mppi := create_mppi.jax.base(
                 planning_interval=4,
                 update_function=update.jax.no_update(),
                 padding_function=padding.jax.zero(),
@@ -289,7 +289,7 @@ async def test_that_mppi_shifts_control_sequence_left_when_replanning[
     ],
     [
         (
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.energy(),
             nominal_input := data.numpy.control_input_sequence(
                 array([[0.0, 0.0], [0.0, 0.0]], shape=(T := 2, D_u := 2))
@@ -321,7 +321,7 @@ async def test_that_mppi_shifts_control_sequence_left_when_replanning[
             ),
         ),
         (
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.energy(),
             nominal_input := data.jax.control_input_sequence(
                 array([[0.0, 0.0], [0.0, 0.0]], shape=(T := 2, D_u := 2))
@@ -403,7 +403,7 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
         (
             # If the weights sum to 1, then the optimal control should be a convex combination
             # of the samples, meaning it must be within the convex hull of the samples.
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.energy(),
             nominal_input := data.numpy.control_input_sequence(
                 array([[0.0], [0.0]], shape=(T := 2, D_u := 1))
@@ -422,7 +422,7 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
             rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
         ),
         (
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.energy(),
             nominal_input := data.jax.control_input_sequence(
                 array([[0.0], [0.0]], shape=(T := 2, D_u := 1))
@@ -499,10 +499,10 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     ],
     [
         (
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.quadratic_distance_to_origin(),
             model := create_model.numpy.integrator(time_step_size=0.1),
-            sampler := samplers.sampler.numpy(
+            sampler := samplers.sampler.numpy.gaussian(
                 standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),
                 rollout_count=200,
                 to_batch=data.numpy.control_input_batch,
@@ -517,10 +517,10 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
             convergence_threshold := 0.1,
         ),
         (
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.quadratic_distance_to_origin(),
             model := create_model.jax.integrator(time_step_size=0.1),
-            sampler := samplers.sampler.jax(
+            sampler := samplers.sampler.jax.gaussian(
                 standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),
                 rollout_count=200,
                 to_batch=data.jax.control_input_batch,
@@ -592,7 +592,7 @@ async def test_that_mppi_converges_to_target_state[
     ],
     [
         (
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.energy(),
             nominal_input := data.numpy.control_input_sequence(
                 np.zeros((T := 2, D_u := 1))
@@ -615,7 +615,7 @@ async def test_that_mppi_converges_to_target_state[
             rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
         ),
         (
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.energy(),
             nominal_input := data.jax.control_input_sequence(
                 np.zeros((T := 2, D_u := 1))
@@ -688,7 +688,7 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
     ],
     [
         (
-            mppi := create_mppi.numpy(),
+            mppi := create_mppi.numpy.base(),
             cost_function := costs.numpy.energy(),
             nominal_input := data.numpy.control_input_sequence(
                 np.zeros((T := 2, D_u := 1))
@@ -711,7 +711,7 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
             rollouts := data.numpy.state_batch(np.zeros((T, D_x, M))),
         ),
         (
-            mppi := create_mppi.jax(),
+            mppi := create_mppi.jax.base(),
             cost_function := costs.jax.energy(),
             nominal_input := data.jax.control_input_sequence(
                 np.zeros((T := 2, D_u := 1))
@@ -788,7 +788,7 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
     ],
     [
         (
-            mppi := create_mppi.numpy(
+            mppi := create_mppi.numpy.base(
                 update_function=stubs.UpdateFunction.returns(
                     data.numpy.control_input_sequence(
                         array([[9.0, 9.0], [10.0, 10.0]], shape=(T := 2, D_u := 2))
@@ -819,7 +819,7 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
             ),
         ),
         (
-            mppi := create_mppi.jax(
+            mppi := create_mppi.jax.base(
                 update_function=stubs.UpdateFunction.returns(
                     data.jax.control_input_sequence(
                         array([[10.0, 10.0], [1.0, 1.0]], shape=(T := 2, D_u := 2))
@@ -906,11 +906,11 @@ padding_size = clear_type
         "expected_nominal_control",
     ],
     [
-        (  #
-            mppi := create_mppi.numpy(
+        (
+            mppi := create_mppi.numpy.base(
                 planning_interval=(padding_size := int(2)),
                 update_function=update.numpy.no_update(),
-                padding_function=stubs.PaddingFunction.returns(
+                padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.numpy.control_input_sequence(
                         array(
                             [[12.0, 16.0], [17.0, 18.0]],
@@ -942,10 +942,10 @@ padding_size = clear_type
             ),
         ),
         (
-            mppi := create_mppi.jax(
+            mppi := create_mppi.jax.base(
                 planning_interval=(padding_size := 3),
                 update_function=update.jax.no_update(),
-                padding_function=stubs.PaddingFunction.returns(
+                padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.jax.control_input_sequence(
                         array(
                             [[9.0, 10.0], [11.0, 12.0], [13.0, 14.0]],
@@ -1036,7 +1036,7 @@ D_u = clear_type
     ],
     [
         (
-            mppi := create_mppi.numpy(
+            mppi := create_mppi.numpy.base(
                 update_function=update.numpy.use_optimal_control(),
                 filter_function=stubs.FilterFunction.returns(
                     expected_optimal_control := data.numpy.control_input_sequence(
@@ -1069,7 +1069,7 @@ D_u = clear_type
             ),
         ),
         (
-            mppi := create_mppi.jax(
+            mppi := create_mppi.jax.base(
                 update_function=update.jax.use_optimal_control(),
                 filter_function=stubs.FilterFunction.returns(
                     expected_optimal_control := data.jax.control_input_sequence(

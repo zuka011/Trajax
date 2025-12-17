@@ -1,9 +1,7 @@
 from typing import Protocol, Sequence
 from dataclasses import dataclass
 
-from trajax.model import ControlInputBatch, StateBatch
-from trajax.mppi import Costs, CostFunction
-from trajax.mppi.basic import Costs as NumPyCosts
+from trajax.mppi import StateBatch, ControlInputBatch, CostFunction, Costs, NumPyCosts
 
 from numtypes import shape_of
 

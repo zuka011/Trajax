@@ -1,24 +1,22 @@
-from typing import Protocol, Self, overload
+from typing import Protocol, Self, cast, overload
 from dataclasses import dataclass
 
-from trajax.model import (
-    DynamicalModel,
+from trajax.mppi.common import (
     State,
     StateBatch,
-    ControlInputSequence as AnyControlInputSequence,
+    ControlInputSequence,
     ControlInputBatch,
-)
-from trajax.mppi.common import (
+    DynamicalModel,
+    Costs,
+    CostFunction,
+    Sampler,
     Mppi,
     Control,
     UseOptimalControlUpdate,
     NoFilter,
-    UpdateFunction as AnyUpdateFunction,
-    PaddingFunction as AnyPaddingFunction,
-    FilterFunction as AnyFilterFunction,
-    Sampler,
-    CostFunction,
-    Costs as AnyCosts,
+    UpdateFunction,
+    PaddingFunction,
+    FilterFunction,
 )
 
 from numtypes import Array, Dims, shape_of
@@ -26,8 +24,14 @@ from numtypes import Array, Dims, shape_of
 import numpy as np
 
 
-class ControlInputSequence[T: int = int, D_u: int = int](
-    AnyControlInputSequence[T, D_u], Protocol
+class NumPyState[D_x: int](State[D_x], Protocol): ...
+
+
+class NumPyStateBatch[T: int, D_x: int, M: int](StateBatch[T, D_x, M], Protocol): ...
+
+
+class NumPyControlInputSequence[T: int, D_u: int](
+    ControlInputSequence[T, D_u], Protocol
 ):
     @overload
     def similar(self, *, array: Array[Dims[T, D_u]]) -> Self:
@@ -39,32 +43,71 @@ class ControlInputSequence[T: int = int, D_u: int = int](
     @overload
     def similar[L: int](
         self, *, array: Array[Dims[L, D_u]], length: L
-    ) -> "ControlInputSequence[L, D_u]":
+    ) -> "NumPyControlInputSequence[L, D_u]":
         """Creates a new control input sequence similar to this one but with the given
         array as its data. The length of the new sequence may differ from the original.
         """
         ...
 
 
-class Costs[T: int = int, M: int = int](AnyCosts[T, M], Protocol):
+class NumPyControlInputBatch[T: int, D_u: int, M: int](
+    ControlInputBatch[T, D_u, M], Protocol
+): ...
+
+
+class NumPyCosts[T: int, M: int](Costs[T, M], Protocol):
     def similar(self, *, array: Array[Dims[T, M]]) -> Self:
         """Creates new costs similar to this one but with the given array as its data."""
         ...
 
 
-type UpdateFunction[C: ControlInputSequence] = AnyUpdateFunction[C]
+class NumPyDynamicalModel[
+    InStateT: NumPyState,
+    OutStateT: NumPyState,
+    StateBatchT: NumPyStateBatch,
+    ControlInputSequenceT: NumPyControlInputSequence,
+    ControlInputBatchT: NumPyControlInputBatch,
+](
+    DynamicalModel[
+        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
+    Protocol,
+): ...
 
-type PaddingFunction[N: ControlInputSequence, P: ControlInputSequence] = (
-    AnyPaddingFunction[N, P]
-)
 
-type FilterFunction[C: ControlInputSequence] = AnyFilterFunction[C]
+class NumPySampler[
+    SequenceT: NumPyControlInputSequence,
+    BatchT: NumPyControlInputBatch,
+](Sampler[SequenceT, BatchT], Protocol): ...
 
 
-class ZeroPadding[T: int = int, D_u: int = int, L: int = int]:
+class NumPyCostFunction[
+    ControlInputBatchT: NumPyControlInputBatch,
+    StateBatchT: NumPyStateBatch,
+    CostsT: NumPyCosts,
+](CostFunction[ControlInputBatchT, StateBatchT, CostsT], Protocol): ...
+
+
+class NumPyUpdateFunction[C: NumPyControlInputSequence](
+    UpdateFunction[C], Protocol
+): ...
+
+
+class NumPyPaddingFunction[
+    N: NumPyControlInputSequence,
+    P: NumPyControlInputSequence,
+](PaddingFunction[N, P], Protocol): ...
+
+
+class NumPyFilterFunction[C: NumPyControlInputSequence](
+    FilterFunction[C], Protocol
+): ...
+
+
+class NumPyZeroPadding[T: int, D_u: int, L: int]:
     def __call__(
-        self, *, nominal_input: ControlInputSequence[T, D_u], padding_size: L
-    ) -> ControlInputSequence[L, D_u]:
+        self, *, nominal_input: NumPyControlInputSequence[T, D_u], padding_size: L
+    ) -> NumPyControlInputSequence[L, D_u]:
         array = np.zeros(shape := (padding_size, nominal_input.dimension))
 
         assert shape_of(array, matches=shape, name="padding array")
@@ -74,63 +117,61 @@ class ZeroPadding[T: int = int, D_u: int = int, L: int = int]:
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyMppi[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputPaddingT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
-    CostsT: Costs,
+    ControlInputSequenceT: NumPyControlInputSequence,
+    ControlInputPaddingT: NumPyControlInputSequence,
 ](
     Mppi[
-        InStateT,
-        OutStateT,
-        StateBatchT,
+        NumPyState,
+        NumPyState,
+        NumPyStateBatch,
         ControlInputSequenceT,
-        ControlInputBatchT,
-        CostsT,
+        NumPyControlInputBatch,
+        NumPyCosts,
     ]
 ):
     planning_interval: int
-    update_function: UpdateFunction[ControlInputSequenceT]
-    padding_function: PaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
-    filter_function: FilterFunction[ControlInputSequenceT]
+    update_function: NumPyUpdateFunction[ControlInputSequenceT]
+    padding_function: NumPyPaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
+    filter_function: NumPyFilterFunction[ControlInputSequenceT]
 
     @staticmethod
     def create[
-        IS: State = State,
-        OS: State = State,
-        SB: StateBatch = StateBatch,
-        CIS: ControlInputSequence = ControlInputSequence,
-        CIP: ControlInputSequence = ControlInputSequence,
-        CIB: ControlInputBatch = ControlInputBatch,
-        C: Costs = Costs,
+        CIS: NumPyControlInputSequence = NumPyControlInputSequence,
+        CIP: NumPyControlInputSequence = NumPyControlInputSequence,
     ](
         *,
         planning_interval: int = 1,
-        update_function: UpdateFunction[CIS] = UseOptimalControlUpdate(),
-        padding_function: PaddingFunction[CIS, CIP] = ZeroPadding(),
-        filter_function: FilterFunction[CIS] = NoFilter(),
-    ) -> "NumPyMppi[IS, OS, SB, CIS, CIP, CIB, C]":
+        update_function: NumPyUpdateFunction[CIS] | None = None,
+        padding_function: NumPyPaddingFunction[CIS, CIP] | None = None,
+        filter_function: NumPyFilterFunction[CIS] | None = None,
+    ) -> "NumPyMppi[CIS, CIP]":
         """Creates a NumPy-based MPPI controller."""
         return NumPyMppi(
             planning_interval=planning_interval,
-            update_function=update_function,
-            padding_function=padding_function,
-            filter_function=filter_function,
+            update_function=update_function
+            or cast(NumPyUpdateFunction[CIS], UseOptimalControlUpdate()),
+            padding_function=padding_function
+            or cast(NumPyPaddingFunction[CIS, CIP], NumPyZeroPadding()),
+            filter_function=filter_function
+            or cast(NumPyFilterFunction[CIS], NoFilter()),
         )
 
     def __post_init__(self) -> None:
         assert self.planning_interval > 0, "Planning interval must be positive."
 
-    async def step(
+    async def step[
+        InStateT: NumPyState,
+        OutStateT: NumPyState,
+        StateBatchT: NumPyStateBatch,
+        ControlInputBatchT: NumPyControlInputBatch,
+    ](
         self,
         *,
-        model: DynamicalModel[
+        model: NumPyDynamicalModel[
             InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
         ],
-        cost_function: CostFunction[ControlInputBatchT, StateBatchT, Costs],
-        sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
+        cost_function: NumPyCostFunction[ControlInputBatchT, StateBatchT, NumPyCosts],
+        sampler: NumPySampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,
         initial_state: InStateT,

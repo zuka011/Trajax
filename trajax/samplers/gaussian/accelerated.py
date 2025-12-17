@@ -2,11 +2,7 @@ from typing import Protocol, Final, overload, cast
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.model import (
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
-)
-from trajax.mppi import Sampler
+from trajax.mppi import JaxControlInputSequence, JaxControlInputBatch, JaxSampler
 
 from jaxtyping import Array as JaxArray, Float, PRNGKeyArray
 from numtypes import Array, Dims
@@ -16,36 +12,18 @@ import jax.random as jrandom
 import jax.numpy as jnp
 
 
-class ControlInputSequence[T: int = int, D_u: int = int](
-    AnyControlInputSequence[T, D_u], Protocol
-):
-    @property
-    def array(self) -> Float[JaxArray, "T D_u"]:
-        """Returns the underlying JAX array representing the control input sequence."""
-        ...
-
-
-class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
-    AnyControlInputBatch[T, D_u, M], Protocol
-):
-    @property
-    def array(self) -> Float[JaxArray, "T D_u M"]:
-        """Returns the underlying JAX array representing the control input batch."""
-        ...
-
-
-class ControlInputBatchCreator[ControlInputBatchT: ControlInputBatch](Protocol):
+class JaxControlInputBatchCreator[ControlInputBatchT: JaxControlInputBatch](Protocol):
     def __call__(self, *, array: Float[JaxArray, "T D_u M"]) -> ControlInputBatchT:
         """Creates a ControlInputBatch from the given array."""
         ...
 
 
 @dataclass(kw_only=True)
-class JaxGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int](
-    Sampler[ControlInputSequence, BatchT, M]
+class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int, M: int](
+    JaxSampler[JaxControlInputSequence, BatchT]
 ):
     standard_deviation: Final[Float[JaxArray, "D_u"]]
-    to_batch: Final[ControlInputBatchCreator[BatchT]]
+    to_batch: Final[JaxControlInputBatchCreator[BatchT]]
 
     _control_dimension: Final[D_u]
     _rollout_count: Final[M]
@@ -54,11 +32,11 @@ class JaxGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int
 
     @overload
     @staticmethod
-    def create[B: ControlInputBatch, D_u_: int, M_: int](
+    def create[B: JaxControlInputBatch, D_u_: int, M_: int](
         *,
         standard_deviation: Array[Dims[D_u_]],
         rollout_count: M_,
-        to_batch: ControlInputBatchCreator[B],
+        to_batch: JaxControlInputBatchCreator[B],
         key: PRNGKeyArray,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
@@ -68,12 +46,12 @@ class JaxGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int
 
     @overload
     @staticmethod
-    def create[B: ControlInputBatch, D_u_: int, M_: int](
+    def create[B: JaxControlInputBatch, D_u_: int, M_: int](
         *,
         standard_deviation: Float[JaxArray, "D_u"],
         control_dimension: D_u_,
         rollout_count: M_,
-        to_batch: ControlInputBatchCreator[B],
+        to_batch: JaxControlInputBatchCreator[B],
         key: PRNGKeyArray,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
@@ -82,12 +60,12 @@ class JaxGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int
         ...
 
     @staticmethod
-    def create[B: ControlInputBatch, D_u_: int, M_: int](
+    def create[B: JaxControlInputBatch, D_u_: int, M_: int](
         *,
         standard_deviation: Array[Dims[D_u_]] | Float[JaxArray, "D_u"],
         control_dimension: D_u_ | None = None,
         rollout_count: M_,
-        to_batch: ControlInputBatchCreator[B],
+        to_batch: JaxControlInputBatchCreator[B],
         key: PRNGKeyArray,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
@@ -111,7 +89,7 @@ class JaxGaussianSampler[BatchT: ControlInputBatch, D_u: int = int, M: int = int
             f"but got {self.standard_deviation.shape}"
         )
 
-    def sample(self, *, around: ControlInputSequence) -> BatchT:
+    def sample(self, *, around: JaxControlInputSequence) -> BatchT:
         self.key, samples = sample(
             self.key,
             around=around.array,

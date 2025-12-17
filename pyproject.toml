@@ -85,6 +85,9 @@ extend-select = ["RUF018"]
     "F722",  # Ignore syntax error in forward references for jaxtyping types
     "F821"  # Ignore undefined names in JIT-compiled functions
 ]
+"trajax/types/factory.py" = [
+    "F811"  # Ignore redefinition of imported names (ruff bug)
+]
 
 [tool.pytest-watcher]
 now = "true"

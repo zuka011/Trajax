@@ -2,15 +2,16 @@ from typing import Protocol, Final
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
-from trajax.states.simple.accelerated import (
-    State as SimpleState,
-    StateBatch as SimpleStateBatch,
+from trajax.states import (
+    JaxSimpleState as SimpleState,
+    JaxSimpleStateBatch as SimpleStateBatch,
 )
-from trajax.model.integrator.common import (
+from trajax.models.integrator.common import (
     IntegratorModel,
-    State as AnyState,
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
+    IntegratorState,
+    IntegratorStateBatch,
+    IntegratorControlInputSequence,
+    IntegratorControlInputBatch,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -22,15 +23,20 @@ import jax.numpy as jnp
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 
-class State[D_x: int = int](AnyState[D_x], Protocol):
+class JaxIntegratorState[D_x: int](IntegratorState[D_x], Protocol):
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
         """Returns the underlying JAX array."""
         ...
 
 
-class ControlInputSequence[T: int = int, D_u: int = int](
-    AnyControlInputSequence[T, D_u], Protocol
+class JaxIntegratorStateBatch[T: int, D_x: int, M: int](
+    IntegratorStateBatch[T, D_x, M], Protocol
+): ...
+
+
+class JaxIntegratorControlInputSequence[T: int, D_u: int](
+    IntegratorControlInputSequence[T, D_u], Protocol
 ):
     @property
     def array(self) -> Float[JaxArray, "T D_u"]:
@@ -43,8 +49,8 @@ class ControlInputSequence[T: int = int, D_u: int = int](
         ...
 
 
-class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
-    AnyControlInputBatch[T, D_u, M], Protocol
+class JaxIntegratorControlInputBatch[T: int, D_u: int, M: int](
+    IntegratorControlInputBatch[T, D_u, M], Protocol
 ):
     @property
     def array(self) -> Float[JaxArray, "T D_u M"]:
@@ -55,7 +61,11 @@ class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](
 @dataclass(kw_only=True, frozen=True)
 class JaxIntegratorModel(
     IntegratorModel[
-        State, SimpleState, SimpleStateBatch, ControlInputSequence, ControlInputBatch
+        JaxIntegratorState,
+        JaxIntegratorState,
+        JaxIntegratorStateBatch,
+        JaxIntegratorControlInputSequence,
+        JaxIntegratorControlInputBatch,
     ]
 ):
     time_step: float
@@ -91,7 +101,9 @@ class JaxIntegratorModel(
         )
 
     async def simulate[T: int, D_u: int, D_x: int, M: int](
-        self, inputs: ControlInputBatch[T, D_u, M], initial_state: State[D_x]
+        self,
+        inputs: JaxIntegratorControlInputBatch[T, D_u, M],
+        initial_state: JaxIntegratorState[D_x],
     ) -> SimpleStateBatch[T, D_x, M]:
         return SimpleStateBatch(
             integrator_simulate(
@@ -106,7 +118,9 @@ class JaxIntegratorModel(
         )
 
     async def step[T: int, D_u: int, D_x: int](
-        self, input: ControlInputSequence[T, D_u], state: State[D_x]
+        self,
+        input: JaxIntegratorControlInputSequence[T, D_u],
+        state: JaxIntegratorState[D_x],
     ) -> SimpleState[D_x]:
         return SimpleState(
             integrator_step(

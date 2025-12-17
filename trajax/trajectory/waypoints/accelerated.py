@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from trajax.type import jaxtyped
 from trajax.trajectory.common import D_R, Trajectory
-from trajax.trajectory.accelerated import PathParameters, ReferencePoints, stack
+from trajax.trajectory.accelerated import JaxPathParameters, JaxReferencePoints, stack
 from trajax.trajectory.waypoints.basic import NumpyWaypointsTrajectory
 
 from scipy.interpolate import CubicSpline
@@ -21,7 +21,7 @@ type JaxPointArray = Float[JaxArray, "N 2"]
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class JaxWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
+class JaxWaypointsTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
     length: float
     reference_points: Float[JaxArray, "N"]
     coefficients_x: Float[JaxArray, "N-1 4"]
@@ -66,13 +66,13 @@ class JaxWaypointsTrajectory(Trajectory[PathParameters, ReferencePoints]):
         )
 
     def query[T: int, M: int](
-        self, parameters: PathParameters[T, M]
-    ) -> ReferencePoints[T, M]:
+        self, parameters: JaxPathParameters[T, M]
+    ) -> JaxReferencePoints[T, M]:
         assert jnp.all((0.0 <= parameters.array) & (parameters.array <= self.length)), (
             f"Path parameters out of bounds. Got: {parameters.array}"
         )
 
-        return ReferencePoints(
+        return JaxReferencePoints(
             query(
                 parameters=parameters.array,
                 reference_points=self.reference_points,

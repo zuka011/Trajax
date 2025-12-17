@@ -5,7 +5,7 @@ from trajax.type import DataType
 from numtypes import Array, Dims
 
 
-class State[D_x: int = int](Protocol):
+class IntegratorState[D_x: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         """Returns the state as a NumPy array."""
         ...
@@ -16,7 +16,7 @@ class State[D_x: int = int](Protocol):
         ...
 
 
-class StateBatch[T: int = int, D_x: int = int, M: int = int](Protocol):
+class IntegratorStateBatch[T: int, D_x: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         """Returns the states as a NumPy array."""
         ...
@@ -37,7 +37,7 @@ class StateBatch[T: int = int, D_x: int = int, M: int = int](Protocol):
         ...
 
 
-class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
+class IntegratorControlInputSequence[T: int, D_u: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         """Returns the control input sequence as a NumPy array."""
         ...
@@ -53,7 +53,7 @@ class ControlInputSequence[T: int = int, D_u: int = int](Protocol):
         ...
 
 
-class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
+class IntegratorControlInputBatch[T: int, D_u: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         """Returns the control inputs as a NumPy array."""
         ...
@@ -75,11 +75,11 @@ class ControlInputBatch[T: int = int, D_u: int = int, M: int = int](Protocol):
 
 
 class IntegratorModel[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    InStateT: IntegratorState,
+    OutStateT: IntegratorState,
+    StateBatchT: IntegratorStateBatch,
+    ControlInputSequenceT: IntegratorControlInputSequence,
+    ControlInputBatchT: IntegratorControlInputBatch,
 ](Protocol):
     async def simulate(
         self, inputs: ControlInputBatchT, initial_state: InStateT

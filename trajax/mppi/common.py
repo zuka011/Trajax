@@ -2,20 +2,102 @@ from typing import Protocol, Self
 from dataclasses import dataclass
 
 from trajax.type import DataType
-from trajax.model import (
-    DynamicalModel,
-    State,
-    StateBatch,
-    ControlInputSequence,
-    ControlInputBatch,
-)
 
 from numtypes import Array, Dims
 
 
-class Costs[T: int = int, M: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+class State[D_x: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+        """Returns the state as a NumPy array."""
+        ...
+
+    @property
+    def dimension(self) -> D_x:
+        """Returns the dimension of the state."""
+        ...
+
+
+class StateBatch[T: int, D_x: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
+        """Returns the states as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the state batch."""
+        ...
+
+    @property
+    def dimension(self) -> D_x:
+        """State dimension."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts in the batch."""
+        ...
+
+
+class ControlInputSequence[T: int, D_u: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
+        """Returns the control input sequence as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the control input sequence."""
+        ...
+
+    @property
+    def dimension(self) -> D_u:
+        """Control input dimension."""
+        ...
+
+
+class ControlInputBatch[T: int, D_u: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         """Returns the control inputs as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the control input batch."""
+        ...
+
+    @property
+    def dimension(self) -> D_u:
+        """Control input dimension."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts in the batch."""
+        ...
+
+
+class DynamicalModel[
+    InStateT: State,
+    OutStateT: State,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+](Protocol):
+    async def simulate(
+        self, inputs: ControlInputBatchT, initial_state: InStateT
+    ) -> StateBatchT:
+        """Simulates the dynamical model over the given control inputs starting from the
+        provided initial state."""
+        ...
+
+    async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
+        """Simulates a single time step of the dynamical model given the control input and current
+        state."""
+        ...
+
+
+class Costs[T: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+        """Returns the costs as a NumPy array."""
         ...
 
     def zero(self) -> Self:
@@ -41,15 +123,13 @@ class CostFunction[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs]
         ...
 
 
-class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch, M: int = int](
-    Protocol
-):
+class Sampler[SequenceT: ControlInputSequence, BatchT: ControlInputBatch](Protocol):
     def sample(self, *, around: SequenceT) -> BatchT:
         """Samples a batch of control input sequences around the given nominal input."""
         ...
 
     @property
-    def rollout_count(self) -> M:
+    def rollout_count(self) -> int:
         """Number of rollouts the sampler generates."""
         ...
 
@@ -64,7 +144,7 @@ class Mppi[
     InStateT: State,
     OutStateT: State,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,  # Invariant
+    ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
     CostsT: Costs,
 ](Protocol):
@@ -86,9 +166,7 @@ class Mppi[
         ...
 
 
-class UpdateFunction[
-    ControlInputSequenceT: ControlInputSequence  # Invariant
-](Protocol):
+class UpdateFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
     def __call__(
         self,
         *,
@@ -109,9 +187,7 @@ class PaddingFunction[NominalT: ControlInputSequence, PaddingT: ControlInputSequ
         ...
 
 
-class FilterFunction[
-    ControlInputSequenceT: ControlInputSequence  # Invariant
-](Protocol):
+class FilterFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
     def __call__(
         self, *, optimal_input: ControlInputSequenceT
     ) -> ControlInputSequenceT:
@@ -119,10 +195,10 @@ class FilterFunction[
         ...
 
 
-class NoUpdate[ControlInputSequenceT: ControlInputSequence]:
+class NoUpdate:
     """Returns the nominal input unchanged."""
 
-    def __call__(
+    def __call__[ControlInputSequenceT: ControlInputSequence](
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -131,10 +207,10 @@ class NoUpdate[ControlInputSequenceT: ControlInputSequence]:
         return nominal_input
 
 
-class UseOptimalControlUpdate[ControlInputSequenceT: ControlInputSequence]:
+class UseOptimalControlUpdate:
     """Sets the nominal input to the optimal input."""
 
-    def __call__(
+    def __call__[ControlInputSequenceT: ControlInputSequence](
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -143,10 +219,10 @@ class UseOptimalControlUpdate[ControlInputSequenceT: ControlInputSequence]:
         return optimal_input
 
 
-class NoFilter[ControlInputSequenceT: ControlInputSequence]:
+class NoFilter:
     """Returns the optimal input unchanged."""
 
-    def __call__(
+    def __call__[ControlInputSequenceT: ControlInputSequence](
         self, *, optimal_input: ControlInputSequenceT
     ) -> ControlInputSequenceT:
         return optimal_input

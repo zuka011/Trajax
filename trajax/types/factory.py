@@ -1,113 +1,105 @@
 from typing import Final
 
-from trajax.model.common import (
-    State as AnyState,
-    StateBatch as AnyStateBatch,
-    ControlInputSequence as AnyControlInputSequence,
-    ControlInputBatch as AnyControlInputBatch,
-    State as NumPyState,
-    StateBatch as NumPyStateBatch,
-    ControlInputBatch as NumPyControlInputBatch,
+from trajax.mppi import (
+    NumPyState,
+    NumPyStateBatch,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
+    NumPyCosts,
+    NumPyCostFunction,
+    JaxState,
+    JaxStateBatch,
+    JaxControlInputSequence,
+    JaxControlInputBatch,
+    JaxCosts,
+    JaxCostFunction,
+    State as State,
+    StateBatch as StateBatch,
+    ControlInputSequence as ControlInputSequence,
+    ControlInputBatch as ControlInputBatch,
+    Costs as Costs,
+    CostFunction as CostFunction,
 )
-from trajax.model.bicycle.common import (
-    D_X as BICYCLE_D_X,
-    D_U as BICYCLE_D_U,
-    D_x as BicycleD_x,
-    D_u as BicycleD_u,
-    State as BicycleState,
-    StateBatch as BicycleStateBatch,
-    Positions as BicyclePositions,
-    ControlInputSequence as BicycleControlInputSequence,
-    ControlInputBatch as BicycleControlInputBatch,
+from trajax.models import (
+    BICYCLE_D_X,
+    BICYCLE_D_U,
+    BicycleD_x,
+    BicycleD_u,
+    BicycleState,
+    BicycleStateBatch,
+    BicyclePositions,
+    BicycleControlInputSequence,
+    BicycleControlInputBatch,
+    NumPyBicycleState,
+    NumPyBicycleStateBatch,
+    NumPyBicyclePositions,
+    NumPyBicycleControlInputSequence,
+    NumPyBicycleControlInputBatch,
+    JaxBicycleState,
+    JaxBicycleStateBatch,
+    JaxBicyclePositions,
+    JaxBicycleControlInputSequence,
+    JaxBicycleControlInputBatch,
 )
-from trajax.model.bicycle.basic import (
-    State as NumPyBicycleState,
-    StateBatch as NumPyBicycleStateBatch,
-    Positions as NumPyBicyclePositions,
-    ControlInputSequence as NumPyBicycleControlInputSequence,
-    ControlInputBatch as NumPyBicycleControlInputBatch,
+from trajax.trajectory import (
+    NumPyPathParameters,
+    NumPyReferencePoints,
+    NumPyPositions,
+    JaxPathParameters,
+    JaxReferencePoints,
+    JaxPositions,
 )
-from trajax.model.bicycle.accelerated import (
-    State as JaxBicycleState,
-    StateBatch as JaxBicycleStateBatch,
-    Positions as JaxBicyclePositions,
-    ControlInputSequence as JaxBicycleControlInputSequence,
-    ControlInputBatch as JaxBicycleControlInputBatch,
+from trajax.costs import (
+    NumPyPathParameterExtractor,
+    NumPyPathVelocityExtractor,
+    NumPyPositionExtractor,
+    NumPyContouringCost,
+    JaxPathParameterExtractor,
+    JaxPathVelocityExtractor,
+    JaxPositionExtractor,
+    JaxContouringCost,
+    Error as Error,
+    ContouringCost as ContouringCost,
 )
-from trajax.trajectory.basic import (
-    PathParameters as NumPyPathParameters,
-    ReferencePoints as NumPyReferencePoints,
-    Positions as NumPyPositions,
-)
-from trajax.trajectory.accelerated import (
-    PathParameters as JaxPathParameters,
-    ReferencePoints as JaxReferencePoints,
-    Positions as JaxPositions,
-)
-from trajax.mppi.common import Costs as AnyCosts
-from trajax.mppi.basic import (
-    ControlInputSequence as NumPyControlInputSequence,
-    Costs as NumPyCosts,
-    CostFunction as NumPyCostFunction,
-)
-from trajax.mppi.accelerated import (
-    State as JaxState,
-    StateBatch as JaxStateBatch,
-    ControlInputSequence as JaxControlInputSequence,
-    ControlInputBatch as JaxControlInputBatch,
-    Costs as JaxCosts,
-    CostFunction as JaxCostFunction,
-)
-from trajax.costs.basic import (
-    PathParameterExtractor as NumPyPathParameterExtractor,
-    PathVelocityExtractor as NumPyPathVelocityExtractor,
-    PositionExtractor as NumPyPositionExtractor,
-)
-from trajax.costs.accelerated import (
-    PathParameterExtractor as JaxPathParameterExtractor,
-    PathVelocityExtractor as JaxPathVelocityExtractor,
-    PositionExtractor as JaxPositionExtractor,
-)
-from trajax.states.simple.basic import (
-    State as NumPySimpleState,
-    StateBatch as NumPySimpleStateBatch,
-    ControlInputSequence as NumPySimpleControlInputSequence,
-    ControlInputBatch as NumPySimpleControlInputBatch,
-    Costs as NumPySimpleCosts,
-)
-from trajax.states.simple.accelerated import (
-    State as JaxSimpleState,
-    StateBatch as JaxSimpleStateBatch,
-    ControlInputSequence as JaxSimpleControlInputSequence,
-    ControlInputBatch as JaxSimpleControlInputBatch,
-    Costs as JaxSimpleCosts,
-)
-from trajax.states.augmented.common import (
-    AugmentedState as AugmentedState,
-    AugmentedStateBatch as AugmentedStateBatch,
-    AugmentedControlInputSequence as AugmentedControlInputSequence,
-    AugmentedControlInputBatch as AugmentedControlInputBatch,
-    AugmentedState as NumPyAugmentedState,
-    AugmentedStateBatch as NumPyAugmentedStateBatch,
-    AugmentedControlInputBatch as NumPyAugmentedControlInputBatch,
-)
-from trajax.states.augmented.basic import (
-    AugmentedControlInputSequence as NumPyAugmentedControlInputSequence,
+from trajax.states import (
+    NumPySimpleState,
+    NumPySimpleStateBatch,
+    NumPySimpleControlInputSequence,
+    NumPySimpleControlInputBatch,
+    NumPySimpleCosts,
+    JaxSimpleState,
+    JaxSimpleStateBatch,
+    JaxSimpleControlInputSequence,
+    JaxSimpleControlInputBatch,
+    JaxSimpleCosts,
+    NumPyAugmentedState,
+    NumPyAugmentedStateBatch,
+    NumPyAugmentedControlInputSequence,
+    NumPyAugmentedControlInputBatch,
+    AugmentedState,
+    AugmentedStateBatch,
+    AugmentedControlInputSequence,
+    AugmentedControlInputBatch,
 )
 
 
 class types:
-    type State[D_x: int = int] = AnyState[D_x]
-    type StateBatch[T: int = int, D_x: int = int, M: int = int] = AnyStateBatch[
-        T, D_x, M
-    ]
-    type ControlInputSequence[T: int = int, D_u: int = int] = AnyControlInputSequence[
+    type State[D_x: int = int] = State[D_x]
+    type StateBatch[T: int = int, D_x: int = int, M: int = int] = StateBatch[T, D_x, M]
+    type ControlInputSequence[T: int = int, D_u: int = int] = ControlInputSequence[
         T, D_u
     ]
     type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
-        AnyControlInputBatch[T, D_u, M]
+        ControlInputBatch[T, D_u, M]
     )
-    type Costs[T: int = int, M: int = int] = AnyCosts[T, M]
+    type Costs[T: int = int, M: int = int] = Costs[T, M]
+    type CostFunction[I: ControlInputBatch, S: StateBatch, C: Costs] = CostFunction[
+        I, S, C
+    ]
+    type Error[T: int, M: int] = Error[T, M]
+    type ContouringCost[I: ControlInputBatch, S: StateBatch, C: Costs, D: Error] = (
+        ContouringCost[I, S, C, D]
+    )
 
     class bicycle:
         type D_x = BicycleD_x
@@ -124,23 +116,23 @@ class types:
         D_U: Final = BICYCLE_D_U
 
     class augmented:
-        type State[P: AnyState, V: AnyState, D_x: int = int] = AugmentedState[P, V, D_x]
+        type State[P: State, V: State, D_x: int = int] = AugmentedState[P, V, D_x]
         type StateBatch[
-            P: AnyStateBatch,
-            V: AnyStateBatch,
+            P: StateBatch,
+            V: StateBatch,
             T: int = int,
             D_x: int = int,
             M: int = int,
         ] = AugmentedStateBatch[P, V, T, D_x, M]
         type ControlInputSequence[
-            P: AnyControlInputSequence,
-            V: AnyControlInputSequence,
+            P: ControlInputSequence,
+            V: ControlInputSequence,
             T: int = int,
             D_u: int = int,
         ] = AugmentedControlInputSequence[P, V, T, D_u]
         type ControlInputBatch[
-            P: AnyControlInputBatch,
-            V: AnyControlInputBatch,
+            P: ControlInputBatch,
+            V: ControlInputBatch,
             T: int = int,
             D_u: int = int,
             M: int = int,
@@ -177,13 +169,12 @@ class types:
             NumPyStateBatch[T, D_x, M],
             NumPyCosts[T, M],
         ]
-        type PathParameterExtractor[StateT: NumPyStateBatch] = (
-            NumPyPathParameterExtractor[StateT]
+        type PathParameterExtractor[S: NumPyStateBatch] = NumPyPathParameterExtractor[S]
+        type PathVelocityExtractor[I: NumPyControlInputBatch] = (
+            NumPyPathVelocityExtractor[I]
         )
-        type PathVelocityExtractor[InputT: NumPyControlInputBatch] = (
-            NumPyPathVelocityExtractor[InputT]
-        )
-        type PositionExtractor[StateT: NumPyStateBatch] = NumPyPositionExtractor[StateT]
+        type PositionExtractor[S: NumPyStateBatch] = NumPyPositionExtractor[S]
+        type ContouringCost[S: NumPyStateBatch] = NumPyContouringCost[S]
 
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
@@ -279,13 +270,12 @@ class types:
         ] = JaxCostFunction[
             JaxControlInputBatch[T, D_u, M], JaxStateBatch[T, D_x, M], JaxCosts[T, M]
         ]
-        type PathParameterExtractor[StateT: JaxStateBatch] = JaxPathParameterExtractor[
-            StateT
+        type PathParameterExtractor[S: JaxStateBatch] = JaxPathParameterExtractor[S]
+        type PathVelocityExtractor[I: JaxControlInputBatch] = JaxPathVelocityExtractor[
+            I
         ]
-        type PathVelocityExtractor[InputT: JaxControlInputBatch] = (
-            JaxPathVelocityExtractor[InputT]
-        )
-        type PositionExtractor[StateT: JaxStateBatch] = JaxPositionExtractor[StateT]
+        type PositionExtractor[S: JaxStateBatch] = JaxPositionExtractor[S]
+        type ContouringCost[S: JaxStateBatch] = JaxContouringCost[S]
 
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create

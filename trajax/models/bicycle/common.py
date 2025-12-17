@@ -4,15 +4,15 @@ from trajax.type import DataType
 
 from numtypes import Array, Dims, D
 
-D_X: Final = 4
-D_U: Final = 2
+BICYCLE_D_X: Final = 4
+BICYCLE_D_U: Final = 2
 
-type D_x = D[4]
-type D_u = D[2]
+type BicycleD_x = D[4]
+type BicycleD_u = D[2]
 
 
-class State(Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+class BicycleState(Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_x]]:
         """Returns the state as a NumPy array."""
         ...
 
@@ -37,14 +37,14 @@ class State(Protocol):
         ...
 
 
-class StateSequence[T: int = int](Protocol):
-    def step(self, index: int) -> State:
+class StateSequence(Protocol):
+    def step(self, index: int) -> BicycleState:
         """Returns the state at the given time step index."""
         ...
 
 
-class StateBatch[T: int = int, M: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
+class BicycleStateBatch[T: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, M]]:
         """Returns the states as a NumPy array."""
         ...
 
@@ -56,18 +56,18 @@ class StateBatch[T: int = int, M: int = int](Protocol):
         """Returns the velocities of the states in the batch."""
         ...
 
-    def rollout(self, index: int) -> StateSequence[T]:
+    def rollout(self, index: int) -> StateSequence:
         """Returns a single rollout from the batch as a state sequence."""
         ...
 
     @property
-    def positions(self) -> "Positions[T, M] ":
+    def positions(self) -> "BicyclePositions[T, M] ":
         """Returns the positions of the states in the batch."""
         ...
 
 
-class Positions[T: int = int, M: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+class BicyclePositions[T: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, M]]:
         """Returns the positions as a NumPy array."""
         ...
 
@@ -80,8 +80,8 @@ class Positions[T: int = int, M: int = int](Protocol):
         ...
 
 
-class ControlInputSequence[T: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
+class BicycleControlInputSequence[T: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u]]:
         """Returns the control input sequence as a NumPy array."""
         ...
 
@@ -91,13 +91,13 @@ class ControlInputSequence[T: int = int](Protocol):
         ...
 
     @property
-    def dimension(self) -> D_u:
+    def dimension(self) -> BicycleD_u:
         """Control input dimension."""
         ...
 
 
-class ControlInputBatch[T: int = int, M: int = int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+class BicycleControlInputBatch[T: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, M]]:
         """Returns the control inputs as a NumPy array."""
         ...
 
@@ -112,12 +112,12 @@ class ControlInputBatch[T: int = int, M: int = int](Protocol):
         ...
 
 
-class KinematicBicycleModel[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+class BicycleModel[
+    InStateT: BicycleState,
+    OutStateT: BicycleState,
+    StateBatchT: BicycleStateBatch,
+    ControlInputSequenceT: BicycleControlInputSequence,
+    ControlInputBatchT: BicycleControlInputBatch,
 ](Protocol):
     async def simulate(
         self, inputs: ControlInputBatchT, initial_state: InStateT

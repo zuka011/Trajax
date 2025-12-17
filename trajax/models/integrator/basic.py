@@ -1,15 +1,16 @@
-from typing import Final
+from typing import Final, Protocol
 from dataclasses import dataclass
 
-from trajax.states.simple.basic import (
-    State as SimpleState,
-    StateBatch as SimpleStateBatch,
+from trajax.states import (
+    NumPySimpleState as SimpleState,
+    NumPySimpleStateBatch as SimpleStateBatch,
 )
-from trajax.model.integrator.common import (
+from trajax.models.integrator.common import (
     IntegratorModel,
-    State,
-    ControlInputSequence,
-    ControlInputBatch,
+    IntegratorState,
+    IntegratorStateBatch,
+    IntegratorControlInputSequence,
+    IntegratorControlInputBatch,
 )
 
 from numtypes import Array, Dims
@@ -20,10 +21,32 @@ import numpy as np
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 
+class NumPyIntegratorState[D_x: int](IntegratorState[D_x], Protocol): ...
+
+
+class NumPyIntegratorStateBatch[T: int, D_x: int, M: int](
+    IntegratorStateBatch[T, D_x, M], Protocol
+): ...
+
+
+class NumPyIntegratorControlInputSequence[T: int, D_u: int](
+    IntegratorControlInputSequence[T, D_u], Protocol
+): ...
+
+
+class NumPyIntegratorControlInputBatch[T: int, D_u: int, M: int](
+    IntegratorControlInputBatch[T, D_u, M], Protocol
+): ...
+
+
 @dataclass(kw_only=True, frozen=True)
 class NumPyIntegratorModel(
     IntegratorModel[
-        State, SimpleState, SimpleStateBatch, ControlInputSequence, ControlInputBatch
+        NumPyIntegratorState,
+        NumPyIntegratorState,
+        NumPyIntegratorStateBatch,
+        NumPyIntegratorControlInputSequence,
+        NumPyIntegratorControlInputBatch,
     ]
 ):
     time_step: float
@@ -58,7 +81,9 @@ class NumPyIntegratorModel(
         )
 
     async def simulate[T: int, D_u: int, D_x: int, M: int](
-        self, inputs: ControlInputBatch[T, D_u, M], initial_state: State[D_x]
+        self,
+        inputs: IntegratorControlInputBatch[T, D_u, M],
+        initial_state: IntegratorState[D_x],
     ) -> SimpleStateBatch[T, D_x, M]:
         initial = np.asarray(initial_state)
         clipped_inputs = np.clip(inputs, *self.velocity_limits)
@@ -77,7 +102,7 @@ class NumPyIntegratorModel(
         )
 
     async def step[T: int, D_u: int, D_x: int](
-        self, input: ControlInputSequence[T, D_u], state: State[D_x]
+        self, input: IntegratorControlInputSequence[T, D_u], state: IntegratorState[D_x]
     ) -> SimpleState[D_x]:
         controls = np.asarray(input)
         current_state = np.asarray(state)

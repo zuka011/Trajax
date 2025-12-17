@@ -7,7 +7,7 @@ D_R: Final = 3
 type D_r = D[3]
 
 
-class PathParameters[T: int = int, M: int = int](Protocol):
+class PathParameters[T: int, M: int](Protocol):
     def __array__(self) -> Array[Dims[T, M]]:
         """Returns the path parameters as a NumPy array."""
         ...
@@ -23,7 +23,7 @@ class PathParameters[T: int = int, M: int = int](Protocol):
         ...
 
 
-class ReferencePoints[T: int = int, M: int = int](Protocol):
+class ReferencePoints[T: int, M: int](Protocol):
     def __array__(self) -> Array[Dims[T, D_r, M]]:
         """Returns the reference points as a NumPy array."""
         ...

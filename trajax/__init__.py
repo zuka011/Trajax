@@ -1,29 +1,34 @@
 from .type import DataType as DataType, jaxtyped as jaxtyped
-from .model import (
-    DynamicalModel as DynamicalModel,
-    State as State,
-    StateBatch as StateBatch,
-    ControlInputSequence as ControlInputSequence,
-    ControlInputBatch as ControlInputBatch,
-    IntegratorModel as IntegratorModel,
-    KinematicBicycleModel as KinematicBicycleModel,
-    model as model,
-)
 from .trajectory import (
     Trajectory as Trajectory,
     PathParameters as PathParameters,
     ReferencePoints as ReferencePoints,
     trajectory as trajectory,
+    NumpyLineTrajectory as NumpyLineTrajectory,
+    NumpyWaypointsTrajectory as NumpyWaypointsTrajectory,
+    JaxLineTrajectory as JaxLineTrajectory,
+    JaxWaypointsTrajectory as JaxWaypointsTrajectory,
 )
-from .costs import costs as costs, CombinedCost as CombinedCost
+from .costs import (
+    costs as costs,
+    CombinedCost as CombinedCost,
+    ContouringCost as ContouringCost,
+    Error as Error,
+)
 from .samplers import sampler as sampler
 from .states import (
     AugmentedModel as AugmentedModel,
     AugmentedSampler as AugmentedSampler,
+    extract as extract,
 )
 from .mppi import (
+    State as State,
+    StateBatch as StateBatch,
+    ControlInputSequence as ControlInputSequence,
+    ControlInputBatch as ControlInputBatch,
     Costs as Costs,
     CostFunction as CostFunction,
+    DynamicalModel as DynamicalModel,
     Sampler as Sampler,
     UpdateFunction as UpdateFunction,
     PaddingFunction as PaddingFunction,
@@ -35,5 +40,10 @@ from .mppi import (
     mppi as mppi,
     update as update,
     padding as padding,
+)
+from .models import (
+    IntegratorModel as IntegratorModel,
+    BicycleModel as BicycleModel,
+    model as model,
 )
 from .types import types as types

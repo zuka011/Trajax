@@ -1,6 +1,6 @@
 from typing import Callable
 
-from trajax import types, KinematicBicycleModel, model as create_model
+from trajax import types, BicycleModel, model as create_model
 
 from numtypes import array, Array
 
@@ -65,7 +65,7 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -184,7 +184,7 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -300,7 +300,7 @@ async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -362,7 +362,7 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -408,7 +408,7 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -475,7 +475,7 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -524,7 +524,7 @@ async def test_that_displacement_is_consistent_with_velocity_state[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -618,7 +618,7 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -680,7 +680,7 @@ async def test_that_angular_velocity_depends_on_wheelbase[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -744,7 +744,7 @@ async def test_that_velocity_is_clamped_to_speed_limits[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -828,7 +828,7 @@ async def test_that_steering_input_is_clipped_to_max_steering[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -902,7 +902,7 @@ async def test_that_acceleration_input_is_clipped_to_max_acceleration[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -966,7 +966,7 @@ async def test_that_simulating_individual_steps_matches_horizon_simulation[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: KinematicBicycleModel[
+    model: BicycleModel[
         StateT, StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     input_batch: ControlInputBatchT,

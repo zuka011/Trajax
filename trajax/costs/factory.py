@@ -1,20 +1,19 @@
 from typing import Final
 
+from trajax.mppi import ControlInputBatch, StateBatch, CostFunction, NumPyCosts
 from trajax.costs.basic import (
-    ContouringCost as NumPyContouringCost,
-    LagCost as NumPyLagCost,
-    ProgressCost as NumPyProgressCost,
-    ControlSmoothingCost as NumPyControlSmoothingCost,
+    NumPyContouringCost,
+    NumPyLagCost,
+    NumPyProgressCost,
+    NumPyControlSmoothingCost,
 )
 from trajax.costs.accelerated import (
-    ContouringCost as JaxContouringCost,
-    LagCost as JaxLagCost,
-    ProgressCost as JaxProgressCost,
-    ControlSmoothingCost as JaxControlSmoothingCost,
+    JaxContouringCost,
+    JaxLagCost,
+    JaxProgressCost,
+    JaxControlSmoothingCost,
 )
 from trajax.costs.combined import CombinedCost, NumPyCostSumFunction
-from trajax.mppi.common import ControlInputBatch, StateBatch, CostFunction
-from trajax.mppi.basic import Costs as NumPyCosts
 
 
 class costs:
