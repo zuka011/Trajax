@@ -36,6 +36,11 @@ class BicycleState(Protocol):
         """Velocity of the agent."""
         ...
 
+    @property
+    def dimension(self) -> BicycleD_x:
+        """State dimension."""
+        ...
+
 
 class StateSequence(Protocol):
     def step(self, index: int) -> BicycleState:
