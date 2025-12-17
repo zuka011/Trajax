@@ -1,4 +1,4 @@
-from typing import Self, overload, cast, Any
+from typing import Self, overload, cast, Any, Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType
@@ -85,6 +85,19 @@ class StateSequence:
 @dataclass(frozen=True)
 class NumPyBicycleStateBatch[T: int, M: int](NumPyStateBatch[T, BicycleD_x, M]):
     array: StateBatchArray[T, M]
+
+    @staticmethod
+    def of_states[T_: int = int](
+        states: Sequence[NumPyBicycleState], *, horizon: T_ | None = None
+    ) -> "NumPyBicycleStateBatch[int, D[1]]":
+        """Creates a NumPy bicycle state batch from a sequence of bicycle states."""
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+
+        array = np.stack([state.array for state in states], axis=0)[:, :, np.newaxis]
+
+        assert shape_of(array, matches=(horizon, BICYCLE_D_X, 1))
+
+        return NumPyBicycleStateBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
         return self.array
@@ -181,6 +194,17 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
     NumPyControlInputBatch[T, BicycleD_u, M]
 ):
     array: ControlInputBatchArray[T, M]
+
+    @staticmethod
+    def zero[T_: int, M_: int](
+        *, horizon: T_, rollout_count: M_ = 1
+    ) -> "NumPyBicycleControlInputBatch[T_, M_]":
+        """Creates a zeroed control input batch for the given horizon and rollout count."""
+        array = np.zeros((horizon, BICYCLE_D_U, rollout_count))
+
+        assert shape_of(array, matches=(horizon, BICYCLE_D_U, rollout_count))
+
+        return NumPyBicycleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
         return self.array

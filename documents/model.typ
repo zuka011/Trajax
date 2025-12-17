@@ -184,6 +184,7 @@ When using MPPI to control the motion of a mobile robot, the terms of the cost f
 
 === Tracking Cost
 
+// TODO: Path Parameter is actually called Arc Length.
 #let path-parameter = $phi$
 #let path-parameter-change = $beta$
 #let reference-trajectory = $#state _("ref")$

@@ -1,4 +1,4 @@
-from typing import Self, overload, cast
+from typing import Self, overload, cast, Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType
@@ -11,7 +11,7 @@ from trajax.mppi import (
 )
 
 import numpy as np
-from numtypes import Array, Dims, shape_of
+from numtypes import Array, Dims, D, shape_of
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,22 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
 @dataclass(frozen=True)
 class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]):
     array: Array[Dims[T, D_x, M]]
+
+    @staticmethod
+    def of_states[D_x_: int, T_: int = int](
+        states: Sequence[NumPySimpleState[D_x_]], *, horizon: T_ | None = None
+    ) -> "NumPySimpleStateBatch[T_, D_x_, D[1]]":
+        """Creates a simple state batch from a sequence of simple states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+        dimension = states[0].dimension
+
+        array = np.stack([state.array for state in states], axis=0)[:, :, np.newaxis]
+
+        assert shape_of(array, matches=(horizon, dimension, 1))
+
+        return NumPySimpleStateBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         return self.array
@@ -98,6 +114,17 @@ class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
     NumPyControlInputBatch[T, D_u, M]
 ):
     array: Array[Dims[T, D_u, M]]
+
+    @staticmethod
+    def zero[T_: int, D_u_: int, M_: int](
+        *, horizon: T_, dimension: D_u_, rollout_count: M_ = 1
+    ) -> "NumPySimpleControlInputBatch[T_, D_u_, M_]":
+        """Creates a zeroed control input batch for the given horizon and rollout count."""
+        array = np.zeros((horizon, dimension, rollout_count))
+
+        assert shape_of(array, matches=(horizon, dimension, rollout_count))
+
+        return NumPySimpleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         return self.array

@@ -34,6 +34,7 @@ type InputSequence = types.numpy.augmented.ControlInputSequence[
 type InputBatch = types.numpy.augmented.ControlInputBatch[
     PhysicalInputBatch, VirtualInputBatch
 ]
+type ContouringCost = types.numpy.ContouringCost[StateBatch]
 type CombinedCost = types.CostFunction[InputBatch, StateBatch, types.numpy.Costs]
 type Planner = NumPyMppi[InputSequence, InputSequence]
 
@@ -141,7 +142,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation(
     min_progress = path_length * 0.75
     progress = 0.0
 
-    for _ in range(300):
+    for _ in range(max_steps := 300):
         control = await planner.step(
             model=augmented_model,
             cost_function=combined_cost,
@@ -163,8 +164,34 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation(
             break
 
     assert progress > min_progress, (
-        f"Vehicle did not make sufficient progress along the path. "
+        f"Vehicle did not make sufficient progress along the path in {max_steps} steps. "
         f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
     )
 
-    # TODO: Add Lateral Deviation Check.
+    assert (deviation := max_lateral_deviation_in(states, contouring_cost)) < (
+        max_deviation := 1.0
+    ), (
+        f"Vehicle deviated too far from the reference trajectory. "
+        f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
+    )
+
+
+def max_lateral_deviation_in(states: list[State], contouring: ContouringCost) -> float:
+    return contouring.error(
+        inputs=types.numpy.augmented.control_input_batch.of(
+            physical=types.numpy.bicycle.control_input_batch.zero(
+                horizon=(horizon := len(states))
+            ),
+            virtual=types.numpy.simple.control_input_batch.zero(
+                horizon=horizon, dimension=1
+            ),
+        ),
+        states=types.numpy.augmented.state_batch.of(
+            physical=types.numpy.bicycle.state_batch.of_states(
+                [it.physical for it in states]
+            ),
+            virtual=types.numpy.simple.state_batch.of_states(
+                [it.virtual for it in states]
+            ),
+        ),
+    ).max()

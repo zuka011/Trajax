@@ -26,7 +26,7 @@ from numtypes import Array, Dims
 
 @dataclass(frozen=True)
 class NumPyAugmentedState[P: NumPyState, V: NumPyState, D_x: int](
-    AugmentedState[P, V, D_x]
+    AugmentedState[P, V, D_x], NumPyState[D_x]
 ):
     inner: AugmentedState[P, V, D_x]
 
@@ -66,7 +66,7 @@ class NumPyAugmentedStateBatch[
     T: int,
     D_x: int,
     M: int,
-](AugmentedStateBatch[P, V, T, D_x, M]):
+](AugmentedStateBatch[P, V, T, D_x, M], NumPyStateBatch[T, D_x, M]):
     inner: AugmentedStateBatch[P, V, T, D_x, M]
 
     @staticmethod
@@ -124,7 +124,7 @@ class NumPyAugmentedControlInputSequence[
     V: NumPyControlInputSequence,
     T: int,
     D_u: int,
-](AugmentedControlInputSequence[P, V, T, D_u]):
+](AugmentedControlInputSequence[P, V, T, D_u], NumPyControlInputSequence[T, D_u]):
     inner: AugmentedControlInputSequence[P, V, T, D_u]
 
     @staticmethod
@@ -198,7 +198,7 @@ class NumPyAugmentedControlInputBatch[
     T: int,
     D_u: int,
     M: int,
-](AugmentedControlInputBatch[P, V, T, D_u, M]):
+](AugmentedControlInputBatch[P, V, T, D_u, M], NumPyControlInputBatch[T, D_u, M]):
     inner: AugmentedControlInputBatch[P, V, T, D_u, M]
 
     @staticmethod

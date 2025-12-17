@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Final, Any
 
 from trajax.mppi import (
     NumPyState,
@@ -84,19 +84,19 @@ from trajax.states import (
 
 
 class types:
-    type State[D_x: int = int] = State[D_x]
-    type StateBatch[T: int = int, D_x: int = int, M: int = int] = StateBatch[T, D_x, M]
-    type ControlInputSequence[T: int = int, D_u: int = int] = ControlInputSequence[
+    type State[D_x: int = Any] = State[D_x]
+    type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = StateBatch[T, D_x, M]
+    type ControlInputSequence[T: int = Any, D_u: int = Any] = ControlInputSequence[
         T, D_u
     ]
-    type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
+    type ControlInputBatch[T: int = Any, D_u: int = Any, M: int = Any] = (
         ControlInputBatch[T, D_u, M]
     )
-    type Costs[T: int = int, M: int = int] = Costs[T, M]
+    type Costs[T: int = Any, M: int = Any] = Costs[T, M]
     type CostFunction[I: ControlInputBatch, S: StateBatch, C: Costs] = CostFunction[
         I, S, C
     ]
-    type Error[T: int, M: int] = Error[T, M]
+    type Error[T: int = Any, M: int = Any] = Error[T, M]
     type ContouringCost[I: ControlInputBatch, S: StateBatch, C: Costs, D: Error] = (
         ContouringCost[I, S, C, D]
     )
@@ -105,10 +105,10 @@ class types:
         type D_x = BicycleD_x
         type D_u = BicycleD_u
         type State = BicycleState
-        type StateBatch[T: int = int, M: int = int] = BicycleStateBatch[T, M]
-        type Positions[T: int = int, M: int = int] = BicyclePositions[T, M]
-        type ControlInputSequence[T: int = int] = BicycleControlInputSequence[T]
-        type ControlInputBatch[T: int = int, M: int = int] = BicycleControlInputBatch[
+        type StateBatch[T: int = Any, M: int = Any] = BicycleStateBatch[T, M]
+        type Positions[T: int = Any, M: int = Any] = BicyclePositions[T, M]
+        type ControlInputSequence[T: int = Any] = BicycleControlInputSequence[T]
+        type ControlInputBatch[T: int = Any, M: int = Any] = BicycleControlInputBatch[
             T, M
         ]
 
@@ -116,26 +116,26 @@ class types:
         D_U: Final = BICYCLE_D_U
 
     class augmented:
-        type State[P: State, V: State, D_x: int = int] = AugmentedState[P, V, D_x]
+        type State[P: State, V: State, D_x: int = Any] = AugmentedState[P, V, D_x]
         type StateBatch[
             P: StateBatch,
             V: StateBatch,
-            T: int = int,
-            D_x: int = int,
-            M: int = int,
+            T: int = Any,
+            D_x: int = Any,
+            M: int = Any,
         ] = AugmentedStateBatch[P, V, T, D_x, M]
         type ControlInputSequence[
             P: ControlInputSequence,
             V: ControlInputSequence,
-            T: int = int,
-            D_u: int = int,
+            T: int = Any,
+            D_u: int = Any,
         ] = AugmentedControlInputSequence[P, V, T, D_u]
         type ControlInputBatch[
             P: ControlInputBatch,
             V: ControlInputBatch,
-            T: int = int,
-            D_u: int = int,
-            M: int = int,
+            T: int = Any,
+            D_u: int = Any,
+            M: int = Any,
         ] = AugmentedControlInputBatch[P, V, T, D_u, M]
 
         state: Final = AugmentedState
@@ -144,26 +144,26 @@ class types:
         control_input_batch: Final = AugmentedControlInputBatch
 
     class numpy:
-        type State[D_x: int = int] = NumPyState[D_x]
-        type StateBatch[T: int = int, D_x: int = int, M: int = int] = NumPyStateBatch[
+        type State[D_x: int = Any] = NumPyState[D_x]
+        type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = NumPyStateBatch[
             T, D_x, M
         ]
-        type ControlInputSequence[T: int = int, D_u: int = int] = (
+        type ControlInputSequence[T: int = Any, D_u: int = Any] = (
             NumPyControlInputSequence[T, D_u]
         )
-        type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
+        type ControlInputBatch[T: int = Any, D_u: int = Any, M: int = Any] = (
             NumPyControlInputBatch[T, D_u, M]
         )
-        type Costs[T: int = int, M: int = int] = NumPyCosts[T, M]
-        type PathParameters[T: int = int, M: int = int] = NumPyPathParameters[T, M]
-        type ReferencePoints[T: int = int, M: int = int] = NumPyReferencePoints[T, M]
-        type Positions[T: int = int, M: int = int] = NumPyPositions[T, M]
+        type Costs[T: int = Any, M: int = Any] = NumPyCosts[T, M]
+        type PathParameters[T: int = Any, M: int = Any] = NumPyPathParameters[T, M]
+        type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
+        type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
 
         type CostFunction[
-            T: int = int,
-            D_u: int = int,
-            D_x: int = int,
-            M: int = int,
+            T: int = Any,
+            D_u: int = Any,
+            D_x: int = Any,
+            M: int = Any,
         ] = NumPyCostFunction[
             NumPyControlInputBatch[T, D_u, M],
             NumPyStateBatch[T, D_x, M],
@@ -181,17 +181,17 @@ class types:
         positions: Final = NumPyPositions.create
 
         class simple:
-            type State[D_x: int = int] = NumPySimpleState[D_x]
-            type StateBatch[T: int = int, D_x: int = int, M: int = int] = (
+            type State[D_x: int = Any] = NumPySimpleState[D_x]
+            type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = (
                 NumPySimpleStateBatch[T, D_x, M]
             )
-            type ControlInputSequence[T: int = int, D_u: int = int] = (
+            type ControlInputSequence[T: int = Any, D_u: int = Any] = (
                 NumPySimpleControlInputSequence[T, D_u]
             )
-            type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
+            type ControlInputBatch[T: int = Any, D_u: int = Any, M: int = Any] = (
                 NumPySimpleControlInputBatch[T, D_u, M]
             )
-            type Costs[T: int = int, M: int = int] = NumPySimpleCosts[T, M]
+            type Costs[T: int = Any, M: int = Any] = NumPySimpleCosts[T, M]
 
             state: Final = NumPySimpleState
             state_batch: Final = NumPySimpleStateBatch
@@ -201,12 +201,12 @@ class types:
 
         class bicycle:
             type State = NumPyBicycleState
-            type StateBatch[T: int = int, M: int = int] = NumPyBicycleStateBatch[T, M]
-            type Positions[T: int = int, M: int = int] = NumPyBicyclePositions[T, M]
-            type ControlInputSequence[T: int = int] = NumPyBicycleControlInputSequence[
+            type StateBatch[T: int = Any, M: int = Any] = NumPyBicycleStateBatch[T, M]
+            type Positions[T: int = Any, M: int = Any] = NumPyBicyclePositions[T, M]
+            type ControlInputSequence[T: int = Any] = NumPyBicycleControlInputSequence[
                 T
             ]
-            type ControlInputBatch[T: int = int, M: int = int] = (
+            type ControlInputBatch[T: int = Any, M: int = Any] = (
                 NumPyBicycleControlInputBatch[T, M]
             )
 
@@ -217,28 +217,28 @@ class types:
             control_input_batch: Final = NumPyBicycleControlInputBatch
 
         class augmented:
-            type State[P: NumPyState, V: NumPyState, D_x: int = int] = (
+            type State[P: NumPyState, V: NumPyState, D_x: int = Any] = (
                 NumPyAugmentedState[P, V, D_x]
             )
             type StateBatch[
                 P: NumPyStateBatch,
                 V: NumPyStateBatch,
-                T: int = int,
-                D_x: int = int,
-                M: int = int,
+                T: int = Any,
+                D_x: int = Any,
+                M: int = Any,
             ] = NumPyAugmentedStateBatch[P, V, T, D_x, M]
             type ControlInputSequence[
                 P: NumPyControlInputSequence,
                 V: NumPyControlInputSequence,
-                T: int = int,
-                D_u: int = int,
+                T: int = Any,
+                D_u: int = Any,
             ] = NumPyAugmentedControlInputSequence[P, V, T, D_u]
             type ControlInputBatch[
                 P: NumPyControlInputBatch,
                 V: NumPyControlInputBatch,
-                T: int = int,
-                D_u: int = int,
-                M: int = int,
+                T: int = Any,
+                D_u: int = Any,
+                M: int = Any,
             ] = NumPyAugmentedControlInputBatch[P, V, T, D_u, M]
 
             state: Final = NumPyAugmentedState
@@ -247,26 +247,26 @@ class types:
             control_input_batch: Final = NumPyAugmentedControlInputBatch
 
     class jax:
-        type State[D_x: int = int] = JaxState[D_x]
-        type StateBatch[T: int = int, D_x: int = int, M: int = int] = JaxStateBatch[
+        type State[D_x: int = Any] = JaxState[D_x]
+        type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = JaxStateBatch[
             T, D_x, M
         ]
-        type ControlInputSequence[T: int = int, D_u: int = int] = (
+        type ControlInputSequence[T: int = Any, D_u: int = Any] = (
             JaxControlInputSequence[T, D_u]
         )
-        type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
+        type ControlInputBatch[T: int = Any, D_u: int = Any, M: int = Any] = (
             JaxControlInputBatch[T, D_u, M]
         )
-        type Costs[T: int = int, M: int = int] = JaxCosts[T, M]
-        type PathParameters[T: int = int, M: int = int] = JaxPathParameters[T, M]
-        type ReferencePoints[T: int = int, M: int = int] = JaxReferencePoints[T, M]
-        type Positions[T: int = int, M: int = int] = JaxPositions[T, M]
+        type Costs[T: int = Any, M: int = Any] = JaxCosts[T, M]
+        type PathParameters[T: int = Any, M: int = Any] = JaxPathParameters[T, M]
+        type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
+        type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
 
         type CostFunction[
-            T: int = int,
-            D_u: int = int,
-            D_x: int = int,
-            M: int = int,
+            T: int = Any,
+            D_u: int = Any,
+            D_x: int = Any,
+            M: int = Any,
         ] = JaxCostFunction[
             JaxControlInputBatch[T, D_u, M], JaxStateBatch[T, D_x, M], JaxCosts[T, M]
         ]
@@ -282,17 +282,17 @@ class types:
         positions: Final = JaxPositions.create
 
         class simple:
-            type State[D_x: int = int] = JaxSimpleState[D_x]
-            type StateBatch[T: int = int, D_x: int = int, M: int = int] = (
+            type State[D_x: int = Any] = JaxSimpleState[D_x]
+            type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = (
                 JaxSimpleStateBatch[T, D_x, M]
             )
-            type ControlInputSequence[T: int = int, D_u: int = int] = (
+            type ControlInputSequence[T: int = Any, D_u: int = Any] = (
                 JaxSimpleControlInputSequence[T, D_u]
             )
-            type ControlInputBatch[T: int = int, D_u: int = int, M: int = int] = (
+            type ControlInputBatch[T: int = Any, D_u: int = Any, M: int = Any] = (
                 JaxSimpleControlInputBatch[T, D_u, M]
             )
-            type Costs[T: int = int, M: int = int] = JaxSimpleCosts[T, M]
+            type Costs[T: int = Any, M: int = Any] = JaxSimpleCosts[T, M]
 
             state: Final = JaxSimpleState
             state_batch: Final = JaxSimpleStateBatch
@@ -302,10 +302,10 @@ class types:
 
         class bicycle:
             type State = JaxBicycleState
-            type StateBatch[T: int = int, M: int = int] = JaxBicycleStateBatch[T, M]
-            type Positions[T: int = int, M: int = int] = JaxBicyclePositions[T, M]
-            type ControlInputSequence[T: int = int] = JaxBicycleControlInputSequence[T]
-            type ControlInputBatch[T: int = int, M: int = int] = (
+            type StateBatch[T: int = Any, M: int = Any] = JaxBicycleStateBatch[T, M]
+            type Positions[T: int = Any, M: int = Any] = JaxBicyclePositions[T, M]
+            type ControlInputSequence[T: int = Any] = JaxBicycleControlInputSequence[T]
+            type ControlInputBatch[T: int = Any, M: int = Any] = (
                 JaxBicycleControlInputBatch[T, M]
             )
 
