@@ -27,7 +27,10 @@ class JaxPathParameters[T: int, M: int]:
     @overload
     @staticmethod
     def create[T_: int, M_: int](
-        array: Float[JaxArray, "T M"], *, horizon: T_, rollout_count: M_
+        array: Float[JaxArray, "T M"],
+        *,
+        horizon: T_ | None = None,
+        rollout_count: M_ | None = None,
     ) -> "JaxPathParameters[T_, M_]":
         """Creates a JAX path parameters instance from a JAX array."""
         ...
@@ -64,10 +67,20 @@ class JaxPositions[T: int, M: int]:
         *,
         x: Float[JaxArray, "T M"],
         y: Float[JaxArray, "T M"],
-        horizon: T_,
-        rollout_count: M_,
+        horizon: T_ | None = None,
+        rollout_count: M_ | None = None,
     ) -> "JaxPositions[T_, M_]":
         """Creates a JAX positions instance from x and y coordinate arrays."""
+        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
+        rollout_count = (
+            rollout_count if rollout_count is not None else cast(M_, x.shape[1])
+        )
+
+        assert x.shape == y.shape == (horizon, rollout_count), (
+            f"Expected x and y to have shape {(horizon, rollout_count)}, "
+            f"but got {x.shape} and {y.shape}."
+        )
+
         return JaxPositions(x=x, y=y)
 
     def __array__(self) -> Array[Dims[T, D[2], M]]:
@@ -111,6 +124,16 @@ class JaxReferencePoints[T: int, M: int]:
         horizon: T_ | None = None,
         rollout_count: M_ | None = None,
     ) -> "JaxReferencePoints[T_, M_]":
+        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
+        rollout_count = (
+            rollout_count if rollout_count is not None else cast(M_, x.shape[1])
+        )
+
+        assert x.shape == y.shape == heading.shape == (horizon, rollout_count), (
+            f"Expected x, y, and heading to have shape {(horizon, rollout_count)}, "
+            f"but got {x.shape}, {y.shape}, and {heading.shape}."
+        )
+
         return JaxReferencePoints(
             array=stack(
                 x=jnp.asarray(x), y=jnp.asarray(y), heading=jnp.asarray(heading)

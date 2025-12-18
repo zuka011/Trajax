@@ -72,4 +72,4 @@ class jax:
     def control_input_batch[T: int, D_u: int, M: int](
         array: Array[Dims[T, D_u, M]] | Float[JaxArray, "T D_u M"],
     ) -> JaxControlInputBatch[T, D_u, M]:
-        return types.jax.simple.control_input_batch(jnp.asarray(array))
+        return types.jax.simple.control_input_batch.create(array=jnp.asarray(array))

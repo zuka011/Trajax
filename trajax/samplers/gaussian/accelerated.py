@@ -49,7 +49,7 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int, M: int](
     def create[B: JaxControlInputBatch, D_u_: int, M_: int](
         *,
         standard_deviation: Float[JaxArray, "D_u"],
-        control_dimension: D_u_,
+        control_dimension: D_u_ | None = None,
         rollout_count: M_,
         to_batch: JaxControlInputBatchCreator[B],
         key: PRNGKeyArray,

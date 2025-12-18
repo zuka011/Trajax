@@ -213,7 +213,7 @@ class JaxControlSmoothingCost[D_u: int](
     @overload
     @staticmethod
     def create[D_u_: int](
-        *, weights: Float[JaxArray, "D_u_"], dimensions: D_u_
+        *, weights: Float[JaxArray, "D_u_"], dimensions: D_u_ | None = None
     ) -> "JaxControlSmoothingCost[D_u_]":
         """Creates a control smoothing cost implemented with JAX.
 

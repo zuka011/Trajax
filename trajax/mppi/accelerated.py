@@ -72,6 +72,10 @@ class JaxControlInputBatch[T: int, D_u: int, M: int](
 
 
 class JaxCosts[T: int, M: int](Costs[T, M], Protocol):
+    def similar(self, *, array: Float[JaxArray, "T M"]) -> Self:
+        """Creates new costs similar to this one but with the given array as its data."""
+        ...
+
     @property
     def array(self) -> Float[JaxArray, "T M"]:
         """Returns the underlying JAX array representing the costs."""

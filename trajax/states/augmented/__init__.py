@@ -4,6 +4,12 @@ from .basic import (
     NumPyAugmentedControlInputSequence as NumPyAugmentedControlInputSequence,
     NumPyAugmentedControlInputBatch as NumPyAugmentedControlInputBatch,
 )
+from .accelerated import (
+    JaxAugmentedState as JaxAugmentedState,
+    JaxAugmentedStateBatch as JaxAugmentedStateBatch,
+    JaxAugmentedControlInputSequence as JaxAugmentedControlInputSequence,
+    JaxAugmentedControlInputBatch as JaxAugmentedControlInputBatch,
+)
 from .common import (
     AugmentedState as AugmentedState,
     AugmentedStateBatch as AugmentedStateBatch,
@@ -16,4 +22,5 @@ from .common import (
 from .mppi import (
     AugmentedMppi as AugmentedMppi,
     NumPyAugmentedMppi as NumPyAugmentedMppi,
+    JaxAugmentedMppi as JaxAugmentedMppi,
 )

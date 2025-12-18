@@ -24,5 +24,6 @@ from .combined import (
     CombinedCost as CombinedCost,
     CostSumFunction as CostSumFunction,
     NumPyCostSumFunction as NumPyCostSumFunction,
+    JaxCostSumFunction as JaxCostSumFunction,
 )
 from .factory import costs as costs

@@ -12,19 +12,19 @@ from trajax.mppi import (
 )
 
 
-class AugmentedState[PhysicalT: State, VirtualT: State](State, Protocol):
+class AugmentedState[P, V](State, Protocol):
     @property
-    def physical(self) -> PhysicalT:
+    def physical(self) -> P:
         """Returns the physical part of the augmented state."""
         ...
 
     @property
-    def virtual(self) -> VirtualT:
+    def virtual(self) -> V:
         """Returns the virtual part of the augmented state."""
         ...
 
 
-class AugmentedStateBatch[P: StateBatch, V: StateBatch](StateBatch, Protocol):
+class AugmentedStateBatch[P, V](StateBatch, Protocol):
     @property
     def physical(self) -> P:
         """Returns the physical part of the augmented state batch."""
@@ -36,9 +36,7 @@ class AugmentedStateBatch[P: StateBatch, V: StateBatch](StateBatch, Protocol):
         ...
 
 
-class AugmentedControlInputSequence[P: ControlInputSequence, V: ControlInputSequence](
-    ControlInputSequence, Protocol
-):
+class AugmentedControlInputSequence[P, V](ControlInputSequence, Protocol):
     @property
     def physical(self) -> P:
         """Returns the physical part of the augmented control input sequence."""
@@ -50,9 +48,7 @@ class AugmentedControlInputSequence[P: ControlInputSequence, V: ControlInputSequ
         ...
 
 
-class AugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch](
-    ControlInputBatch, Protocol
-):
+class AugmentedControlInputBatch[P, V](ControlInputBatch, Protocol):
     @property
     def physical(self) -> P:
         """Returns the physical part of the augmented control input batch."""
@@ -64,25 +60,19 @@ class AugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch](
         ...
 
 
-class AugmentedStateCreator[P: State, V: State, A: AugmentedState](Protocol):
+class AugmentedStateCreator[P, V, A](Protocol):
     def of(self, *, physical: P, virtual: V) -> A:
         """Creates an augmented state from physical and virtual parts."""
         ...
 
 
-class AugmentedStateBatchCreator[P: StateBatch, V: StateBatch, A: AugmentedStateBatch](
-    Protocol
-):
+class AugmentedStateBatchCreator[P, V, A](Protocol):
     def of(self, *, physical: P, virtual: V) -> A:
         """Creates an augmented state batch from physical and virtual parts."""
         ...
 
 
-class AugmentedControlInputBatchCreator[
-    P: ControlInputBatch,
-    V: ControlInputBatch,
-    A: AugmentedControlInputBatch,
-](Protocol):
+class AugmentedControlInputBatchCreator[P, V, A](Protocol):
     def of(self, *, physical: P, virtual: V) -> A:
         """Creates an augmented control input batch from physical and virtual parts."""
         ...
@@ -179,12 +169,7 @@ class AugmentedSampler[
     VirtualSequenceT: ControlInputSequence,
     VirtualBatchT: ControlInputBatch,
     ABatchT: AugmentedControlInputBatch,
-](
-    Sampler[
-        AugmentedControlInputSequence[PhysicalSequenceT, VirtualSequenceT],
-        AugmentedControlInputBatch[PhysicalBatchT, VirtualBatchT],
-    ]
-):
+](Sampler[AugmentedControlInputSequence[PhysicalSequenceT, VirtualSequenceT], ABatchT]):
     physical: Sampler[PhysicalSequenceT, PhysicalBatchT]
     virtual: Sampler[VirtualSequenceT, VirtualBatchT]
     batch: AugmentedControlInputBatchCreator[PhysicalBatchT, VirtualBatchT, ABatchT]

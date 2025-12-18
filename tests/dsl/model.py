@@ -123,14 +123,14 @@ class jax:
         acceleration: float | Array,
         steering: float | Array,
     ) -> JaxControlInputBatch:
-        return types.jax.bicycle.control_input_batch(
-            jnp.array(
+        return types.jax.bicycle.control_input_batch.create(
+            array=jnp.array(
                 numpy.control_input_batch(
                     rollout_count=rollout_count,
                     time_horizon=time_horizon,  # type: ignore
                     acceleration=acceleration,  # type: ignore
                     steering=steering,  # type: ignore
-                ).array
+                )
             )
         )
 

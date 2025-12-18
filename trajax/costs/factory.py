@@ -1,6 +1,12 @@
 from typing import Final
 
-from trajax.mppi import ControlInputBatch, StateBatch, CostFunction, NumPyCosts
+from trajax.mppi import (
+    ControlInputBatch,
+    StateBatch,
+    CostFunction,
+    NumPyCosts,
+    JaxCosts,
+)
 from trajax.costs.basic import (
     NumPyContouringCost,
     NumPyLagCost,
@@ -13,7 +19,7 @@ from trajax.costs.accelerated import (
     JaxProgressCost,
     JaxControlSmoothingCost,
 )
-from trajax.costs.combined import CombinedCost, NumPyCostSumFunction
+from trajax.costs.combined import CombinedCost, NumPyCostSumFunction, JaxCostSumFunction
 
 
 class costs:
@@ -38,6 +44,17 @@ class costs:
             control_smoothing: Final = NumPyControlSmoothingCost.create
 
     class jax:
+        @staticmethod
+        def combined[
+            ControlInputBatchT: ControlInputBatch,
+            StateBatchT: StateBatch,
+            CostsT: JaxCosts,
+        ](
+            *costs: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        ) -> CombinedCost[ControlInputBatchT, StateBatchT, CostsT]:
+            """Creates a JAX cost function combining all given cost functions by summation."""
+            return CombinedCost(costs=list(costs), sum=JaxCostSumFunction())
+
         class tracking:
             contouring: Final = JaxContouringCost.create
             lag: Final = JaxLagCost.create

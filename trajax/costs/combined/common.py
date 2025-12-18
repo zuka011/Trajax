@@ -1,11 +1,12 @@
 from typing import Protocol, Sequence
 from dataclasses import dataclass
 
-from trajax.mppi import StateBatch, ControlInputBatch, CostFunction, Costs, NumPyCosts
-
-from numtypes import shape_of
-
-import numpy as np
+from trajax.mppi import (
+    StateBatch,
+    ControlInputBatch,
+    CostFunction,
+    Costs,
+)
 
 
 class CostSumFunction[CostsT: Costs](Protocol):
@@ -28,14 +29,3 @@ class CombinedCost[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs]
         ]
 
         return self.sum(costs=costs, initial=costs[0].zero())
-
-
-class NumPyCostSumFunction[CostsT: NumPyCosts](CostSumFunction[CostsT]):
-    def __call__(self, costs: Sequence[CostsT], *, initial: CostsT) -> CostsT:
-        total = np.sum(np.asarray(list(costs) + [initial]), axis=0)
-
-        assert shape_of(
-            total, matches=(initial.horizon, initial.rollout_count), name="summed costs"
-        )
-
-        return initial.similar(array=total)

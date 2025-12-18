@@ -8,7 +8,7 @@ from trajax.mppi import (
     NoUpdate,
     UseOptimalControlUpdate,
 )
-from trajax.states import AugmentedMppi, NumPyAugmentedMppi
+from trajax.states import AugmentedMppi, NumPyAugmentedMppi, JaxAugmentedMppi
 
 
 class mppi:
@@ -20,6 +20,7 @@ class mppi:
 
     class jax:
         base: Final = JaxMppi.create
+        augmented: Final = JaxAugmentedMppi.create
 
 
 class update:

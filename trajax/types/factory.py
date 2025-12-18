@@ -76,6 +76,10 @@ from trajax.states import (
     NumPyAugmentedStateBatch,
     NumPyAugmentedControlInputSequence,
     NumPyAugmentedControlInputBatch,
+    JaxAugmentedState,
+    JaxAugmentedStateBatch,
+    JaxAugmentedControlInputSequence,
+    JaxAugmentedControlInputBatch,
     AugmentedState,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
@@ -116,27 +120,14 @@ class types:
         D_U: Final = BICYCLE_D_U
 
     class augmented:
-        type State[P: State, V: State, D_x: int = Any] = AugmentedState[P, V, D_x]
-        type StateBatch[
-            P: StateBatch,
-            V: StateBatch,
-            T: int = Any,
-            D_x: int = Any,
-            M: int = Any,
-        ] = AugmentedStateBatch[P, V, T, D_x, M]
-        type ControlInputSequence[
-            P: ControlInputSequence,
-            V: ControlInputSequence,
-            T: int = Any,
-            D_u: int = Any,
-        ] = AugmentedControlInputSequence[P, V, T, D_u]
-        type ControlInputBatch[
-            P: ControlInputBatch,
-            V: ControlInputBatch,
-            T: int = Any,
-            D_u: int = Any,
-            M: int = Any,
-        ] = AugmentedControlInputBatch[P, V, T, D_u, M]
+        type State[P: State, V: State] = AugmentedState[P, V]
+        type StateBatch[P: StateBatch, V: StateBatch] = AugmentedStateBatch[P, V]
+        type ControlInputSequence[P: ControlInputSequence, V: ControlInputSequence] = (
+            AugmentedControlInputSequence[P, V]
+        )
+        type ControlInputBatch[P: ControlInputBatch, V: ControlInputBatch] = (
+            AugmentedControlInputBatch[P, V]
+        )
 
         state: Final = AugmentedState
         state_batch: Final = AugmentedStateBatch
@@ -217,29 +208,18 @@ class types:
             control_input_batch: Final = NumPyBicycleControlInputBatch
 
         class augmented:
-            type State[P: NumPyState, V: NumPyState, D_x: int = Any] = (
-                NumPyAugmentedState[P, V, D_x]
+            type State[P: NumPyState, V: NumPyState] = NumPyAugmentedState[P, V]
+            type StateBatch[P: NumPyStateBatch, V: NumPyStateBatch] = (
+                NumPyAugmentedStateBatch[P, V]
             )
-            type StateBatch[
-                P: NumPyStateBatch,
-                V: NumPyStateBatch,
-                T: int = Any,
-                D_x: int = Any,
-                M: int = Any,
-            ] = NumPyAugmentedStateBatch[P, V, T, D_x, M]
             type ControlInputSequence[
                 P: NumPyControlInputSequence,
                 V: NumPyControlInputSequence,
-                T: int = Any,
-                D_u: int = Any,
-            ] = NumPyAugmentedControlInputSequence[P, V, T, D_u]
+            ] = NumPyAugmentedControlInputSequence[P, V]
             type ControlInputBatch[
                 P: NumPyControlInputBatch,
                 V: NumPyControlInputBatch,
-                T: int = Any,
-                D_u: int = Any,
-                M: int = Any,
-            ] = NumPyAugmentedControlInputBatch[P, V, T, D_u, M]
+            ] = NumPyAugmentedControlInputBatch[P, V]
 
             state: Final = NumPyAugmentedState
             state_batch: Final = NumPyAugmentedStateBatch
@@ -314,3 +294,21 @@ class types:
             positions: Final = JaxBicyclePositions
             control_input_sequence: Final = JaxBicycleControlInputSequence
             control_input_batch: Final = JaxBicycleControlInputBatch
+
+        class augmented:
+            type State[P: JaxState, V: JaxState] = JaxAugmentedState[P, V]
+            type StateBatch[P: JaxStateBatch, V: JaxStateBatch] = (
+                JaxAugmentedStateBatch[P, V]
+            )
+            type ControlInputSequence[
+                P: JaxControlInputSequence,
+                V: JaxControlInputSequence,
+            ] = JaxAugmentedControlInputSequence[P, V]
+            type ControlInputBatch[P: JaxControlInputBatch, V: JaxControlInputBatch] = (
+                JaxAugmentedControlInputBatch[P, V]
+            )
+
+            state: Final = JaxAugmentedState
+            state_batch: Final = JaxAugmentedStateBatch
+            control_input_sequence: Final = JaxAugmentedControlInputSequence
+            control_input_batch: Final = JaxAugmentedControlInputBatch

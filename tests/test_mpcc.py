@@ -15,7 +15,7 @@ import numpy as np
 from numtypes import Array, Dim1
 
 from tests.visualize import VisualizationData, visualizer, MpccSimulationResult
-from tests.examples import numpy_mpcc
+from tests.examples import numpy_mpcc, jax_mpcc
 from pytest import mark
 
 
@@ -93,6 +93,11 @@ class MpccPlannerConfiguration[
         (
             numpy_mpcc.configure.numpy_mpcc_planner_from_augmented(),
             "numpy-mpcc-from-augmented",
+        ),
+        (jax_mpcc.configure.jax_mpcc_planner_from_base(), "jax-mpcc-from-base"),
+        (
+            jax_mpcc.configure.jax_mpcc_planner_from_augmented(),
+            "jax-mpcc-from-augmented",
         ),
     ],
 )

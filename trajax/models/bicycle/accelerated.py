@@ -1,4 +1,4 @@
-from typing import cast, Any, overload, Self
+from typing import cast, Any, overload, Self, Sequence
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
@@ -82,6 +82,19 @@ class StateSequence:
 class JaxBicycleStateBatch[T: int, M: int](JaxStateBatch[T, BicycleD_x, M]):
     _array: StateBatchArray
 
+    @staticmethod
+    def of_states[T_: int = int](
+        states: Sequence[JaxBicycleState], *, horizon: T_ | None = None
+    ) -> "JaxBicycleStateBatch[T_, int]":
+        """Creates a bicycle state batch from a sequence of bicycle states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+
+        array = jnp.stack([state.array for state in states], axis=0)[:, :, jnp.newaxis]
+
+        return JaxBicycleStateBatch(array)
+
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_x, M]]:
         return np.asarray(self.array, dtype=dtype)
 
@@ -128,6 +141,14 @@ class JaxBicyclePositions[T: int, M: int]:
 
     def y(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array.array[:, 1, :])
+
+    @property
+    def x_array(self) -> Float[JaxArray, "T M"]:
+        return self.array.array[:, 0, :]
+
+    @property
+    def y_array(self) -> Float[JaxArray, "T M"]:
+        return self.array.array[:, 1, :]
 
 
 @jaxtyped
@@ -181,6 +202,33 @@ class JaxBicycleControlInputBatch[T: int, M: int](
 ):
     _array: ControlInputBatchArray
 
+    @staticmethod
+    def create[T_: int = int, M_: int = int](
+        *,
+        array: ControlInputBatchArray,
+        horizon: T_ | None = None,
+        rollout_count: M_ | None = None,
+    ) -> "JaxBicycleControlInputBatch[T_, M_]":
+        horizon = horizon if horizon is not None else cast(T_, array.shape[0])
+        rollout_count = (
+            rollout_count if rollout_count is not None else cast(M_, array.shape[2])
+        )
+
+        assert array.shape == (expected := (horizon, BICYCLE_D_U, rollout_count)), (
+            f"Array shape {array.shape} does not match expected shape {expected}."
+        )
+
+        return JaxBicycleControlInputBatch(array)
+
+    @staticmethod
+    def zero[T_: int, M_: int](
+        *, horizon: T_, rollout_count: M_ = 1
+    ) -> "JaxBicycleControlInputBatch[T_, M_]":
+        """Creates a zeroed control input batch for the given horizon and rollout count."""
+        array = jnp.zeros((horizon, BICYCLE_D_U, rollout_count))
+
+        return JaxBicycleControlInputBatch(array)
+
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u, M]]:
         return np.asarray(self.array, dtype=dtype)
 
@@ -189,12 +237,16 @@ class JaxBicycleControlInputBatch[T: int, M: int](
         return self._array
 
     @property
-    def rollout_count(self) -> M:
-        return cast(M, self.array.shape[2])
-
-    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> BicycleD_u:
+        return cast(BicycleD_u, self.array.shape[1])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self.array.shape[2])
 
 
 @dataclass(kw_only=True, frozen=True)

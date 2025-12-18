@@ -19,6 +19,15 @@ from trajax.mppi import (
     NumPyUpdateFunction,
     NumPyPaddingFunction,
     NumPyFilterFunction,
+    JaxState,
+    JaxStateBatch,
+    JaxControlInputSequence,
+    JaxControlInputBatch,
+    JaxCosts,
+    JaxMppi,
+    JaxUpdateFunction,
+    JaxPaddingFunction,
+    JaxFilterFunction,
 )
 from trajax.states.augmented.common import (
     AugmentedState,
@@ -31,7 +40,18 @@ from trajax.states.augmented.common import (
     AugmentedStateBatchCreator,
     AugmentedControlInputBatchCreator,
 )
-from trajax.states.augmented.basic import NumPyAugmentedControlInputSequence
+from trajax.states.augmented.basic import (
+    NumPyAugmentedState,
+    NumPyAugmentedStateBatch,
+    NumPyAugmentedControlInputSequence,
+    NumPyAugmentedControlInputBatch,
+)
+from trajax.states.augmented.accelerated import (
+    JaxAugmentedState,
+    JaxAugmentedStateBatch,
+    JaxAugmentedControlInputSequence,
+    JaxAugmentedControlInputBatch,
+)
 
 
 class MppiCreator[
@@ -65,20 +85,19 @@ class AugmentedMppi:
         AS: AugmentedState,
         ASB: AugmentedStateBatch,
         ACIS: AugmentedControlInputSequence,
+        ACIB: AugmentedControlInputBatch,
         C: Costs,
     ](
         *,
-        mppi: MppiCreator[AS, ASB, ACIS, AugmentedControlInputBatch[PCIB, VCIB], C],
+        mppi: MppiCreator[AS, ASB, ACIS, ACIB, C],
         models: tuple[
             DynamicalModel[PS, PSB, PCIS, PCIB], DynamicalModel[VS, VSB, VCIS, VCIB]
         ],
         samplers: tuple[Sampler[PCIS, PCIB], Sampler[VCIS, VCIB]],
-        cost: CostFunction[AugmentedControlInputBatch[PCIB, VCIB], ASB, C],
+        cost: CostFunction[ACIB, ASB, C],
         state: AugmentedStateCreator[PS, VS, AS],
         state_batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
-        input_batch: AugmentedControlInputBatchCreator[
-            PCIB, VCIB, AugmentedControlInputBatch[PCIB, VCIB]
-        ],
+        input_batch: AugmentedControlInputBatchCreator[PCIB, VCIB, ACIB],
     ) -> tuple[
         Mppi[AS, ACIS],
         AugmentedModel[PS, PSB, PCIS, PCIB, VS, VSB, VCIS, VCIB, AS, ASB],
@@ -113,8 +132,8 @@ class NumPyAugmentedMppi:
         VSB: NumPyStateBatch,
         VCIS: NumPyControlInputSequence,
         VCIB: NumPyControlInputBatch,
-        AS: AugmentedState,
-        ASB: AugmentedStateBatch,
+        AS: NumPyAugmentedState,
+        ASB: NumPyAugmentedStateBatch,
         ACIS: NumPyAugmentedControlInputSequence,
         C: NumPyCosts,
     ](
@@ -124,11 +143,11 @@ class NumPyAugmentedMppi:
             DynamicalModel[PS, PSB, PCIS, PCIB], DynamicalModel[VS, VSB, VCIS, VCIB]
         ],
         samplers: tuple[Sampler[PCIS, PCIB], Sampler[VCIS, VCIB]],
-        cost: CostFunction[AugmentedControlInputBatch[PCIB, VCIB], ASB, C],
+        cost: CostFunction[NumPyAugmentedControlInputBatch[PCIB, VCIB], ASB, C],
         state: AugmentedStateCreator[PS, VS, AS],
         state_batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
         input_batch: AugmentedControlInputBatchCreator[
-            PCIB, VCIB, AugmentedControlInputBatch[PCIB, VCIB]
+            PCIB, VCIB, NumPyAugmentedControlInputBatch[PCIB, VCIB]
         ],
         update_function: NumPyUpdateFunction[ACIS] | None = None,
         padding_function: NumPyPaddingFunction[ACIS, NumPyAugmentedControlInputSequence]
@@ -140,6 +159,61 @@ class NumPyAugmentedMppi:
     ]:
         return AugmentedMppi.create(
             mppi=lambda model, sampler, cost: NumPyMppi.create(
+                planning_interval=planning_interval,
+                model=model,
+                cost_function=cost,
+                sampler=sampler,
+                update_function=update_function,
+                padding_function=padding_function,
+                filter_function=filter_function,
+            ),
+            models=models,
+            samplers=samplers,
+            cost=cost,
+            state=state,
+            state_batch=state_batch,
+            input_batch=input_batch,
+        )
+
+
+class JaxAugmentedMppi:
+    @staticmethod
+    def create[
+        PS: JaxState,
+        PSB: JaxStateBatch,
+        PCIS: JaxControlInputSequence,
+        PCIB: JaxControlInputBatch,
+        VS: JaxState,
+        VSB: JaxStateBatch,
+        VCIS: JaxControlInputSequence,
+        VCIB: JaxControlInputBatch,
+        AS: JaxAugmentedState,
+        ASB: JaxAugmentedStateBatch,
+        ACIS: JaxAugmentedControlInputSequence,
+        C: JaxCosts,
+    ](
+        *,
+        planning_interval: int = 1,
+        models: tuple[
+            DynamicalModel[PS, PSB, PCIS, PCIB], DynamicalModel[VS, VSB, VCIS, VCIB]
+        ],
+        samplers: tuple[Sampler[PCIS, PCIB], Sampler[VCIS, VCIB]],
+        cost: CostFunction[JaxAugmentedControlInputBatch[PCIB, VCIB], ASB, C],
+        state: AugmentedStateCreator[PS, VS, AS],
+        state_batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
+        input_batch: AugmentedControlInputBatchCreator[
+            PCIB, VCIB, JaxAugmentedControlInputBatch[PCIB, VCIB]
+        ],
+        update_function: JaxUpdateFunction[ACIS] | None = None,
+        padding_function: JaxPaddingFunction[ACIS, JaxAugmentedControlInputSequence]
+        | None = None,
+        filter_function: JaxFilterFunction[ACIS] | None = None,
+    ) -> tuple[
+        Mppi[AS, ACIS],
+        AugmentedModel[PS, PSB, PCIS, PCIB, VS, VSB, VCIS, VCIB, AS, ASB],
+    ]:
+        return AugmentedMppi.create(
+            mppi=lambda model, sampler, cost: JaxMppi.create(
                 planning_interval=planning_interval,
                 model=model,
                 cost_function=cost,

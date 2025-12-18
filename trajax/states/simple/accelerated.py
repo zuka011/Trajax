@@ -1,4 +1,4 @@
-from typing import cast, Self, overload
+from typing import cast, Self, overload, Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType, jaxtyped
@@ -39,6 +39,19 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
 class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     _array: Float[JaxArray, "T D_x M"]
 
+    @staticmethod
+    def of_states[D_x_: int, T_: int = int](
+        states: Sequence[JaxSimpleState[D_x_]], *, horizon: T_ | None = None
+    ) -> "JaxSimpleStateBatch[T_, D_x_, int]":
+        """Creates a simple state batch from a sequence of simple states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+
+        array = jnp.stack([state.array for state in states], axis=0)[:, :, jnp.newaxis]
+
+        return JaxSimpleStateBatch(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         return np.asarray(self.array, dtype=dtype)
 
@@ -63,6 +76,15 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
 @dataclass(frozen=True)
 class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T, D_u]):
     _array: Float[JaxArray, "T D_u"]
+
+    @staticmethod
+    def zeroes[T_: int, D_u_: int](
+        horizon: T_, dimension: D_u_
+    ) -> "JaxSimpleControlInputSequence[T_, D_u_]":
+        """Creates a zeroed control input sequence for the given horizon."""
+        array = jnp.zeros((horizon, dimension))
+
+        return JaxSimpleControlInputSequence(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return np.asarray(self.array, dtype=dtype)
@@ -106,6 +128,20 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
 ):
     _array: Float[JaxArray, "T D_u M"]
 
+    @staticmethod
+    def create(*, array: Float[JaxArray, "T D_u M"]) -> "JaxSimpleControlInputBatch":
+        """Factory method to create a JAX simple control input batch from an array."""
+        return JaxSimpleControlInputBatch(array)
+
+    @staticmethod
+    def zero[T_: int, D_u_: int, M_: int](
+        *, horizon: T_, dimension: D_u_, rollout_count: M_ = 1
+    ) -> "JaxSimpleControlInputBatch[T_, D_u_, M_]":
+        """Creates a zeroed control input batch for the given horizon and rollout count."""
+        return JaxSimpleControlInputBatch(
+            jnp.zeros((horizon, dimension, rollout_count))
+        )
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         return np.asarray(self.array, dtype=dtype)
 
@@ -133,6 +169,9 @@ class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
         return np.asarray(self.array, dtype=dtype)
+
+    def similar(self, *, array: Float[JaxArray, "T M"]) -> Self:
+        return self.__class__(array)
 
     def zero(self) -> Self:
         return self.__class__(jnp.zeros_like(self.array))
