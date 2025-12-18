@@ -1,4 +1,4 @@
-from typing import Self, overload, cast
+from typing import Self, overload
 from dataclasses import dataclass
 
 from trajax.type import DataType
@@ -21,29 +21,24 @@ from trajax.states.augmented.base import (
     BaseAugmentedControlInputBatch,
 )
 
-from numtypes import Array, Dims
+from numtypes import Array, Dim1, Dim2, Dim3
 
 
 @dataclass(frozen=True)
-class NumPyAugmentedState[P: NumPyState, V: NumPyState, D_x: int](
-    AugmentedState[P, V, D_x], NumPyState[D_x]
+class NumPyAugmentedState[P: NumPyState, V: NumPyState](
+    AugmentedState[P, V], NumPyState
 ):
-    inner: AugmentedState[P, V, D_x]
+    inner: AugmentedState[P, V]
 
     @staticmethod
-    def of[P_: NumPyState, V_: NumPyState, D_x_: int = int](
-        *,
-        physical: P_,
-        virtual: V_,
-        dimension: D_x_ | None = None,
-    ) -> "NumPyAugmentedState[P_, V_, D_x_]":
+    def of[P_: NumPyState, V_: NumPyState](
+        *, physical: P_, virtual: V_
+    ) -> "NumPyAugmentedState[P_, V_]":
         return NumPyAugmentedState(
-            BaseAugmentedState.of(
-                physical=physical, virtual=virtual, dimension=dimension
-            )
+            BaseAugmentedState.of(physical=physical, virtual=virtual)
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
         return self.inner.__array__(dtype=dtype)
 
     @property
@@ -55,46 +50,25 @@ class NumPyAugmentedState[P: NumPyState, V: NumPyState, D_x: int](
         return self.inner.virtual
 
     @property
-    def dimension(self) -> D_x:
+    def dimension(self) -> int:
         return self.inner.dimension
 
 
 @dataclass(frozen=True)
-class NumPyAugmentedStateBatch[
-    P: NumPyStateBatch,
-    V: NumPyStateBatch,
-    T: int,
-    D_x: int,
-    M: int,
-](AugmentedStateBatch[P, V, T, D_x, M], NumPyStateBatch[T, D_x, M]):
-    inner: AugmentedStateBatch[P, V, T, D_x, M]
+class NumPyAugmentedStateBatch[P: NumPyStateBatch, V: NumPyStateBatch](
+    AugmentedStateBatch[P, V], NumPyStateBatch
+):
+    inner: AugmentedStateBatch[P, V]
 
     @staticmethod
-    def of[
-        P_: NumPyStateBatch,
-        V_: NumPyStateBatch,
-        T_: int = int,
-        D_x_: int = int,
-        M_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_x_ | None = None,
-        rollout_count: M_ | None = None,
-    ) -> "NumPyAugmentedStateBatch[P_, V_, T_, D_x_, M_]":
+    def of[P_: NumPyStateBatch, V_: NumPyStateBatch](
+        *, physical: P_, virtual: V_
+    ) -> "NumPyAugmentedStateBatch[P_, V_]":
         return NumPyAugmentedStateBatch(
-            BaseAugmentedStateBatch.of(
-                physical=physical,
-                virtual=virtual,
-                horizon=horizon,
-                dimension=dimension,
-                rollout_count=rollout_count,
-            )
+            BaseAugmentedStateBatch.of(physical=physical, virtual=virtual)
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return self.inner.__array__(dtype=dtype)
 
     @property
@@ -106,15 +80,15 @@ class NumPyAugmentedStateBatch[
         return self.inner.virtual
 
     @property
-    def horizon(self) -> T:
+    def horizon(self) -> int:
         return self.inner.horizon
 
     @property
-    def dimension(self) -> D_x:
+    def dimension(self) -> int:
         return self.inner.dimension
 
     @property
-    def rollout_count(self) -> M:
+    def rollout_count(self) -> int:
         return self.inner.rollout_count
 
 
@@ -122,44 +96,36 @@ class NumPyAugmentedStateBatch[
 class NumPyAugmentedControlInputSequence[
     P: NumPyControlInputSequence,
     V: NumPyControlInputSequence,
-    T: int,
-    D_u: int,
-](AugmentedControlInputSequence[P, V, T, D_u], NumPyControlInputSequence[T, D_u]):
-    inner: AugmentedControlInputSequence[P, V, T, D_u]
+](AugmentedControlInputSequence[P, V], NumPyControlInputSequence):
+    inner: AugmentedControlInputSequence[P, V]
 
     @staticmethod
-    def of[
-        P_: NumPyControlInputSequence,
-        V_: NumPyControlInputSequence,
-        T_: int = int,
-        D_u_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_u_ | None = None,
-    ) -> "NumPyAugmentedControlInputSequence[P_, V_, T_, D_u_]":
+    def of[P_: NumPyControlInputSequence, V_: NumPyControlInputSequence](
+        *, physical: P_, virtual: V_
+    ) -> "NumPyAugmentedControlInputSequence[P_, V_]":
         return NumPyAugmentedControlInputSequence(
-            BaseAugmentedControlInputSequence.of(
-                physical=physical, virtual=virtual, horizon=horizon, dimension=dimension
-            )
+            BaseAugmentedControlInputSequence.of(physical=physical, virtual=virtual)
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return self.inner.__array__(dtype=dtype)
 
     @overload
-    def similar(self, *, array: Array[Dims[T, D_u]]) -> Self: ...
+    def similar(self, *, array: Array[Dim2]) -> Self: ...
 
     @overload
-    def similar[L: int](
-        self, *, array: Array[Dims[L, D_u]], length: L
-    ) -> "NumPyAugmentedControlInputSequence[P, V, L, D_u]": ...
+    def similar(
+        self, *, array: Array[Dim2], length: int
+    ) -> "NumPyAugmentedControlInputSequence[P, V]": ...
 
-    def similar[L: int](
-        self, *, array: Array[Dims[T, D_u]], length: L | None = None
-    ) -> "Self | NumPyAugmentedControlInputSequence[P, V, L, D_u]":
+    def similar(
+        self, *, array: Array[Dim2], length: int | None = None
+    ) -> "Self | NumPyAugmentedControlInputSequence[P, V]":
+        assert length is None or length == array.shape[0], (
+            f"Length mismatch in {self.__class__.__name__}.similar: "
+            f"got {array.shape[0]} but expected {length}"
+        )
+
         return self.__class__(
             BaseAugmentedControlInputSequence.of(
                 physical=self.inner.physical.similar(
@@ -168,9 +134,6 @@ class NumPyAugmentedControlInputSequence[
                 virtual=self.inner.virtual.similar(
                     array=array[:, -self.inner.virtual.dimension :]
                 ),
-                # NOTE: "Wrong" cast to silence the type checker.
-                horizon=cast(T, length if length is not None else self.horizon),
-                dimension=self.inner.dimension,
             )
         )
 
@@ -183,11 +146,11 @@ class NumPyAugmentedControlInputSequence[
         return self.inner.virtual
 
     @property
-    def horizon(self) -> T:
+    def horizon(self) -> int:
         return self.inner.horizon
 
     @property
-    def dimension(self) -> D_u:
+    def dimension(self) -> int:
         return self.inner.dimension
 
 
@@ -195,38 +158,18 @@ class NumPyAugmentedControlInputSequence[
 class NumPyAugmentedControlInputBatch[
     P: NumPyControlInputBatch,
     V: NumPyControlInputBatch,
-    T: int,
-    D_u: int,
-    M: int,
-](AugmentedControlInputBatch[P, V, T, D_u, M], NumPyControlInputBatch[T, D_u, M]):
-    inner: AugmentedControlInputBatch[P, V, T, D_u, M]
+](AugmentedControlInputBatch[P, V], NumPyControlInputBatch):
+    inner: AugmentedControlInputBatch[P, V]
 
     @staticmethod
-    def of[
-        P_: NumPyControlInputBatch,
-        V_: NumPyControlInputBatch,
-        T_: int = int,
-        D_u_: int = int,
-        M_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_u_ | None = None,
-        rollout_count: M_ | None = None,
-    ) -> "NumPyAugmentedControlInputBatch[P_, V_, T_, D_u_, M_]":
+    def of[P_: NumPyControlInputBatch, V_: NumPyControlInputBatch](
+        *, physical: P_, virtual: V_
+    ) -> "NumPyAugmentedControlInputBatch[P_, V_]":
         return NumPyAugmentedControlInputBatch(
-            BaseAugmentedControlInputBatch.of(
-                physical=physical,
-                virtual=virtual,
-                horizon=horizon,
-                dimension=dimension,
-                rollout_count=rollout_count,
-            )
+            BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual)
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return self.inner.__array__(dtype=dtype)
 
     @property
@@ -238,13 +181,13 @@ class NumPyAugmentedControlInputBatch[
         return self.inner.virtual
 
     @property
-    def horizon(self) -> T:
+    def horizon(self) -> int:
         return self.inner.horizon
 
     @property
-    def dimension(self) -> D_u:
+    def dimension(self) -> int:
         return self.inner.dimension
 
     @property
-    def rollout_count(self) -> M:
+    def rollout_count(self) -> int:
         return self.inner.rollout_count

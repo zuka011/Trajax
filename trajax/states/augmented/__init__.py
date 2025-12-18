@@ -13,3 +13,7 @@ from .common import (
     AugmentedSampler as AugmentedSampler,
     extract as extract,
 )
+from .mppi import (
+    AugmentedMppi as AugmentedMppi,
+    NumPyAugmentedMppi as NumPyAugmentedMppi,
+)

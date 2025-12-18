@@ -48,6 +48,10 @@ class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
             )
         )
 
+    @property
+    def path_length(self) -> float:
+        return self.length
+
 
 @jax.jit
 @jaxtyped

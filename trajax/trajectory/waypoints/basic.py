@@ -68,6 +68,10 @@ class NumpyWaypointsTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoi
 
         return NumPyReferencePoints.create(x=x, y=y, heading=heading)
 
+    @property
+    def path_length(self) -> float:
+        return self.length
+
 
 def compute_path_parameters(*, x: Array[Dim1], y: Array[Dim1]) -> Array[Dim1]:
     segment_lengths = np.sqrt(np.diff(x) ** 2 + np.diff(y) ** 2)

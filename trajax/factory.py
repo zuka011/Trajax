@@ -1,13 +1,22 @@
 from typing import Final
 
-from trajax.mppi.basic import NumPyMppi, NumPyZeroPadding
-from trajax.mppi.accelerated import JaxMppi, JaxZeroPadding
-from trajax.mppi.common import NoUpdate, UseOptimalControlUpdate
+from trajax.mppi import (
+    NumPyMppi,
+    NumPyZeroPadding,
+    JaxMppi,
+    JaxZeroPadding,
+    NoUpdate,
+    UseOptimalControlUpdate,
+)
+from trajax.states import AugmentedMppi, NumPyAugmentedMppi
 
 
 class mppi:
+    augmented: Final = AugmentedMppi.create
+
     class numpy:
         base: Final = NumPyMppi.create
+        augmented: Final = NumPyAugmentedMppi.create
 
     class jax:
         base: Final = JaxMppi.create

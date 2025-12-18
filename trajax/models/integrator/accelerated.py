@@ -62,7 +62,6 @@ class JaxIntegratorControlInputBatch[T: int, D_u: int, M: int](
 class JaxIntegratorModel(
     IntegratorModel[
         JaxIntegratorState,
-        JaxIntegratorState,
         JaxIntegratorStateBatch,
         JaxIntegratorControlInputSequence,
         JaxIntegratorControlInputBatch,

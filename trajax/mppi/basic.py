@@ -62,15 +62,12 @@ class NumPyCosts[T: int, M: int](Costs[T, M], Protocol):
 
 
 class NumPyDynamicalModel[
-    InStateT: NumPyState,
-    OutStateT: NumPyState,
+    StateT: NumPyState,
     StateBatchT: NumPyStateBatch,
     ControlInputSequenceT: NumPyControlInputSequence,
     ControlInputBatchT: NumPyControlInputBatch,
 ](
-    DynamicalModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    DynamicalModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     Protocol,
 ): ...
 
@@ -117,37 +114,45 @@ class NumPyZeroPadding[T: int, D_u: int, L: int]:
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyMppi[
+    StateT: NumPyState,
+    StateBatchT: NumPyStateBatch,
     ControlInputSequenceT: NumPyControlInputSequence,
-    ControlInputPaddingT: NumPyControlInputSequence,
-](
-    Mppi[
-        NumPyState,
-        NumPyState,
-        NumPyStateBatch,
-        ControlInputSequenceT,
-        NumPyControlInputBatch,
-        NumPyCosts,
-    ]
-):
+    ControlInputBatchT: NumPyControlInputBatch,
+    ControlInputPaddingT: NumPyControlInputSequence = ControlInputSequenceT,
+](Mppi[StateT, ControlInputSequenceT]):
     planning_interval: int
+    model: NumPyDynamicalModel[
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ]
+    cost_function: NumPyCostFunction[ControlInputBatchT, StateBatchT, NumPyCosts]
+    sampler: NumPySampler[ControlInputSequenceT, ControlInputBatchT]
     update_function: NumPyUpdateFunction[ControlInputSequenceT]
     padding_function: NumPyPaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
     filter_function: NumPyFilterFunction[ControlInputSequenceT]
 
     @staticmethod
     def create[
-        CIS: NumPyControlInputSequence = NumPyControlInputSequence,
-        CIP: NumPyControlInputSequence = NumPyControlInputSequence,
+        S: NumPyState,
+        SB: NumPyStateBatch,
+        CIS: NumPyControlInputSequence,
+        CIB: NumPyControlInputBatch,
+        CIP: NumPyControlInputSequence = CIS,
     ](
         *,
         planning_interval: int = 1,
+        model: NumPyDynamicalModel[S, SB, CIS, CIB],
+        cost_function: NumPyCostFunction[CIB, SB, NumPyCosts],
+        sampler: NumPySampler[CIS, CIB],
         update_function: NumPyUpdateFunction[CIS] | None = None,
         padding_function: NumPyPaddingFunction[CIS, CIP] | None = None,
         filter_function: NumPyFilterFunction[CIS] | None = None,
-    ) -> "NumPyMppi[CIS, CIP]":
+    ) -> "NumPyMppi[S, SB, CIS, CIB, CIP]":
         """Creates a NumPy-based MPPI controller."""
         return NumPyMppi(
             planning_interval=planning_interval,
+            model=model,
+            cost_function=cost_function,
+            sampler=sampler,
             update_function=update_function
             or cast(NumPyUpdateFunction[CIS], UseOptimalControlUpdate()),
             padding_function=padding_function
@@ -159,30 +164,22 @@ class NumPyMppi[
     def __post_init__(self) -> None:
         assert self.planning_interval > 0, "Planning interval must be positive."
 
-    async def step[
-        InStateT: NumPyState,
-        OutStateT: NumPyState,
-        StateBatchT: NumPyStateBatch,
-        ControlInputBatchT: NumPyControlInputBatch,
-    ](
+    async def step(
         self,
         *,
-        model: NumPyDynamicalModel[
-            InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-        ],
-        cost_function: NumPyCostFunction[ControlInputBatchT, StateBatchT, NumPyCosts],
-        sampler: NumPySampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,
-        initial_state: InStateT,
+        initial_state: StateT,
     ) -> Control[ControlInputSequenceT]:
         assert temperature > 0.0, "Temperature must be positive."
 
-        samples = sampler.sample(around=nominal_input)
+        samples = self.sampler.sample(around=nominal_input)
         rollout_count = samples.rollout_count
 
-        rollouts = await model.simulate(inputs=samples, initial_state=initial_state)
-        costs = cost_function(inputs=samples, states=rollouts)
+        rollouts = await self.model.simulate(
+            inputs=samples, initial_state=initial_state
+        )
+        costs = self.cost_function(inputs=samples, states=rollouts)
         costs_per_rollout = np.sum(costs, axis=0)
 
         assert shape_of(

@@ -17,8 +17,10 @@ from .costs import (
 )
 from .samplers import sampler as sampler
 from .states import (
+    AugmentedState as AugmentedState,
     AugmentedModel as AugmentedModel,
     AugmentedSampler as AugmentedSampler,
+    AugmentedMppi as AugmentedMppi,
     extract as extract,
 )
 from .mppi import (
@@ -37,9 +39,6 @@ from .mppi import (
     Mppi as Mppi,
     NumPyMppi as NumPyMppi,
     JaxMppi as JaxMppi,
-    mppi as mppi,
-    update as update,
-    padding as padding,
 )
 from .models import (
     IntegratorModel as IntegratorModel,
@@ -47,3 +46,4 @@ from .models import (
     model as model,
 )
 from .types import types as types
+from .factory import mppi as mppi, update as update, padding as padding

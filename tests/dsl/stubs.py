@@ -134,19 +134,14 @@ class FilterFunction[SequenceT: ControlInputSequence](FilterFunctionLike[Sequenc
 
 @dataclass(frozen=True)
 class DynamicalModel[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
-](
-    DynamicalModelLike[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ]
-):
+](DynamicalModelLike[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT]):
     rollouts: StateBatchT
     expected_control_inputs: ControlInputBatchT
-    expected_initial_state: InStateT
+    expected_initial_state: StateT
 
     @staticmethod
     def returns[
@@ -155,7 +150,7 @@ class DynamicalModel[
         CIB: ControlInputBatch,
     ](
         rollouts: SB, *, when_control_inputs_are: CIB, and_initial_state_is: S
-    ) -> "DynamicalModel[S, State, SB, ControlInputSequence, CIB]":
+    ) -> "DynamicalModel[S,   SB, ControlInputSequence, CIB]":
         return DynamicalModel(
             rollouts=rollouts,
             expected_control_inputs=when_control_inputs_are,
@@ -163,7 +158,7 @@ class DynamicalModel[
         )
 
     async def simulate(
-        self, inputs: ControlInputBatchT, initial_state: InStateT
+        self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         assert np.array_equal(self.expected_control_inputs, inputs), (
             f"Dynamical model received unexpected control inputs. "
@@ -175,5 +170,5 @@ class DynamicalModel[
         )
         return self.rollouts
 
-    async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
+    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")

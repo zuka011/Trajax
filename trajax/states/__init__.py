@@ -21,5 +21,7 @@ from .augmented import (
     AugmentedControlInputBatch as AugmentedControlInputBatch,
     AugmentedModel as AugmentedModel,
     AugmentedSampler as AugmentedSampler,
+    AugmentedMppi as AugmentedMppi,
+    NumPyAugmentedMppi as NumPyAugmentedMppi,
     extract as extract,
 )

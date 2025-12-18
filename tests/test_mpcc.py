@@ -1,162 +1,128 @@
+from typing import Protocol, Sequence
+
 from trajax import (
-    NumPyMppi,
-    AugmentedModel,
-    AugmentedSampler,
-    mppi,
-    model,
-    sampler,
-    costs,
-    trajectory,
-    types,
-    extract,
+    AugmentedState,
+    StateBatch,
+    ControlInputSequence,
+    ControlInputBatch,
+    DynamicalModel,
+    Trajectory,
+    ContouringCost,
+    Mppi,
 )
 
 import numpy as np
-from numtypes import array, Array, Dim1, Dim2
+from numtypes import Array, Dim1
 
 from tests.visualize import VisualizationData, visualizer, MpccSimulationResult
+from tests.examples import numpy_mpcc
 from pytest import mark
 
-type PhysicalState = types.numpy.bicycle.State
-type PhysicalStateBatch = types.numpy.bicycle.StateBatch
-type PhysicalInputSequence = types.numpy.bicycle.ControlInputSequence
-type PhysicalInputBatch = types.numpy.bicycle.ControlInputBatch
-type VirtualState = types.numpy.simple.State
-type VirtualStateBatch = types.numpy.simple.StateBatch
-type VirtualInputSequence = types.numpy.simple.ControlInputSequence
-type VirtualInputBatch = types.numpy.simple.ControlInputBatch
-type State = types.numpy.augmented.State[PhysicalState, VirtualState]
-type StateBatch = types.numpy.augmented.StateBatch[
-    PhysicalStateBatch, VirtualStateBatch
-]
-type InputSequence = types.numpy.augmented.ControlInputSequence[
-    PhysicalInputSequence, VirtualInputSequence
-]
-type InputBatch = types.numpy.augmented.ControlInputBatch[
-    PhysicalInputBatch, VirtualInputBatch
-]
-type ContouringCost = types.numpy.ContouringCost[StateBatch]
-type CombinedCost = types.CostFunction[InputBatch, StateBatch, types.numpy.Costs]
-type Planner = NumPyMppi[InputSequence, InputSequence]
+
+class StateStacker[StateT, StateBatchT](Protocol):
+    def __call__(self, states: Sequence[StateT]) -> StateBatchT:
+        """Stacks a sequence of states into a state batch."""
+        ...
+
+
+class ZeroControlInputProvider[ControlInputBatchT](Protocol):
+    def __call__(self, horizon: int) -> ControlInputBatchT:
+        """Returns a control input batch of zeroes with the specified horizon."""
+        ...
+
+
+class MpccPlannerConfiguration[
+    StateT: AugmentedState,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+](Protocol):
+    @property
+    def reference(self) -> Trajectory:
+        """Returns the reference trajectory."""
+        ...
+
+    @property
+    def planner(self) -> Mppi[StateT, ControlInputSequenceT]:
+        """Returns the MPCC planner."""
+        ...
+
+    @property
+    def model(
+        self,
+    ) -> DynamicalModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT]:
+        """Returns the augmented dynamical model."""
+        ...
+
+    @property
+    def contouring_cost(self) -> ContouringCost[ControlInputBatchT, StateBatchT]:
+        """Returns the contouring cost function."""
+        ...
+
+    @property
+    def initial_state(self) -> StateT:
+        """Returns the initial augmented state."""
+        ...
+
+    @property
+    def nominal_input(self) -> ControlInputSequenceT:
+        """Returns the nominal control input sequence."""
+        ...
+
+    @property
+    def wheelbase(self) -> float:
+        """Returns the vehicle wheelbase (to be used in the visualization)."""
+        ...
+
+    @property
+    def stack_states(self) -> StateStacker[StateT, StateBatchT]:
+        """Returns the state stacker."""
+        ...
+
+    @property
+    def zero_inputs(self) -> ZeroControlInputProvider[ControlInputBatchT]:
+        """Returns the control input provider."""
+        ...
 
 
 @mark.asyncio
-@mark.visualize.with_args(visualizer.mpcc())
-async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation(
+@mark.parametrize(
+    ["configuration", "configuration_name"],
+    [
+        (numpy_mpcc.configure.numpy_mpcc_planner_from_base(), "numpy-mpcc-from-base"),
+        (
+            numpy_mpcc.configure.numpy_mpcc_planner_from_augmented(),
+            "numpy-mpcc-from-augmented",
+        ),
+    ],
+)
+@mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"mpcc-{seed}")
+async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
+    StateT: AugmentedState,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+](
     visualization: VisualizationData[MpccSimulationResult],
+    configuration: MpccPlannerConfiguration[
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
+    configuration_name: str,
 ) -> None:
-    reference = trajectory.numpy.waypoints(
-        points=array(
-            [
-                [0.0, 0.0],
-                [10.0, 0.0],
-                [20.0, 5.0],
-                [25.0, 15.0],
-                [20.0, 25.0],
-                [10.0, 25.0],
-                [5.0, 15.0],
-                [10.0, 5.0],
-                [20.0, 0.0],
-                [30.0, 0.0],
-                [40.0, 5.0],
-                [50.0, 5.0],
-                [60.0, 0.0],
-                [70.0, 0.0],
-            ],
-            shape=(14, 2),
-        ),
-        path_length=(path_length := 120.0),
-    )
+    reference = configuration.reference
+    planner = configuration.planner
+    augmented_model = configuration.model
+    contouring_cost = configuration.contouring_cost
+    current_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+    L = configuration.wheelbase
 
-    planner: Planner = mppi.numpy.base()
-    augmented_model = AugmentedModel.of(
-        physical=model.numpy.kinematic_bicycle(
-            time_step_size=(dt := 0.1),
-            wheelbase=(L := 2.5),
-            speed_limits=(0.0, 15.0),
-            steering_limits=(-0.5, 0.5),
-            acceleration_limits=(-3.0, 3.0),
-        ),
-        virtual=model.numpy.integrator(
-            time_step_size=dt,
-            state_limits=(0, path_length),
-            velocity_limits=(0, 15),
-        ),
-        state=types.numpy.augmented.state,
-        batch=types.numpy.augmented.state_batch,
-    )
-
-    augmented_sampler = AugmentedSampler.of(
-        physical=sampler.numpy.gaussian(
-            standard_deviation=np.array([1.0, 1.0]),
-            rollout_count=(rollout_count := 512),
-            to_batch=types.numpy.bicycle.control_input_batch,
-            seed=42,
-        ),
-        virtual=sampler.numpy.gaussian(
-            standard_deviation=np.array([1.0]),
-            rollout_count=rollout_count,
-            to_batch=types.numpy.simple.control_input_batch,
-            seed=43,
-        ),
-        batch=types.numpy.augmented.control_input_batch,
-    )
-
-    def path_parameter(states: VirtualStateBatch) -> types.numpy.PathParameters:
-        return types.numpy.path_parameters(states.array[:, 0, :])
-
-    def path_velocity(inputs: VirtualInputBatch) -> Array[Dim2]:
-        return inputs.array[:, 0, :]
-
-    def position(states: PhysicalStateBatch) -> types.numpy.Positions:
-        return types.numpy.positions(x=states.positions.x(), y=states.positions.y())
-
-    combined_cost: CombinedCost = costs.numpy.combined(
-        contouring_cost := costs.numpy.tracking.contouring(
-            reference=reference,
-            path_parameter_extractor=(
-                path_extractor := extract.from_virtual(path_parameter)
-            ),
-            position_extractor=(position_extractor := extract.from_physical(position)),
-            weight=50.0,
-        ),
-        costs.numpy.tracking.lag(
-            reference=reference,
-            path_parameter_extractor=path_extractor,
-            position_extractor=position_extractor,
-            weight=10.0,
-        ),
-        costs.numpy.tracking.progress(
-            path_velocity_extractor=extract.from_virtual(path_velocity),
-            time_step_size=dt,
-            weight=250.0,
-        ),
-        costs.numpy.comfort.control_smoothing(weights=np.array([2.0, 5.0, 5.0])),
-    )
-
-    current_state = types.numpy.augmented.state.of(
-        physical=types.numpy.bicycle.state(x=0.0, y=0.0, heading=0.0, speed=0.0),
-        virtual=types.numpy.simple.state(np.array([0.0])),
-    )
-
-    nominal_input = types.numpy.augmented.control_input_sequence.of(
-        physical=types.numpy.bicycle.control_input_sequence.zeroes(
-            horizon=(horizon := 30)
-        ),
-        virtual=types.numpy.simple.control_input_sequence.zeroes(
-            horizon=horizon, dimension=1
-        ),
-    )
-
-    states: list[State] = []
-    min_progress = path_length * 0.7
+    states: list[StateT] = []
+    min_progress = reference.path_length * 0.7
     progress = 0.0
 
     for _ in range(max_steps := 300):
         control = await planner.step(
-            model=augmented_model,
-            cost_function=combined_cost,
-            sampler=augmented_sampler,
             temperature=0.05,
             nominal_input=nominal_input,
             initial_state=current_state,
@@ -177,11 +143,16 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation(
         MpccSimulationResult(
             reference=reference,
             states=states,
-            path_length=path_length,
-            contouring_errors=(errors := contouring_errors(states, contouring_cost)),
+            contouring_errors=(
+                errors := contouring_errors(
+                    contouring_cost,
+                    inputs=configuration.zero_inputs(horizon=len(states)),
+                    states=configuration.stack_states(states),
+                )
+            ),
             wheelbase=L,
         )
-    )
+    ).seed_is(configuration_name)
 
     assert progress > min_progress, (
         f"Vehicle did not make sufficient progress along the path in {max_steps} steps. "
@@ -194,22 +165,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation(
     )
 
 
-def contouring_errors(states: list[State], contouring: ContouringCost) -> Array[Dim1]:
-    return contouring.error(
-        inputs=types.numpy.augmented.control_input_batch.of(
-            physical=types.numpy.bicycle.control_input_batch.zero(
-                horizon=(horizon := len(states))
-            ),
-            virtual=types.numpy.simple.control_input_batch.zero(
-                horizon=horizon, dimension=1
-            ),
-        ),
-        states=types.numpy.augmented.state_batch.of(
-            physical=types.numpy.bicycle.state_batch.of_states(
-                [it.physical for it in states]
-            ),
-            virtual=types.numpy.simple.state_batch.of_states(
-                [it.virtual for it in states]
-            ),
-        ),
-    )[:, 0]
+def contouring_errors[InputT: ControlInputBatch, StateT: StateBatch](
+    contouring: ContouringCost[InputT, StateT], inputs: InputT, states: StateT
+) -> Array[Dim1]:
+    return np.asarray(contouring.error(inputs=inputs, states=states))[:, 0]

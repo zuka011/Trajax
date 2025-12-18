@@ -226,7 +226,6 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
 class NumPyBicycleModel(
     BicycleModel[
         NumPyBicycleState,
-        NumPyBicycleState,
         NumPyBicycleStateBatch,
         NumPyBicycleControlInputSequence,
         NumPyBicycleControlInputBatch,

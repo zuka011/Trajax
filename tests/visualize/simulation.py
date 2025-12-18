@@ -4,17 +4,15 @@ from pathlib import Path
 
 import numpy as np
 from numtypes import Array, Dim1, IndexArray
+from aiopath import AsyncPath
 
 from bokeh.plotting import figure
 from bokeh.models.plots import Plot as Figure
-from bokeh.io import save
+from bokeh.embed import file_html
 from bokeh.resources import CDN
 from bokeh.models import ColumnDataSource, Slider, CustomJS, Div, Button, Column
 from bokeh.layouts import column, row
 from bokeh.events import DocumentReady
-
-
-VISUALIZATIONS_DIRECTORY = Path(__file__).parent.parent / "visualizations"
 
 
 type VehicleType = Literal["triangle", "car"]
@@ -124,25 +122,36 @@ class SimulationData:
         return np.arange(self.timestep_count)
 
 
+@dataclass(kw_only=True, frozen=True)
 class SimulationVisualizer:
     """Generic visualizer for trajectory-following simulations using Bokeh."""
 
-    def __init__(self, output_filename: str = "simulation") -> None:
-        self.output_filename = output_filename
+    output: AsyncPath
+
+    @staticmethod
+    def create(
+        *, output: str = "simulation", directory: Path | None = None
+    ) -> "SimulationVisualizer":
+        return SimulationVisualizer(
+            output=AsyncPath(
+                directory
+                if directory is not None
+                else Path(__file__).parent.parent / "visualizations"
+            )
+            / output
+        )
+
+    async def __call__(self, data: SimulationData, *, key: str) -> None:
+        await self.output.mkdir(parents=True, exist_ok=True)
+        await create_animation_html(data, output := self.output / f"{key}.html")
+
+        print(f"\nVisualization saved to: {output}")
 
     def can_visualize(self, data: object) -> bool:
         return isinstance(data, SimulationData)
 
-    async def __call__(self, data: SimulationData) -> None:
-        VISUALIZATIONS_DIRECTORY.mkdir(parents=True, exist_ok=True)
-        html_path = VISUALIZATIONS_DIRECTORY / f"{self.output_filename}.html"
-        create_animation_html(data, html_path)
-        print(f"\nVisualization saved to: {html_path}")
 
-
-def create_animation_html(data: SimulationData, output_path: Path) -> None:
-    """Creates an HTML file with an animated visualization of the simulation."""
-
+async def create_animation_html(data: SimulationData, output: AsyncPath) -> None:
     sources = create_data_sources(data)
 
     trajectory_plot = create_trajectory_plot(data)
@@ -160,29 +169,28 @@ def create_animation_html(data: SimulationData, output_path: Path) -> None:
     speed_selector = create_speed_selector()
     reset_button = create_reset_button(time_slider)
 
-    info_div = create_info_div()
+    info_section = info_section_placeholder()
 
     slider_callback = create_slider_callback(sources=sources, data=data)
     time_slider.js_on_change("value", slider_callback)
 
-    setup_info_updates(info_div, time_slider, data, trajectory_plot)
+    setup_info_updates(info_section, time_slider, data, trajectory_plot)
 
     layout = create_layout(
         trajectory_plot=trajectory_plot,
         progress_plot=progress_plot,
         error_plot=error_plot,
-        info_div=info_div,
+        info_section=info_section,
         time_slider=time_slider,
         play_button=play_button,
         speed_selector=speed_selector,
         reset_button=reset_button,
     )
 
-    save(layout, filename=str(output_path), resources=CDN, title="MPCC Simulation")
+    await save(layout, to=output)
 
 
 def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
-    """Creates all data sources needed for the visualization."""
     errors = get_errors(data)
     ghost_x, ghost_y = get_ghost_positions(data)
 
@@ -253,7 +261,6 @@ def get_ghost_positions(data: SimulationData) -> tuple[Array[Dim1], Array[Dim1]]
 
 
 def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
-    """Computes lateral error from reference for each timestep (fallback)."""
     errors = np.zeros(data.timestep_count)
 
     for i in range(data.timestep_count):
@@ -269,7 +276,6 @@ def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
 def compute_ghost_positions_from_closest_point(
     data: SimulationData,
 ) -> tuple[Array[Dim1], Array[Dim1]]:
-    """Computes ghost positions from closest point on reference (fallback)."""
     ghost_x = np.zeros(data.timestep_count)
     ghost_y = np.zeros(data.timestep_count)
 
@@ -286,7 +292,6 @@ def compute_ghost_positions_from_closest_point(
 
 
 def create_trajectory_plot(data: SimulationData) -> Figure:
-    """Creates the main trajectory plot."""
     plot = figure(
         title="Vehicle Trajectory",
         x_axis_label="X Position (m)",
@@ -322,7 +327,6 @@ def create_trajectory_plot(data: SimulationData) -> Figure:
 
 
 def create_progress_plot(data: SimulationData) -> Figure:
-    """Creates the path parameter progress plot."""
     plot = figure(
         title="Path Progress",
         x_axis_label="Time (s)",
@@ -359,7 +363,6 @@ def create_progress_plot(data: SimulationData) -> Figure:
 
 
 def create_error_plot(data: SimulationData) -> Figure:
-    """Creates the error plot."""
     errors = get_errors(data)
     times = data.timesteps * data.time_step
 
@@ -442,7 +445,6 @@ def create_play_button(slider: Slider, timestep_count: int) -> Button:
 
 
 def create_speed_selector() -> Button:
-    """Creates a button to cycle through animation speeds."""
     button = Button(label="1x", button_type="light", width=50)
 
     callback = CustomJS(
@@ -510,7 +512,6 @@ def add_vehicle_to_plot(
 def add_car_to_plot(
     plot: Figure, source: ColumnDataSource, data: SimulationData
 ) -> None:
-    """Renders vehicle as a rectangle representing a car."""
     plot.rect(  # type: ignore
         "x",
         "y",
@@ -526,7 +527,6 @@ def add_car_to_plot(
 
 
 def add_ghost_vehicle_to_plot(plot: Figure, source: ColumnDataSource) -> None:
-    """Adds a ghost marker showing ideal position on reference."""
     plot.scatter(  # type: ignore
         "x",
         "y",
@@ -578,9 +578,7 @@ def add_error_marker_to_plot(plot: Figure, source: ColumnDataSource) -> None:
 
 
 def create_slider_callback(
-    *,
-    sources: dict[str, ColumnDataSource],
-    data: SimulationData,
+    *, sources: dict[str, ColumnDataSource], data: SimulationData
 ) -> CustomJS:
     return CustomJS(
         args={
@@ -625,17 +623,13 @@ def create_slider_callback(
     )
 
 
-def create_info_div() -> Div:
+def info_section_placeholder() -> Div:
     return Div(text="Simulation info will appear here...", width=400, height=180)
 
 
 def setup_info_updates(
-    info_div: Div,
-    slider: Slider,
-    data: SimulationData,
-    target: Figure,
+    info_div: Div, slider: Slider, data: SimulationData, target: Figure
 ) -> None:
-    """Sets up info div updates on slider change and initial load."""
     args = {
         "info_div": info_div,
         "slider": slider,
@@ -657,7 +651,7 @@ def create_layout(
     trajectory_plot: Figure,
     progress_plot: Figure,
     error_plot: Figure,
-    info_div: Div,
+    info_section: Div,
     time_slider: Slider,
     play_button: Button,
     speed_selector: Button,
@@ -691,7 +685,7 @@ def create_layout(
     time_slider.sizing_mode = "stretch_width"
 
     right_panel = column(
-        info_div,
+        info_section,
         Div(height=10),
         progress_plot,
         Div(height=10),
@@ -699,7 +693,7 @@ def create_layout(
         width=400,
     )
 
-    info_div.sizing_mode = "stretch_width"
+    info_section.sizing_mode = "stretch_width"
 
     main_content = row(
         trajectory_plot,
@@ -715,3 +709,8 @@ def create_layout(
         styles={"padding": "20px", "font-family": "system-ui, sans-serif"},
         sizing_mode="stretch_both",
     )
+
+
+async def save(layout: Column, *, to: AsyncPath) -> None:
+    async with to.open("w", encoding="utf-8") as f:
+        await f.write(file_html(layout, CDN, title="Simulation Visualization"))

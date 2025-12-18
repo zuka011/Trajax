@@ -81,6 +81,10 @@ class JaxWaypointsTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
             )
         )
 
+    @property
+    def path_length(self) -> float:
+        return self.length
+
 
 def coefficients_from(spline: CubicSpline) -> Float[JaxArray, "S 4"]:
     """Extracts cubic spline coefficients from scipy CubicSpline.

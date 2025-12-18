@@ -59,17 +59,14 @@ type ControlInputBatch = types.bicycle.ControlInputBatch
     ],
 )
 async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     M: int,
     T: int,
     x_0: float,
@@ -178,17 +175,14 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     ],
 )
 async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_x: Array,
     expected_y: Array,
     expected_theta: Array,
@@ -294,17 +288,14 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     ],
 )
 async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_x_final: Array,
     expected_y_final: Array,
     expected_theta: Array,
@@ -356,17 +347,14 @@ T = clear_type
     ],
 )
 async def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_final_theta: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -402,17 +390,14 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
     ],
 )
 async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_final_v: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -469,17 +454,14 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
     ],
 )
 async def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_final_x: Array,
     expected_final_y: Array,
     expected_final_theta: Array,
@@ -518,17 +500,14 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
     ],
 )
 async def test_that_displacement_is_consistent_with_velocity_state[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     time_step_size: float,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -612,17 +591,14 @@ async def test_that_displacement_is_consistent_with_velocity_state[
     ],
 )
 async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_final_x: Array,
     expected_final_y: Array,
     expected_final_theta: Array,
@@ -674,17 +650,14 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     ],
 )
 async def test_that_angular_velocity_depends_on_wheelbase[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     time_step_size: float,
     expected_angular_velocity: Array,
 ) -> None:
@@ -738,17 +711,14 @@ async def test_that_angular_velocity_depends_on_wheelbase[
     ],
 )
 async def test_that_velocity_is_clamped_to_speed_limits[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     max_speed: float,
     min_speed: float,
 ) -> None:
@@ -822,17 +792,14 @@ async def test_that_velocity_is_clamped_to_speed_limits[
     ],
 )
 async def test_that_steering_input_is_clipped_to_max_steering[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_theta_change: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -896,17 +863,14 @@ async def test_that_steering_input_is_clipped_to_max_steering[
     ],
 )
 async def test_that_acceleration_input_is_clipped_to_max_acceleration[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_velocity: Array,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -966,9 +930,7 @@ async def test_that_simulating_individual_steps_matches_horizon_simulation[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
-    model: BicycleModel[
-        StateT, StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    model: BicycleModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     input_batch: ControlInputBatchT,
     initial_state: StateT,
     horizon: int,

@@ -43,7 +43,6 @@ class NumPyIntegratorControlInputBatch[T: int, D_u: int, M: int](
 class NumPyIntegratorModel(
     IntegratorModel[
         NumPyIntegratorState,
-        NumPyIntegratorState,
         NumPyIntegratorStateBatch,
         NumPyIntegratorControlInputSequence,
         NumPyIntegratorControlInputBatch,

@@ -1,13 +1,14 @@
 from typing import Protocol
 from dataclasses import dataclass
 
+from trajax.type import DataType
 from trajax.mppi import (
     StateBatch,
     ControlInputBatch,
+    CostFunction,
     NumPyStateBatch,
     NumPyControlInputBatch,
     NumPyCosts,
-    CostFunction,
 )
 from trajax.trajectory import (
     Trajectory,
@@ -16,6 +17,7 @@ from trajax.trajectory import (
     NumPyPositions,
 )
 from trajax.states import NumPySimpleCosts
+from trajax.costs.common import ContouringCost, Error
 
 from numtypes import Array, Dims, Dim2
 
@@ -40,9 +42,17 @@ class NumPyPositionExtractor[StateT: NumPyStateBatch](Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class NumPyError[T: int, M: int](Error[T, M]):
+    array: Array[Dims[T, M]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+        return self.array
+
+
 @dataclass(kw_only=True, frozen=True)
 class NumPyContouringCost[StateT: NumPyStateBatch](
-    CostFunction[ControlInputBatch, StateT, NumPyCosts]
+    ContouringCost[ControlInputBatch, StateT, NumPyCosts, NumPyError]
 ):
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
     path_parameter_extractor: NumPyPathParameterExtractor[StateT]
@@ -76,17 +86,18 @@ class NumPyContouringCost[StateT: NumPyStateBatch](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateT
     ) -> NumPySimpleCosts[T, M]:
         error = self.error(inputs=inputs, states=states)
-        return NumPySimpleCosts(self.weight * error**2)
+        return NumPySimpleCosts(self.weight * error.array**2)
 
     def error[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateT
-    ) -> Array[Dims[T, M]]:
+    ) -> NumPyError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()
         positions = self.position_extractor(states)
 
-        return np.sin(heading) * (positions.x - ref_points.x()) - np.cos(heading) * (
-            positions.y - ref_points.y()
+        return NumPyError(
+            np.sin(heading) * (positions.x - ref_points.x())
+            - np.cos(heading) * (positions.y - ref_points.y())
         )
 
 

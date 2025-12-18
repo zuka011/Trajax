@@ -47,3 +47,8 @@ class Trajectory[PathParametersT: PathParameters, ReferencePointsT: ReferencePoi
     def query(self, parameters: PathParametersT) -> ReferencePointsT:
         """Queries the trajectory at the given path parameters, returning the reference points."""
         ...
+
+    @property
+    def path_length(self) -> float:
+        """Returns the total length of the reference trajectory."""
+        ...

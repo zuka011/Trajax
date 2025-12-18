@@ -986,6 +986,8 @@ doc = [
     { name = "typi" },
 ]
 test = [
+    { name = "aiofiles" },
+    { name = "aiopath" },
     { name = "bokeh" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -1011,6 +1013,8 @@ dev = [
 ]
 doc = [{ name = "typi", specifier = ">=0.1.1" }]
 test = [
+    { name = "aiofiles", specifier = ">=25.1.0" },
+    { name = "aiopath", specifier = ">=0.7.7" },
     { name = "bokeh", specifier = ">=3.8.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },

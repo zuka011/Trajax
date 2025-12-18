@@ -12,6 +12,9 @@ from .common import (
     FilterFunction as FilterFunction,
     Control as Control,
     Mppi as Mppi,
+    NoUpdate as NoUpdate,
+    UseOptimalControlUpdate as UseOptimalControlUpdate,
+    NoFilter as NoFilter,
 )
 from .basic import (
     NumPyState as NumPyState,
@@ -26,6 +29,7 @@ from .basic import (
     NumPyPaddingFunction as NumPyPaddingFunction,
     NumPyFilterFunction as NumPyFilterFunction,
     NumPyMppi as NumPyMppi,
+    NumPyZeroPadding as NumPyZeroPadding,
 )
 from .accelerated import (
     JaxState as JaxState,
@@ -40,5 +44,5 @@ from .accelerated import (
     JaxPaddingFunction as JaxPaddingFunction,
     JaxFilterFunction as JaxFilterFunction,
     JaxMppi as JaxMppi,
+    JaxZeroPadding as JaxZeroPadding,
 )
-from .factory import mppi as mppi, update as update, padding as padding

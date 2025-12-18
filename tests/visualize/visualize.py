@@ -1,13 +1,15 @@
-from typing import Protocol, AsyncGenerator, Final
+from typing import Protocol, AsyncGenerator, Final, NamedTuple, Self, runtime_checkable
 from dataclasses import dataclass
 
 from pytest import Parser, FixtureRequest
 from pytest_asyncio import fixture as async_fixture
 
 
+@runtime_checkable
 class Visualizer[T](Protocol):
-    async def __call__(self, data: T) -> None:
-        """Visualizes the given data."""
+    async def __call__(self, data: T, *, key: str) -> None:
+        """Visualizes the given data. The key can be used to distinguish between
+        different visualization contexts."""
         ...
 
     async def can_visualize(self, data: object) -> bool:
@@ -15,20 +17,42 @@ class Visualizer[T](Protocol):
         ...
 
 
+@runtime_checkable
+class KeyProvider(Protocol):
+    def __call__(self, seed: str, /) -> str:
+        """Returns a key to distinguish between different visualization contexts."""
+        ...
+
+
 @dataclass
 class VisualizationData[T]:
     _data: T | None
+    _seed: str | None
 
     @staticmethod
     def empty[T_ = object]() -> "VisualizationData[T_]":
-        return VisualizationData(None)
+        return VisualizationData(None, None)
 
-    def data_is(self, data: T) -> None:
+    def data_is(self, data: T) -> Self:
         self._data = data
+        return self
+
+    def seed_is(self, seed: str) -> Self:
+        self._seed = seed
+        return self
 
     @property
     def data(self) -> T | None:
         return self._data
+
+    @property
+    def seed(self) -> str | None:
+        return self._seed
+
+
+class VisualizerArguments[T](NamedTuple):
+    visualizer: Visualizer[T]
+    key: str
 
 
 class options:
@@ -48,28 +72,44 @@ def add_visualizer_option(parser: Parser) -> None:
     )
 
 
-async def visualizer_from[T](
+async def visualizer_arguments_from[T](
     request: FixtureRequest, capture: VisualizationData[T]
-) -> Visualizer[T] | None:
+) -> VisualizerArguments[T] | None:
     if (
         not request.config.getoption(options.visualize)
         or (marker := request.node.get_closest_marker(markers.visualize)) is None
     ):
         return
 
-    assert len(marker.args) == 1, (
-        f"{markers.visualize} requires a single visualizer argument, got {len(marker.args)}. "
-        "Example: @pytest.mark.visualize.with_args(my_visualizer)"
-    )
+    match marker.args:
+        case (Visualizer() as visualizer, str() as key):
+            pass
+        case (Visualizer() as visualizer, KeyProvider() as key_provider):
+            assert (
+                capture.seed is not None
+            ), """A key provider was used for visualization, but no seed was
+                provided during the test.
+                
+                Example: @pytest.mark.visualize.with_args(my_visualizer, lambda seed: f"prefix-{seed}")
 
-    visualizer: Visualizer = marker.args[0]
+                Then inside the test:
+                    capture.seed_is("my-test-seed")
+                """
+            key = key_provider(capture.seed)
+        case _:
+            assert False, f"""{markers.visualize} expects the following arguments: 
+                    - a Visualizer instance. 
+                    - a key to distinguish between different visualization contexts.
+                
+                Example: @pytest.mark.visualize.with_args(my_visualizer, "my-test-key")
+                """
 
     assert await visualizer.can_visualize(capture.data), (
         f"Visualizer {visualizer} cannot visualize data of type "
         f"{type(capture.data).__name__}"
     )
 
-    return visualizer
+    return VisualizerArguments(visualizer=visualizer, key=key)
 
 
 @async_fixture
@@ -82,8 +122,8 @@ async def visualization[T = object](
 
     if (
         capture.data is None
-        or (visualizer := await visualizer_from(request, capture)) is None
+        or (args := await visualizer_arguments_from(request, capture)) is None
     ):
         return
 
-    await visualizer(capture.data)
+    await args.visualizer(capture.data, key=args.key)

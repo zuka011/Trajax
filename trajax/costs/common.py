@@ -15,8 +15,8 @@ class Error[T: int, M: int](Protocol):
 class ContouringCost[
     InputT: ControlInputBatch,
     StateT: StateBatch,
-    CostT: Costs,
-    ErrorT: Error,
+    CostT: Costs = Costs,
+    ErrorT: Error = Error,
 ](CostFunction[InputT, StateT, CostT], Protocol):
     def error(self, *, inputs: InputT, states: StateT) -> ErrorT:
         """Computes the contouring error for the given inputs and states."""

@@ -96,17 +96,16 @@ from pytest import mark
     ],
 )
 async def test_that_integration_is_exact_for_constant_inputs[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
     model: IntegratorModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -157,17 +156,16 @@ M = clear_type
     ],
 )
 async def test_that_zero_velocity_results_in_standstill[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
     model: IntegratorModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)
@@ -265,17 +263,16 @@ async def test_that_zero_velocity_results_in_standstill[
     ],
 )
 async def test_that_state_limits_are_respected_during_integration[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
     model: IntegratorModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     state_min: float,
     state_max: float,
     expected_final_state: StateBatchT,
@@ -396,17 +393,16 @@ async def test_that_state_limits_are_respected_during_integration[
     ],
 )
 async def test_that_velocity_limits_are_respected_during_integration[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](
     model: IntegratorModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
-    initial_state: InStateT,
+    initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
     rollouts = await model.simulate(inputs, initial_state)

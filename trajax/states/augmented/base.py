@@ -1,4 +1,3 @@
-from typing import cast
 from dataclasses import dataclass
 
 from trajax.type import DataType
@@ -10,41 +9,23 @@ from trajax.states.augmented.common import (
     AugmentedControlInputBatch,
 )
 
-from numtypes import Array, Dims
+from numtypes import Array, Dim1, Dim2, Dim3
 
 import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class BaseAugmentedState[P: State, V: State, D_x: int](AugmentedState[P, V, D_x]):
+class BaseAugmentedState[P: State, V: State](AugmentedState[P, V]):
     _physical: P
     _virtual: V
-    _dimension: D_x
 
     @staticmethod
-    def of[P_: State, V_: State, D_x_: int](
-        *, physical: P_, virtual: V_, dimension: D_x_ | None = None
-    ) -> "AugmentedState[P_, V_, D_x_]":
-        return BaseAugmentedState(
-            _physical=physical,
-            _virtual=virtual,
-            _dimension=cast(
-                D_x_,
-                dimension
-                if dimension is not None
-                else physical.dimension + virtual.dimension,
-            ),
-        )
+    def of[P_: State, V_: State](
+        *, physical: P_, virtual: V_
+    ) -> "AugmentedState[P_, V_]":
+        return BaseAugmentedState(_physical=physical, _virtual=virtual)
 
-    def __post_init__(self) -> None:
-        assert self.dimension == (self.physical.dimension + self.virtual.dimension), (
-            f"State dimension mismatch in {self.__class__.__name__}: "
-            f"expected {self.dimension}, got "
-            f"{self.physical.dimension} (physical) + {self.virtual.dimension} (virtual) "
-            f"= {self.physical.dimension + self.virtual.dimension}"
-        )
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
         return np.concatenate(
             [
                 np.asarray(self.physical, dtype=dtype),
@@ -61,81 +42,35 @@ class BaseAugmentedState[P: State, V: State, D_x: int](AugmentedState[P, V, D_x]
         return self._virtual
 
     @property
-    def dimension(self) -> D_x:
-        return self._dimension
+    def dimension(self) -> int:
+        return self.physical.dimension + self.virtual.dimension
 
 
 @dataclass(kw_only=True, frozen=True)
-class BaseAugmentedStateBatch[
-    P: StateBatch,
-    V: StateBatch,
-    T: int,
-    D_x: int,
-    M: int,
-](AugmentedStateBatch[P, V, T, D_x, M]):
+class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](AugmentedStateBatch[P, V]):
     _physical: P
     _virtual: V
-    _horizon: T
-    _dimension: D_x
-    _rollout_count: M
 
     @staticmethod
-    def of[
-        P_: StateBatch,
-        V_: StateBatch,
-        T_: int = int,
-        D_x_: int = int,
-        M_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_x_ | None = None,
-        rollout_count: M_ | None = None,
-    ) -> "AugmentedStateBatch[P_, V_, T_, D_x_, M_]":
+    def of[P_: StateBatch, V_: StateBatch](
+        *, physical: P_, virtual: V_
+    ) -> "AugmentedStateBatch[P_, V_]":
         return BaseAugmentedStateBatch(
             _physical=physical,
             _virtual=virtual,
-            _horizon=cast(
-                T_,
-                horizon if horizon is not None else physical.horizon,
-            ),
-            _dimension=cast(
-                D_x_,
-                dimension
-                if dimension is not None
-                else physical.dimension + virtual.dimension,
-            ),
-            _rollout_count=cast(
-                M_,
-                rollout_count if rollout_count is not None else physical.rollout_count,
-            ),
         )
 
     def __post_init__(self) -> None:
-        assert self.horizon == self.physical.horizon == self.virtual.horizon, (
+        assert self.physical.horizon == self.virtual.horizon, (
             f"Horizon mismatch in {self.__class__.__name__}: "
-            f"expected {self.horizon}, got "
-            f"{self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
+            f"Got {self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
         )
-        assert self.dimension == (self.physical.dimension + self.virtual.dimension), (
-            f"State dimension mismatch in {self.__class__.__name__}: "
-            f"expected {self.dimension}, got "
-            f"{self.physical.dimension} (physical) + {self.virtual.dimension} (virtual) "
-            f"= {self.physical.dimension + self.virtual.dimension}"
-        )
-        assert (
-            self.rollout_count
-            == self.physical.rollout_count
-            == self.virtual.rollout_count
-        ), (
+        assert self.physical.rollout_count == self.virtual.rollout_count, (
             f"Rollout count mismatch in {self.__class__.__name__}: "
-            f"expected {self.rollout_count}, got "
-            f"{self.physical.rollout_count} (physical) and {self.virtual.rollout_count} (virtual)"
+            f"Got {self.physical.rollout_count} (physical) and {self.virtual.rollout_count} (virtual)"
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
             [
                 np.asarray(self.physical, dtype=dtype),
@@ -153,72 +88,39 @@ class BaseAugmentedStateBatch[
         return self._virtual
 
     @property
-    def horizon(self) -> T:
-        return self._horizon
+    def horizon(self) -> int:
+        return self.physical.horizon
 
     @property
-    def dimension(self) -> D_x:
-        return self._dimension
+    def dimension(self) -> int:
+        return self.physical.dimension + self.virtual.dimension
 
     @property
-    def rollout_count(self) -> M:
-        return self._rollout_count
+    def rollout_count(self) -> int:
+        return self.physical.rollout_count
 
 
 @dataclass(kw_only=True, frozen=True)
 class BaseAugmentedControlInputSequence[
     P: ControlInputSequence,
     V: ControlInputSequence,
-    T: int,
-    D_u: int,
-](AugmentedControlInputSequence[P, V, T, D_u]):
+](AugmentedControlInputSequence[P, V]):
     _physical: P
     _virtual: V
-    _horizon: T
-    _dimension: D_u
 
     @staticmethod
-    def of[
-        P_: ControlInputSequence,
-        V_: ControlInputSequence,
-        T_: int = int,
-        D_u_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_u_ | None = None,
-    ) -> "AugmentedControlInputSequence[P_, V_, T_, D_u_]":
-        return BaseAugmentedControlInputSequence(
-            _physical=physical,
-            _virtual=virtual,
-            _horizon=cast(
-                T_,
-                horizon if horizon is not None else physical.horizon,
-            ),
-            _dimension=cast(
-                D_u_,
-                dimension
-                if dimension is not None
-                else physical.dimension + virtual.dimension,
-            ),
-        )
+    def of[P_: ControlInputSequence, V_: ControlInputSequence](
+        *, physical: P_, virtual: V_
+    ) -> "AugmentedControlInputSequence[P_, V_]":
+        return BaseAugmentedControlInputSequence(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
-        assert self.horizon == self.physical.horizon == self.virtual.horizon, (
+        assert self.physical.horizon == self.virtual.horizon, (
             f"Horizon mismatch in {self.__class__.__name__}: "
-            f"expected {self.horizon}, got "
-            f"{self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
-        )
-        assert self.dimension == (self.physical.dimension + self.virtual.dimension), (
-            f"Control dimension mismatch in {self.__class__.__name__}: "
-            f"expected {self.dimension}, got "
-            f"{self.physical.dimension} (physical) + {self.virtual.dimension} (virtual) "
-            f"= {self.physical.dimension + self.virtual.dimension}"
+            f"Got {self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return np.concatenate(
             [
                 np.asarray(self.physical, dtype=dtype),
@@ -236,85 +138,38 @@ class BaseAugmentedControlInputSequence[
         return self._virtual
 
     @property
-    def horizon(self) -> T:
-        return self._horizon
+    def horizon(self) -> int:
+        return self.physical.horizon
 
     @property
-    def dimension(self) -> D_u:
-        return self._dimension
+    def dimension(self) -> int:
+        return self.physical.dimension + self.virtual.dimension
 
 
 @dataclass(kw_only=True, frozen=True)
-class BaseAugmentedControlInputBatch[
-    P: ControlInputBatch,
-    V: ControlInputBatch,
-    T: int,
-    D_u: int,
-    M: int,
-](AugmentedControlInputBatch[P, V, T, D_u, M]):
+class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch](
+    AugmentedControlInputBatch[P, V]
+):
     _physical: P
     _virtual: V
-    _horizon: T
-    _dimension: D_u
-    _rollout_count: M
 
     @staticmethod
-    def of[
-        P_: ControlInputBatch,
-        V_: ControlInputBatch,
-        T_: int = int,
-        D_u_: int = int,
-        M_: int = int,
-    ](
-        *,
-        physical: P_,
-        virtual: V_,
-        horizon: T_ | None = None,
-        dimension: D_u_ | None = None,
-        rollout_count: M_ | None = None,
-    ) -> "AugmentedControlInputBatch[P_, V_, T_, D_u_, M_]":
-        return BaseAugmentedControlInputBatch(
-            _physical=physical,
-            _virtual=virtual,
-            _horizon=cast(
-                T_,
-                horizon if horizon is not None else physical.horizon,
-            ),
-            _dimension=cast(
-                D_u_,
-                dimension
-                if dimension is not None
-                else physical.dimension + virtual.dimension,
-            ),
-            _rollout_count=cast(
-                M_,
-                rollout_count if rollout_count is not None else physical.rollout_count,
-            ),
-        )
+    def of[P_: ControlInputBatch, V_: ControlInputBatch](
+        *, physical: P_, virtual: V_
+    ) -> "AugmentedControlInputBatch[P_, V_]":
+        return BaseAugmentedControlInputBatch(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
-        assert self.horizon == self.physical.horizon == self.virtual.horizon, (
+        assert self.physical.horizon == self.virtual.horizon, (
             f"Horizon mismatch in {self.__class__.__name__}: "
-            f"expected {self.horizon}, got "
-            f"{self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
+            f"Got {self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
         )
-        assert self.dimension == (self.physical.dimension + self.virtual.dimension), (
-            f"Control dimension mismatch in {self.__class__.__name__}: "
-            f"expected {self.dimension}, got "
-            f"{self.physical.dimension} (physical) + {self.virtual.dimension} (virtual) "
-            f"= {self.physical.dimension + self.virtual.dimension}"
-        )
-        assert (
-            self.rollout_count
-            == self.physical.rollout_count
-            == self.virtual.rollout_count
-        ), (
+        assert self.physical.rollout_count == self.virtual.rollout_count, (
             f"Rollout count mismatch in {self.__class__.__name__}: "
-            f"expected {self.rollout_count}, got "
-            f"{self.physical.rollout_count} (physical) and {self.virtual.rollout_count} (virtual)"
+            f"Got {self.physical.rollout_count} (physical) and {self.virtual.rollout_count} (virtual)"
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
             [
                 np.asarray(self.physical, dtype=dtype),
@@ -332,13 +187,13 @@ class BaseAugmentedControlInputBatch[
         return self._virtual
 
     @property
-    def horizon(self) -> T:
-        return self._horizon
+    def horizon(self) -> int:
+        return self.physical.horizon
 
     @property
-    def dimension(self) -> D_u:
-        return self._dimension
+    def dimension(self) -> int:
+        return self.physical.dimension + self.virtual.dimension
 
     @property
-    def rollout_count(self) -> M:
-        return self._rollout_count
+    def rollout_count(self) -> int:
+        return self.physical.rollout_count

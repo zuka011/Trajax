@@ -75,20 +75,19 @@ class IntegratorControlInputBatch[T: int, D_u: int, M: int](Protocol):
 
 
 class IntegratorModel[
-    InStateT: IntegratorState,
-    OutStateT: IntegratorState,
+    StateT: IntegratorState,
     StateBatchT: IntegratorStateBatch,
     ControlInputSequenceT: IntegratorControlInputSequence,
     ControlInputBatchT: IntegratorControlInputBatch,
 ](Protocol):
     async def simulate(
-        self, inputs: ControlInputBatchT, initial_state: InStateT
+        self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         """Simulates a single integrator model over the given control inputs starting from the
         initial state."""
         ...
 
-    async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
+    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the integrator model given the control input and
         current state."""
         ...

@@ -79,15 +79,12 @@ class JaxCosts[T: int, M: int](Costs[T, M], Protocol):
 
 
 class JaxDynamicalModel[
-    InStateT: JaxState,
-    OutStateT: JaxState,
+    StateT: JaxState,
     StateBatchT: JaxStateBatch,
     ControlInputSequenceT: JaxControlInputSequence,
     ControlInputBatchT: JaxControlInputBatch,
 ](
-    DynamicalModel[
-        InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-    ],
+    DynamicalModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
     Protocol,
 ): ...
 
@@ -125,37 +122,45 @@ class JaxZeroPadding[T: int, D_u: int, L: int]:
 
 @dataclass(kw_only=True, frozen=True)
 class JaxMppi[
+    StateT: JaxState,
+    StateBatchT: JaxStateBatch,
     ControlInputSequenceT: JaxControlInputSequence,
-    ControlInputPaddingT: JaxControlInputSequence,
-](
-    Mppi[
-        JaxState,
-        JaxState,
-        JaxStateBatch,
-        ControlInputSequenceT,
-        JaxControlInputBatch,
-        JaxCosts,
-    ]
-):
+    ControlInputBatchT: JaxControlInputBatch,
+    ControlInputPaddingT: JaxControlInputSequence = ControlInputSequenceT,
+](Mppi[StateT, ControlInputSequenceT]):
     planning_interval: int
+    model: DynamicalModel[
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ]
+    cost_function: JaxCostFunction[ControlInputBatchT, StateBatchT, JaxCosts]
+    sampler: Sampler[ControlInputSequenceT, ControlInputBatchT]
     update_function: JaxUpdateFunction[ControlInputSequenceT]
     padding_function: JaxPaddingFunction[ControlInputSequenceT, ControlInputPaddingT]
     filter_function: JaxFilterFunction[ControlInputSequenceT]
 
     @staticmethod
     def create[
-        CIS: JaxControlInputSequence = JaxControlInputSequence,
-        CIP: JaxControlInputSequence = JaxControlInputSequence,
+        S: JaxState,
+        SB: JaxStateBatch,
+        CIS: JaxControlInputSequence,
+        CIB: JaxControlInputBatch,
+        CIP: JaxControlInputSequence = CIS,
     ](
         *,
         planning_interval: int = 1,
+        model: DynamicalModel[S, SB, CIS, CIB],
+        cost_function: JaxCostFunction[CIB, SB, JaxCosts],
+        sampler: Sampler[CIS, CIB],
         update_function: JaxUpdateFunction[CIS] | None = None,
         padding_function: JaxPaddingFunction[CIS, CIP] | None = None,
         filter_function: JaxFilterFunction[CIS] | None = None,
-    ) -> "JaxMppi[CIS, CIP]":
+    ) -> "JaxMppi[S, SB, CIS, CIB, CIP]":
         """Creates a JAX-based MPPI controller."""
         return JaxMppi(
             planning_interval=planning_interval,
+            model=model,
+            cost_function=cost_function,
+            sampler=sampler,
             update_function=update_function
             or cast(JaxUpdateFunction[CIS], UseOptimalControlUpdate()),
             padding_function=padding_function
@@ -166,30 +171,21 @@ class JaxMppi[
     def __post_init__(self) -> None:
         assert self.planning_interval > 0, "Planning interval must be positive."
 
-    async def step[
-        InStateT: JaxState,
-        OutStateT: JaxState,
-        StateBatchT: JaxStateBatch,
-        ControlInputBatchT: JaxControlInputBatch,
-        CostsT: JaxCosts,
-    ](
+    async def step(
         self,
         *,
-        model: DynamicalModel[
-            InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-        ],
-        cost_function: JaxCostFunction[ControlInputBatchT, StateBatchT, CostsT],
-        sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,
-        initial_state: InStateT,
+        initial_state: StateT,
     ) -> Control[ControlInputSequenceT]:
         assert temperature > 0.0, "Temperature must be positive."
 
-        samples = sampler.sample(around=nominal_input)
+        samples = self.sampler.sample(around=nominal_input)
 
-        rollouts = await model.simulate(inputs=samples, initial_state=initial_state)
-        costs = cost_function(inputs=samples, states=rollouts)
+        rollouts = await self.model.simulate(
+            inputs=samples, initial_state=initial_state
+        )
+        costs = self.cost_function(inputs=samples, states=rollouts)
 
         optimal_control = compute_weighted_control(
             samples.array, costs.array, temperature

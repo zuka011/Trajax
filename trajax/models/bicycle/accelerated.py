@@ -201,7 +201,6 @@ class JaxBicycleControlInputBatch[T: int, M: int](
 class JaxBicycleModel(
     BicycleModel[
         JaxBicycleState,
-        JaxBicycleState,
         JaxBicycleStateBatch,
         JaxBicycleControlInputSequence,
         JaxBicycleControlInputBatch,

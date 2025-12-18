@@ -76,20 +76,19 @@ class ControlInputBatch[T: int, D_u: int, M: int](Protocol):
 
 
 class DynamicalModel[
-    InStateT: State,
-    OutStateT: State,
+    StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](Protocol):
     async def simulate(
-        self, inputs: ControlInputBatchT, initial_state: InStateT
+        self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         """Simulates the dynamical model over the given control inputs starting from the
         provided initial state."""
         ...
 
-    async def step(self, input: ControlInputSequenceT, state: InStateT) -> OutStateT:
+    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the dynamical model given the control input and current
         state."""
         ...
@@ -140,25 +139,13 @@ class Control[InputT: ControlInputSequence]:
     nominal: InputT
 
 
-class Mppi[
-    InStateT: State,
-    OutStateT: State,
-    StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
-    CostsT: Costs,
-](Protocol):
+class Mppi[StateT: State, ControlInputSequenceT: ControlInputSequence](Protocol):
     async def step(
         self,
         *,
-        model: DynamicalModel[
-            InStateT, OutStateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
-        ],
-        cost_function: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
-        sampler: Sampler[ControlInputSequenceT, ControlInputBatchT],
         temperature: float,
         nominal_input: ControlInputSequenceT,
-        initial_state: InStateT,
+        initial_state: StateT,
     ) -> Control[ControlInputSequenceT]:
         """Runs one iteration of the MPPI algorithm to compute the next optimal and nominal
         control sequences.
@@ -198,7 +185,7 @@ class FilterFunction[ControlInputSequenceT: ControlInputSequence](Protocol):
 class NoUpdate:
     """Returns the nominal input unchanged."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__[ControlInputSequenceT](
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -210,7 +197,7 @@ class NoUpdate:
 class UseOptimalControlUpdate:
     """Sets the nominal input to the optimal input."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__[ControlInputSequenceT](
         self,
         *,
         nominal_input: ControlInputSequenceT,
@@ -222,7 +209,7 @@ class UseOptimalControlUpdate:
 class NoFilter:
     """Returns the optimal input unchanged."""
 
-    def __call__[ControlInputSequenceT: ControlInputSequence](
+    def __call__[ControlInputSequenceT](
         self, *, optimal_input: ControlInputSequenceT
     ) -> ControlInputSequenceT:
         return optimal_input

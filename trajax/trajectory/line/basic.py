@@ -46,3 +46,7 @@ class NumpyLineTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints])
         assert shape_of(heading, matches=(T, M), name="heading")
 
         return NumPyReferencePoints.create(x=x, y=y, heading=heading)
+
+    @property
+    def path_length(self) -> float:
+        return self.length

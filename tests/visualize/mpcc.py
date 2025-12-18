@@ -22,7 +22,6 @@ type AugmentedState = types.augmented.State[PhysicalState, VirtualState]
 class MpccSimulationResult:
     reference: Trajectory
     states: Sequence[AugmentedState]
-    path_length: float
     contouring_errors: Array[Dim1]
     wheelbase: float
 
@@ -38,17 +37,19 @@ class MpccVisualizer:
     def create(
         *, output: str = "mpcc-simulation", reference_sample_count: int = 200
     ) -> "MpccVisualizer":
-        return MpccVisualizer(SimulationVisualizer(output), reference_sample_count)
+        return MpccVisualizer(
+            SimulationVisualizer.create(output=output), reference_sample_count
+        )
 
-    async def __call__(self, data: MpccSimulationResult) -> None:
-        await self.inner(self.extract(data))
+    async def __call__(self, data: MpccSimulationResult, *, key: str) -> None:
+        await self.inner(self.extract(data), key=key)
 
     async def can_visualize(self, data: object) -> bool:
         return isinstance(data, MpccSimulationResult)
 
     def extract(self, result: MpccSimulationResult) -> SimulationData:
         reference = self.sample_reference_trajectory(
-            result.reference, result.path_length
+            result.reference, result.reference.path_length
         )
         path_parameters = np.array([state.virtual.array[0] for state in result.states])
         ghost_positions = self.query_ghost_positions(result.reference, path_parameters)
@@ -59,7 +60,7 @@ class MpccVisualizer:
             positions_y=np.array([state.physical.y for state in result.states]),
             headings=np.array([state.physical.theta for state in result.states]),
             path_parameters=path_parameters,
-            path_length=result.path_length,
+            path_length=result.reference.path_length,
             ghost_x=ghost_positions.x,
             ghost_y=ghost_positions.y,
             errors=result.contouring_errors,
