@@ -150,6 +150,8 @@ class configure:
     def jax_mpcc_planner_from_base(
         reference: Trajectory = REFERENCE,
     ) -> JaxMpccPlannerConfiguration:
+        # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
+        # need to help them with an explicit annotation.
         planner: Planner = mppi.jax.base(
             model=(
                 augmented_model := AugmentedModel.of(

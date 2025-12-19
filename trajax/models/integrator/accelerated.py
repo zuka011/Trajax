@@ -163,7 +163,6 @@ def integrator_simulate(
     clipped_controls = jnp.clip(controls, *velocity_limits)
     initial = jnp.broadcast_to(initial_state[:, None], (state_dimension, rollout_count))
 
-    @jax.jit
     @jaxtyped
     def step(
         state: Float[JaxArray, "D_u M"], control: Float[JaxArray, "D_u M"]

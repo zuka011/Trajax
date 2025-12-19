@@ -67,6 +67,22 @@ class JaxBicycleState(JaxState[BicycleD_x]):
     def v(self) -> float:
         return float(self.array[3])
 
+    @property
+    def x_scalar(self) -> Scalar:
+        return self.array[0]
+
+    @property
+    def y_scalar(self) -> Scalar:
+        return self.array[1]
+
+    @property
+    def theta_scalar(self) -> Scalar:
+        return self.array[2]
+
+    @property
+    def v_scalar(self) -> Scalar:
+        return self.array[3]
+
 
 @dataclass(kw_only=True, frozen=True)
 class StateSequence:
@@ -295,10 +311,10 @@ class JaxBicycleModel(
 
         initial = jnp.stack(
             [
-                jnp.full(rollout_count, initial_state.x),
-                jnp.full(rollout_count, initial_state.y),
-                jnp.full(rollout_count, initial_state.theta),
-                jnp.full(rollout_count, initial_state.v),
+                jnp.full(rollout_count, initial_state.x_scalar),
+                jnp.full(rollout_count, initial_state.y_scalar),
+                jnp.full(rollout_count, initial_state.theta_scalar),
+                jnp.full(rollout_count, initial_state.v_scalar),
             ]
         )
 
@@ -366,7 +382,6 @@ def simulate(
     steering_limits: tuple[Scalar, Scalar],
     acceleration_limits: tuple[Scalar, Scalar],
 ) -> StateBatchArray:
-    @jax.jit
     @jaxtyped
     def do_step(
         state: StatesAtTimeStep, control: ControlInputsAtTimeStep

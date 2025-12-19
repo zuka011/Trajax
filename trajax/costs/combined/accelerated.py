@@ -1,9 +1,7 @@
 from typing import Sequence
 
 from trajax.type import jaxtyped
-from trajax.mppi import (
-    JaxCosts,
-)
+from trajax.mppi import JaxCosts
 from trajax.costs.combined.common import CostSumFunction
 
 from jaxtyping import Array as JaxArray, Float
@@ -24,4 +22,4 @@ class JaxCostSumFunction[CostsT: JaxCosts](CostSumFunction[CostsT]):
 def sum_costs(
     costs: list[Float[JaxArray, "T M"]], initial: Float[JaxArray, "T M"]
 ) -> Float[JaxArray, "T M"]:
-    return jnp.sum(jnp.asarray(costs + [initial]), axis=0)
+    return jnp.stack(costs).sum(axis=0) + initial

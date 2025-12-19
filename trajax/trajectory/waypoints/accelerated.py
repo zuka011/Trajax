@@ -1,4 +1,4 @@
-from typing import overload
+from typing import overload, Literal
 from dataclasses import dataclass
 
 from trajax.type import jaxtyped
@@ -7,7 +7,7 @@ from trajax.trajectory.accelerated import JaxPathParameters, JaxReferencePoints,
 from trajax.trajectory.waypoints.basic import NumpyWaypointsTrajectory
 
 from scipy.interpolate import CubicSpline
-from jaxtyping import Array as JaxArray, Float
+from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D
 
 import jax
@@ -68,9 +68,7 @@ class JaxWaypointsTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
     def query[T: int, M: int](
         self, parameters: JaxPathParameters[T, M]
     ) -> JaxReferencePoints[T, M]:
-        assert jnp.all((0.0 <= parameters.array) & (parameters.array <= self.length)), (
-            f"Path parameters out of bounds. Got: {parameters.array}"
-        )
+        assert path_parameters_are_valid(parameters.array, path_length=self.path_length)
 
         return JaxReferencePoints(
             query(
@@ -84,6 +82,21 @@ class JaxWaypointsTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
     @property
     def path_length(self) -> float:
         return self.length
+
+
+def report_invalid_parameters(valid: bool, parameters: Float[JaxArray, "S 4"]) -> None:
+    if not valid:
+        print(f"Path parameters out of bounds. Got: {parameters}")
+
+
+@jax.jit
+@jaxtyped
+def path_parameters_are_valid(
+    path_parameters: Float[JaxArray, "T M"], *, path_length: Scalar
+) -> Literal[True]:
+    valid = jnp.all((0.0 <= path_parameters) & (path_parameters <= path_length))
+    jax.debug.callback(report_invalid_parameters, valid, path_parameters)
+    return True
 
 
 def coefficients_from(spline: CubicSpline) -> Float[JaxArray, "S 4"]:

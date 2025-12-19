@@ -36,7 +36,7 @@ class BenchmarkStats:
     min: float = 0.0
     max: float = 0.0
     mean: float = 0.0
-    std: float = 0.0
+    stddev: float = 0.0
     rounds: int = 0
     median: float = 0.0
     ops: float = 0.0
@@ -44,7 +44,7 @@ class BenchmarkStats:
     q1: float = 0.0
     q3: float = 0.0
     iqr_outliers: int = 0
-    std_outliers: int = 0
+    stddev_outliers: int = 0
     outliers: str = ""
     ld15iqr: float = 0.0
     hd15iqr: float = 0.0
@@ -195,7 +195,7 @@ class report:
                 format.time(stats.min),
                 format.time(stats.mean),
                 format.time(stats.max),
-                format.time(stats.std),
+                format.time(stats.stddev),
                 str(stats.rounds),
                 format.operations(stats.ops),
                 format.comparison(stats.mean, baseline),
