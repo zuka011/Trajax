@@ -7,11 +7,15 @@ wheels/
 *.egg-info
 .coverage
 
-# Virtual environments
+# Virtual environments, caches, and IDE settings
 .venv
 .vscode
 .pytest_cache
 .ruff_cache
+benchmark.json
 
 # Test visualizations
 tests/visualizations/
+
+# Chat sessions
+.chats
