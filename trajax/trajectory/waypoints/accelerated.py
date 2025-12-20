@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from trajax.type import jaxtyped
 from trajax.trajectory.common import D_R, Trajectory
 from trajax.trajectory.accelerated import JaxPathParameters, JaxReferencePoints, stack
-from trajax.trajectory.waypoints.basic import NumpyWaypointsTrajectory
+from trajax.trajectory.waypoints.basic import NumPyWaypointsTrajectory
 
 from scipy.interpolate import CubicSpline
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -54,7 +54,7 @@ class JaxWaypointsTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
         Returns:
             A waypoints trajectory using cubic spline interpolation.
         """
-        trajectory = NumpyWaypointsTrajectory.create(
+        trajectory = NumPyWaypointsTrajectory.create(
             points=np.asarray(points), path_length=path_length
         )
 

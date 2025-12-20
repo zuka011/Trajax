@@ -1,2 +1,2 @@
-from .basic import NumpyLineTrajectory as NumpyLineTrajectory
+from .basic import NumPyLineTrajectory as NumPyLineTrajectory
 from .accelerated import JaxLineTrajectory as JaxLineTrajectory

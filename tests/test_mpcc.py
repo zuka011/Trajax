@@ -102,6 +102,7 @@ class MpccPlannerConfiguration[
     ],
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"mpcc-{seed}")
+@mark.integration
 async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     StateT: AugmentedState,
     StateBatchT: StateBatch,

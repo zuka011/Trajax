@@ -43,4 +43,11 @@
   abstract      = {Summary This paper describes autonomous racing of RC race cars based on mathematical optimization. Using a dynamical model of the vehicle, control inputs are computed by receding horizon based controllers, where the objective is to maximize progress on the track subject to the requirement of staying on the track and avoiding opponents. Two different control formulations are presented. The first controller employs a two-level structure, consisting of a path planner and a nonlinear model predictive controller (NMPC) for tracking. The second controller combines both tasks in one nonlinear optimization problem (NLP) following the ideas of contouring control. Linear time varying models obtained by linearization are used to build local approximations of the control NLPs in the form of convex quadratic programs (QPs) at each sampling time. The resulting QPs have a typical MPC structure and can be solved in the range of milliseconds by recent structure exploiting solvers, which is key to the real-time feasibility of the overall control scheme. Obstacle avoidance is incorporated by means of a high-level corridor planner based on dynamic programming, which generates convex constraints for the controllers according to the current position of opponents and the track layout. The control performance is investigated experimentally using 1:43 scale RC race cars, driven at speeds of more than 3\hspace{0.167em}m/s and in operating regions with saturated rear tire forces (drifting). The algorithms run at 50\hspace{0.167em}Hz sampling rate on embedded computing platforms, demonstrating the real-time feasibility and high performance of optimization-based approaches for autonomous racing. Copyright \textcopyright{} 2014 John Wiley \& Sons, Ltd.},
   year          = {2015}
 }
+@article{Schulman2013,
+  title         = {Finding Locally Optimal, Collision-Free Trajectories with Sequential Convex Optimization},
+  author        = {John Schulman and Jonathan Ho and Alex X. Lee and Ibrahim Awwal and Henry Bradlow and P. Abbeel},
+  journal       = {Robotics: Science and Systems IX},
+  year          = {2013},
+  url           = {https://api.semanticscholar.org/CorpusID:2393365}
+}
 // https://arxiv.org/pdf/2001.03093 Reference for CVM

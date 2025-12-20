@@ -58,8 +58,10 @@ from trajax.costs import (
     JaxPathVelocityExtractor,
     JaxPositionExtractor,
     JaxContouringCost,
-    Error as Error,
+    Error as Error,  # NOTE: Aliased to workaround ruff bug.
     ContouringCost as ContouringCost,
+    NumPyDistance,
+    JaxDistance,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -149,6 +151,7 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = NumPyPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
+        type Distance[T: int = Any, V: int = Any, M: int = Any] = NumPyDistance[T, V, M]
 
         type CostFunction[
             T: int = Any,
@@ -170,6 +173,7 @@ class types:
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
         positions: Final = NumPyPositions.create
+        distance: Final = NumPyDistance
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -241,6 +245,7 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = JaxPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
+        type Distance[T: int = Any, V: int = Any, M: int = Any] = JaxDistance[T, V, M]
 
         type CostFunction[
             T: int = Any,
@@ -260,6 +265,7 @@ class types:
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create
         positions: Final = JaxPositions.create
+        distance: Final = JaxDistance
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

@@ -14,11 +14,11 @@ from .common import (
     ReferencePoints as ReferencePoints,
 )
 from .line import (
-    NumpyLineTrajectory as NumpyLineTrajectory,
+    NumPyLineTrajectory as NumPyLineTrajectory,
     JaxLineTrajectory as JaxLineTrajectory,
 )
 from .waypoints import (
-    NumpyWaypointsTrajectory as NumpyWaypointsTrajectory,
+    NumPyWaypointsTrajectory as NumPyWaypointsTrajectory,
     JaxWaypointsTrajectory as JaxWaypointsTrajectory,
 )
 from .factory import trajectory as trajectory

@@ -9,7 +9,7 @@ import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyLineTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
+class NumPyLineTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
     start: tuple[float, float]
     end: tuple[float, float]
 
@@ -21,9 +21,9 @@ class NumpyLineTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints])
     @staticmethod
     def create(
         *, start: tuple[float, float], end: tuple[float, float], path_length: float
-    ) -> "NumpyLineTrajectory":
+    ) -> "NumPyLineTrajectory":
         """Generates a straight line trajectory from start to end."""
-        return NumpyLineTrajectory(
+        return NumPyLineTrajectory(
             start=start,
             end=end,
             delta_x=(delta_x := end[0] - start[0]),

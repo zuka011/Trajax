@@ -1,3 +1,54 @@
+# ==============================================================================
+# TODO: COLLISION COST FUNCTION PROPERTY TESTS
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Gradient & Decay Tests
+# ------------------------------------------------------------------------------
+# TODO: Test Distance Decay (Gradient Check)
+#   1. Setup: Obstacle at (0,0).
+#   2. Evaluate Cost at:
+#      - d_close = 0.5m (High danger)
+#      - d_med   = 1.5m (Medium danger)
+#      - d_far   = 10.0m (Safe)
+#   3. ASSERT: Cost(close) > Cost(med) > Cost(far).
+#   4. ASSERT: Cost(far) is approximately 0.0 (or base cost).
+#   WHY: Ensures the optimizer is pushed AWAY from the obstacle (correct gradient sign).
+
+# ------------------------------------------------------------------------------
+# 2. Collision Event Logic
+# ------------------------------------------------------------------------------
+# TODO: Test Interior Penalty (Penetration check)
+#   1. Setup: Circular obstacle Radius=1.0 at (0,0).
+#   2. Evaluate Cost at:
+#      - d_touch = 1.0m (At boundary)
+#      - d_in    = 0.5m (Inside obstacle)
+#   3. ASSERT: Cost(in) >> Cost(touch).
+#   WHY: Ensures the cost function doesn't "give up" or flip signs inside the object.
+#        Critical to prevent the robot from teleporting/tunneling through walls.
+
+# ------------------------------------------------------------------------------
+# 3. Geometric Invariance
+# ------------------------------------------------------------------------------
+# TODO: Test Rigid Body Invariance
+#   1. Scenario A: Robot at (1,0), Obstacle at (2,0). Calculate Cost_A.
+#   2. Scenario B: Rotate/Translate both by random transform (e.g., +100m, +90deg).
+#      - New relative distance must be identical.
+#   3. ASSERT: Cost_A == Cost_B.
+#   WHY: Catches bugs where cost depends on global coordinates instead of relative distance.
+
+# ------------------------------------------------------------------------------
+# 4. Topology & Summation
+# ------------------------------------------------------------------------------
+# TODO: Test The "Tunnel" (Summation Logic)
+#   1. Setup: Obstacle A at y=2, Obstacle B at y=-2.
+#   2. Evaluate Cost at:
+#      - y=0 (Dead center, "Safe" passage).
+#      - y=1.5 (Near A, unsafe).
+#   3. ASSERT: Cost(center) < Cost(near_A).
+#   WHY: Verifies that costs from multiple obstacles sum correctly to form a
+#        "valley" of safety, rather than maximizing or overwriting each other.
+
 from trajax import (
     ControlInputBatch,
     StateBatch,
@@ -13,8 +64,8 @@ from numtypes import array
 import numpy as np
 import jax.numpy as jnp
 
-from tests.dsl import mppi as data, clear_type
-from pytest import mark
+from tests.dsl import mppi as data, clear_type, stubs
+from pytest import mark, approx
 
 
 @mark.parametrize(
@@ -797,6 +848,58 @@ M = clear_type
                 (0.1, 1.0, 1.0, 1.0),
             )
         ],
+        (
+            inputs := data.numpy.control_input_batch(
+                np.random.uniform(size=(T := 3, D_u := 2, M := 2))
+            ),
+            states := data.numpy.state_batch(
+                np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
+            ),
+            low_weight_cost := costs.numpy.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    distance := data.numpy.distance(
+                        np.random.uniform(size=(T, V := 3, M))  # type: ignore
+                    ),
+                    when_states_are=states,
+                ),
+                distance_threshold=(
+                    distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
+                ),
+                weight=2.0,
+            ),
+            high_weight_cost := costs.numpy.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    distance, when_states_are=states
+                ),
+                distance_threshold=distance_threshold,
+                weight=20.0,
+            ),
+        ),
+        (
+            inputs := data.jax.control_input_batch(
+                np.random.uniform(size=(T := 3, D_u := 2, M := 2))
+            ),
+            jax_states := data.jax.state_batch(
+                np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
+            ),
+            low_weight_cost := costs.jax.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    jax_distance := data.jax.distance(
+                        np.random.uniform(size=(T, V := 3, M))  # type: ignore
+                    ),
+                    when_states_are=jax_states,
+                ),
+                distance_threshold=(distance_threshold := jnp.array([1.0, 2.0, 3.0])),
+                weight=2.0,
+            ),
+            high_weight_cost := costs.jax.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    jax_distance, when_states_are=jax_states
+                ),
+                distance_threshold=distance_threshold,
+                weight=20.0,
+            ),
+        ),
     ],
 )
 def test_that_cost_increases_with_weight[
@@ -1070,3 +1173,208 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
         f"Cost should be higher for changes in dimensions with higher weights. "
         f"Got costs: {J}"
     )
+
+
+@mark.parametrize(
+    [
+        "cost",
+        "inputs",
+        "states",
+        "cost_order",
+        "non_zero_cost_indices",
+        "zero_cost_indices",
+    ],
+    [
+        (
+            cost := costs.numpy.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.numpy.distance(
+                        array(  # Robot has V = 2 parts.
+                            [
+                                # Collisions
+                                [[-0.8, -0.7, -0.6, -0.5], [-0.6, -0.5, -0.4, -0.3]],
+                                # Near Collision (close to threshold)
+                                [[-0.2, -0.1, 0.0, 0.1], [0.5, 0.6, 0.7, 0.8]],
+                                # Middle Distance (just below threshold)
+                                [[0.6, 0.7, 0.8, 0.9], [0.8, 0.85, 0.9, 0.95]],
+                                # Very Far (well above threshold)
+                                [[2.0, 2.5, 3.0, 5.0], [3.0, 3.5, 4.0, 10.0]],
+                            ],
+                            shape=(T := 4, V := 2, M := 4),
+                        )
+                    ),
+                    when_states_are=(
+                        states := data.numpy.state_batch(
+                            np.random.uniform(size=(T, D_x := 2, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=array([1.0, 1.0], shape=(V,)),
+                weight=2.0,
+            ),
+            inputs := data.numpy.control_input_batch(np.zeros((T, D_u := 3, M))),
+            states,
+            cost_order := [
+                *[(0, 0), (0, 1), (0, 2), (0, 3)],  # Collisions
+                *[(1, 0), (1, 1), (1, 2), (1, 3)],  # Near Collision
+                *[(2, 0), (2, 1), (2, 2), (2, 3)],  # Middle Distance
+                *[(3, 0), (3, 1), (3, 2), (3, 3)],  # Very Far
+            ],
+            non_zero_cost_indices := [(0, 0), (1, 2), (2, 3)],
+            zero_cost_indices := [(3, 0), (3, 1), (3, 2), (3, 3)],
+        ),
+        (
+            cost := costs.jax.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.jax.distance(
+                        array(  # Robot has V = 2 parts.
+                            [
+                                # Collisions
+                                [[-0.8, -0.7, -0.6, -0.5], [-0.6, -0.5, -0.4, -0.3]],
+                                # Near Collision (close to threshold)
+                                [[-0.2, -0.1, 0.0, 0.1], [0.5, 0.6, 0.7, 0.8]],
+                                # Middle Distance (just below threshold)
+                                [[0.6, 0.7, 0.8, 0.9], [0.8, 0.85, 0.9, 0.95]],
+                                # Very Far (well above threshold)
+                                [[2.0, 2.5, 3.0, 5.0], [3.0, 3.5, 4.0, 10.0]],
+                            ],
+                            shape=(T := 4, V := 2, M := 4),
+                        )
+                    ),
+                    when_states_are=(
+                        states := data.jax.state_batch(
+                            np.random.uniform(size=(T, D_x := 2, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=jnp.array([1.0, 1.0]),
+                weight=2.0,
+            ),
+            inputs := data.jax.control_input_batch(np.zeros((T, D_u := 3, M))),
+            states,
+            cost_order := [
+                *[(0, 0), (0, 1), (0, 2), (0, 3)],  # Collisions
+                *[(1, 0), (1, 1), (1, 2), (1, 3)],  # Near Collision
+                *[(2, 0), (2, 1), (2, 2), (2, 3)],  # Middle Distance
+                *[(3, 0), (3, 1), (3, 2), (3, 3)],  # Very Far
+            ],
+            non_zero_cost_indices := [(0, 0), (1, 2), (2, 3)],
+            zero_cost_indices := [(3, 0), (3, 1), (3, 2), (3, 3)],
+        ),
+    ],
+)
+def test_that_collision_cost_decreases_with_distance[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+    cost_order: list[tuple[int, int]],
+    non_zero_cost_indices: list[tuple[int, int]],
+    zero_cost_indices: list[tuple[int, int]],
+) -> None:
+    J = np.asarray(cost(inputs=inputs, states=states))
+
+    assert all(
+        [
+            J[t, m] >= J[next_t, next_m]
+            for (t, m), (next_t, next_m) in zip(cost_order, cost_order[1:])
+        ]
+    ), (
+        f"Collision cost should decrease with increasing distance to obstacles. Got costs: {J}"
+    )
+    assert all([J[t, m] > 0.0 for (t, m) in non_zero_cost_indices]), (
+        f"Cost should be non-zero when distance is less than threshold. Got costs: {J}"
+    )
+    assert all([J[t, m] == approx(0.0, abs=1e-3) for (t, m) in zero_cost_indices]), (
+        f"Cost should be zero when distance is significantly above threshold. Got costs: {J}"
+    )
+
+
+@mark.parametrize(
+    ["cost", "inputs", "states", "cost_order"],
+    [
+        (
+            cost := costs.numpy.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.numpy.distance(
+                        array(
+                            [
+                                # Only v=2 contributes
+                                [[20, 10], [100.0, 20.0], [0.6, 0.65]],
+                                # v=1 and v=2 contribute
+                                [[0.3, 0.35], [0.3, 0.35], [0.3, 0.35]],
+                                # All parts contribute
+                                [[0.1, 0.15], [0.1, 0.15], [0.1, 0.15]],
+                                # All parts contribute
+                                [[-0.1, -0.15], [-0.1, -0.15], [-0.1, -0.15]],
+                            ],
+                            shape=(T := 4, V := 3, M := 2),
+                        )
+                    ),
+                    when_states_are=(
+                        states := data.numpy.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=array([0.25, 0.5, 0.75], shape=(V,)),
+                weight=2.0,
+            ),
+            inputs := data.numpy.control_input_batch(np.zeros((T, D_u := 3, M))),
+            states,
+            cost_order := [(2, 0), (2, 1), (1, 0), (1, 1), (0, 0), (0, 1)],
+        ),
+        (
+            cost := costs.jax.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.jax.distance(
+                        array(
+                            [
+                                # Only v=2 contributes
+                                [[20, 10], [100.0, 20.0], [0.6, 0.65]],
+                                # v=1 and v=2 contribute
+                                [[0.3, 0.35], [0.3, 0.35], [0.3, 0.35]],
+                                # All parts contribute
+                                [[0.1, 0.15], [0.1, 0.15], [0.1, 0.15]],
+                                # All parts contribute
+                                [[-0.1, -0.15], [-0.1, -0.15], [-0.1, -0.15]],
+                            ],
+                            shape=(T := 4, V := 3, M := 2),
+                        )
+                    ),
+                    when_states_are=(
+                        states := data.jax.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=jnp.array([0.25, 0.5, 0.75]),
+                weight=2.0,
+            ),
+            inputs := data.jax.control_input_batch(np.zeros((T, D_u := 3, M))),
+            states,
+            cost_order := [(2, 0), (2, 1), (1, 0), (1, 1), (0, 0), (0, 1)],
+        ),
+    ],
+)
+def test_that_collision_cost_uses_different_thresholds_for_different_parts[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+    cost_order: list[tuple[int, int]],
+) -> None:
+    J = np.asarray(cost(inputs=inputs, states=states))
+
+    assert all(
+        [
+            J[t, m] > J[next_t, next_m]
+            for (t, m), (next_t, next_m) in zip(cost_order, cost_order[1:])
+        ]
+    ), f"Collision cost should reflect different thresholds per part. Got costs: {J}"

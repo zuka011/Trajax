@@ -5,11 +5,13 @@ from trajax import (
     StateBatch,
     ControlInputBatch,
     ControlInputSequence,
+    Distance,
     Sampler as SamplerLike,
     UpdateFunction as UpdateFunctionLike,
     PaddingFunction as PaddingFunctionLike,
     FilterFunction as FilterFunctionLike,
     DynamicalModel as DynamicalModelLike,
+    DistanceExtractor as DistanceExtractorLike,
 )
 
 import numpy as np
@@ -172,3 +174,24 @@ class DynamicalModel[
 
     async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")
+
+
+@dataclass(frozen=True)
+class DistanceExtractor[StateBatchT: StateBatch, DistanceT: Distance](
+    DistanceExtractorLike[StateBatchT, DistanceT]
+):
+    expected_states: StateBatchT
+    result: DistanceT
+
+    @staticmethod
+    def returns[SB: StateBatch, D: Distance](
+        distances: D, *, when_states_are: SB
+    ) -> "DistanceExtractor[SB, D]":
+        return DistanceExtractor(expected_states=when_states_are, result=distances)
+
+    def __call__(self, states: StateBatchT) -> DistanceT:
+        assert np.array_equal(self.expected_states, states), (
+            f"DistanceExtractor received unexpected states. "
+            f"Expected: {self.expected_states}, Got: {states}"
+        )
+        return self.result

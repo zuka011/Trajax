@@ -12,12 +12,14 @@ from trajax.costs.basic import (
     NumPyLagCost,
     NumPyProgressCost,
     NumPyControlSmoothingCost,
+    NumPyCollisionCost,
 )
 from trajax.costs.accelerated import (
     JaxContouringCost,
     JaxLagCost,
     JaxProgressCost,
     JaxControlSmoothingCost,
+    JaxCollisionCost,
 )
 from trajax.costs.combined import CombinedCost, NumPyCostSumFunction, JaxCostSumFunction
 
@@ -43,6 +45,9 @@ class costs:
         class comfort:
             control_smoothing: Final = NumPyControlSmoothingCost.create
 
+        class safety:
+            collision: Final = NumPyCollisionCost.create
+
     class jax:
         @staticmethod
         def combined[
@@ -62,3 +67,6 @@ class costs:
 
         class comfort:
             control_smoothing: Final = JaxControlSmoothingCost.create
+
+        class safety:
+            collision: Final = JaxCollisionCost.create

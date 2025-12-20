@@ -4,11 +4,11 @@ from tests.benchmarks.runner.common import BenchmarkTarget
 
 
 @dataclass(frozen=True)
-class NumpyBenchmarkRunner:
+class NumPyBenchmarkRunner:
     @staticmethod
-    def create() -> "NumpyBenchmarkRunner":
+    def create() -> "NumPyBenchmarkRunner":
         """Creates a benchmark runner for NumPy implementations."""
-        return NumpyBenchmarkRunner()
+        return NumPyBenchmarkRunner()
 
     async def warm_up(self, target: BenchmarkTarget) -> None:
         await target()

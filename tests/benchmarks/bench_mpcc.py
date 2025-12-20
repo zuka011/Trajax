@@ -5,7 +5,7 @@ from trajax import State, ControlInputSequence, Mppi
 from tests.benchmarks.runner import (
     run_benchmark,
     BenchmarkRunner,
-    NumpyBenchmarkRunner,
+    NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
 from tests.examples import numpy_mpcc, jax_mpcc
@@ -27,7 +27,7 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
         *[
             (
                 id,
-                NumpyBenchmarkRunner.create(),
+                NumPyBenchmarkRunner.create(),
                 MpccConfiguration(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,

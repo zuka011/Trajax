@@ -17,7 +17,7 @@ from trajax.trajectory import (
     NumPyPositions,
 )
 from trajax.states import NumPySimpleCosts
-from trajax.costs.common import ContouringCost, Error
+from trajax.costs.common import ContouringCost, Error, Distance
 
 from numtypes import Array, Dims, Dim2
 
@@ -42,11 +42,27 @@ class NumPyPositionExtractor[StateT: NumPyStateBatch](Protocol):
         ...
 
 
+class NumPyDistanceExtractor[StateT: NumPyStateBatch, DistanceT: "NumPyDistance"](
+    Protocol
+):
+    def __call__(self, states: StateT, /) -> DistanceT:
+        """Extracts minimum distances to obstacles in the environment from a batch of states."""
+        ...
+
+
 @dataclass(frozen=True)
 class NumPyError[T: int, M: int](Error[T, M]):
     array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+        return self.array
+
+
+@dataclass(frozen=True)
+class NumPyDistance[T: int, V: int, M: int](Distance[T, V, M]):
+    array: Array[Dims[T, V, M]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M]]:
         return self.array
 
 
@@ -214,3 +230,34 @@ class NumPyControlSmoothingCost[D_u: int](
         cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)
 
         return NumPySimpleCosts(cost_per_time_step)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyCollisionCost[StateT: NumPyStateBatch, DistanceT: NumPyDistance, V: int](
+    CostFunction[NumPyControlInputBatch[int, int, int], StateT, NumPySimpleCosts]
+):
+    distance: NumPyDistanceExtractor[StateT, DistanceT]
+    distance_threshold: Array[Dims[V]]
+    weight: float
+
+    @staticmethod
+    def create[S: StateBatch, D: NumPyDistance](
+        *,
+        distance: NumPyDistanceExtractor[S, D],
+        distance_threshold: Array[Dims[V]],
+        weight: float,
+    ) -> "NumPyCollisionCost[S, D, V]":
+        return NumPyCollisionCost(
+            distance=distance,
+            distance_threshold=distance_threshold,
+            weight=weight,
+        )
+
+    def __call__[T: int, M: int](
+        self, *, inputs: NumPyControlInputBatch[T, int, M], states: StateT
+    ) -> NumPySimpleCosts[T, M]:
+        cost = self.distance_threshold[np.newaxis, :, np.newaxis] - np.asarray(
+            self.distance(states)
+        )
+
+        return NumPySimpleCosts(self.weight * np.clip(cost, 0, None).sum(axis=1))

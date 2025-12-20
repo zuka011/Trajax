@@ -67,6 +67,7 @@ pythonpath = [".", "trajax", "tests"]
 python_files = ["test_*.py", "bench_*.py"]
 python_functions = ["test_*", "bench_*"]
 markers = [
+    "integration: Mark the test as an integration test.",
     "visualize: Mark the test to produce visualization data using the given visualizer.",
     "benchmark: Performance benchmarks (deselected by default, use --benchmark-enable)",
 ]

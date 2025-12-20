@@ -4,16 +4,19 @@ from .trajectory import (
     PathParameters as PathParameters,
     ReferencePoints as ReferencePoints,
     trajectory as trajectory,
-    NumpyLineTrajectory as NumpyLineTrajectory,
-    NumpyWaypointsTrajectory as NumpyWaypointsTrajectory,
+    NumPyLineTrajectory as NumPyLineTrajectory,
+    NumPyWaypointsTrajectory as NumPyWaypointsTrajectory,
     JaxLineTrajectory as JaxLineTrajectory,
     JaxWaypointsTrajectory as JaxWaypointsTrajectory,
 )
 from .costs import (
     costs as costs,
     CombinedCost as CombinedCost,
-    ContouringCost as ContouringCost,
     Error as Error,
+    ContouringCost as ContouringCost,
+    Distance as Distance,
+    DistanceExtractor as DistanceExtractor,
+    CollisionCost as CollisionCost,
 )
 from .samplers import sampler as sampler
 from .states import (

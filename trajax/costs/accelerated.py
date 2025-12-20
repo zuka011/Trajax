@@ -1,7 +1,7 @@
 from typing import Protocol, overload, cast
 from dataclasses import dataclass
 
-from trajax.type import jaxtyped
+from trajax.type import jaxtyped, DataType
 from trajax.mppi import (
     CostFunction,
     JaxControlInputBatch,
@@ -17,10 +17,12 @@ from trajax.trajectory import (
     JaxPositions,
 )
 from trajax.states import JaxSimpleCosts
+from trajax.costs.common import Distance
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims
 
+import numpy as np
 import jax
 import jax.numpy as jnp
 
@@ -40,6 +42,12 @@ class JaxPathVelocityExtractor[InputT: JaxControlInputBatch](Protocol):
 class JaxPositionExtractor[StateT: JaxStateBatch](Protocol):
     def __call__(self, states: StateT, /) -> JaxPositions:
         """Extracts (x, y) positions from a batch of states."""
+        ...
+
+
+class JaxDistanceExtractor[StateT: JaxStateBatch, DistanceT: "JaxDistance"](Protocol):
+    def __call__(self, states: StateT, /) -> DistanceT:
+        """Extracts minimum distances to obstacles in the environment from a batch of states."""
         ...
 
 
@@ -247,6 +255,52 @@ class JaxControlSmoothingCost[D_u: int](
         )
 
 
+@jaxtyped
+@dataclass(frozen=True)
+class JaxDistance[T: int, V: int, M: int](Distance[T, V, M]):
+    _array: Float[JaxArray, "T V M"]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M]]:
+        return np.asarray(self.array, dtype=dtype)
+
+    @property
+    def array(self) -> Float[JaxArray, "T V M"]:
+        return self._array
+
+
+@dataclass(kw_only=True, frozen=True)
+class JaxCollisionCost[StateT: JaxStateBatch, DistanceT: JaxDistance, V: int](
+    CostFunction[JaxControlInputBatch[int, int, int], StateT, JaxSimpleCosts]
+):
+    distance: JaxDistanceExtractor[StateT, DistanceT]
+    distance_threshold: Float[JaxArray, "V"]
+    weight: float
+
+    @staticmethod
+    def create[S: JaxStateBatch, D: JaxDistance](
+        *,
+        distance: JaxDistanceExtractor[S, D],
+        distance_threshold: Float[JaxArray, "V"],
+        weight: float,
+    ) -> "JaxCollisionCost[S, D, V]":
+        return JaxCollisionCost(
+            distance=distance,
+            distance_threshold=distance_threshold,
+            weight=weight,
+        )
+
+    def __call__[T: int, M: int](
+        self, *, inputs: JaxControlInputBatch[T, int, M], states: StateT
+    ) -> JaxSimpleCosts[T, M]:
+        return JaxSimpleCosts(
+            collision_cost(
+                distance=self.distance(states).array,
+                distance_threshold=self.distance_threshold,
+                weight=self.weight,
+            )
+        )
+
+
 @jax.jit
 @jaxtyped
 def contour_error(
@@ -309,3 +363,15 @@ def control_smoothing_cost(
     weighted_squared_diffs = squared_diffs * weights[jnp.newaxis, :, jnp.newaxis]
     cost_per_time_step = jnp.sum(weighted_squared_diffs, axis=1)
     return cost_per_time_step
+
+
+@jax.jit
+@jaxtyped
+def collision_cost(
+    *,
+    distance: Float[JaxArray, "T V M"],
+    distance_threshold: Float[JaxArray, "V"],
+    weight: Scalar,
+) -> Float[JaxArray, "T M"]:
+    cost = distance_threshold[jnp.newaxis, :, jnp.newaxis] - distance
+    return weight * jnp.clip(cost, 0, None).sum(axis=1)

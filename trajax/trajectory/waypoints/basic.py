@@ -12,14 +12,14 @@ type PointArray = Array[Dims[int, D[2]]]
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumpyWaypointsTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
+class NumPyWaypointsTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoints]):
     length: float
     reference_points: Array[Dim1]
     spline_x: CubicSpline
     spline_y: CubicSpline
 
     @staticmethod
-    def create(*, points: PointArray, path_length: float) -> "NumpyWaypointsTrajectory":
+    def create(*, points: PointArray, path_length: float) -> "NumPyWaypointsTrajectory":
         """Creates a waypoints trajectory from a set of 2D points.
 
         Args:
@@ -38,7 +38,7 @@ class NumpyWaypointsTrajectory(Trajectory[NumPyPathParameters, NumPyReferencePoi
         spline_x = CubicSpline(normalized_length, x, bc_type="natural")
         spline_y = CubicSpline(normalized_length, y, bc_type="natural")
 
-        return NumpyWaypointsTrajectory(
+        return NumPyWaypointsTrajectory(
             length=path_length,
             reference_points=normalized_length,
             spline_x=spline_x,

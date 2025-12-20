@@ -137,6 +137,7 @@ Where $(dot)_t$ represents the value of $(dot)$ at time step $t$. A Euler integr
 
 == Computational Framework
 
+#let ego-parts = $V$
 #let state-single-space = $cal(X)$
 #let input-space = $bold(cal(U))$
 #let state-space = $bold(cal(X))$
@@ -148,6 +149,18 @@ Where $(dot)_t$ represents the value of $(dot)$ at time step $t$. A Euler integr
 #let cost-batch = cost-batch-(input-batch, state-batch)
 #let state-dimension = $D_x$
 #let control-dimension = $D_u$
+#let min-distance-(..args, sub: none) = function(
+  name: $bold(sans(d))$,
+  ..args,
+  sub: sub,
+)
+#let min-distance = min-distance-()
+#let min-distance-batch-(..args, sub: none) = function(
+  name: $bold(sans(D))$,
+  ..args,
+  sub: sub,
+)
+#let min-distance-batch = min-distance-batch-()
 
 Since MPPI requires similar computations to be performed many times for each planning step, a parallel implementation will be significantly more performant than a sequential one. For this reason, it is more convenient to think of *batches* of states and inputs. Here's the corresponding notation:
 
@@ -172,6 +185,17 @@ Analogously, we can define a *batch cost function*:
   #align(
     center,
     $#cost-batch-(input-batch, state-batch) = {#cost-($#input _1$, $#state _1$), #cost-($#input _2$, $#state _2$), ..., #cost-($#input _#rollouts$, $#state _#rollouts$)} = {#cost-() _1, #cost-() _2, ..., #cost-() _#rollouts} := #cost-batch-()$,
+  )
+]
+
+Cost terms related to obstacle avoidance typically also require measuring distances between parts of the robot and the environment. We can define a *batch distance function* for this purpose:
+
+#definition(title: "Batch Distance Function")[
+  Let $#state-batch = {#state _1, #state _2, ..., #state _#rollouts}$ be a batch of robot states. The *batch distance function* #min-distance-batch-(state-batch) : $#state-space^#rollouts -> bb(R)^(#horizon times #ego-parts times #rollouts)$ computes the minimum distances between $V$ parts of the robot and the nearest obstacles for each time step and rollout in the batch. The output is defined as:
+
+  #align(
+    center,
+    $#min-distance-batch-(state-batch) = {#min-distance-($#state _1$), #min-distance-($#state _2$), ..., #min-distance-($#state _#rollouts$)} = {#min-distance _1, #min-distance _2, ..., #min-distance _#rollouts} := #min-distance-batch$,
   )
 ]
 
@@ -214,14 +238,20 @@ The tracking cost requires a global reference trajectory that is to be followed.
   - $#augmented-state-single := [- #state-single - quad #path-parameter]$, #state-single is the original robot state, and
   - $#augmented-input-single := [- #input-single - quad #path-parameter-change]$, #input-single is the original robot control input.
 
-  The dynamics of #path-parameter can be simply integrated as $#path-parameter _(t + 1) = #path-parameter _t + #path-parameter-change _t dot #delta-t$. Additionally, it is important that #reference-trajectory is parameterized by #path-parameter in such a way that the position and heading at a given #path-parameter can be efficiently queried. These queried quantities are denoted as:
+  The dynamics of #path-parameter can be simply integrated as:
+
+  $
+    #path-parameter _(t + 1) = #path-parameter _t + #path-parameter-change _t dot #delta-t
+  $ <path-parameter-dynamics-equation>
+
+  Additionally, it is important that #reference-trajectory is parameterized by #path-parameter in such a way that the position and heading at a given #path-parameter can be efficiently queried. These queried quantities are denoted as:
 
   #align(
     center,
     $#x-at-arc-length := #reference-x (#path-parameter), quad #y-at-arc-length := #reference-y (#path-parameter), quad #theta-at-arc-length := #reference-theta (#path-parameter)$,
   )
 
-  The *contouring error* #contouring-error and *lag error* #lag-error are defined as the orthogonal and parallel distances, respectively, between the robot's current position $(x, y)$ and the reference point $(#x-at-arc-length, #y-at-arc-length)$ along the direction defined by #theta-at-arc-length. This is illustrated in @tracking-error-figure.
+  Let $t$ be the current time step, $(x, y)$ - the robot's current position, and #path-parameter - the current path parameter. The *contouring error* #contouring-error and *lag error* #lag-error are defined as the orthogonal and parallel distances, respectively, between $(x, y)$ and the reference point $(#x-at-arc-length, #y-at-arc-length)$ along the direction defined by #theta-at-arc-length. This is illustrated in @tracking-error-figure.
 
   #align(
     center,
@@ -229,7 +259,7 @@ The tracking cost requires a global reference trajectory that is to be followed.
       #lag-error = - cos(#theta-at-arc-length) (x - #x-at-arc-length) - sin(#theta-at-arc-length) (y - #y-at-arc-length)$,
   )
 
-  Finally, the *contouring cost* #contouring-cost and *lag cost* #lag-cost are defined as:
+  Then, the *contouring cost* #contouring-cost and *lag cost* #lag-cost for time step $t$ are defined as:
 
   $
     #contouring-cost = #contouring-weight dot #contouring-error^2, quad
@@ -245,13 +275,13 @@ The tracking cost requires a global reference trajectory that is to be followed.
 ) <tracking-error-figure>
 
 #definition(title: [Progress Cost @Liniger2015])[
-  Since the costs given by @contouring-lag-cost-equations alone do not encourage progress along the reference trajectory, an additional *progress cost* #progress-cost needs to be added. This cost is defined as:
+  Since the costs given by @contouring-lag-cost-equations alone do not encourage progress along the reference trajectory, an additional *progress cost* #progress-cost needs to be added. For a time step $t$, this cost is defined as:
 
   $
     #progress-cost = - #progress-weight dot #path-parameter-change #delta-t
   $ <progress-cost-equation>
 
-  where $#progress-weight > 0$ is a weighting factor.
+  where $#progress-weight > 0$ is a weighting factor, and #path-parameter-change is the velocity of the path parameter #path-parameter at time step $t$ (see @path-parameter-dynamics-equation).
 ]
 
 The progress cost given by @progress-cost-equation pushes #path-parameter to move forward along the reference trajectory as fast as possible, pulling the robot along with it. Simultaneously, the contouring and lag costs given by @contouring-lag-cost-equations also pull the #path-parameter back, preventing it from moving too far ahead of the robot. If the weights #contouring-weight, #lag-weight and #progress-weight are chosen appropriately, the robot will try to follow the reference trajectory closely and maximize progress.
@@ -265,11 +295,45 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
 #definition(title: [Control Smoothing Cost @Liniger2015])[
   To prevent erratic control behavior a *smoothing cost* #smoothing-cost can be used, which penalizes the rate of change of the control inputs.
 
-  Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost is then defined as:
+  Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost at time step $t$ is then defined as:
 
   $
-    #smoothing-cost = sum_t^(#horizon) || #input-smooth-weight #input-change _t ||^2
+    #smoothing-cost = || #input-smooth-weight #input-change _t ||^2
   $ <smoothing-cost-equation>
 ]
+
+=== Safety Cost
+
+#let collision-cost-(sub: none) = function(
+  name: $#cost-()$,
+  sub: $"col" #sub$,
+)
+#let collision-cost = collision-cost-()
+#let min-distance-single-(sub: none) = function(
+  name: $sans(d)$,
+  sub: sub,
+)
+#let min-distance-single = min-distance-single-()
+#let distance-threshold = min-distance-single-(sub: 0)
+#let collision-weight = $k_("col")$
+
+#definition(title: [Collision Cost @Schulman2013])[
+  To avoid collisions with obstacles, a *collision cost* #collision-cost can be used.
+
+  Let $V$ be the number of parts the ego robot consists of, and #min-distance-single-(sub: $i$) - the minimum distance between the $i$-th part of the robot and the obstacles nearest to it at a time step $t$. Given a safety distance threshold #distance-threshold, the
+  collision cost at time step $t$ is defined as:
+
+  $
+    #collision-cost = sum^V_(i=1) #collision-cost-(sub: $,i$), quad
+    #collision-cost-(sub: $,i$) = cases(
+      #collision-weight (#distance-threshold - #min-distance-single-(sub: $i$)) comma quad "if" #min-distance-single-(sub: $i$) < #distance-threshold,
+      0 comma quad "otherwise"
+    )
+  $ <collision-cost-equation>
+
+  where $#collision-weight > 0$ is a weighting factor.
+]
+
+#pagebreak()
 
 #bibliography("references.bib")
