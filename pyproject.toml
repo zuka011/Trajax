@@ -77,7 +77,8 @@ addopts = "--benchmark-skip"
 include = ["trajax", "tests"]
 exclude = [
     "**/__pycache__",
-    "tests/test_cost.py", # Pyright can't handle inference in this file.
+    "tests/test_cost.py", # Pyright can't handle inference in these files.
+    "tests/test_distance.py",
 ]
 
 [tool.ruff.lint]
