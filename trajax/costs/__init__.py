@@ -34,4 +34,9 @@ from .combined import (
     NumPyCostSumFunction as NumPyCostSumFunction,
     JaxCostSumFunction as JaxCostSumFunction,
 )
-from .factory import costs as costs
+from .distance import (
+    Circles as Circles,
+    NumPyObstaclePositions as NumPyObstaclePositions,
+    JaxObstaclePositions as JaxObstaclePositions,
+)
+from .factory import costs as costs, distance as distance

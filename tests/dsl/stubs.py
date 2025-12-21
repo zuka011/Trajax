@@ -195,3 +195,15 @@ class DistanceExtractor[StateBatchT: StateBatch, DistanceT: Distance](
             f"Expected: {self.expected_states}, Got: {states}"
         )
         return self.result
+
+
+@dataclass(frozen=True)
+class ObstacleStateProvider[ObstacleStatesT]:
+    result: ObstacleStatesT
+
+    @staticmethod
+    def returns[O](result: O) -> "ObstacleStateProvider[O]":
+        return ObstacleStateProvider(result=result)
+
+    def __call__(self) -> ObstacleStatesT:
+        return self.result

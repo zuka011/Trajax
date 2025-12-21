@@ -62,6 +62,8 @@ from trajax.costs import (
     ContouringCost as ContouringCost,
     NumPyDistance,
     JaxDistance,
+    NumPyObstaclePositions,
+    JaxObstaclePositions,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -174,6 +176,7 @@ class types:
         reference_points: Final = NumPyReferencePoints.create
         positions: Final = NumPyPositions.create
         distance: Final = NumPyDistance
+        obstacle_states: Final = NumPyObstaclePositions.create
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -266,6 +269,7 @@ class types:
         reference_points: Final = JaxReferencePoints.create
         positions: Final = JaxPositions.create
         distance: Final = JaxDistance
+        obstacle_states: Final = JaxObstaclePositions.create
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

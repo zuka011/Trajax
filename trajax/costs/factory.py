@@ -22,6 +22,10 @@ from trajax.costs.accelerated import (
     JaxCollisionCost,
 )
 from trajax.costs.combined import CombinedCost, NumPyCostSumFunction, JaxCostSumFunction
+from trajax.costs.distance import (
+    NumPyCircleDistanceExtractor,
+    JaxCircleDistanceExtractor,
+)
 
 
 class costs:
@@ -70,3 +74,11 @@ class costs:
 
         class safety:
             collision: Final = JaxCollisionCost.create
+
+
+class distance:
+    class numpy:
+        circles: Final = NumPyCircleDistanceExtractor.create
+
+    class jax:
+        circles: Final = JaxCircleDistanceExtractor.create

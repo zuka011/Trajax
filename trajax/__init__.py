@@ -11,12 +11,14 @@ from .trajectory import (
 )
 from .costs import (
     costs as costs,
+    distance as distance,
     CombinedCost as CombinedCost,
     Error as Error,
     ContouringCost as ContouringCost,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     CollisionCost as CollisionCost,
+    Circles as Circles,
 )
 from .samplers import sampler as sampler
 from .states import (
