@@ -148,6 +148,19 @@ class JaxMpccPlannerWeights:
     collision: float = 1000.0
 
 
+@dataclass(frozen=True)
+class JaxSamplingOptions:
+    physical_standard_deviation: Float[JaxArray, "D_u"] = field(
+        default_factory=lambda: jnp.array([1.0, 2.0])
+    )
+    virtual_standard_deviation: Float[JaxArray, "D_v"] = field(
+        default_factory=lambda: jnp.array([1.0])
+    )
+    rollout_count: int = 512
+    physical_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(42))
+    virtual_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(43))
+
+
 class reference:
     loop: Final = trajectory.jax.waypoints(
         points=array(
@@ -178,15 +191,26 @@ class obstacles:
 
     class static:
         loop: Final = create_obstacles.jax.static(
-            jnp.array(
+            positions=jnp.array(
                 [
-                    [15.0, 2.0],
+                    [15.0, 2.5],
                     [17.0, 20.0],
-                    [8.0, 13.0],
-                    [12.0, 3.0],
-                    [32.0, -1.0],
-                    [42.0, 6.0],
-                    [57.0, 2.0],
+                    [8.0, 12.0],
+                    [12.0, 4.0],
+                    [32.0, 0.5],
+                    [42.0, 7.0],
+                    [57.0, 3.0],
+                ]
+            ),
+            headings=jnp.array(
+                [
+                    jnp.pi / 6,
+                    -jnp.pi / 4,
+                    jnp.pi / 3,
+                    0.0,
+                    jnp.pi / 8,
+                    -jnp.pi / 6,
+                    jnp.pi / 2,
                 ]
             ),
             horizon=HORIZON,
@@ -198,6 +222,7 @@ class configure:
     def planner_from_base(
         reference: Trajectory = reference.loop,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
+        sampling: JaxSamplingOptions = JaxSamplingOptions(),
     ) -> JaxMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
@@ -246,16 +271,16 @@ class configure:
             ),
             sampler=AugmentedSampler.of(
                 physical=sampler.jax.gaussian(
-                    standard_deviation=jnp.array([1.0, 1.0]),
-                    rollout_count=(rollout_count := 512),
+                    standard_deviation=sampling.physical_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.jax.bicycle.control_input_batch.create,
-                    key=jrandom.PRNGKey(42),
+                    key=sampling.physical_key,
                 ),
                 virtual=sampler.jax.gaussian(
-                    standard_deviation=jnp.array([1.0]),
-                    rollout_count=rollout_count,
+                    standard_deviation=sampling.virtual_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.jax.simple.control_input_batch.create,
-                    key=jrandom.PRNGKey(43),
+                    key=sampling.virtual_key,
                 ),
                 batch=types.jax.augmented.control_input_batch,
             ),
@@ -275,6 +300,7 @@ class configure:
         reference: Trajectory = reference.loop,
         obstacles: ObstacleStateProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
+        sampling: JaxSamplingOptions = JaxSamplingOptions(),
     ) -> JaxMpccPlannerConfiguration:
         planner, augmented_model = mppi.jax.augmented(
             models=(
@@ -293,16 +319,16 @@ class configure:
             ),
             samplers=(
                 sampler.jax.gaussian(
-                    standard_deviation=jnp.array([1.0, 1.0]),
-                    rollout_count=(rollout_count := 512),
+                    standard_deviation=sampling.physical_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.jax.bicycle.control_input_batch.create,
-                    key=jrandom.PRNGKey(42),
+                    key=sampling.physical_key,
                 ),
                 sampler.jax.gaussian(
-                    standard_deviation=jnp.array([1.0]),
-                    rollout_count=rollout_count,
+                    standard_deviation=sampling.virtual_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.jax.simple.control_input_batch.create,
-                    key=jrandom.PRNGKey(43),
+                    key=sampling.virtual_key,
                 ),
             ),
             cost=costs.jax.combined(

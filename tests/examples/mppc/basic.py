@@ -124,6 +124,19 @@ class NumPyMpccPlannerWeights:
     collision: float = 1000.0
 
 
+@dataclass(frozen=True)
+class NumPySamplingOptions:
+    physical_standard_deviation: Array[Dim1] = field(
+        default_factory=lambda: np.array([1.0, 2.0])
+    )
+    virtual_standard_deviation: Array[Dim1] = field(
+        default_factory=lambda: np.array([1.0])
+    )
+    rollout_count: int = 512
+    physical_seed: int = 42
+    virtual_seed: int = 43
+
+
 class reference:
     loop: Final = trajectory.numpy.waypoints(
         points=array(
@@ -154,17 +167,29 @@ class obstacles:
 
     class static:
         loop: Final = create_obstacles.numpy.static(
-            array(
+            positions=array(
                 [
-                    [15.0, 2.0],
+                    [15.0, 2.5],
                     [17.0, 20.0],
-                    [8.0, 13.0],
-                    [12.0, 3.0],
-                    [32.0, -1.0],
-                    [42.0, 6.0],
-                    [57.0, 2.0],
+                    [8.0, 12.0],
+                    [12.0, 4.0],
+                    [32.0, 0.5],
+                    [42.0, 7.0],
+                    [57.0, 3.0],
                 ],
                 shape=(7, 2),
+            ),
+            headings=array(
+                [
+                    np.pi / 6,
+                    -np.pi / 4,
+                    np.pi / 3,
+                    0.0,
+                    np.pi / 8,
+                    -np.pi / 6,
+                    np.pi / 2,
+                ],
+                shape=(7,),
             ),
             horizon=HORIZON,
         )
@@ -175,6 +200,7 @@ class configure:
     def planner_from_base(
         reference: Trajectory = reference.loop,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
+        sampling: NumPySamplingOptions = NumPySamplingOptions(),
     ) -> NumPyMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
@@ -225,16 +251,16 @@ class configure:
             ),
             sampler=AugmentedSampler.of(
                 physical=sampler.numpy.gaussian(
-                    standard_deviation=np.array([1.0, 1.0]),
-                    rollout_count=(rollout_count := 512),
+                    standard_deviation=sampling.physical_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.numpy.bicycle.control_input_batch,
-                    seed=42,
+                    seed=sampling.physical_seed,
                 ),
                 virtual=sampler.numpy.gaussian(
-                    standard_deviation=np.array([1.0]),
-                    rollout_count=rollout_count,
+                    standard_deviation=sampling.virtual_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.numpy.simple.control_input_batch,
-                    seed=43,
+                    seed=sampling.virtual_seed,
                 ),
                 batch=types.numpy.augmented.control_input_batch,
             ),
@@ -254,6 +280,7 @@ class configure:
         reference: Trajectory = reference.loop,
         obstacles: ObstacleStateProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
+        sampling: NumPySamplingOptions = NumPySamplingOptions(),
     ) -> NumPyMpccPlannerConfiguration:
         planner, augmented_model = mppi.numpy.augmented(
             models=(
@@ -272,16 +299,16 @@ class configure:
             ),
             samplers=(
                 sampler.numpy.gaussian(
-                    standard_deviation=np.array([1.0, 1.0]),
-                    rollout_count=(rollout_count := 512),
+                    standard_deviation=sampling.physical_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.numpy.bicycle.control_input_batch,
-                    seed=42,
+                    seed=sampling.physical_seed,
                 ),
                 sampler.numpy.gaussian(
-                    standard_deviation=np.array([1.0]),
-                    rollout_count=rollout_count,
+                    standard_deviation=sampling.virtual_standard_deviation,
+                    rollout_count=sampling.rollout_count,
                     to_batch=types.numpy.simple.control_input_batch,
-                    seed=43,
+                    seed=sampling.virtual_seed,
                 ),
             ),
             cost=costs.numpy.combined(

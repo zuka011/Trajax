@@ -4,10 +4,11 @@ stages:
 
 include:
   - project: 'zurabm/ci-templates'
-    ref: v1.1.1
+    ref: v1.2.0
     file:
       - '/python/verify.yml'
       - '/python/publish.yml'
 
 variables:
+  RUN_INTEGRATION_TESTS: "true"
   PYPI_PROJECT_NAME: "" # TODO: Fill this in later.

@@ -178,11 +178,9 @@ class DynamicalModel[
 
 
 @dataclass(frozen=True)
-class DistanceExtractor[
-    StateBatchT: StateBatch,
-    ObstacleStatesT: ObstacleStates,
-    DistanceT: Distance,
-](DistanceExtractorLike[StateBatchT, ObstacleStatesT, DistanceT]):
+class DistanceExtractor[StateBatchT: StateBatch, DistanceT: Distance](
+    DistanceExtractorLike[StateBatchT, ObstacleStates, DistanceT]
+):
     expected_states: StateBatchT
     result: DistanceT
 
@@ -198,6 +196,13 @@ class DistanceExtractor[
             f"Expected: {self.expected_states}, Got: {states}"
         )
         return self.result
+
+    def measure(
+        self, *, states: StateBatchT, obstacle_states: ObstacleStates
+    ) -> DistanceT:
+        raise NotImplementedError(
+            "Measure method is not implemented in the stub distance extractor."
+        )
 
 
 @dataclass(frozen=True)

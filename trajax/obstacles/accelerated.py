@@ -10,7 +10,7 @@ import jax.numpy as jnp
 
 @dataclass(frozen=True)
 class JaxStaticObstacleStateProvider[T: int, K: int](
-    JaxObstacleStateProvider[T, D[2], K]
+    JaxObstacleStateProvider[T, D[3], K]
 ):
     positions: JaxObstaclePositions[T, K]
 
@@ -24,8 +24,9 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
 
     @staticmethod
     def create[T_: int, K_: int](
-        positions: Float[JaxArray, "K 2"],
         *,
+        positions: Float[JaxArray, "K 2"],
+        headings: Float[JaxArray, "K"] | None = None,
         horizon: T_,
         obstacle_count: K_ | None = None,
     ) -> "JaxStaticObstacleStateProvider[T_, K_]":
@@ -33,11 +34,18 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
         x = jnp.tile(positions[:, 0], (horizon, 1))
         y = jnp.tile(positions[:, 1], (horizon, 1))
 
-        assert x.shape == y.shape == (horizon, K), (
-            f"Expected shapes {(horizon, K)}, but got x with shape {x.shape} and y with shape {y.shape}."
+        if headings is not None:
+            heading = jnp.tile(headings, (horizon, 1))
+        else:
+            heading = jnp.zeros((horizon, K))
+
+        assert x.shape == y.shape == heading.shape == (horizon, K), (
+            f"Expected shapes {(horizon, K)}, but got x with shape {x.shape}, y with shape {y.shape}, heading with shape {heading.shape}."
         )
 
-        return JaxStaticObstacleStateProvider(JaxObstaclePositions.create(x=x, y=y))
+        return JaxStaticObstacleStateProvider(
+            JaxObstaclePositions.create(x=x, y=y, heading=heading)
+        )
 
     def __call__(self) -> JaxObstaclePositions[T, K]:
         return self.positions

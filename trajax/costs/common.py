@@ -36,6 +36,10 @@ class ObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the y positions of obstacles over time."""
         ...
 
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of obstacles over time."""
+        ...
+
 
 class ObstacleStateProvider[StateT: ObstacleStates](Protocol):
     def __call__(self) -> StateT:

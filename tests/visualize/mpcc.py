@@ -24,6 +24,7 @@ class MpccSimulationResult:
     states: Sequence[AugmentedState]
     contouring_errors: Array[Dim1]
     wheelbase: float
+    max_deviation: float
     obstacles: Sequence[ObstacleStates] = ()
 
 
@@ -54,7 +55,7 @@ class MpccVisualizer:
         )
         path_parameters = np.array([state.virtual.array[0] for state in result.states])
         ghost_positions = self.query_ghost_positions(result.reference, path_parameters)
-        obstacle_positions_x, obstacle_positions_y = self.obstacle_positions_from(
+        obstacle_x, obstacle_y, obstacle_heading = self.obstacle_positions_from(
             result.obstacles
         )
 
@@ -69,10 +70,12 @@ class MpccVisualizer:
             ghost_y=ghost_positions.y,
             errors=result.contouring_errors,
             wheelbase=result.wheelbase,
+            max_error=result.max_deviation,
             error_label="Contouring Error",
             vehicle_type="car",
-            obstacle_positions_x=obstacle_positions_x,
-            obstacle_positions_y=obstacle_positions_y,
+            obstacle_positions_x=obstacle_x,
+            obstacle_positions_y=obstacle_y,
+            obstacle_headings=obstacle_heading,
         )
 
     def query_ghost_positions(
@@ -98,10 +101,12 @@ class MpccVisualizer:
 
     def obstacle_positions_from(
         self, obstacles: Sequence[ObstacleStates]
-    ) -> tuple[Array[Dim2] | None, Array[Dim2] | None]:
+    ) -> tuple[Array[Dim2] | None, Array[Dim2] | None, Array[Dim2] | None]:
         if len(obstacles) == 0:
-            return None, None
+            return None, None, None
 
-        return np.array([it.x()[0] for it in obstacles]), np.array(
-            [it.y()[0] for it in obstacles]
+        return (
+            np.array([it.x()[0] for it in obstacles]),
+            np.array([it.y()[0] for it in obstacles]),
+            np.array([it.heading()[0] for it in obstacles]),
         )

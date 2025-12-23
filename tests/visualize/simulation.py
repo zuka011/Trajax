@@ -109,12 +109,14 @@ class SimulationData:
     errors: Array[Dim1] | None = None
     ghost_x: Array[Dim1] | None = None
     ghost_y: Array[Dim1] | None = None
+    max_error: float = 1.0
     error_label: str = "Lateral Error"
     vehicle_type: VehicleType = "triangle"
     wheelbase: float = Theme.Sizes.DEFAULT_VEHICLE_WHEELBASE
     vehicle_width: float = Theme.Sizes.DEFAULT_VEHICLE_WIDTH
     obstacle_positions_x: Array[Dim2] | None = None
     obstacle_positions_y: Array[Dim2] | None = None
+    obstacle_headings: Array[Dim2] | None = None
 
     def __post_init__(self) -> None:
         assert len(self.positions_x) == self.time_step_count, (
@@ -158,6 +160,13 @@ class SimulationData:
         ), (
             f"Length of obstacle_positions_y does not match number of timesteps."
             f"Got {len(self.obstacle_positions_y)} positions, expected {self.time_step_count}."
+        )
+        assert (
+            self.obstacle_headings is None
+            or len(self.obstacle_headings) == self.time_step_count
+        ), (
+            f"Length of obstacle_headings does not match number of timesteps."
+            f"Got {len(self.obstacle_headings)} headings, expected {self.time_step_count}."
         )
 
     @property
@@ -241,7 +250,7 @@ async def create_animation_html(data: SimulationData, output: AsyncPath) -> None
 def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
     errors = get_errors(data)
     ghost_x, ghost_y = get_ghost_positions(data)
-    obstacle_x, obstacle_y = get_obstacle_positions(data)
+    obstacle_x, obstacle_y, obstacle_heading = get_obstacle_positions(data)
 
     return {
         "vehicle": ColumnDataSource(
@@ -279,6 +288,7 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
             data={
                 "x": obstacle_x[0].tolist(),
                 "y": obstacle_y[0].tolist(),
+                "heading": obstacle_heading[0].tolist(),
             }
         ),
         "simulation": ColumnDataSource(
@@ -292,6 +302,7 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "ghost_y": ghost_y.tolist(),
                 "obstacle_positions_x": obstacle_x.tolist(),
                 "obstacle_positions_y": obstacle_y.tolist(),
+                "obstacle_headings": obstacle_heading.tolist(),
             }
         ),
         "reference": ColumnDataSource(
@@ -319,11 +330,18 @@ def get_ghost_positions(data: SimulationData) -> tuple[Array[Dim1], Array[Dim1]]
 
 def get_obstacle_positions(
     data: SimulationData,
-) -> tuple[ObstacleCoordinate, ObstacleCoordinate]:
+) -> tuple[ObstacleCoordinate, ObstacleCoordinate, ObstacleCoordinate]:
     if data.obstacle_positions_x is None or data.obstacle_positions_y is None:
-        return np.empty((data.time_step_count, 0)), np.empty((data.time_step_count, 0))
+        empty = np.empty((data.time_step_count, 0))
+        return empty, empty, empty
 
-    return data.obstacle_positions_x, data.obstacle_positions_y
+    obstacle_headings = (
+        data.obstacle_headings
+        if data.obstacle_headings is not None
+        else np.zeros_like(data.obstacle_positions_x)
+    )
+
+    return data.obstacle_positions_x, data.obstacle_positions_y, obstacle_headings
 
 
 def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
@@ -454,7 +472,7 @@ def create_error_plot(data: SimulationData) -> Figure:
 
     plot.line(
         times,
-        np.ones_like(times) * 1.0,
+        np.ones_like(times) * data.max_error,
         line_width=1,
         line_color=Theme.Colors.ACCENT_DARK,
         line_dash="dotted",
@@ -620,7 +638,7 @@ def add_obstacles_to_plot(
         source=source,
         width=data.wheelbase,
         height=data.vehicle_width,
-        angle=0.0,
+        angle="heading",
         color=obstacle_color,
         line_color=obstacle_border,
         line_width=2,
@@ -713,10 +731,12 @@ def create_slider_callback(
             
             const obstacle_positions_x = s.obstacle_positions_x;
             const obstacle_positions_y = s.obstacle_positions_y;
+            const obstacle_headings = s.obstacle_headings;
 
             obstacles.data = {
                 x: obstacle_positions_x[t],
-                y: obstacle_positions_y[t]
+                y: obstacle_positions_y[t],
+                heading: obstacle_headings[t]
             };
         """,
     )

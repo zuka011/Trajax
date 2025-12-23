@@ -28,6 +28,10 @@ class JaxObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the y positions of obstacles over time as a NumPy array."""
         ...
 
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of obstacles over time as a NumPy array."""
+        ...
+
     @property
     def x_array(self) -> Float[JaxArray, "T K"]:
         """Returns the x positions of obstacles over time."""
@@ -38,6 +42,11 @@ class JaxObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the y positions of obstacles over time."""
         ...
 
+    @property
+    def heading_array(self) -> Float[JaxArray, "T K"]:
+        """Returns the headings of obstacles over time."""
+        ...
+
 
 class JaxObstacleStateProvider[T: int, D_o: int, K: int](
     ObstacleStateProvider[JaxObstacleStates[T, D_o, K]]
@@ -46,15 +55,17 @@ class JaxObstacleStateProvider[T: int, D_o: int, K: int](
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[2], K]):
+class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[3], K]):
     _x: Float[JaxArray, "T K"]
     _y: Float[JaxArray, "T K"]
+    _heading: Float[JaxArray, "T K"]
 
     @staticmethod
     def create[T_: int, K_: int](
         *,
         x: Float[JaxArray, "T K"],
         y: Float[JaxArray, "T K"],
+        heading: Float[JaxArray, "T K"] | None = None,
         horizon: T_ | None = None,
         obstacle_count: K_ | None = None,
     ) -> "JaxObstaclePositions[T_, K_]":
@@ -65,7 +76,10 @@ class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[2], K]):
             f"Expected obstacle count {obstacle_count}, but got x with shape {x.shape} and y with shape {y.shape}."
         )
 
-        return JaxObstaclePositions(_x=x, _y=y)
+        if heading is None:
+            heading = jnp.zeros_like(x)
+
+        return JaxObstaclePositions(_x=x, _y=y, _heading=heading)
 
     @staticmethod
     def of_states[T_: int, D_o_: int, K_: int](
@@ -75,17 +89,23 @@ class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[2], K]):
     ) -> "JaxObstaclePositions[T_, K_]":
         x = jnp.stack([states.x_array[0] for states in obstacle_states], axis=0)
         y = jnp.stack([states.y_array[0] for states in obstacle_states], axis=0)
+        heading = jnp.stack(
+            [states.heading_array[0] for states in obstacle_states], axis=0
+        )
 
-        return JaxObstaclePositions.create(x=x, y=y, horizon=horizon)
+        return JaxObstaclePositions.create(x=x, y=y, heading=heading, horizon=horizon)
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K]]:
-        return np.stack([self._x, self._y], axis=-1)
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[3], K]]:
+        return np.stack([self._x, self._y, self._heading], axis=-1)
 
     def x(self) -> Array[Dims[T, K]]:
         return np.asarray(self._x)
 
     def y(self) -> Array[Dims[T, K]]:
         return np.asarray(self._y)
+
+    def heading(self) -> Array[Dims[T, K]]:
+        return np.asarray(self._heading)
 
     @property
     def x_array(self) -> Float[JaxArray, "T K"]:
@@ -94,6 +114,10 @@ class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[2], K]):
     @property
     def y_array(self) -> Float[JaxArray, "T K"]:
         return self._y
+
+    @property
+    def heading_array(self) -> Float[JaxArray, "T K"]:
+        return self._heading
 
 
 @dataclass(frozen=True)
@@ -128,10 +152,10 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
         )
 
     def __call__(self, states: StateT) -> JaxDistance[int, V, int]:
-        return self.measure(states, self.obstacle_states())
+        return self.measure(states=states, obstacle_states=self.obstacle_states())
 
     def measure(
-        self, states: StateT, obstacle_states: JaxObstacleStates
+        self, *, states: StateT, obstacle_states: JaxObstacleStates
     ) -> JaxDistance[int, V, int]:
         ego_positions = self.positions_from(states)
 
@@ -147,6 +171,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
                 ego_origins=self.ego_origins,
                 obstacle_x=obstacle_states.x_array,
                 obstacle_y=obstacle_states.y_array,
+                obstacle_heading=obstacle_states.heading_array,
                 obstacle_radii=self.obstacle_radii,
                 obstacle_origins=self.obstacle_origins,
             )
@@ -174,6 +199,7 @@ def compute_circle_distances(
     ego_radii: Float[JaxArray, "V"],
     obstacle_x: Float[JaxArray, "T K"],
     obstacle_y: Float[JaxArray, "T K"],
+    obstacle_heading: Float[JaxArray, "T K"],
     obstacle_origins: Float[JaxArray, "C 2"],
     obstacle_radii: Float[JaxArray, "C"],
 ) -> Float[JaxArray, "T V M"]:
@@ -181,8 +207,11 @@ def compute_circle_distances(
         x=ego_x, y=ego_y, local_origins=ego_origins
     )
 
-    obstacle_global_x, obstacle_global_y = to_global_positions(
-        x=obstacle_x, y=obstacle_y, local_origins=obstacle_origins
+    obstacle_global_x, obstacle_global_y = to_global_obstacle_positions(
+        x=obstacle_x,
+        y=obstacle_y,
+        heading=obstacle_heading,
+        local_origins=obstacle_origins,
     )
 
     pairwise_distances = pairwise_min_distances(
@@ -207,6 +236,35 @@ def to_global_positions(
 ) -> tuple[Float[JaxArray, "C A B"], Float[JaxArray, "C A B"]]:
     global_x = x[jnp.newaxis, :, :] + local_origins[:, 0:1, jnp.newaxis]
     global_y = y[jnp.newaxis, :, :] + local_origins[:, 1:2, jnp.newaxis]
+
+    return global_x, global_y
+
+
+@jax.jit
+@jaxtyped
+def to_global_obstacle_positions(
+    *,
+    x: Float[JaxArray, "T K"],
+    y: Float[JaxArray, "T K"],
+    heading: Float[JaxArray, "T K"],
+    local_origins: Float[JaxArray, "C 2"],
+) -> tuple[Float[JaxArray, "C T K"], Float[JaxArray, "C T K"]]:
+    """Computes global positions of obstacle circles considering heading rotation."""
+    cos_h = jnp.cos(heading)
+    sin_h = jnp.sin(heading)
+
+    local_x = local_origins[:, 0:1, jnp.newaxis]
+    local_y = local_origins[:, 1:2, jnp.newaxis]
+
+    rotated_local_x = (
+        local_x * cos_h[jnp.newaxis, :, :] - local_y * sin_h[jnp.newaxis, :, :]
+    )
+    rotated_local_y = (
+        local_x * sin_h[jnp.newaxis, :, :] + local_y * cos_h[jnp.newaxis, :, :]
+    )
+
+    global_x = x[jnp.newaxis, :, :] + rotated_local_x
+    global_y = y[jnp.newaxis, :, :] + rotated_local_y
 
     return global_x, global_y
 

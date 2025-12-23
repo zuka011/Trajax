@@ -29,6 +29,10 @@ class NumPyObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the y positions of obstacles over time."""
         ...
 
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of obstacles over time."""
+        ...
+
 
 class NumPyObstacleStateProvider[T: int, D_o: int, K: int](
     ObstacleStateProvider[NumPyObstacleStates[T, D_o, K]]
@@ -36,17 +40,22 @@ class NumPyObstacleStateProvider[T: int, D_o: int, K: int](
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyObstaclePositions[T: int, K: int](NumPyObstacleStates[T, D[2], K]):
+class NumPyObstaclePositions[T: int, K: int](NumPyObstacleStates[T, D[3], K]):
     _x: Array[Dims[T, K]]
     _y: Array[Dims[T, K]]
+    _heading: Array[Dims[T, K]]
 
     @staticmethod
     def create[T_: int, K_: int](
         *,
         x: Array[Dims[T_, K_]],
         y: Array[Dims[T_, K_]],
+        heading: Array[Dims[T_, K_]] | None = None,
     ) -> "NumPyObstaclePositions[T_, K_]":
-        return NumPyObstaclePositions(_x=x, _y=y)
+        if heading is None:
+            heading = np.zeros_like(x)
+
+        return NumPyObstaclePositions(_x=x, _y=y, _heading=heading)
 
     @staticmethod
     def of_states[T_: int, D_o_: int, K_: int](
@@ -56,16 +65,21 @@ class NumPyObstaclePositions[T: int, K: int](NumPyObstacleStates[T, D[2], K]):
     ) -> "NumPyObstaclePositions[T_, K_]":
         x = np.stack([states.x()[0] for states in obstacle_states], axis=0)
         y = np.stack([states.y()[0] for states in obstacle_states], axis=0)
-        return NumPyObstaclePositions.create(x=x, y=y)
+        heading = np.stack([states.heading()[0] for states in obstacle_states], axis=0)
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K]]:
-        return np.stack([self._x, self._y], axis=-1)
+        return NumPyObstaclePositions.create(x=x, y=y, heading=heading)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[3], K]]:
+        return np.stack([self._x, self._y, self._heading], axis=-1)
 
     def x(self) -> Array[Dims[T, K]]:
         return self._x
 
     def y(self) -> Array[Dims[T, K]]:
         return self._y
+
+    def heading(self) -> Array[Dims[T, K]]:
+        return self._heading
 
 
 @dataclass(frozen=True)
@@ -96,10 +110,10 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         )
 
     def __call__(self, states: StateT) -> NumPyDistance[int, V, int]:
-        return self.measure(states, self.obstacle_states())
+        return self.measure(states=states, obstacle_states=self.obstacle_states())
 
     def measure(
-        self, states: StateT, obstacle_states: NumPyObstacleStates
+        self, *, states: StateT, obstacle_states: NumPyObstacleStates
     ) -> NumPyDistance[int, V, int]:
         return NumPyDistance(
             compute_circle_distances(
@@ -122,8 +136,11 @@ def compute_circle_distances[T: int, M: int, V: int, C: int, K: int](
         x=ego_positions.x, y=ego_positions.y, local_origins=ego.origins
     )
 
-    obstacle_global_x, obstacle_global_y = to_global_positions(
-        x=obstacle_states.x(), y=obstacle_states.y(), local_origins=obstacle.origins
+    obstacle_global_x, obstacle_global_y = to_global_obstacle_positions(
+        x=obstacle_states.x(),
+        y=obstacle_states.y(),
+        heading=obstacle_states.heading(),
+        local_origins=obstacle.origins,
     )
 
     pairwise_distances = pairwise_min_distances(
@@ -143,6 +160,36 @@ def to_global_positions[A: int, B: int, C: int](
 ) -> tuple[Array[Dims[C, A, B]], Array[Dims[C, A, B]]]:
     global_x = x[np.newaxis, :, :] + local_origins[:, 0:1, np.newaxis]
     global_y = y[np.newaxis, :, :] + local_origins[:, 1:2, np.newaxis]
+
+    return global_x, global_y
+
+
+def to_global_obstacle_positions[T: int, K: int, C: int](
+    x: Array[Dims[T, K]],
+    y: Array[Dims[T, K]],
+    heading: Array[Dims[T, K]],
+    local_origins: OriginsArray[C],
+) -> tuple[Array[Dims[C, T, K]], Array[Dims[C, T, K]]]:
+    """Computes global positions of obstacle circles considering heading rotation.
+
+    The local_origins are rotated by the obstacle heading before being added to
+    the obstacle position.
+    """
+    cos_h = np.cos(heading)
+    sin_h = np.sin(heading)
+
+    local_x = local_origins[:, 0:1, np.newaxis]
+    local_y = local_origins[:, 1:2, np.newaxis]
+
+    rotated_local_x = (
+        local_x * cos_h[np.newaxis, :, :] - local_y * sin_h[np.newaxis, :, :]
+    )
+    rotated_local_y = (
+        local_x * sin_h[np.newaxis, :, :] + local_y * cos_h[np.newaxis, :, :]
+    )
+
+    global_x = x[np.newaxis, :, :] + rotated_local_x
+    global_y = y[np.newaxis, :, :] + rotated_local_y
 
     return global_x, global_y
 

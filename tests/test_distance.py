@@ -1073,8 +1073,148 @@ def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_p
     expected_distances: Array,
 ) -> None:
     assert np.allclose(
-        computed := extractor.measure(states, obstacle_states), expected_distances
+        computed := extractor.measure(states=states, obstacle_states=obstacle_states),
+        expected_distances,
     ), (
         f"The distance should be measured based on the provided obstacle states. "
         f"Expected: {expected_distances}, Got: {computed}"
+    )
+
+
+@mark.parametrize(
+    ["extractor", "states", "expected_distances"],
+    [
+        (
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(C := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    types.numpy.obstacle_states.create(
+                        x=array([[0.0]], shape=(T := 1, K := 1)),
+                        y=array([[3.0]], shape=(T, K)),
+                        heading=array([[np.pi / 2]], shape=(T, K)),
+                    )
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array([[[0.0], [0.0], [0.0]]], shape=(T, D_x := 3, M := 1))
+            ),
+            # Ego at (0,0), obstacle center at (0,3)
+            # Front circle at (0,4), rear circle at (0,2) in global
+            # Distance to rear circle (closest): 2 - 1 - 0.5 = 0.5
+            expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
+        ),
+        (
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(C := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    types.numpy.obstacle_states.create(
+                        x=array([[3.0]], shape=(T := 1, K := 1)),
+                        y=array([[0.0]], shape=(T, K)),
+                        heading=array([[np.pi / 4]], shape=(T, K)),
+                    )
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array([[[0.0], [0.0], [0.0]]], shape=(T, D_x := 3, M := 1))
+            ),
+            # rear circle at (3 - sqrt(2)/2, -sqrt(2)/2) ≈ (2.293, -0.707)
+            # distance = sqrt(2.293^2 + 0.707^2) - 1.5 ≈ 2.4 - 1.5 = 0.9
+            expected_distances := array(
+                [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
+                shape=(T, V := 1, M),
+            ),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(C := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    types.jax.obstacle_states.create(
+                        x=jnp.array([[0.0]]),
+                        y=jnp.array([[3.0]]),
+                        heading=jnp.array([[np.pi / 2]]),
+                    )
+                ),
+            ),
+            states := data.jax.state_batch(
+                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(C := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    types.jax.obstacle_states.create(
+                        x=jnp.array([[3.0]]),
+                        y=jnp.array([[0.0]]),
+                        heading=jnp.array([[np.pi / 4]]),
+                    )
+                ),
+            ),
+            states := data.jax.state_batch(
+                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            expected_distances := array(
+                [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
+                shape=(T, V := 1, M),
+            ),
+        ),
+    ],
+)
+def test_that_distance_accounts_for_obstacle_heading[
+    DistanceT: Distance,
+    ObstacleStatesT: ObstacleStates,
+    StateT: StateBatch,
+](
+    extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+    states: StateT,
+    expected_distances: Array,
+) -> None:
+    assert np.allclose(distance := extractor(states), expected_distances), (
+        f"Obstacle heading should rotate circle offsets correctly. "
+        f"Expected: {expected_distances}, Got: {distance}"
     )
