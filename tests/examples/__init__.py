@@ -1,1 +1,1 @@
-from . import numpy_mpcc as numpy_mpcc
+from .factory import reference as reference, mpcc as mpcc, obstacles as obstacles

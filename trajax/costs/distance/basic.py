@@ -1,12 +1,13 @@
-from typing import Protocol
+from typing import Protocol, Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType
 from trajax.mppi import NumPyStateBatch
 from trajax.costs.basic import NumPyDistance, NumPyPositions, NumPyPositionExtractor
-from trajax.costs.distance.common import Circles, ObstacleStateProvider
+from trajax.costs.common import ObstacleStateProvider
+from trajax.costs.distance.common import Circles
 
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims, D, shape_of
 
 import numpy as np
 
@@ -20,15 +21,18 @@ class NumPyObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the states of obstacles as a NumPy array."""
         ...
 
-    @property
     def x(self) -> Array[Dims[T, K]]:
         """Returns the x positions of obstacles over time."""
         ...
 
-    @property
     def y(self) -> Array[Dims[T, K]]:
         """Returns the y positions of obstacles over time."""
         ...
+
+
+class NumPyObstacleStateProvider[T: int, D_o: int, K: int](
+    ObstacleStateProvider[NumPyObstacleStates[T, D_o, K]]
+): ...
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -44,14 +48,22 @@ class NumPyObstaclePositions[T: int, K: int](NumPyObstacleStates[T, D[2], K]):
     ) -> "NumPyObstaclePositions[T_, K_]":
         return NumPyObstaclePositions(_x=x, _y=y)
 
+    @staticmethod
+    def of_states[T_: int, D_o_: int, K_: int](
+        obstacle_states: Sequence[NumPyObstacleStates[int, D_o_, K_]],
+        *,
+        horizon: T_ | None = None,
+    ) -> "NumPyObstaclePositions[T_, K_]":
+        x = np.stack([states.x()[0] for states in obstacle_states], axis=0)
+        y = np.stack([states.y()[0] for states in obstacle_states], axis=0)
+        return NumPyObstaclePositions.create(x=x, y=y)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K]]:
         return np.stack([self._x, self._y], axis=-1)
 
-    @property
     def x(self) -> Array[Dims[T, K]]:
         return self._x
 
-    @property
     def y(self) -> Array[Dims[T, K]]:
         return self._y
 
@@ -66,7 +78,7 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
     ego: Circles[V]
     obstacle: Circles[C]
     positions_from: NumPyPositionExtractor[StateT]
-    obstacle_states: ObstacleStateProvider[NumPyObstacleStates]
+    obstacle_states: NumPyObstacleStateProvider
 
     @staticmethod
     def create[S: NumPyStateBatch, V_: int, C_: int](
@@ -74,7 +86,7 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: NumPyPositionExtractor[S],
-        obstacle_states: ObstacleStateProvider[NumPyObstacleStates],
+        obstacle_states: NumPyObstacleStateProvider,
     ) -> "NumPyCircleDistanceExtractor[S, V_, C_]":
         return NumPyCircleDistanceExtractor(
             ego=ego,
@@ -84,11 +96,16 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         )
 
     def __call__(self, states: StateT) -> NumPyDistance[int, V, int]:
+        return self.measure(states, self.obstacle_states())
+
+    def measure(
+        self, states: StateT, obstacle_states: NumPyObstacleStates
+    ) -> NumPyDistance[int, V, int]:
         return NumPyDistance(
             compute_circle_distances(
                 ego_positions=self.positions_from(states),
                 ego=self.ego,
-                obstacle_states=self.obstacle_states(),
+                obstacle_states=obstacle_states,
                 obstacle=self.obstacle,
             )
         )
@@ -106,7 +123,7 @@ def compute_circle_distances[T: int, M: int, V: int, C: int, K: int](
     )
 
     obstacle_global_x, obstacle_global_y = to_global_positions(
-        x=obstacle_states.x, y=obstacle_states.y, local_origins=obstacle.origins
+        x=obstacle_states.x(), y=obstacle_states.y(), local_origins=obstacle.origins
     )
 
     pairwise_distances = pairwise_min_distances(
@@ -159,5 +176,12 @@ def pairwise_min_distances[T: int, M: int, V: int, C: int, K: int](
 def min_distance_per_ego_part[T: int, M: int, V: int, C: int, K: int](
     pairwise_distances: Array[Dims[V, C, T, M, K]],
 ) -> Array[Dims[T, V, M]]:
+    V, C, T, M, K = pairwise_distances.shape
+
+    if C == 0 or K == 0:
+        distances = np.full((T, V, M), np.inf)
+        assert shape_of(distances, matches=(T, V, M), name="distances")
+        return distances
+
     min_over_obstacles = np.min(pairwise_distances, axis=(1, 4))
     return np.transpose(min_over_obstacles, (1, 0, 2))

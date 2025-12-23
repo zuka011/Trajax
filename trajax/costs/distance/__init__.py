@@ -1,9 +1,11 @@
 from .basic import (
-    NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
     NumPyObstaclePositions as NumPyObstaclePositions,
+    NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
+    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
 )
 from .accelerated import (
-    JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
     JaxObstaclePositions as JaxObstaclePositions,
+    JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
+    JaxObstacleStateProvider as JaxObstacleStateProvider,
 )
 from .common import Circles as Circles

@@ -1,10 +1,10 @@
 from typing import Sequence
 from dataclasses import dataclass
 
-from trajax import types, Trajectory
+from trajax import types, Trajectory, ObstacleStates
 
 import numpy as np
-from numtypes import Array, Dim1
+from numtypes import Array, Dim1, Dim2
 
 from tests.visualize.simulation import (
     SimulationVisualizer,
@@ -24,6 +24,7 @@ class MpccSimulationResult:
     states: Sequence[AugmentedState]
     contouring_errors: Array[Dim1]
     wheelbase: float
+    obstacles: Sequence[ObstacleStates] = ()
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,9 @@ class MpccVisualizer:
         )
         path_parameters = np.array([state.virtual.array[0] for state in result.states])
         ghost_positions = self.query_ghost_positions(result.reference, path_parameters)
+        obstacle_positions_x, obstacle_positions_y = self.obstacle_positions_from(
+            result.obstacles
+        )
 
         return SimulationData(
             reference=reference,
@@ -67,6 +71,8 @@ class MpccVisualizer:
             wheelbase=result.wheelbase,
             error_label="Contouring Error",
             vehicle_type="car",
+            obstacle_positions_x=obstacle_positions_x,
+            obstacle_positions_y=obstacle_positions_y,
         )
 
     def query_ghost_positions(
@@ -88,4 +94,14 @@ class MpccVisualizer:
 
         return ReferenceTrajectory(
             x=reference_points.x()[:, 0], y=reference_points.y()[:, 0]
+        )
+
+    def obstacle_positions_from(
+        self, obstacles: Sequence[ObstacleStates]
+    ) -> tuple[Array[Dim2] | None, Array[Dim2] | None]:
+        if len(obstacles) == 0:
+            return None, None
+
+        return np.array([it.x()[0] for it in obstacles]), np.array(
+            [it.y()[0] for it in obstacles]
         )

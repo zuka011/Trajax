@@ -64,6 +64,8 @@ from trajax.costs import (
     JaxDistance,
     NumPyObstaclePositions,
     JaxObstaclePositions,
+    NumPyObstacleStateProvider,
+    JaxObstacleStateProvider,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -171,12 +173,15 @@ class types:
         )
         type PositionExtractor[S: NumPyStateBatch] = NumPyPositionExtractor[S]
         type ContouringCost[S: NumPyStateBatch] = NumPyContouringCost[S]
+        type ObstacleStateProvider[T: int = Any, D_o: int = Any, K: int = Any] = (
+            NumPyObstacleStateProvider[T, D_o, K]
+        )
 
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
         positions: Final = NumPyPositions.create
         distance: Final = NumPyDistance
-        obstacle_states: Final = NumPyObstaclePositions.create
+        obstacle_states: Final = NumPyObstaclePositions
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -264,12 +269,15 @@ class types:
         ]
         type PositionExtractor[S: JaxStateBatch] = JaxPositionExtractor[S]
         type ContouringCost[S: JaxStateBatch] = JaxContouringCost[S]
+        type ObstacleStateProvider[T: int = Any, D_o: int = Any, K: int = Any] = (
+            JaxObstacleStateProvider[T, D_o, K]
+        )
 
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create
         positions: Final = JaxPositions.create
         distance: Final = JaxDistance
-        obstacle_states: Final = JaxObstaclePositions.create
+        obstacle_states: Final = JaxObstaclePositions
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

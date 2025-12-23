@@ -24,6 +24,8 @@ from .accelerated import (
 from .common import (
     Error as Error,
     ContouringCost as ContouringCost,
+    ObstacleStates as ObstacleStates,
+    ObstacleStateProvider as ObstacleStateProvider,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     CollisionCost as CollisionCost,
@@ -37,6 +39,10 @@ from .combined import (
 from .distance import (
     Circles as Circles,
     NumPyObstaclePositions as NumPyObstaclePositions,
+    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
+    NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
     JaxObstaclePositions as JaxObstaclePositions,
+    JaxObstacleStateProvider as JaxObstacleStateProvider,
+    JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
 from .factory import costs as costs, distance as distance

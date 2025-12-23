@@ -8,6 +8,10 @@ from trajax import (
     DynamicalModel,
     Trajectory,
     ContouringCost,
+    Distance,
+    DistanceExtractor,
+    ObstacleStates,
+    ObstacleStateProvider,
     Mppi,
 )
 
@@ -15,7 +19,7 @@ import numpy as np
 from numtypes import Array, Dim1
 
 from tests.visualize import VisualizationData, visualizer, MpccSimulationResult
-from tests.examples import numpy_mpcc, jax_mpcc
+from tests.examples import mpcc, reference, obstacles
 from pytest import mark
 
 
@@ -31,15 +35,27 @@ class ZeroControlInputProvider[ControlInputBatchT](Protocol):
         ...
 
 
+class ObstacleStacker[ObstacleStatesT](Protocol):
+    def __call__(self, obstacle_states: Sequence[ObstacleStatesT]) -> ObstacleStatesT:
+        """Stacks a sequence of obstacle states into a single obstacle states batch."""
+        ...
+
+
 class MpccPlannerConfiguration[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
+    ObstacleStatesT: ObstacleStates,
 ](Protocol):
     @property
     def reference(self) -> Trajectory:
         """Returns the reference trajectory."""
+        ...
+
+    @property
+    def obstacles(self) -> ObstacleStateProvider | None:
+        """Returns the obstacle state provider."""
         ...
 
     @property
@@ -57,6 +73,13 @@ class MpccPlannerConfiguration[
     @property
     def contouring_cost(self) -> ContouringCost[ControlInputBatchT, StateBatchT]:
         """Returns the contouring cost function."""
+        ...
+
+    @property
+    def distance(
+        self,
+    ) -> DistanceExtractor[StateBatchT, ObstacleStatesT, Distance] | None:
+        """Returns the distance extractor used for obstacle avoidance."""
         ...
 
     @property
@@ -80,6 +103,11 @@ class MpccPlannerConfiguration[
         ...
 
     @property
+    def stack_obstacles(self) -> ObstacleStacker[ObstacleStatesT]:
+        """Returns the obstacle stacker."""
+        ...
+
+    @property
     def zero_inputs(self) -> ZeroControlInputProvider[ControlInputBatchT]:
         """Returns the control input provider."""
         ...
@@ -89,29 +117,24 @@ class MpccPlannerConfiguration[
 @mark.parametrize(
     ["configuration", "configuration_name"],
     [
-        (numpy_mpcc.configure.numpy_mpcc_planner_from_base(), "numpy-mpcc-from-base"),
-        (
-            numpy_mpcc.configure.numpy_mpcc_planner_from_augmented(),
-            "numpy-mpcc-from-augmented",
-        ),
-        (jax_mpcc.configure.jax_mpcc_planner_from_base(), "jax-mpcc-from-base"),
-        (
-            jax_mpcc.configure.jax_mpcc_planner_from_augmented(),
-            "jax-mpcc-from-augmented",
-        ),
+        (mpcc.numpy.planner_from_base(), "numpy-from-base"),
+        (mpcc.numpy.planner_from_augmented(), "numpy-from-augmented"),
+        (mpcc.jax.planner_from_base(), "jax-from-base"),
+        (mpcc.jax.planner_from_augmented(), "jax-from-augmented"),
     ],
 )
-@mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"mpcc-{seed}")
+@mark.visualize.with_args(visualizer.mpcc(), lambda seed: seed)
 @mark.integration
 async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
+    ObstacleStatesT: ObstacleStates,
 ](
     visualization: VisualizationData[MpccSimulationResult],
     configuration: MpccPlannerConfiguration[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, ObstacleStatesT
     ],
     configuration_name: str,
 ) -> None:
@@ -171,7 +194,125 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     )
 
 
+@mark.asyncio
+@mark.parametrize(
+    ["configuration", "configuration_name"],
+    [
+        (
+            mpcc.numpy.planner_from_augmented(
+                reference=reference.numpy.loop, obstacles=obstacles.numpy.static.loop
+            ),
+            "numpy-from-augmented-static",
+        ),
+        (
+            mpcc.jax.planner_from_augmented(
+                reference=reference.jax.loop, obstacles=obstacles.jax.static.loop
+            ),
+            "jax-from-augmented-static",
+        ),
+    ],
+)
+@mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"{seed}-obstacles")
+@mark.integration
+async def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_are_present[
+    StateT: AugmentedState,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT: ControlInputSequence,
+    ControlInputBatchT: ControlInputBatch,
+    ObstacleStatesT: ObstacleStates,
+](
+    visualization: VisualizationData[MpccSimulationResult],
+    configuration: MpccPlannerConfiguration[
+        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, ObstacleStatesT
+    ],
+    configuration_name: str,
+) -> None:
+    reference = configuration.reference
+    planner = configuration.planner
+    augmented_model = configuration.model
+    contouring_cost = configuration.contouring_cost
+    current_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+    L = configuration.wheelbase
+    obstacles = configuration.obstacles
+
+    assert obstacles is not None, "Obstacles must be provided for this test."
+
+    states: list[StateT] = []
+    obstacle_history: list[ObstacleStates] = []
+    min_progress = reference.path_length * 0.3
+    progress = 0.0
+
+    for _ in range(max_steps := 300):
+        control = await planner.step(
+            temperature=0.05,
+            nominal_input=nominal_input,
+            initial_state=current_state,
+        )
+
+        nominal_input = control.nominal
+
+        states.append(
+            current_state := await augmented_model.step(
+                input=control.optimal, state=current_state
+            )
+        )
+
+        obstacle_history.append(obstacles())
+
+        if (progress := current_state.virtual.array[0]) >= min_progress:
+            break
+
+    visualization.data_is(
+        MpccSimulationResult(
+            reference=reference,
+            states=states,
+            contouring_errors=(
+                errors := contouring_errors(
+                    contouring_cost,
+                    inputs=configuration.zero_inputs(horizon=len(states)),
+                    states=configuration.stack_states(states),
+                )
+            ),
+            wheelbase=L,
+            obstacles=obstacle_history,
+        )
+    ).seed_is(configuration_name)
+
+    assert progress > min_progress, (
+        f"Vehicle did not make sufficient progress along the path in {max_steps} steps. "
+        f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
+    )
+
+    assert (deviation := errors.max()) < (max_deviation := 5.0), (
+        f"Vehicle deviated too far from the reference trajectory. "
+        f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
+    )
+
+    assert (distance := configuration.distance) is not None, (
+        "Distance extractor is not defined in the configuration."
+    )
+    assert (
+        min_distance := min_distance_to_obstacles(
+            distance,
+            states=configuration.stack_states(states),
+            obstacle_states=configuration.stack_obstacles(obstacle_history),
+        )
+    ) > (safe_distance := 0.0), (
+        f"Vehicle came too close to obstacles. "
+        f"Min distance to obstacles: {min_distance:.2f} m, expected > {safe_distance:.2f} m"
+    )
+
+
 def contouring_errors[InputT: ControlInputBatch, StateT: StateBatch](
     contouring: ContouringCost[InputT, StateT], inputs: InputT, states: StateT
 ) -> Array[Dim1]:
     return np.asarray(contouring.error(inputs=inputs, states=states))[:, 0]
+
+
+def min_distance_to_obstacles[StateT: StateBatch, ObstacleStatesT: ObstacleStates](
+    distance_extractor: DistanceExtractor[StateT, ObstacleStatesT, Distance],
+    states: StateT,
+    obstacle_states: ObstacleStatesT,
+) -> float:
+    return np.min(distance_extractor.measure(states, obstacle_states))

@@ -277,15 +277,15 @@ class JaxCollisionCost[StateT: JaxStateBatch, DistanceT: JaxDistance, V: int](
     weight: float
 
     @staticmethod
-    def create[S: JaxStateBatch, D: JaxDistance](
+    def create[S: JaxStateBatch, D: JaxDistance, V_: int](
         *,
         distance: JaxDistanceExtractor[S, D],
-        distance_threshold: Float[JaxArray, "V"],
+        distance_threshold: Array[Dims[V_]],
         weight: float,
-    ) -> "JaxCollisionCost[S, D, V]":
+    ) -> "JaxCollisionCost[S, D, V_]":
         return JaxCollisionCost(
             distance=distance,
-            distance_threshold=distance_threshold,
+            distance_threshold=jnp.asarray(distance_threshold),
             weight=weight,
         )
 

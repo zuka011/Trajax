@@ -1,10 +1,11 @@
-from typing import Protocol
+from typing import Protocol, Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType, jaxtyped
 from trajax.mppi import JaxStateBatch
 from trajax.costs.accelerated import JaxPositionExtractor, JaxDistance
-from trajax.costs.distance.common import Circles, ObstacleStateProvider
+from trajax.costs.common import ObstacleStateProvider
+from trajax.costs.distance.common import Circles
 
 from numtypes import Array, Dims, D
 from jaxtyping import Array as JaxArray, Float
@@ -19,15 +20,28 @@ class JaxObstacleStates[T: int, D_o: int, K: int](Protocol):
         """Returns the states of obstacles as a NumPy array."""
         ...
 
+    def x(self) -> Array[Dims[T, K]]:
+        """Returns the x positions of obstacles over time as a NumPy array."""
+        ...
+
+    def y(self) -> Array[Dims[T, K]]:
+        """Returns the y positions of obstacles over time as a NumPy array."""
+        ...
+
     @property
-    def x(self) -> Float[JaxArray, "T K"]:
+    def x_array(self) -> Float[JaxArray, "T K"]:
         """Returns the x positions of obstacles over time."""
         ...
 
     @property
-    def y(self) -> Float[JaxArray, "T K"]:
+    def y_array(self) -> Float[JaxArray, "T K"]:
         """Returns the y positions of obstacles over time."""
         ...
+
+
+class JaxObstacleStateProvider[T: int, D_o: int, K: int](
+    ObstacleStateProvider[JaxObstacleStates[T, D_o, K]]
+): ...
 
 
 @jaxtyped
@@ -53,15 +67,32 @@ class JaxObstaclePositions[T: int, K: int](JaxObstacleStates[T, D[2], K]):
 
         return JaxObstaclePositions(_x=x, _y=y)
 
+    @staticmethod
+    def of_states[T_: int, D_o_: int, K_: int](
+        obstacle_states: Sequence[JaxObstacleStates[int, D_o_, K_]],
+        *,
+        horizon: T_ | None = None,
+    ) -> "JaxObstaclePositions[T_, K_]":
+        x = jnp.stack([states.x_array[0] for states in obstacle_states], axis=0)
+        y = jnp.stack([states.y_array[0] for states in obstacle_states], axis=0)
+
+        return JaxObstaclePositions.create(x=x, y=y, horizon=horizon)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K]]:
         return np.stack([self._x, self._y], axis=-1)
 
+    def x(self) -> Array[Dims[T, K]]:
+        return np.asarray(self._x)
+
+    def y(self) -> Array[Dims[T, K]]:
+        return np.asarray(self._y)
+
     @property
-    def x(self) -> Float[JaxArray, "T K"]:
+    def x_array(self) -> Float[JaxArray, "T K"]:
         return self._x
 
     @property
-    def y(self) -> Float[JaxArray, "T K"]:
+    def y_array(self) -> Float[JaxArray, "T K"]:
         return self._y
 
 
@@ -77,7 +108,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
     obstacle_origins: Float[JaxArray, "C 2"]
     obstacle_radii: Float[JaxArray, "C"]
     positions_from: JaxPositionExtractor[StateT]
-    obstacle_states: ObstacleStateProvider[JaxObstacleStates]
+    obstacle_states: JaxObstacleStateProvider
 
     @staticmethod
     def create[S: JaxStateBatch, V_: int, C_: int](
@@ -85,7 +116,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: JaxPositionExtractor[S],
-        obstacle_states: ObstacleStateProvider[JaxObstacleStates],
+        obstacle_states: JaxObstacleStateProvider,
     ) -> "JaxCircleDistanceExtractor[S, V_, C_]":
         return JaxCircleDistanceExtractor(
             ego_origins=jnp.asarray(ego.origins),
@@ -97,20 +128,40 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
         )
 
     def __call__(self, states: StateT) -> JaxDistance[int, V, int]:
+        return self.measure(states, self.obstacle_states())
+
+    def measure(
+        self, states: StateT, obstacle_states: JaxObstacleStates
+    ) -> JaxDistance[int, V, int]:
         ego_positions = self.positions_from(states)
-        obstacle_positions = self.obstacle_states()
+
+        if self._no_obstacles_exist(obstacle_states):
+            (T, M), V = ego_positions.x.shape, self._ego_circle_count
+            return JaxDistance(jnp.full((T, V, M), jnp.inf))
+
         return JaxDistance(
             compute_circle_distances(
                 ego_x=ego_positions.x,
                 ego_y=ego_positions.y,
                 ego_radii=self.ego_radii,
                 ego_origins=self.ego_origins,
-                obstacle_x=obstacle_positions.x,
-                obstacle_y=obstacle_positions.y,
+                obstacle_x=obstacle_states.x_array,
+                obstacle_y=obstacle_states.y_array,
                 obstacle_radii=self.obstacle_radii,
                 obstacle_origins=self.obstacle_origins,
             )
         )
+
+    def _no_obstacles_exist(self, states: JaxObstacleStates) -> bool:
+        return self._obstacle_circle_count == 0 or states.x_array.shape[1] == 0
+
+    @property
+    def _obstacle_circle_count(self) -> int:
+        return self.obstacle_origins.shape[0]
+
+    @property
+    def _ego_circle_count(self) -> int:
+        return self.ego_origins.shape[0]
 
 
 @jax.jit

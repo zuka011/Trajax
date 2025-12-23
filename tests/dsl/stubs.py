@@ -6,6 +6,7 @@ from trajax import (
     ControlInputBatch,
     ControlInputSequence,
     Distance,
+    ObstacleStates,
     Sampler as SamplerLike,
     UpdateFunction as UpdateFunctionLike,
     PaddingFunction as PaddingFunctionLike,
@@ -177,9 +178,11 @@ class DynamicalModel[
 
 
 @dataclass(frozen=True)
-class DistanceExtractor[StateBatchT: StateBatch, DistanceT: Distance](
-    DistanceExtractorLike[StateBatchT, DistanceT]
-):
+class DistanceExtractor[
+    StateBatchT: StateBatch,
+    ObstacleStatesT: ObstacleStates,
+    DistanceT: Distance,
+](DistanceExtractorLike[StateBatchT, ObstacleStatesT, DistanceT]):
     expected_states: StateBatchT
     result: DistanceT
 

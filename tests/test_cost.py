@@ -1,54 +1,3 @@
-# ==============================================================================
-# TODO: COLLISION COST FUNCTION PROPERTY TESTS
-# ==============================================================================
-
-# ------------------------------------------------------------------------------
-# 1. Gradient & Decay Tests
-# ------------------------------------------------------------------------------
-# TODO: Test Distance Decay (Gradient Check)
-#   1. Setup: Obstacle at (0,0).
-#   2. Evaluate Cost at:
-#      - d_close = 0.5m (High danger)
-#      - d_med   = 1.5m (Medium danger)
-#      - d_far   = 10.0m (Safe)
-#   3. ASSERT: Cost(close) > Cost(med) > Cost(far).
-#   4. ASSERT: Cost(far) is approximately 0.0 (or base cost).
-#   WHY: Ensures the optimizer is pushed AWAY from the obstacle (correct gradient sign).
-
-# ------------------------------------------------------------------------------
-# 2. Collision Event Logic
-# ------------------------------------------------------------------------------
-# TODO: Test Interior Penalty (Penetration check)
-#   1. Setup: Circular obstacle Radius=1.0 at (0,0).
-#   2. Evaluate Cost at:
-#      - d_touch = 1.0m (At boundary)
-#      - d_in    = 0.5m (Inside obstacle)
-#   3. ASSERT: Cost(in) >> Cost(touch).
-#   WHY: Ensures the cost function doesn't "give up" or flip signs inside the object.
-#        Critical to prevent the robot from teleporting/tunneling through walls.
-
-# ------------------------------------------------------------------------------
-# 3. Geometric Invariance
-# ------------------------------------------------------------------------------
-# TODO: Test Rigid Body Invariance
-#   1. Scenario A: Robot at (1,0), Obstacle at (2,0). Calculate Cost_A.
-#   2. Scenario B: Rotate/Translate both by random transform (e.g., +100m, +90deg).
-#      - New relative distance must be identical.
-#   3. ASSERT: Cost_A == Cost_B.
-#   WHY: Catches bugs where cost depends on global coordinates instead of relative distance.
-
-# ------------------------------------------------------------------------------
-# 4. Topology & Summation
-# ------------------------------------------------------------------------------
-# TODO: Test The "Tunnel" (Summation Logic)
-#   1. Setup: Obstacle A at y=2, Obstacle B at y=-2.
-#   2. Evaluate Cost at:
-#      - y=0 (Dead center, "Safe" passage).
-#      - y=1.5 (Near A, unsafe).
-#   3. ASSERT: Cost(center) < Cost(near_A).
-#   WHY: Verifies that costs from multiple obstacles sum correctly to form a
-#        "valley" of safety, rather than maximizing or overwriting each other.
-
 from trajax import (
     ControlInputBatch,
     StateBatch,
@@ -889,7 +838,9 @@ M = clear_type
                     ),
                     when_states_are=jax_states,
                 ),
-                distance_threshold=(distance_threshold := jnp.array([1.0, 2.0, 3.0])),
+                distance_threshold=(
+                    distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
+                ),
                 weight=2.0,
             ),
             high_weight_cost := costs.jax.safety.collision(
@@ -1238,7 +1189,7 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                                 # Very Far (well above threshold)
                                 [[2.0, 2.5, 3.0, 5.0], [3.0, 3.5, 4.0, 10.0]],
                             ],
-                            shape=(T := 4, V := 2, M := 4),
+                            shape=(T := 4, V_1 := 2, M := 4),
                         )
                     ),
                     when_states_are=(
@@ -1247,7 +1198,7 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                         )
                     ),
                 ),
-                distance_threshold=jnp.array([1.0, 1.0]),
+                distance_threshold=array([1.0, 1.0], shape=(V_1,)),
                 weight=2.0,
             ),
             inputs := data.jax.control_input_batch(np.zeros((T, D_u := 3, M))),
@@ -1351,7 +1302,7 @@ def test_that_collision_cost_decreases_with_distance[
                         )
                     ),
                 ),
-                distance_threshold=jnp.array([0.25, 0.5, 0.75]),
+                distance_threshold=array([0.25, 0.5, 0.75], shape=(V,)),
                 weight=2.0,
             ),
             inputs := data.jax.control_input_batch(np.zeros((T, D_u := 3, M))),
@@ -1378,3 +1329,56 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
             for (t, m), (next_t, next_m) in zip(cost_order, cost_order[1:])
         ]
     ), f"Collision cost should reflect different thresholds per part. Got costs: {J}"
+
+
+@mark.parametrize(
+    ["cost", "inputs", "states"],
+    [
+        (
+            cost := costs.numpy.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.numpy.distance(np.full((T := 2, V := 2, M := 3), np.inf)),
+                    when_states_are=(
+                        states := data.numpy.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=array([0.5, 0.5], shape=(V,)),
+                weight=10.0,
+            ),
+            inputs := data.numpy.control_input_batch(np.zeros((T, D_u := 2, M))),
+            states,
+        ),
+        (
+            cost := costs.jax.safety.collision(
+                distance=stubs.DistanceExtractor.returns(
+                    data.jax.distance(np.full((T := 2, V := 2, M := 3), np.inf)),
+                    when_states_are=(
+                        states := data.jax.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                ),
+                distance_threshold=array([0.5, 0.5], shape=(V,)),
+                weight=10.0,
+            ),
+            inputs := data.jax.control_input_batch(np.zeros((T, D_u := 2, M))),
+            states,
+        ),
+    ],
+)
+def test_that_collision_cost_is_zero_when_no_obstacles_are_present[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+) -> None:
+    J = np.asarray(cost(inputs=inputs, states=states))
+
+    assert np.allclose(J, 0.0), (
+        f"Collision cost should be zero when no obstacles are present. Got costs: {J}"
+    )

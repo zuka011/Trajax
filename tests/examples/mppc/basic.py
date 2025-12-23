@@ -1,5 +1,5 @@
-from typing import Final
-from dataclasses import dataclass
+from typing import Final, Sequence
+from dataclasses import dataclass, field
 
 from trajax import (
     Mppi,
@@ -7,6 +7,9 @@ from trajax import (
     AugmentedSampler,
     ContouringCost,
     Trajectory,
+    Circles,
+    Distance,
+    DistanceExtractor,
     mppi,
     model,
     sampler,
@@ -14,10 +17,14 @@ from trajax import (
     trajectory,
     types,
     extract,
+    distance,
+    obstacles as create_obstacles,
 )
 
 import numpy as np
-from numtypes import array, Array, Dim2
+from numtypes import array, Array, Dim1, Dim2
+
+HORIZON: Final = 30
 
 type PhysicalState = types.numpy.bicycle.State
 type PhysicalStateBatch = types.numpy.bicycle.StateBatch
@@ -38,6 +45,8 @@ type MpccInputBatch = types.numpy.augmented.ControlInputBatch[
     PhysicalInputBatch, VirtualInputBatch
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
+type ObstacleStates = types.numpy.ObstacleStates
+type ObstacleStateProvider = types.numpy.ObstacleStateProvider
 
 
 def path_parameter(states: VirtualStateBatch) -> types.numpy.PathParameters:
@@ -52,30 +61,6 @@ def position(states: PhysicalStateBatch) -> types.numpy.Positions:
     return types.numpy.positions(x=states.positions.x(), y=states.positions.y())
 
 
-REFERENCE: Final = trajectory.numpy.waypoints(
-    points=array(
-        [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [20.0, 5.0],
-            [25.0, 15.0],
-            [20.0, 25.0],
-            [10.0, 25.0],
-            [5.0, 15.0],
-            [10.0, 5.0],
-            [20.0, 0.0],
-            [30.0, 0.0],
-            [40.0, 5.0],
-            [50.0, 5.0],
-            [60.0, 0.0],
-            [70.0, 0.0],
-        ],
-        shape=(14, 2),
-    ),
-    path_length=120.0,
-)
-
-
 @dataclass(kw_only=True, frozen=True)
 class NumPyMpccPlannerConfiguration:
     reference: Trajectory
@@ -83,6 +68,9 @@ class NumPyMpccPlannerConfiguration:
     model: AugmentedModel
     contouring_cost: ContouringCost
     wheelbase: float
+
+    distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
+    obstacles: ObstacleStateProvider | None = None
 
     @staticmethod
     def stack_states(states: list[MpccState]) -> MpccStateBatch:
@@ -94,6 +82,10 @@ class NumPyMpccPlannerConfiguration:
                 [it.virtual for it in states]
             ),
         )
+
+    @staticmethod
+    def stack_obstacles(obstacle_states: Sequence[ObstacleStates]) -> ObstacleStates:
+        return types.numpy.obstacle_states.of_states(obstacle_states)
 
     @staticmethod
     def zero_inputs(horizon: int) -> MpccInputBatch:
@@ -114,19 +106,75 @@ class NumPyMpccPlannerConfiguration:
     @property
     def nominal_input(self) -> MpccInputSequence:
         return types.numpy.augmented.control_input_sequence.of(
-            physical=types.numpy.bicycle.control_input_sequence.zeroes(
-                horizon=(horizon := 30)
-            ),
+            physical=types.numpy.bicycle.control_input_sequence.zeroes(horizon=HORIZON),
             virtual=types.numpy.simple.control_input_sequence.zeroes(
-                horizon=horizon, dimension=1
+                horizon=HORIZON, dimension=1
             ),
+        )
+
+
+@dataclass(frozen=True)
+class NumPyMpccPlannerWeights:
+    contouring: float = 20.0
+    lag: float = 10.0
+    progress: float = 500.0
+    control_smoothing: Array[Dim1] = field(
+        default_factory=lambda: array([2.0, 5.0, 5.0], shape=(3,))
+    )
+    collision: float = 1000.0
+
+
+class reference:
+    loop: Final = trajectory.numpy.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [25.0, 15.0],
+                [20.0, 25.0],
+                [10.0, 25.0],
+                [5.0, 15.0],
+                [10.0, 5.0],
+                [20.0, 0.0],
+                [30.0, 0.0],
+                [40.0, 5.0],
+                [50.0, 5.0],
+                [60.0, 0.0],
+                [70.0, 0.0],
+            ],
+            shape=(14, 2),
+        ),
+        path_length=120.0,
+    )
+
+
+class obstacles:
+    none: Final = create_obstacles.numpy.empty(horizon=HORIZON)
+
+    class static:
+        loop: Final = create_obstacles.numpy.static(
+            array(
+                [
+                    [15.0, 2.0],
+                    [17.0, 20.0],
+                    [8.0, 13.0],
+                    [12.0, 3.0],
+                    [32.0, -1.0],
+                    [42.0, 6.0],
+                    [57.0, 2.0],
+                ],
+                shape=(7, 2),
+            ),
+            horizon=HORIZON,
         )
 
 
 class configure:
     @staticmethod
-    def numpy_mpcc_planner_from_base(
-        reference: Trajectory = REFERENCE,
+    def planner_from_base(
+        reference: Trajectory = reference.loop,
+        weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
     ) -> NumPyMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
@@ -158,21 +206,21 @@ class configure:
                     position_extractor=(
                         position_extractor := extract.from_physical(position)
                     ),
-                    weight=50.0,
+                    weight=weights.contouring,
                 ),
                 costs.numpy.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
-                    weight=10.0,
+                    weight=weights.lag,
                 ),
                 costs.numpy.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
-                    weight=250.0,
+                    weight=weights.progress,
                 ),
                 costs.numpy.comfort.control_smoothing(
-                    weights=np.array([2.0, 5.0, 5.0])
+                    weights=weights.control_smoothing
                 ),
             ),
             sampler=AugmentedSampler.of(
@@ -201,8 +249,11 @@ class configure:
         )
 
     @staticmethod
-    def numpy_mpcc_planner_from_augmented(
-        reference: Trajectory = REFERENCE,
+    def planner_from_augmented(
+        *,
+        reference: Trajectory = reference.loop,
+        obstacles: ObstacleStateProvider = obstacles.none,
+        weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
     ) -> NumPyMpccPlannerConfiguration:
         planner, augmented_model = mppi.numpy.augmented(
             models=(
@@ -242,21 +293,45 @@ class configure:
                     position_extractor=(
                         position_extractor := extract.from_physical(position)
                     ),
-                    weight=50.0,
+                    weight=weights.contouring,
                 ),
                 costs.numpy.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
-                    weight=10.0,
+                    weight=weights.lag,
                 ),
                 costs.numpy.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
-                    weight=250.0,
+                    weight=weights.progress,
                 ),
                 costs.numpy.comfort.control_smoothing(
-                    weights=np.array([2.0, 5.0, 5.0])
+                    weights=weights.control_smoothing
+                ),
+                costs.numpy.safety.collision(
+                    distance=(
+                        circles_distance := distance.numpy.circles(
+                            ego=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(V := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(V,)),
+                            ),
+                            obstacle=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(C := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(C,)),
+                            ),
+                            position_extractor=position_extractor,
+                            obstacle_states=obstacles,
+                        )
+                    ),
+                    distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
+                    weight=weights.collision,
                 ),
             ),
             state=types.numpy.augmented.state,
@@ -270,4 +345,6 @@ class configure:
             model=augmented_model,
             contouring_cost=contouring_cost,
             wheelbase=L,
+            distance=circles_distance,
+            obstacles=obstacles,
         )

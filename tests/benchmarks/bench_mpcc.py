@@ -8,7 +8,7 @@ from tests.benchmarks.runner import (
     NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
-from tests.examples import numpy_mpcc, jax_mpcc
+from tests.examples import mpcc
 
 from pytest import mark
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -34,9 +34,7 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
                     nominal_input=configuration.nominal_input,
                 ),
             )
-            for id, configuration in (
-                ("NumPy", numpy_mpcc.configure.numpy_mpcc_planner_from_augmented()),
-            )
+            for id, configuration in (("NumPy", mpcc.numpy.planner_from_augmented()),)
         ],
         *[
             (
@@ -48,9 +46,7 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
                     nominal_input=configuration.nominal_input,
                 ),
             )
-            for id, configuration in (
-                ("JAX", jax_mpcc.configure.jax_mpcc_planner_from_augmented()),
-            )
+            for id, configuration in (("JAX", mpcc.jax.planner_from_augmented()),)
         ],
     ],
 )

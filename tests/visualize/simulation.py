@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from numtypes import Array, Dim1, IndexArray
+from numtypes import Array, Dims, Dim1, Dim2, IndexArray
 from aiopath import AsyncPath
 
 from bokeh.plotting import figure
@@ -16,6 +16,7 @@ from bokeh.events import DocumentReady
 
 
 type VehicleType = Literal["triangle", "car"]
+type ObstacleCoordinate[T: int = int, K: int = int] = Array[Dims[T, K]]
 
 
 class Theme:
@@ -112,14 +113,60 @@ class SimulationData:
     vehicle_type: VehicleType = "triangle"
     wheelbase: float = Theme.Sizes.DEFAULT_VEHICLE_WHEELBASE
     vehicle_width: float = Theme.Sizes.DEFAULT_VEHICLE_WIDTH
+    obstacle_positions_x: Array[Dim2] | None = None
+    obstacle_positions_y: Array[Dim2] | None = None
+
+    def __post_init__(self) -> None:
+        assert len(self.positions_x) == self.time_step_count, (
+            f"Length of positions_x does not match number of timesteps. "
+            f"Got {len(self.positions_x)} positions, expected {self.time_step_count}."
+        )
+        assert len(self.positions_y) == self.time_step_count, (
+            f"Length of positions_y does not match number of timesteps."
+            f"Got {len(self.positions_y)} positions, expected {self.time_step_count}."
+        )
+        assert len(self.headings) == self.time_step_count, (
+            f"Length of headings does not match number of timesteps."
+            f"Got {len(self.headings)} headings, expected {self.time_step_count}."
+        )
+        assert len(self.path_parameters) == self.time_step_count, (
+            f"Length of path_parameters does not match number of timesteps."
+            f"Got {len(self.path_parameters)} parameters, expected {self.time_step_count}."
+        )
+        assert self.errors is None or len(self.errors) == self.time_step_count, (
+            f"Length of errors does not match number of timesteps."
+            f"Got {len(self.errors)} errors, expected {self.time_step_count}."
+        )
+        assert self.ghost_x is None or len(self.ghost_x) == self.time_step_count, (
+            f"Length of ghost_x does not match number of timesteps."
+            f"Got {len(self.ghost_x)} positions, expected {self.time_step_count}."
+        )
+        assert self.ghost_y is None or len(self.ghost_y) == self.time_step_count, (
+            f"Length of ghost_y does not match number of timesteps."
+            f"Got {len(self.ghost_y)} positions, expected {self.time_step_count}."
+        )
+        assert (
+            self.obstacle_positions_x is None
+            or len(self.obstacle_positions_x) == self.time_step_count
+        ), (
+            f"Length of obstacle_positions_x does not match number of timesteps."
+            f"Got {len(self.obstacle_positions_x)} positions, expected {self.time_step_count}."
+        )
+        assert (
+            self.obstacle_positions_y is None
+            or len(self.obstacle_positions_y) == self.time_step_count
+        ), (
+            f"Length of obstacle_positions_y does not match number of timesteps."
+            f"Got {len(self.obstacle_positions_y)} positions, expected {self.time_step_count}."
+        )
 
     @property
-    def timestep_count(self) -> int:
+    def time_step_count(self) -> int:
         return len(self.positions_x)
 
     @property
-    def timesteps(self) -> IndexArray[Dim1]:
-        return np.arange(self.timestep_count)
+    def time_steps(self) -> IndexArray[Dim1]:
+        return np.arange(self.time_step_count)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -161,11 +208,12 @@ async def create_animation_html(data: SimulationData, output: AsyncPath) -> None
     add_vehicle_to_plot(trajectory_plot, sources["vehicle"], data)
     add_trajectory_trace_to_plot(trajectory_plot, sources["trajectory"])
     add_ghost_vehicle_to_plot(trajectory_plot, sources["ghost"])
+    add_obstacles_to_plot(trajectory_plot, sources["obstacles"], data)
     add_progress_marker_to_plot(progress_plot, sources["progress"])
     add_error_marker_to_plot(error_plot, sources["error"])
 
-    time_slider = create_time_slider(data.timestep_count)
-    play_button = create_play_button(time_slider, data.timestep_count)
+    time_slider = create_time_slider(data.time_step_count)
+    play_button = create_play_button(time_slider, data.time_step_count)
     speed_selector = create_speed_selector()
     reset_button = create_reset_button(time_slider)
 
@@ -193,6 +241,7 @@ async def create_animation_html(data: SimulationData, output: AsyncPath) -> None
 def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
     errors = get_errors(data)
     ghost_x, ghost_y = get_ghost_positions(data)
+    obstacle_x, obstacle_y = get_obstacle_positions(data)
 
     return {
         "vehicle": ColumnDataSource(
@@ -226,6 +275,12 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "error": [errors[0]],
             }
         ),
+        "obstacles": ColumnDataSource(
+            data={
+                "x": obstacle_x[0].tolist(),
+                "y": obstacle_y[0].tolist(),
+            }
+        ),
         "simulation": ColumnDataSource(
             data={
                 "positions_x": data.positions_x.tolist(),
@@ -235,6 +290,8 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "errors": errors.tolist(),
                 "ghost_x": ghost_x.tolist(),
                 "ghost_y": ghost_y.tolist(),
+                "obstacle_positions_x": obstacle_x.tolist(),
+                "obstacle_positions_y": obstacle_y.tolist(),
             }
         ),
         "reference": ColumnDataSource(
@@ -260,10 +317,19 @@ def get_ghost_positions(data: SimulationData) -> tuple[Array[Dim1], Array[Dim1]]
     return compute_ghost_positions_from_closest_point(data)
 
 
-def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
-    errors = np.zeros(data.timestep_count)
+def get_obstacle_positions(
+    data: SimulationData,
+) -> tuple[ObstacleCoordinate, ObstacleCoordinate]:
+    if data.obstacle_positions_x is None or data.obstacle_positions_y is None:
+        return np.empty((data.time_step_count, 0)), np.empty((data.time_step_count, 0))
 
-    for i in range(data.timestep_count):
+    return data.obstacle_positions_x, data.obstacle_positions_y
+
+
+def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
+    errors = np.zeros(data.time_step_count)
+
+    for i in range(data.time_step_count):
         distances = np.sqrt(
             (data.reference.x - data.positions_x[i]) ** 2
             + (data.reference.y - data.positions_y[i]) ** 2
@@ -276,10 +342,10 @@ def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
 def compute_ghost_positions_from_closest_point(
     data: SimulationData,
 ) -> tuple[Array[Dim1], Array[Dim1]]:
-    ghost_x = np.zeros(data.timestep_count)
-    ghost_y = np.zeros(data.timestep_count)
+    ghost_x = np.zeros(data.time_step_count)
+    ghost_y = np.zeros(data.time_step_count)
 
-    for i in range(data.timestep_count):
+    for i in range(data.time_step_count):
         distances = np.sqrt(
             (data.reference.x - data.positions_x[i]) ** 2
             + (data.reference.y - data.positions_y[i]) ** 2
@@ -339,7 +405,7 @@ def create_progress_plot(data: SimulationData) -> Figure:
         sizing_mode="stretch_width",
     )
 
-    times = data.timesteps * data.time_step
+    times = data.time_steps * data.time_step
 
     plot.line(
         times,
@@ -364,7 +430,7 @@ def create_progress_plot(data: SimulationData) -> Figure:
 
 def create_error_plot(data: SimulationData) -> Figure:
     errors = get_errors(data)
-    times = data.timesteps * data.time_step
+    times = data.time_steps * data.time_step
 
     plot = figure(
         title=data.error_label,
@@ -539,6 +605,30 @@ def add_ghost_vehicle_to_plot(plot: Figure, source: ColumnDataSource) -> None:
     )
 
 
+def add_obstacles_to_plot(
+    plot: Figure, source: ColumnDataSource, data: SimulationData
+) -> None:
+    if data.obstacle_positions_x is None or data.obstacle_positions_y is None:
+        return
+
+    obstacle_color = "#7f8c8d"
+    obstacle_border = "#5a6263"
+
+    plot.rect(  # type: ignore
+        "x",
+        "y",
+        source=source,
+        width=data.wheelbase,
+        height=data.vehicle_width,
+        angle=0.0,
+        color=obstacle_color,
+        line_color=obstacle_border,
+        line_width=2,
+        alpha=0.8,
+        legend_label="Obstacle",
+    )
+
+
 def add_trajectory_trace_to_plot(plot: Figure, source: ColumnDataSource) -> None:
     plot.line(  # type: ignore
         "x",
@@ -587,6 +677,7 @@ def create_slider_callback(
             "progress": sources["progress"],
             "ghost": sources["ghost"],
             "error": sources["error"],
+            "obstacles": sources["obstacles"],
             "sim": sources["simulation"],
             "dt": data.time_step,
         },
@@ -618,6 +709,14 @@ def create_slider_callback(
             error.data = {
                 timestep: [t * dt],
                 error: [s.errors[t]]
+            };
+            
+            const obstacle_positions_x = s.obstacle_positions_x;
+            const obstacle_positions_y = s.obstacle_positions_y;
+
+            obstacles.data = {
+                x: obstacle_positions_x[t],
+                y: obstacle_positions_y[t]
             };
         """,
     )

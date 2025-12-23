@@ -1,26 +1,33 @@
 from typing import Final, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from trajax import (
     Mppi,
     AugmentedModel,
     AugmentedSampler,
+    Circles,
     ContouringCost,
+    Distance,
+    DistanceExtractor,
     Trajectory,
     mppi,
     model,
     sampler,
     costs,
+    distance,
     trajectory,
     types,
     extract,
+    obstacles as create_obstacles,
 )
 
-from numtypes import array
+from numtypes import array, Array, Dim1
 from jaxtyping import Array as JaxArray, Float
 
 import jax.numpy as jnp
 import jax.random as jrandom
+
+HORIZON: Final = 30
 
 type PhysicalState = types.jax.bicycle.State
 type PhysicalStateBatch = types.jax.bicycle.StateBatch
@@ -60,6 +67,8 @@ type Sampler = AugmentedSampler[
     MpccInputBatch,
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
+type ObstacleStates = types.jax.ObstacleStates
+type ObstacleStateProvider = types.jax.ObstacleStateProvider
 
 
 def path_parameter(states: VirtualStateBatch) -> types.jax.PathParameters:
@@ -74,30 +83,6 @@ def position(states: PhysicalStateBatch) -> types.jax.Positions:
     return types.jax.positions(x=states.positions.x_array, y=states.positions.y_array)
 
 
-REFERENCE: Final = trajectory.jax.waypoints(
-    points=array(
-        [
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [20.0, 5.0],
-            [25.0, 15.0],
-            [20.0, 25.0],
-            [10.0, 25.0],
-            [5.0, 15.0],
-            [10.0, 5.0],
-            [20.0, 0.0],
-            [30.0, 0.0],
-            [40.0, 5.0],
-            [50.0, 5.0],
-            [60.0, 0.0],
-            [70.0, 0.0],
-        ],
-        shape=(14, 2),
-    ),
-    path_length=120.0,
-)
-
-
 @dataclass(kw_only=True, frozen=True)
 class JaxMpccPlannerConfiguration:
     reference: Trajectory
@@ -105,6 +90,9 @@ class JaxMpccPlannerConfiguration:
     model: AugmentedModel
     contouring_cost: ContouringCost
     wheelbase: float
+
+    distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
+    obstacles: ObstacleStateProvider | None = None
 
     @staticmethod
     def stack_states(states: Sequence[MpccState]) -> MpccStateBatch:
@@ -116,6 +104,10 @@ class JaxMpccPlannerConfiguration:
                 [it.virtual for it in states]
             ),
         )
+
+    @staticmethod
+    def stack_obstacles(obstacle_states: Sequence[ObstacleStates]) -> ObstacleStates:
+        return types.jax.obstacle_states.of_states(obstacle_states)
 
     @staticmethod
     def zero_inputs(horizon: int) -> MpccInputBatch:
@@ -145,10 +137,67 @@ class JaxMpccPlannerConfiguration:
         )
 
 
+@dataclass(frozen=True)
+class JaxMpccPlannerWeights:
+    contouring: float = 20.0
+    lag: float = 10.0
+    progress: float = 500.0
+    control_smoothing: Array[Dim1] = field(
+        default_factory=lambda: array([2.0, 5.0, 5.0], shape=(3,))
+    )
+    collision: float = 1000.0
+
+
+class reference:
+    loop: Final = trajectory.jax.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [25.0, 15.0],
+                [20.0, 25.0],
+                [10.0, 25.0],
+                [5.0, 15.0],
+                [10.0, 5.0],
+                [20.0, 0.0],
+                [30.0, 0.0],
+                [40.0, 5.0],
+                [50.0, 5.0],
+                [60.0, 0.0],
+                [70.0, 0.0],
+            ],
+            shape=(14, 2),
+        ),
+        path_length=120.0,
+    )
+
+
+class obstacles:
+    none: Final = create_obstacles.jax.empty(horizon=HORIZON)
+
+    class static:
+        loop: Final = create_obstacles.jax.static(
+            jnp.array(
+                [
+                    [15.0, 2.0],
+                    [17.0, 20.0],
+                    [8.0, 13.0],
+                    [12.0, 3.0],
+                    [32.0, -1.0],
+                    [42.0, 6.0],
+                    [57.0, 2.0],
+                ]
+            ),
+            horizon=HORIZON,
+        )
+
+
 class configure:
     @staticmethod
-    def jax_mpcc_planner_from_base(
-        reference: Trajectory = REFERENCE,
+    def planner_from_base(
+        reference: Trajectory = reference.loop,
+        weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
     ) -> JaxMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
@@ -180,20 +229,20 @@ class configure:
                     position_extractor=(
                         position_extractor := extract.from_physical(position)
                     ),
-                    weight=50.0,
+                    weight=weights.contouring,
                 ),
                 costs.jax.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
-                    weight=10.0,
+                    weight=weights.lag,
                 ),
                 costs.jax.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
-                    weight=250.0,
+                    weight=weights.progress,
                 ),
-                costs.jax.comfort.control_smoothing(weights=jnp.array([2.0, 5.0, 5.0])),
+                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
             ),
             sampler=AugmentedSampler.of(
                 physical=sampler.jax.gaussian(
@@ -221,8 +270,11 @@ class configure:
         )
 
     @staticmethod
-    def jax_mpcc_planner_from_augmented(
-        reference: Trajectory = REFERENCE,
+    def planner_from_augmented(
+        *,
+        reference: Trajectory = reference.loop,
+        obstacles: ObstacleStateProvider = obstacles.none,
+        weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
     ) -> JaxMpccPlannerConfiguration:
         planner, augmented_model = mppi.jax.augmented(
             models=(
@@ -262,20 +314,44 @@ class configure:
                     position_extractor=(
                         position_extractor := extract.from_physical(position)
                     ),
-                    weight=50.0,
+                    weight=weights.contouring,
                 ),
                 costs.jax.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
-                    weight=10.0,
+                    weight=weights.lag,
                 ),
                 costs.jax.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
-                    weight=250.0,
+                    weight=weights.progress,
                 ),
-                costs.jax.comfort.control_smoothing(weights=jnp.array([2.0, 5.0, 5.0])),
+                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.jax.safety.collision(
+                    distance=(
+                        circles_distance := distance.jax.circles(
+                            ego=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(V := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(V,)),
+                            ),
+                            obstacle=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(C := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(C,)),
+                            ),
+                            position_extractor=position_extractor,
+                            obstacle_states=obstacles,
+                        )
+                    ),
+                    distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
+                    weight=weights.collision,
+                ),
             ),
             state=types.jax.augmented.state,
             state_batch=types.jax.augmented.state_batch,
@@ -288,4 +364,6 @@ class configure:
             model=augmented_model,
             contouring_cost=contouring_cost,
             wheelbase=L,
+            distance=circles_distance,
+            obstacles=obstacles,
         )

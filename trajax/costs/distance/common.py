@@ -1,5 +1,5 @@
-from typing import Protocol
 from dataclasses import dataclass
+
 
 from numtypes import Array, Dims, D
 
@@ -16,9 +16,3 @@ class Circles[N: int]:
 
     radii: RadiiArray[N]
     """The radius of the circle."""
-
-
-class ObstacleStateProvider[StateT](Protocol):
-    def __call__(self) -> StateT:
-        """Provides the current obstacle states."""
-        ...
