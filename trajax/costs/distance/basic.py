@@ -3,10 +3,12 @@ from dataclasses import dataclass
 
 from trajax.type import DataType
 from trajax.mppi import NumPyStateBatch
+from trajax.trajectory import NumPyHeadings
 from trajax.costs.basic import (
     NumPyDistance,
     NumPyPositions,
     NumPyPositionExtractor,
+    NumPyHeadingExtractor,
     NumPyObstacleStates,
 )
 from trajax.costs.distance.common import Circles
@@ -73,6 +75,7 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
     ego: Circles[V]
     obstacle: Circles[C]
     positions_from: NumPyPositionExtractor[StateT]
+    headings_from: NumPyHeadingExtractor[StateT]
 
     @staticmethod
     def create[S: NumPyStateBatch, V_: int, C_: int](
@@ -80,9 +83,13 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: NumPyPositionExtractor[S],
+        heading_extractor: NumPyHeadingExtractor[S],
     ) -> "NumPyCircleDistanceExtractor[S, V_, C_]":
         return NumPyCircleDistanceExtractor(
-            ego=ego, obstacle=obstacle, positions_from=position_extractor
+            ego=ego,
+            obstacle=obstacle,
+            positions_from=position_extractor,
+            headings_from=heading_extractor,
         )
 
     def __call__(
@@ -91,6 +98,7 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         return NumPyDistance(
             compute_circle_distances(
                 ego_positions=self.positions_from(states),
+                ego_headings=self.headings_from(states),
                 ego=self.ego,
                 obstacle_states=obstacle_states,
                 obstacle=self.obstacle,
@@ -101,15 +109,19 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
 def compute_circle_distances[T: int, M: int, V: int, C: int, K: int](
     *,
     ego_positions: NumPyPositions[T, M],
+    ego_headings: NumPyHeadings[T, M],
     ego: Circles[V],
     obstacle_states: NumPyObstacleStates[T, int, K],
     obstacle: Circles[C],
 ) -> Array[Dims[T, V, M]]:
     ego_global_x, ego_global_y = to_global_positions(
-        x=ego_positions.x, y=ego_positions.y, local_origins=ego.origins
+        x=ego_positions.x,
+        y=ego_positions.y,
+        heading=ego_headings.theta,
+        local_origins=ego.origins,
     )
 
-    obstacle_global_x, obstacle_global_y = to_global_obstacle_positions(
+    obstacle_global_x, obstacle_global_y = to_global_positions(
         x=obstacle_states.x(),
         y=obstacle_states.y(),
         heading=obstacle_states.heading(),
@@ -129,30 +141,16 @@ def compute_circle_distances[T: int, M: int, V: int, C: int, K: int](
 
 
 def to_global_positions[A: int, B: int, C: int](
-    x: Array[Dims[A, B]], y: Array[Dims[A, B]], local_origins: OriginsArray[C]
-) -> tuple[Array[Dims[C, A, B]], Array[Dims[C, A, B]]]:
-    global_x = x[np.newaxis, :, :] + local_origins[:, 0:1, np.newaxis]
-    global_y = y[np.newaxis, :, :] + local_origins[:, 1:2, np.newaxis]
-
-    return global_x, global_y
-
-
-def to_global_obstacle_positions[T: int, K: int, C: int](
-    x: Array[Dims[T, K]],
-    y: Array[Dims[T, K]],
-    heading: Array[Dims[T, K]],
+    x: Array[Dims[A, B]],
+    y: Array[Dims[A, B]],
+    heading: Array[Dims[A, B]],
     local_origins: OriginsArray[C],
-) -> tuple[Array[Dims[C, T, K]], Array[Dims[C, T, K]]]:
-    """Computes global positions of obstacle circles considering heading rotation.
-
-    The local_origins are rotated by the obstacle heading before being added to
-    the obstacle position.
-    """
-    cos_h = np.cos(heading)
-    sin_h = np.sin(heading)
-
+) -> tuple[Array[Dims[C, A, B]], Array[Dims[C, A, B]]]:
     local_x = local_origins[:, 0:1, np.newaxis]
     local_y = local_origins[:, 1:2, np.newaxis]
+
+    cos_h = np.cos(heading)
+    sin_h = np.sin(heading)
 
     rotated_local_x = (
         local_x * cos_h[np.newaxis, :, :] - local_y * sin_h[np.newaxis, :, :]

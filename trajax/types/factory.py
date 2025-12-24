@@ -45,9 +45,11 @@ from trajax.trajectory import (
     NumPyPathParameters,
     NumPyReferencePoints,
     NumPyPositions,
+    NumPyHeadings,
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
+    JaxHeadings,
 )
 from trajax.costs import (
     NumPyPathParameterExtractor,
@@ -157,6 +159,7 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = NumPyPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
+        type Headings[T: int = Any, M: int = Any] = NumPyHeadings[T, M]
         type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
             NumPyObstacleStates[T, D_o, K]
         )
@@ -185,6 +188,7 @@ class types:
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
         positions: Final = NumPyPositions.create
+        headings: Final = NumPyHeadings.create
         distance: Final = NumPyDistance
         obstacle_states: Final = NumPyObstaclePositions
 
@@ -258,6 +262,7 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = JaxPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
+        type Headings[T: int = Any, M: int = Any] = JaxHeadings[T, M]
         type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
             JaxObstacleStates[T, D_o, K]
         )
@@ -282,6 +287,7 @@ class types:
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create
         positions: Final = JaxPositions.create
+        headings: Final = JaxHeadings.create
         distance: Final = JaxDistance
         obstacle_states: Final = JaxObstaclePositions
 

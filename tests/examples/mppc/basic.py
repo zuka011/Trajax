@@ -61,6 +61,10 @@ def position(states: PhysicalStateBatch) -> types.numpy.Positions:
     return types.numpy.positions(x=states.positions.x(), y=states.positions.y())
 
 
+def heading(states: PhysicalStateBatch) -> types.numpy.Headings:
+    return types.numpy.headings(theta=states.orientations())
+
+
 @dataclass(kw_only=True, frozen=True)
 class NumPyMpccPlannerConfiguration:
     reference: Trajectory
@@ -355,6 +359,7 @@ class configure:
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
                             position_extractor=position_extractor,
+                            heading_extractor=extract.from_physical(heading),
                         )
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),

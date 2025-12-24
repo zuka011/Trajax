@@ -1446,3 +1446,37 @@ def test_that_collision_cost_is_zero_when_no_obstacles_are_present[
     assert np.allclose(J, 0.0), (
         f"Collision cost should be zero when no obstacles are present. Got costs: {J}"
     )
+
+
+# def test_that_collision_cost_increases_with_higher_position_uncertainty() -> None:
+#     cost = costs.numpy.safety.collision(
+#         obstacle_states=stubs.ObstacleStateProvider.returns(
+#             obstacle_states := data.jax.obstacle_states(
+#                 x=array([[1.0], [2.0]], shape=(T := 2, K := 1)),
+#                 y=array([[2.0], [3.0]], shape=(T, K)),
+#             )
+#         ),
+#         distance=distance_measure.numpy.circles(
+#             ego=Circles(
+#                 origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+#                 radii=array([0.5], shape=(V,)),
+#             ),
+#             obstacle=Circles(
+#                 origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+#                 radii=array([0.5], shape=(C,)),
+#             ),
+#             position_extractor=lambda states: types.numpy.positions(
+#                 x=np.asarray(states)[:, 0],
+#                 y=np.asarray(states)[:, 1],
+#             ),
+#         ),
+#         distance_threshold=array([0.5], shape=(V,)),
+#         weight=10.0,
+#     )
+
+#     inputs = data.numpy.control_input_batch(np.zeros((T, D_u := 2, M)))
+#     # states = data.numpy.state_batch(
+#     # array(
+#     #     [
+#     #         [[0.0, ]]
+#     #     ]

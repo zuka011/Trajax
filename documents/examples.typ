@@ -243,7 +243,7 @@
     contouring-endpoint,
     color: contour-color.transparentize(25%),
     dash: "solid",
-    label-content: text(fill: contour-color, $e_l$),
+    label-content: text(fill: contour-color, $e_c$),
     label-offset: (-0.3, 0),
   )
 
@@ -252,7 +252,7 @@
     reference-point,
     color: lag-color.transparentize(25%),
     dash: "solid",
-    label-content: text(fill: lag-color, $e_c$),
+    label-content: text(fill: lag-color, $e_l$),
     label-offset: (0, 0.3),
   )
 

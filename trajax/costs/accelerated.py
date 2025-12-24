@@ -15,6 +15,7 @@ from trajax.trajectory import (
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
+    JaxHeadings,
 )
 from trajax.states import JaxSimpleCosts
 from trajax.costs.common import Distance
@@ -42,6 +43,12 @@ class JaxPathVelocityExtractor[InputT: JaxControlInputBatch](Protocol):
 class JaxPositionExtractor[StateT: JaxStateBatch](Protocol):
     def __call__(self, states: StateT, /) -> JaxPositions:
         """Extracts (x, y) positions from a batch of states."""
+        ...
+
+
+class JaxHeadingExtractor[StateT: JaxStateBatch](Protocol):
+    def __call__(self, states: StateT, /) -> JaxHeadings:
+        """Extracts heading angles from a batch of states."""
         ...
 
 

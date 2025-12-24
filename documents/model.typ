@@ -334,6 +334,24 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
   where $#collision-weight > 0$ is a weighting factor.
 ]
 
+== Motion Prediction
+
+=== Constant Velocity Model
+
+To effectively avoid collisions, only considering the current state of moving obstacles is insufficient most of the time. Instead, we need to predict how these obstacles will move in the near future. Among the many ways to do this, a simple method is to assume that the obstacles will continue moving at a constant velocity. More specifically, we can assume that the state of each obstacle changes according to some known dynamics, and that the control inputs to these dynamics are zero.
+
+For example, assume a robot follows the kinematic bicycle model described in @kinematic-bicycle-equations. Then, for the robot's current state $#state-single _("obs")$ and control input $#input-single _("obs") = [0 quad 0]$, we can predict its future trajectory by simulating the kinematic bicycle model with these values. In this specific case, we would predict that the robot will continue moving straight at its current speed.
+
+=== Constant Acceleration Model
+
+Similarly, for the constant acceleration model, we can assume that the obstacles will continue moving with their current acceleration.
+
+For example, for the case of the kinematic bicycle model, this means that we assume the control inputs $#input-single _("obs") = [a quad delta]$ remain constant over the prediction horizon. If a robot is following a curved path, this model's predictions will likely be more accurate than those of the constant velocity model.
+
+=== Incorporating Uncertainty
+
+
+
 #pagebreak()
 
 #bibliography("references.bib")

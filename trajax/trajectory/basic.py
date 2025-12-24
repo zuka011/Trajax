@@ -39,6 +39,19 @@ class NumPyPositions[T: int, M: int]:
 
 
 @dataclass(frozen=True)
+class NumPyHeadings[T: int, M: int]:
+    theta: Array[Dims[T, M]]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        *,
+        theta: Array[Dims[T_, M_]],
+    ) -> "NumPyHeadings[T_, M_]":
+        """Creates a NumPy headings instance from an array of headings."""
+        return NumPyHeadings(theta=theta)
+
+
+@dataclass(frozen=True)
 class NumPyReferencePoints[T: int, M: int]:
     array: Array[Dims[T, D_r, M]]
 

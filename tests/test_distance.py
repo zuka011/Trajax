@@ -35,6 +35,9 @@ from pytest import mark
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -62,6 +65,9 @@ from pytest import mark
                 position_extractor=lambda states: types.numpy.positions(
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
                 ),
             ),
             states := data.numpy.state_batch(
@@ -92,6 +98,9 @@ from pytest import mark
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -120,6 +129,9 @@ from pytest import mark
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
             ),
             states := data.jax.state_batch(
                 array(
@@ -147,6 +159,9 @@ from pytest import mark
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
             ),
             states := data.jax.state_batch(
                 array(
@@ -173,6 +188,9 @@ from pytest import mark
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -227,6 +245,9 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -255,6 +276,9 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -309,6 +333,9 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -338,6 +365,9 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -391,6 +421,9 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 # Ego center at (0, 0)
@@ -428,6 +461,9 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -477,6 +513,9 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 # Ego at origin
@@ -506,6 +545,9 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -558,6 +600,9 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -586,6 +631,9 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -638,6 +686,9 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 # Three ego samples at different x positions
@@ -674,6 +725,9 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -732,6 +786,9 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 # Ego stationary at origin
@@ -766,6 +823,9 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -824,6 +884,9 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array(
@@ -850,6 +913,9 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -900,6 +966,9 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                         x=np.asarray(states)[:, 0, :],
                         y=np.asarray(states)[:, 1, :],
                     ),
+                    heading_extractor=lambda states: types.numpy.headings(
+                        theta=np.asarray(states)[:, 2, :],
+                    ),
                 ),
                 states := data.numpy.state_batch(
                     array(
@@ -942,6 +1011,9 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                     position_extractor=lambda states: types.jax.positions(
                         x=states.array[:, 0, :],
                         y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.jax.headings(
+                        theta=states.array[:, 2, :],
                     ),
                 ),
                 state := data.jax.state_batch(
@@ -1008,6 +1080,9 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
             ),
             states := data.numpy.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
@@ -1035,6 +1110,9 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
                 position_extractor=lambda states: types.numpy.positions(
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
                 ),
             ),
             states := data.numpy.state_batch(
@@ -1066,6 +1144,9 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
             ),
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
@@ -1090,6 +1171,9 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
                 position_extractor=lambda states: types.jax.positions(
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
                 ),
             ),
             states := data.jax.state_batch(
@@ -1122,5 +1206,172 @@ def test_that_distance_accounts_for_obstacle_heading[
         expected_distances,
     ), (
         f"Obstacle heading should rotate circle offsets correctly. "
+        f"Expected: {expected_distances}, Got: {computed}"
+    )
+
+
+@mark.parametrize(
+    ["extractor", "states", "obstacle_states", "expected_distances"],
+    [
+        (  # Ego facing up (pi/2), front circle should be above ego center
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array([[[0.0], [0.0], [np.pi / 2]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[0.0]], shape=(T, K := 1)),
+                y=array([[3.0]], shape=(T, K)),
+            ),
+            # Front ego circle at (0, 1), rear at (0, -1)
+            # Distance from front (0,1) to obstacle (0,3): 3-1 - 0.5 - 0.5 = 1.0
+            # Distance from rear (0,-1) to obstacle (0,3): 4 - 1.0 = 3.0
+            expected_distances := array([[[1.0], [3.0]]], shape=(T, V := 2, M)),
+        ),
+        (  # Ego facing 45 degrees (pi/4)
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array([[[0.0], [0.0], [np.pi / 4]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[3.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
+            ),
+            expected_distances := array(
+                [
+                    [
+                        # Front circle at (cos(pi/4), sin(pi/4)) = (sqrt(2)/2, sqrt(2)/2)
+                        # Distance = sqrt((3 - sqrt(2)/2)^2 + (sqrt(2)/2)^2) - 1.0
+                        [
+                            np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
+                            - 1.0
+                        ],
+                        # Rear circle at (-sqrt(2)/2, -sqrt(2)/2)
+                        # Distance = sqrt((3 + sqrt(2)/2)^2 + (sqrt(2)/2)^2) - 1.0
+                        [
+                            np.sqrt((3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
+                            - 1.0
+                        ],
+                    ]
+                ],
+                shape=(T, V := 2, M),
+            ),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array([[[0.0], [0.0], [np.pi / 2]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[0.0]]),
+                y=jnp.array([[3.0]]),
+            ),
+            expected_distances := array([[[1.0], [3.0]]], shape=(T, V := 2, M)),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([0.5, 0.5], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([0.5], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array([[[0.0], [0.0], [np.pi / 4]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[3.0]]),
+                y=jnp.array([[0.0]]),
+            ),
+            expected_distances := array(
+                [
+                    [
+                        [
+                            np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
+                            - 1.0
+                        ],
+                        [
+                            np.sqrt((3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
+                            - 1.0
+                        ],
+                    ]
+                ],
+                shape=(T, V := 2, M),
+            ),
+        ),
+    ],
+)
+def test_that_distance_accounts_for_ego_heading[
+    DistanceT: Distance,
+    ObstacleStatesT: ObstacleStates,
+    StateT: StateBatch,
+](
+    extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+    states: StateT,
+    obstacle_states: ObstacleStatesT,
+    expected_distances: Array,
+) -> None:
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
+        f"Ego heading should rotate ego circle offsets correctly. "
         f"Expected: {expected_distances}, Got: {computed}"
     )

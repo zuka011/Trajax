@@ -83,6 +83,10 @@ def position(states: PhysicalStateBatch) -> types.jax.Positions:
     return types.jax.positions(x=states.positions.x_array, y=states.positions.y_array)
 
 
+def heading(states: PhysicalStateBatch) -> types.jax.Headings:
+    return types.jax.headings(theta=states.orientations_array)
+
+
 @dataclass(kw_only=True, frozen=True)
 class JaxMpccPlannerConfiguration:
     reference: Trajectory
@@ -373,6 +377,7 @@ class configure:
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
                             position_extractor=position_extractor,
+                            heading_extractor=extract.from_physical(heading),
                         )
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),

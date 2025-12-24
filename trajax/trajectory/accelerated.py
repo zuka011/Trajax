@@ -87,6 +87,22 @@ class JaxPositions[T: int, M: int]:
         return np.asarray(jnp.stack([self.x, self.y], axis=-1).transpose(0, 2, 1))
 
 
+@jaxtyped
+@dataclass(frozen=True)
+class JaxHeadings[T: int, M: int]:
+    theta: Float[JaxArray, "T M"]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        *,
+        theta: Float[JaxArray, "T M"],
+        horizon: T_ | None = None,
+        rollout_count: M_ | None = None,
+    ) -> "JaxHeadings[T_, M_]":
+        """Creates a JAX headings instance from an array of headings."""
+        return JaxHeadings(theta=theta)
+
+
 @dataclass(frozen=True)
 class JaxReferencePoints[T: int, M: int]:
     array: Float[JaxArray, f"T {D_R} M"]

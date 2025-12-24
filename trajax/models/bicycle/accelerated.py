@@ -132,6 +132,10 @@ class JaxBicycleStateBatch[T: int, M: int](JaxStateBatch[T, BicycleD_x, M]):
         return JaxBicyclePositions(array=self)
 
     @property
+    def orientations_array(self) -> Float[JaxArray, "T M"]:
+        return self.array[:, 2, :]
+
+    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 

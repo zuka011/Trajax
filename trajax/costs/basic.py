@@ -15,6 +15,7 @@ from trajax.trajectory import (
     NumPyPathParameters,
     NumPyReferencePoints,
     NumPyPositions,
+    NumPyHeadings,
 )
 from trajax.states import NumPySimpleCosts
 from trajax.costs.common import ContouringCost, Error, Distance, ObstacleStateProvider
@@ -57,6 +58,12 @@ class NumPyPathVelocityExtractor[InputT: NumPyControlInputBatch](Protocol):
 class NumPyPositionExtractor[StateT: NumPyStateBatch](Protocol):
     def __call__(self, states: StateT, /) -> NumPyPositions:
         """Extracts (x, y) positions from a batch of states."""
+        ...
+
+
+class NumPyHeadingExtractor[StateT: NumPyStateBatch](Protocol):
+    def __call__(self, states: StateT, /) -> NumPyHeadings:
+        """Extracts heading angles from a batch of states."""
         ...
 
 

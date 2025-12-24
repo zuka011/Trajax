@@ -5,6 +5,7 @@ from trajax.type import DataType, jaxtyped
 from trajax.mppi import JaxStateBatch
 from trajax.costs.accelerated import (
     JaxPositionExtractor,
+    JaxHeadingExtractor,
     JaxObstacleStates,
     JaxDistance,
 )
@@ -97,6 +98,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
     obstacle_origins: Float[JaxArray, "C 2"]
     obstacle_radii: Float[JaxArray, "C"]
     positions_from: JaxPositionExtractor[StateT]
+    headings_from: JaxHeadingExtractor[StateT]
 
     @staticmethod
     def create[S: JaxStateBatch, V_: int, C_: int](
@@ -104,6 +106,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: JaxPositionExtractor[S],
+        heading_extractor: JaxHeadingExtractor[S],
     ) -> "JaxCircleDistanceExtractor[S, V_, C_]":
         return JaxCircleDistanceExtractor(
             ego_origins=jnp.asarray(ego.origins),
@@ -111,12 +114,14 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
             obstacle_origins=jnp.asarray(obstacle.origins),
             obstacle_radii=jnp.asarray(obstacle.radii),
             positions_from=position_extractor,
+            headings_from=heading_extractor,
         )
 
     def __call__(
         self, *, states: StateT, obstacle_states: JaxObstacleStates
     ) -> JaxDistance[int, V, int]:
         ego_positions = self.positions_from(states)
+        ego_headings = self.headings_from(states)
 
         if self._no_obstacles_exist(obstacle_states):
             (T, M), V = ego_positions.x.shape, self._ego_circle_count
@@ -126,6 +131,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
             compute_circle_distances(
                 ego_x=ego_positions.x,
                 ego_y=ego_positions.y,
+                ego_heading=ego_headings.theta,
                 ego_radii=self.ego_radii,
                 ego_origins=self.ego_origins,
                 obstacle_x=obstacle_states.x_array,
@@ -154,6 +160,7 @@ def compute_circle_distances(
     *,
     ego_x: Float[JaxArray, "T M"],
     ego_y: Float[JaxArray, "T M"],
+    ego_heading: Float[JaxArray, "T M"],
     ego_origins: Float[JaxArray, "V 2"],
     ego_radii: Float[JaxArray, "V"],
     obstacle_x: Float[JaxArray, "T K"],
@@ -163,10 +170,10 @@ def compute_circle_distances(
     obstacle_radii: Float[JaxArray, "C"],
 ) -> Float[JaxArray, "T V M"]:
     ego_global_x, ego_global_y = to_global_positions(
-        x=ego_x, y=ego_y, local_origins=ego_origins
+        x=ego_x, y=ego_y, heading=ego_heading, local_origins=ego_origins
     )
 
-    obstacle_global_x, obstacle_global_y = to_global_obstacle_positions(
+    obstacle_global_x, obstacle_global_y = to_global_positions(
         x=obstacle_x,
         y=obstacle_y,
         heading=obstacle_heading,
@@ -191,29 +198,14 @@ def to_global_positions(
     *,
     x: Float[JaxArray, "A B"],
     y: Float[JaxArray, "A B"],
+    heading: Float[JaxArray, "A B"],
     local_origins: Float[JaxArray, "C 2"],
 ) -> tuple[Float[JaxArray, "C A B"], Float[JaxArray, "C A B"]]:
-    global_x = x[jnp.newaxis, :, :] + local_origins[:, 0:1, jnp.newaxis]
-    global_y = y[jnp.newaxis, :, :] + local_origins[:, 1:2, jnp.newaxis]
-
-    return global_x, global_y
-
-
-@jax.jit
-@jaxtyped
-def to_global_obstacle_positions(
-    *,
-    x: Float[JaxArray, "T K"],
-    y: Float[JaxArray, "T K"],
-    heading: Float[JaxArray, "T K"],
-    local_origins: Float[JaxArray, "C 2"],
-) -> tuple[Float[JaxArray, "C T K"], Float[JaxArray, "C T K"]]:
-    """Computes global positions of obstacle circles considering heading rotation."""
-    cos_h = jnp.cos(heading)
-    sin_h = jnp.sin(heading)
-
     local_x = local_origins[:, 0:1, jnp.newaxis]
     local_y = local_origins[:, 1:2, jnp.newaxis]
+
+    cos_h = jnp.cos(heading)
+    sin_h = jnp.sin(heading)
 
     rotated_local_x = (
         local_x * cos_h[jnp.newaxis, :, :] - local_y * sin_h[jnp.newaxis, :, :]
