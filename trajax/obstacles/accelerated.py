@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from trajax.costs.distance import JaxObstacleStateProvider, JaxObstaclePositions
+from trajax.costs import JaxObstacleStateProvider
+from trajax.costs.distance import JaxObstaclePositions
 
 from numtypes import D
 from jaxtyping import Array as JaxArray, Float
@@ -10,7 +11,7 @@ import jax.numpy as jnp
 
 @dataclass(frozen=True)
 class JaxStaticObstacleStateProvider[T: int, K: int](
-    JaxObstacleStateProvider[T, D[3], K]
+    JaxObstacleStateProvider[JaxObstaclePositions[T, K]]
 ):
     positions: JaxObstaclePositions[T, K]
 

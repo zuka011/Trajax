@@ -355,6 +355,7 @@ class configure:
                 ),
                 costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
                 costs.jax.safety.collision(
+                    obstacle_states=obstacles,
                     distance=(
                         circles_distance := distance.jax.circles(
                             ego=Circles(
@@ -372,7 +373,6 @@ class configure:
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
                             position_extractor=position_extractor,
-                            obstacle_states=obstacles,
                         )
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),

@@ -317,6 +317,4 @@ def min_distance_to_obstacles[StateT: StateBatch, ObstacleStatesT: ObstacleState
     states: StateT,
     obstacle_states: ObstacleStatesT,
 ) -> float:
-    return np.min(
-        distance_extractor.measure(states=states, obstacle_states=obstacle_states)
-    )
+    return np.min(distance_extractor(states=states, obstacle_states=obstacle_states))

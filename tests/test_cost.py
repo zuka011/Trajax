@@ -805,11 +805,18 @@ M = clear_type
                 np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
             ),
             low_weight_cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=np.random.uniform(size=(T, K := 3)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     distance := data.numpy.distance(
                         np.random.uniform(size=(T, V := 3, M))  # type: ignore
                     ),
                     when_states_are=states,
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=(
                     distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
@@ -817,8 +824,11 @@ M = clear_type
                 weight=2.0,
             ),
             high_weight_cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(obstacle_states),
                 distance=stubs.DistanceExtractor.returns(
-                    distance, when_states_are=states
+                    distance,
+                    when_states_are=states,
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=distance_threshold,
                 weight=20.0,
@@ -832,11 +842,18 @@ M = clear_type
                 np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
             ),
             low_weight_cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    jax_obstacle_states := data.jax.obstacle_states(
+                        x=np.random.uniform(size=(T, K := 3)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     jax_distance := data.jax.distance(
                         np.random.uniform(size=(T, V := 3, M))  # type: ignore
                     ),
                     when_states_are=jax_states,
+                    and_obstacle_states_are=jax_obstacle_states,
                 ),
                 distance_threshold=(
                     distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
@@ -844,8 +861,13 @@ M = clear_type
                 weight=2.0,
             ),
             high_weight_cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    jax_obstacle_states
+                ),
                 distance=stubs.DistanceExtractor.returns(
-                    jax_distance, when_states_are=jax_states
+                    jax_distance,
+                    when_states_are=jax_states,
+                    and_obstacle_states_are=jax_obstacle_states,
                 ),
                 distance_threshold=distance_threshold,
                 weight=20.0,
@@ -1138,6 +1160,12 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
     [
         (
             cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=np.random.uniform(size=(T := 4, K := 1)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     data.numpy.distance(
                         array(  # Robot has V = 2 parts.
@@ -1151,7 +1179,7 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                                 # Very Far (well above threshold)
                                 [[2.0, 2.5, 3.0, 5.0], [3.0, 3.5, 4.0, 10.0]],
                             ],
-                            shape=(T := 4, V := 2, M := 4),
+                            shape=(T, V := 2, M := 4),
                         )
                     ),
                     when_states_are=(
@@ -1159,6 +1187,7 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                             np.random.uniform(size=(T, D_x := 2, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=array([1.0, 1.0], shape=(V,)),
                 weight=2.0,
@@ -1176,6 +1205,12 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
         ),
         (
             cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.jax.obstacle_states(
+                        x=np.random.uniform(size=(T := 4, K := 1)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     data.jax.distance(
                         array(  # Robot has V = 2 parts.
@@ -1189,7 +1224,7 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                                 # Very Far (well above threshold)
                                 [[2.0, 2.5, 3.0, 5.0], [3.0, 3.5, 4.0, 10.0]],
                             ],
-                            shape=(T := 4, V_1 := 2, M := 4),
+                            shape=(T, V := 2, M := 4),
                         )
                     ),
                     when_states_are=(
@@ -1197,8 +1232,9 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
                             np.random.uniform(size=(T, D_x := 2, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
-                distance_threshold=array([1.0, 1.0], shape=(V_1,)),
+                distance_threshold=array([1.0, 1.0], shape=(V,)),
                 weight=2.0,
             ),
             inputs := data.jax.control_input_batch(np.zeros((T, D_u := 3, M))),
@@ -1249,6 +1285,12 @@ def test_that_collision_cost_decreases_with_distance[
     [
         (
             cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=np.random.uniform(size=(T := 4, K := 1)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     data.numpy.distance(
                         array(
@@ -1262,7 +1304,7 @@ def test_that_collision_cost_decreases_with_distance[
                                 # All parts contribute
                                 [[-0.1, -0.15], [-0.1, -0.15], [-0.1, -0.15]],
                             ],
-                            shape=(T := 4, V := 3, M := 2),
+                            shape=(T, V := 3, M := 2),
                         )
                     ),
                     when_states_are=(
@@ -1270,6 +1312,7 @@ def test_that_collision_cost_decreases_with_distance[
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=array([0.25, 0.5, 0.75], shape=(V,)),
                 weight=2.0,
@@ -1280,6 +1323,12 @@ def test_that_collision_cost_decreases_with_distance[
         ),
         (
             cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.jax.obstacle_states(
+                        x=np.random.uniform(size=(T := 4, K := 1)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
                     data.jax.distance(
                         array(
@@ -1293,7 +1342,7 @@ def test_that_collision_cost_decreases_with_distance[
                                 # All parts contribute
                                 [[-0.1, -0.15], [-0.1, -0.15], [-0.1, -0.15]],
                             ],
-                            shape=(T := 4, V := 3, M := 2),
+                            shape=(T, V := 3, M := 2),
                         )
                     ),
                     when_states_are=(
@@ -1301,6 +1350,7 @@ def test_that_collision_cost_decreases_with_distance[
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=array([0.25, 0.5, 0.75], shape=(V,)),
                 weight=2.0,
@@ -1336,13 +1386,20 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
     [
         (
             cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=np.random.uniform(size=(T := 2, K := 0)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
-                    data.numpy.distance(np.full((T := 2, V := 2, M := 3), np.inf)),
+                    data.numpy.distance(np.full((T, V := 2, M := 3), np.inf)),
                     when_states_are=(
                         states := data.numpy.state_batch(
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=array([0.5, 0.5], shape=(V,)),
                 weight=10.0,
@@ -1352,13 +1409,20 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
         ),
         (
             cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.jax.obstacle_states(
+                        x=np.random.uniform(size=(T := 2, K := 0)),
+                        y=np.random.uniform(size=(T, K)),
+                    )
+                ),
                 distance=stubs.DistanceExtractor.returns(
-                    data.jax.distance(np.full((T := 2, V := 2, M := 3), np.inf)),
+                    data.jax.distance(np.full((T, V := 2, M := 3), np.inf)),
                     when_states_are=(
                         states := data.jax.state_batch(
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
                         )
                     ),
+                    and_obstacle_states_are=obstacle_states,
                 ),
                 distance_threshold=array([0.5, 0.5], shape=(V,)),
                 weight=10.0,

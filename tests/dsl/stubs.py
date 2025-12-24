@@ -178,31 +178,37 @@ class DynamicalModel[
 
 
 @dataclass(frozen=True)
-class DistanceExtractor[StateBatchT: StateBatch, DistanceT: Distance](
-    DistanceExtractorLike[StateBatchT, ObstacleStates, DistanceT]
-):
+class DistanceExtractor[
+    StateBatchT: StateBatch,
+    ObstacleStatesT: ObstacleStates,
+    DistanceT: Distance,
+](DistanceExtractorLike[StateBatchT, ObstacleStatesT, DistanceT]):
     expected_states: StateBatchT
+    expected_obstacle_states: ObstacleStatesT
     result: DistanceT
 
     @staticmethod
-    def returns[SB: StateBatch, D: Distance](
-        distances: D, *, when_states_are: SB
-    ) -> "DistanceExtractor[SB, D]":
-        return DistanceExtractor(expected_states=when_states_are, result=distances)
+    def returns[SB: StateBatch, OS: ObstacleStates, D: Distance](
+        distances: D, *, when_states_are: SB, and_obstacle_states_are: OS
+    ) -> "DistanceExtractor[SB, OS, D]":
+        return DistanceExtractor(
+            expected_states=when_states_are,
+            expected_obstacle_states=and_obstacle_states_are,
+            result=distances,
+        )
 
-    def __call__(self, states: StateBatchT) -> DistanceT:
+    def __call__(
+        self, *, states: StateBatchT, obstacle_states: ObstacleStatesT
+    ) -> DistanceT:
         assert np.array_equal(self.expected_states, states), (
             f"DistanceExtractor received unexpected states. "
             f"Expected: {self.expected_states}, Got: {states}"
         )
-        return self.result
-
-    def measure(
-        self, *, states: StateBatchT, obstacle_states: ObstacleStates
-    ) -> DistanceT:
-        raise NotImplementedError(
-            "Measure method is not implemented in the stub distance extractor."
+        assert np.array_equal(self.expected_obstacle_states, obstacle_states), (
+            f"DistanceExtractor received unexpected obstacle states. "
+            f"Expected: {self.expected_obstacle_states}, Got: {obstacle_states}"
         )
+        return self.result
 
 
 @dataclass(frozen=True)

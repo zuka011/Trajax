@@ -9,7 +9,7 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyStaticObstacleStateProvider[T: int, K: int](
-    NumPyObstacleStateProvider[T, D[3], K]
+    NumPyObstacleStateProvider[NumPyObstaclePositions[T, K]]
 ):
     positions: NumPyObstaclePositions[T, K]
 

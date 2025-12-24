@@ -1,10 +1,14 @@
-from typing import Protocol, Sequence
+from typing import Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType
 from trajax.mppi import NumPyStateBatch
-from trajax.costs.basic import NumPyDistance, NumPyPositions, NumPyPositionExtractor
-from trajax.costs.common import ObstacleStateProvider
+from trajax.costs.basic import (
+    NumPyDistance,
+    NumPyPositions,
+    NumPyPositionExtractor,
+    NumPyObstacleStates,
+)
 from trajax.costs.distance.common import Circles
 
 from numtypes import Array, Dims, D, shape_of
@@ -14,29 +18,6 @@ import numpy as np
 
 type OriginsArray[N: int = int] = Array[Dims[N, D[2]]]
 type RadiiArray[N: int = int] = Array[Dims[N]]
-
-
-class NumPyObstacleStates[T: int, D_o: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        """Returns the states of obstacles as a NumPy array."""
-        ...
-
-    def x(self) -> Array[Dims[T, K]]:
-        """Returns the x positions of obstacles over time."""
-        ...
-
-    def y(self) -> Array[Dims[T, K]]:
-        """Returns the y positions of obstacles over time."""
-        ...
-
-    def heading(self) -> Array[Dims[T, K]]:
-        """Returns the headings of obstacles over time."""
-        ...
-
-
-class NumPyObstacleStateProvider[T: int, D_o: int, K: int](
-    ObstacleStateProvider[NumPyObstacleStates[T, D_o, K]]
-): ...
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -92,7 +73,6 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
     ego: Circles[V]
     obstacle: Circles[C]
     positions_from: NumPyPositionExtractor[StateT]
-    obstacle_states: NumPyObstacleStateProvider
 
     @staticmethod
     def create[S: NumPyStateBatch, V_: int, C_: int](
@@ -100,19 +80,12 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: NumPyPositionExtractor[S],
-        obstacle_states: NumPyObstacleStateProvider,
     ) -> "NumPyCircleDistanceExtractor[S, V_, C_]":
         return NumPyCircleDistanceExtractor(
-            ego=ego,
-            obstacle=obstacle,
-            positions_from=position_extractor,
-            obstacle_states=obstacle_states,
+            ego=ego, obstacle=obstacle, positions_from=position_extractor
         )
 
-    def __call__(self, states: StateT) -> NumPyDistance[int, V, int]:
-        return self.measure(states=states, obstacle_states=self.obstacle_states())
-
-    def measure(
+    def __call__(
         self, *, states: StateT, obstacle_states: NumPyObstacleStates
     ) -> NumPyDistance[int, V, int]:
         return NumPyDistance(

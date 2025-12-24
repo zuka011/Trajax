@@ -25,7 +25,7 @@ class ContouringCost[
 
 class ObstacleStates[T: int, D_o: int, K: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        """Returns the states of obstacles as a NumPy array."""
+        """Returns the mean states of obstacles as a NumPy array."""
         ...
 
     def x(self) -> Array[Dims[T, K]]:
@@ -47,7 +47,7 @@ class ObstacleStateProvider[StateT: ObstacleStates](Protocol):
         ...
 
 
-class Distance[T: int, V: int, M: int]:
+class Distance[T: int, V: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M]]:
         """Returns the distances between ego parts and obstacles as a NumPy array."""
         ...
@@ -57,13 +57,10 @@ class DistanceExtractor[
     StateT: StateBatch,
     ObstacleStatesT: ObstacleStates,
     DistanceT: Distance,
-]:
-    def __call__(self, state: StateT) -> DistanceT:
-        """Computes the distances between each part of the ego and the corresponding closest
-        obstacles."""
-        ...
-
-    def measure(self, *, states: StateT, obstacle_states: ObstacleStatesT) -> DistanceT:
+](Protocol):
+    def __call__(
+        self, *, states: StateT, obstacle_states: ObstacleStatesT
+    ) -> DistanceT:
         """Computes the distances between each part of the ego and the corresponding closest
         obstacles."""
         ...

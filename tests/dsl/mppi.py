@@ -1,7 +1,7 @@
 from trajax import types
 
 from jaxtyping import Array as JaxArray, Float
-from numtypes import Array, Dims
+from numtypes import Array, Dims, D
 
 import jax.numpy as jnp
 
@@ -16,6 +16,9 @@ type NumPyControlInputSequence[T: int, D_u: int] = (
 type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
     types.numpy.simple.ControlInputBatch[T, D_u, M]
 )
+type NumPyObstacleStates[T: int, D_o: int, K: int] = types.numpy.ObstacleStates[
+    T, D_o, K
+]
 type NumPyDistance[T: int, V: int, M: int] = types.numpy.Distance[T, V, M]
 
 type JaxState[D_x: int] = types.jax.simple.State[D_x]
@@ -26,6 +29,7 @@ type JaxControlInputSequence[T: int, D_u: int] = types.jax.simple.ControlInputSe
 type JaxControlInputBatch[T: int, D_u: int, M: int] = (
     types.jax.simple.ControlInputBatch[T, D_u, M]
 )
+type JaxObstacleStates[T: int, D_o: int, K: int] = types.jax.ObstacleStates[T, D_o, K]
 type JaxDistance[T: int, V: int, M: int] = types.jax.Distance[T, V, M]
 
 
@@ -51,6 +55,15 @@ class numpy:
         array: Array[Dims[T, D_u, M]],
     ) -> NumPyControlInputBatch[T, D_u, M]:
         return types.numpy.simple.control_input_batch(array)
+
+    @staticmethod
+    def obstacle_states[T: int, K: int](
+        *,
+        x: Array[Dims[T, K]],
+        y: Array[Dims[T, K]],
+        heading: Array[Dims[T, K]] | None = None,
+    ) -> NumPyObstacleStates[T, D[3], K]:
+        return types.numpy.obstacle_states.create(x=x, y=y, heading=heading)
 
     @staticmethod
     def distance[T: int, V: int, M: int](
@@ -81,6 +94,19 @@ class jax:
         array: Array[Dims[T, D_u, M]] | Float[JaxArray, "T D_u M"],
     ) -> JaxControlInputBatch[T, D_u, M]:
         return types.jax.simple.control_input_batch.create(array=jnp.asarray(array))
+
+    @staticmethod
+    def obstacle_states[T: int, K: int](
+        *,
+        x: Array[Dims[T, K]] | Float[JaxArray, "T K"],
+        y: Array[Dims[T, K]] | Float[JaxArray, "T K"],
+        heading: Array[Dims[T, K]] | Float[JaxArray, "T K"] | None = None,
+    ) -> JaxObstacleStates[T, D[3], K]:
+        return types.jax.obstacle_states.create(
+            x=jnp.asarray(x),
+            y=jnp.asarray(y),
+            heading=jnp.asarray(heading) if heading is not None else None,
+        )
 
     @staticmethod
     def distance[T: int, V: int, M: int](

@@ -60,12 +60,14 @@ from trajax.costs import (
     JaxContouringCost,
     Error as Error,  # NOTE: Aliased to workaround ruff bug.
     ContouringCost as ContouringCost,
-    NumPyDistance,
-    JaxDistance,
+    NumPyObstacleStates,
     NumPyObstaclePositions,
-    JaxObstaclePositions,
     NumPyObstacleStateProvider,
+    NumPyDistance,
+    JaxObstacleStates,
+    JaxObstaclePositions,
     JaxObstacleStateProvider,
+    JaxDistance,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -155,6 +157,9 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = NumPyPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
+        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
+            NumPyObstacleStates[T, D_o, K]
+        )
         type Distance[T: int = Any, V: int = Any, M: int = Any] = NumPyDistance[T, V, M]
 
         type CostFunction[
@@ -173,9 +178,9 @@ class types:
         )
         type PositionExtractor[S: NumPyStateBatch] = NumPyPositionExtractor[S]
         type ContouringCost[S: NumPyStateBatch] = NumPyContouringCost[S]
-        type ObstacleStateProvider[T: int = Any, D_o: int = Any, K: int = Any] = (
-            NumPyObstacleStateProvider[T, D_o, K]
-        )
+        type ObstacleStateProvider[O: NumPyObstacleStates] = NumPyObstacleStateProvider[
+            O
+        ]
 
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
@@ -253,6 +258,9 @@ class types:
         type PathParameters[T: int = Any, M: int = Any] = JaxPathParameters[T, M]
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
+        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
+            JaxObstacleStates[T, D_o, K]
+        )
         type Distance[T: int = Any, V: int = Any, M: int = Any] = JaxDistance[T, V, M]
 
         type CostFunction[
@@ -269,9 +277,7 @@ class types:
         ]
         type PositionExtractor[S: JaxStateBatch] = JaxPositionExtractor[S]
         type ContouringCost[S: JaxStateBatch] = JaxContouringCost[S]
-        type ObstacleStateProvider[T: int = Any, D_o: int = Any, K: int = Any] = (
-            JaxObstacleStateProvider[T, D_o, K]
-        )
+        type ObstacleStateProvider[O: JaxObstacleStates] = JaxObstacleStateProvider[O]
 
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create

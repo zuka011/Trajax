@@ -45,8 +45,53 @@ class JaxPositionExtractor[StateT: JaxStateBatch](Protocol):
         ...
 
 
-class JaxDistanceExtractor[StateT: JaxStateBatch, DistanceT: "JaxDistance"](Protocol):
-    def __call__(self, states: StateT, /) -> DistanceT:
+class JaxObstacleStates[T: int, D_o: int, K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
+        """Returns the states of obstacles as a NumPy array."""
+        ...
+
+    def x(self) -> Array[Dims[T, K]]:
+        """Returns the x positions of obstacles over time as a NumPy array."""
+        ...
+
+    def y(self) -> Array[Dims[T, K]]:
+        """Returns the y positions of obstacles over time as a NumPy array."""
+        ...
+
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of obstacles over time as a NumPy array."""
+        ...
+
+    @property
+    def x_array(self) -> Float[JaxArray, "T K"]:
+        """Returns the x positions of obstacles over time."""
+        ...
+
+    @property
+    def y_array(self) -> Float[JaxArray, "T K"]:
+        """Returns the y positions of obstacles over time."""
+        ...
+
+    @property
+    def heading_array(self) -> Float[JaxArray, "T K"]:
+        """Returns the headings of obstacles over time."""
+        ...
+
+
+class JaxObstacleStateProvider[ObstacleStateT: JaxObstacleStates](Protocol):
+    def __call__(self) -> ObstacleStateT:
+        """Provides the current obstacle states."""
+        ...
+
+
+class JaxDistanceExtractor[
+    StateT: JaxStateBatch,
+    ObstacleStatesT: JaxObstacleStates,
+    DistanceT: "JaxDistance",
+](Protocol):
+    def __call__(
+        self, *, states: StateT, obstacle_states: ObstacleStatesT
+    ) -> DistanceT:
         """Extracts minimum distances to obstacles in the environment from a batch of states."""
         ...
 
@@ -269,21 +314,27 @@ class JaxDistance[T: int, V: int, M: int](Distance[T, V, M]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxCollisionCost[StateT: JaxStateBatch, DistanceT: JaxDistance, V: int](
-    CostFunction[JaxControlInputBatch[int, int, int], StateT, JaxSimpleCosts]
-):
-    distance: JaxDistanceExtractor[StateT, DistanceT]
+class JaxCollisionCost[
+    StateT: JaxStateBatch,
+    ObstacleStatesT: JaxObstacleStates,
+    DistanceT: JaxDistance,
+    V: int,
+](CostFunction[JaxControlInputBatch[int, int, int], StateT, JaxSimpleCosts]):
+    obstacle_states: JaxObstacleStateProvider[ObstacleStatesT]
+    distance: JaxDistanceExtractor[StateT, ObstacleStatesT, DistanceT]
     distance_threshold: Float[JaxArray, "V"]
     weight: float
 
     @staticmethod
-    def create[S: JaxStateBatch, D: JaxDistance, V_: int](
+    def create[S: JaxStateBatch, OS: JaxObstacleStates, D: JaxDistance, V_: int](
         *,
-        distance: JaxDistanceExtractor[S, D],
+        obstacle_states: JaxObstacleStateProvider[OS],
+        distance: JaxDistanceExtractor[S, OS, D],
         distance_threshold: Array[Dims[V_]],
         weight: float,
-    ) -> "JaxCollisionCost[S, D, V_]":
+    ) -> "JaxCollisionCost[S, OS, D, V_]":
         return JaxCollisionCost(
+            obstacle_states=obstacle_states,
             distance=distance,
             distance_threshold=jnp.asarray(distance_threshold),
             weight=weight,
@@ -294,7 +345,9 @@ class JaxCollisionCost[StateT: JaxStateBatch, DistanceT: JaxDistance, V: int](
     ) -> JaxSimpleCosts[T, M]:
         return JaxSimpleCosts(
             collision_cost(
-                distance=self.distance(states).array,
+                distance=self.distance(
+                    states=states, obstacle_states=self.obstacle_states()
+                ).array,
                 distance_threshold=self.distance_threshold,
                 weight=self.weight,
             )

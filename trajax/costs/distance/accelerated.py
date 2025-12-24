@@ -1,10 +1,13 @@
-from typing import Protocol, Sequence
+from typing import Sequence
 from dataclasses import dataclass
 
 from trajax.type import DataType, jaxtyped
 from trajax.mppi import JaxStateBatch
-from trajax.costs.accelerated import JaxPositionExtractor, JaxDistance
-from trajax.costs.common import ObstacleStateProvider
+from trajax.costs.accelerated import (
+    JaxPositionExtractor,
+    JaxObstacleStates,
+    JaxDistance,
+)
 from trajax.costs.distance.common import Circles
 
 from numtypes import Array, Dims, D
@@ -13,44 +16,6 @@ from jaxtyping import Array as JaxArray, Float
 import jax
 import jax.numpy as jnp
 import numpy as np
-
-
-class JaxObstacleStates[T: int, D_o: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        """Returns the states of obstacles as a NumPy array."""
-        ...
-
-    def x(self) -> Array[Dims[T, K]]:
-        """Returns the x positions of obstacles over time as a NumPy array."""
-        ...
-
-    def y(self) -> Array[Dims[T, K]]:
-        """Returns the y positions of obstacles over time as a NumPy array."""
-        ...
-
-    def heading(self) -> Array[Dims[T, K]]:
-        """Returns the headings of obstacles over time as a NumPy array."""
-        ...
-
-    @property
-    def x_array(self) -> Float[JaxArray, "T K"]:
-        """Returns the x positions of obstacles over time."""
-        ...
-
-    @property
-    def y_array(self) -> Float[JaxArray, "T K"]:
-        """Returns the y positions of obstacles over time."""
-        ...
-
-    @property
-    def heading_array(self) -> Float[JaxArray, "T K"]:
-        """Returns the headings of obstacles over time."""
-        ...
-
-
-class JaxObstacleStateProvider[T: int, D_o: int, K: int](
-    ObstacleStateProvider[JaxObstacleStates[T, D_o, K]]
-): ...
 
 
 @jaxtyped
@@ -132,7 +97,6 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
     obstacle_origins: Float[JaxArray, "C 2"]
     obstacle_radii: Float[JaxArray, "C"]
     positions_from: JaxPositionExtractor[StateT]
-    obstacle_states: JaxObstacleStateProvider
 
     @staticmethod
     def create[S: JaxStateBatch, V_: int, C_: int](
@@ -140,7 +104,6 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: JaxPositionExtractor[S],
-        obstacle_states: JaxObstacleStateProvider,
     ) -> "JaxCircleDistanceExtractor[S, V_, C_]":
         return JaxCircleDistanceExtractor(
             ego_origins=jnp.asarray(ego.origins),
@@ -148,13 +111,9 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
             obstacle_origins=jnp.asarray(obstacle.origins),
             obstacle_radii=jnp.asarray(obstacle.radii),
             positions_from=position_extractor,
-            obstacle_states=obstacle_states,
         )
 
-    def __call__(self, states: StateT) -> JaxDistance[int, V, int]:
-        return self.measure(states=states, obstacle_states=self.obstacle_states())
-
-    def measure(
+    def __call__(
         self, *, states: StateT, obstacle_states: JaxObstacleStates
     ) -> JaxDistance[int, V, int]:
         ego_positions = self.positions_from(states)

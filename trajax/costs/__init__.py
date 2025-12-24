@@ -3,6 +3,8 @@ from .basic import (
     NumPyPathVelocityExtractor as NumPyPathVelocityExtractor,
     NumPyPositionExtractor as NumPyPositionExtractor,
     NumPyDistanceExtractor as NumPyDistanceExtractor,
+    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
+    NumPyObstacleStates as NumPyObstacleStates,
     NumPyDistance as NumPyDistance,
     NumPyContouringCost as NumPyContouringCost,
     NumPyLagCost as NumPyLagCost,
@@ -14,6 +16,8 @@ from .accelerated import (
     JaxPathVelocityExtractor as JaxPathVelocityExtractor,
     JaxPositionExtractor as JaxPositionExtractor,
     JaxDistanceExtractor as JaxDistanceExtractor,
+    JaxObstacleStateProvider as JaxObstacleStateProvider,
+    JaxObstacleStates as JaxObstacleStates,
     JaxDistance as JaxDistance,
     JaxContouringCost as JaxContouringCost,
     JaxLagCost as JaxLagCost,
@@ -39,10 +43,8 @@ from .combined import (
 from .distance import (
     Circles as Circles,
     NumPyObstaclePositions as NumPyObstaclePositions,
-    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
     JaxObstaclePositions as JaxObstaclePositions,
-    JaxObstacleStateProvider as JaxObstacleStateProvider,
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
 from .factory import costs as costs, distance as distance

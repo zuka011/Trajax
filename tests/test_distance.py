@@ -13,12 +13,12 @@ from numtypes import array, Array
 import numpy as np
 import jax.numpy as jnp
 
-from tests.dsl import mppi as data, stubs
+from tests.dsl import mppi as data
 from pytest import mark
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         # Basic distance along x-axis
         (
@@ -35,18 +35,16 @@ from pytest import mark
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(  # K = 1 Obstacle
-                        x=array([[x_o := 5.0]], shape=(T := 1, K := 1)),
-                        y=array([[y_o := 0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(  # K = 1 Obstacle
+                x=array([[x_o := 5.0]], shape=(T, K := 1)),
+                y=array([[y_o := 0.0]], shape=(T, K)),
             ),
             expected_distances := array([[[x_o - x - r - r_o]]], shape=(T, V := 1, M)),
         ),
@@ -65,18 +63,16 @@ from pytest import mark
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[x_o := 3.0]], shape=(T := 1, K := 1)),
-                        y=array([[y_o := 4.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[x_o := 3.0]], shape=(T, K := 1)),
+                y=array([[y_o := 4.0]], shape=(T, K)),
             ),
             # distance = sqrt(3^2 + 4^2) - 1 - 1 = 5 - 2 = 3
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
@@ -96,18 +92,16 @@ from pytest import mark
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[x_o := 1.0]], shape=(T := 1, K := 1)),
-                        y=array([[y_o := 0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[x_o := 1.0]], shape=(T, K := 1)),
+                y=array([[y_o := 0.0]], shape=(T, K)),
             ),
             # distance = 1 - 1 - 1 = -1 (penetration)
             expected_distances := array([[[-1.0]]], shape=(T, V := 1, M)),
@@ -126,18 +120,16 @@ from pytest import mark
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(  # K = 1 Obstacle
-                        x=jnp.array([[x_o := 5.0]]),
-                        y=jnp.array([[y_o := 0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(  # K = 1 Obstacle
+                x=jnp.array([[x_o := 5.0]]),
+                y=jnp.array([[y_o := 0.0]]),
             ),
             expected_distances := array([[[x_o - x - r - r_o]]], shape=(T, V := 1, M)),
         ),
@@ -155,18 +147,16 @@ from pytest import mark
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[3.0]]),
-                        y=jnp.array([[4.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[3.0]]),
+                y=jnp.array([[4.0]]),
             ),
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
         ),
@@ -184,18 +174,16 @@ from pytest import mark
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[1.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[1.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[-1.0]]], shape=(T, V := 1, M)),
         ),
@@ -208,16 +196,20 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Distance should be computed correctly. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -235,18 +227,16 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[10.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[10.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             expected_distances := array([[[8.5], [6.5], [4.5]]], shape=(T, V := 3, M)),
         ),
@@ -266,18 +256,16 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[10.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[10.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[8.5], [6.5], [4.5]]], shape=(T, V := 3, M)),
         ),
@@ -290,16 +278,20 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Each ego part should have its own distance. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -317,18 +309,16 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[0.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[0.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             # Closest is circle at (5,0) with r=0.5: 5 - 1 - 0.5 = 3.5
             expected_distances := array([[[3.5]]], shape=(T, V := 1, M)),
@@ -349,18 +339,16 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[0.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[0.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[3.5]]], shape=(T, V := 1, M)),
         ),
@@ -373,16 +361,20 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Should use closest obstacle circle. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         # Ego has two circles offset along x-axis
         (
@@ -399,12 +391,6 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[5.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 # Ego center at (0, 0)
@@ -412,8 +398,12 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                 # Obstacle at (5, 0)
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[5.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             expected_distances := array(
                 [
@@ -439,15 +429,13 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[5.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[5.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[3.0], [5.0]]], shape=(T, V := 2, M := 1)),
         ),
@@ -460,16 +448,20 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Ego circle offsets should be applied. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -485,20 +477,18 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[5.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 # Ego at origin
                 # Obstacle at (5, 0) with circles at (6, 0) and (4, 0)
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[5.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             # Closest is circle at (4, 0): ||(0,0)-(4,0)|| - 1.0 = 4 - 1 = 3.0
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
@@ -517,18 +507,16 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[5.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[5.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
         ),
@@ -541,16 +529,20 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Obstacle circle offsets should be applied. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -566,19 +558,17 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        # Obstacle A at (9, 0), Obstacle B at (4, 0)
-                        x=array([[9.0, 4.0]], shape=(T := 1, K := 2)),
-                        y=array([[0.0, 0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            # Obstacle A at (9, 0), Obstacle B at (4, 0)
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[9.0, 4.0]], shape=(T, K := 2)),
+                y=array([[0.0, 0.0]], shape=(T, K)),
             ),
             # Obstacle B rear circle at (3,0): 3 - 1 - 0.5 = 1.5
             expected_distances := array([[[1.5]]], shape=(T, V := 1, M)),
@@ -597,18 +587,16 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[9.0, 4.0]]),
-                        y=jnp.array([[0.0, 0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[9.0, 4.0]]),
+                y=jnp.array([[0.0, 0.0]]),
             ),
             expected_distances := array([[[1.5]]], shape=(T, V := 1, M)),
         ),
@@ -621,16 +609,20 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Should use closest circle across all obstacles. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -646,13 +638,6 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        # One obstacle at origin
-                        x=array([[0.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 # Three ego samples at different x positions
@@ -664,8 +649,13 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                             [0.0, 0.0, 0.0],  # theta
                         ]
                     ],
-                    shape=(T, D_x := 3, M := 3),
+                    shape=(T := 1, D_x := 3, M := 3),
                 )
+            ),
+            # One obstacle at origin
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[0.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             expected_distances := array(
                 [[[1.0, 3.0, 0.0]]], shape=(T, V := 1, M)
@@ -685,12 +675,6 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[0.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
@@ -704,6 +688,10 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                     shape=(T := 1, D_x := 3, M := 3),
                 )
             ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[0.0]]),
+                y=jnp.array([[0.0]]),
+            ),
             expected_distances := array([[[1.0, 3.0, 0.0]]], shape=(T, V := 1, M)),
         ),
     ],
@@ -715,16 +703,20 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Batched states should be handled correctly. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -740,13 +732,6 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        # Obstacle moving: t=0 at (5,0), t=1 at (4,0), t=2 at (3,0)
-                        x=array([[5.0], [4.0], [3.0]], shape=(T := 3, K := 1)),
-                        y=array([[0.0], [0.0], [0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 # Ego stationary at origin
@@ -756,8 +741,13 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                         [[0.0], [0.0], [0.0]],
                         [[0.0], [0.0], [0.0]],
                     ],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 3, D_x := 3, M := 1),
                 )
+            ),
+            # Obstacle moving: t=0 at (5,0), t=1 at (4,0), t=2 at (3,0)
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[5.0], [4.0], [3.0]], shape=(T, K := 1)),
+                y=array([[0.0], [0.0], [0.0]], shape=(T, K)),
             ),
             expected_distances := array(
                 [[[3.0]], [[2.0]], [[1.0]]], shape=(T, V := 1, M)
@@ -777,12 +767,6 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[5.0], [4.0], [3.0]]),
-                        y=jnp.array([[0.0], [0.0], [0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
@@ -793,6 +777,10 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                     ],
                     shape=(T := 3, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[5.0], [4.0], [3.0]]),
+                y=jnp.array([[0.0], [0.0], [0.0]]),
             ),
             expected_distances := array(
                 [[[3.0]], [[2.0]], [[1.0]]], shape=(T, V := 1, M)
@@ -807,16 +795,20 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Multiple time steps should be handled correctly. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -832,18 +824,16 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[4.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
-                    shape=(T, D_x := 3, M := 1),
+                    shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[4.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
             ),
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),  # 4 - 1 - 0
         ),
@@ -861,18 +851,16 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[4.0]]),
-                        y=jnp.array([[0.0]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array(
                     [[[0.0], [0.0], [0.0]]],
                     shape=(T := 1, D_x := 3, M := 1),
                 )
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[4.0]]),
+                y=jnp.array([[0.0]]),
             ),
             expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
         ),
@@ -885,16 +873,20 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Zero radius circles should be handled. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         *[
             (
@@ -908,20 +900,18 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                         x=np.asarray(states)[:, 0, :],
                         y=np.asarray(states)[:, 1, :],
                     ),
-                    obstacle_states=stubs.ObstacleStateProvider.returns(
-                        types.numpy.obstacle_states.create(
-                            x=np.empty((T := 1, K := 0)),
-                            y=np.empty((T, K)),
-                        )
-                    ),
                 ),
                 states := data.numpy.state_batch(
                     array(
                         [[[0.0], [0.0], [0.0]]],
-                        shape=(T, D_x := 3, M := 1),
+                        shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
                 # No obstacles means infinite distance (represented as a large value)
+                obstacle_states := types.numpy.obstacle_states.create(
+                    x=np.empty((T, K := 0)),
+                    y=np.empty((T, K)),
+                ),
                 expected_distances,
             )
             for ego, expected_distances in (
@@ -953,15 +943,13 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                         x=states.array[:, 0, :],
                         y=states.array[:, 1, :],
                     ),
-                    obstacle_states=stubs.ObstacleStateProvider.returns(
-                        types.jax.obstacle_states.create(
-                            x=jnp.empty((T := 1, K := 0)),
-                            y=jnp.empty((T, K)),
-                        )
-                    ),
                 ),
                 state := data.jax.state_batch(
                     array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+                ),
+                obstacle_states := types.jax.obstacle_states.create(
+                    x=jnp.empty((T, K := 0)),
+                    y=jnp.empty((T, K)),
                 ),
                 expected_distances,
             )
@@ -991,98 +979,20 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
-    expected_distances: Array,
-) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
-        f"No obstacles should result in infinite distance. "
-        f"Expected: {expected_distances}, Got: {distance}"
-    )
-
-
-@mark.parametrize(
-    ["extractor", "states", "obstacle_states", "expected_distances"],
-    [
-        (
-            extractor := distance.numpy.circles(
-                ego=Circles(
-                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
-                    radii=array([r := 1.0], shape=(V,)),
-                ),
-                obstacle=Circles(
-                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
-                    radii=array([r_o := 1.0], shape=(C,)),
-                ),
-                position_extractor=lambda states: types.numpy.positions(
-                    x=np.asarray(states)[:, 0, :],
-                    y=np.asarray(states)[:, 1, :],
-                ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=np.zeros((1, 1)), y=np.zeros((1, 1))
-                    )
-                ),
-            ),
-            states := data.numpy.state_batch(
-                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
-            ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[x_o := 5.0]], shape=(T, K := 1)),
-                y=array([[y_o := 0.0]], shape=(T, K)),
-            ),
-            expected_distances := array([[[x_o - r - r_o]]], shape=(T, V := 1, M)),
-        ),
-        (
-            extractor := distance.jax.circles(
-                ego=Circles(
-                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
-                    radii=array([r := 1.0], shape=(V,)),
-                ),
-                obstacle=Circles(
-                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
-                    radii=array([r_o := 1.0], shape=(C,)),
-                ),
-                position_extractor=lambda states: types.jax.positions(
-                    x=states.array[:, 0, :],
-                    y=states.array[:, 1, :],
-                ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.zeros((1, 1)), y=jnp.zeros((1, 1))
-                    )
-                ),
-            ),
-            states := data.jax.state_batch(
-                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
-            ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[x_o := 5.0]]),
-                y=jnp.array([[y_o := 0.0]]),
-            ),
-            expected_distances := array([[[x_o - r - r_o]]], shape=(T, V := 1, M)),
-        ),
-    ],
-)
-def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_provided[
-    DistanceT: Distance,
-    ObstacleStatesT: ObstacleStates,
-    StateT: StateBatch,
-](
-    extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
-    states: StateT,
     obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
     assert np.allclose(
-        computed := extractor.measure(states=states, obstacle_states=obstacle_states),
+        computed := extractor(states=states, obstacle_states=obstacle_states),
         expected_distances,
     ), (
-        f"The distance should be measured based on the provided obstacle states. "
+        f"No obstacles should result in infinite distance. "
         f"Expected: {expected_distances}, Got: {computed}"
     )
 
 
 @mark.parametrize(
-    ["extractor", "states", "expected_distances"],
+    ["extractor", "states", "obstacle_states", "expected_distances"],
     [
         (
             extractor := distance.numpy.circles(
@@ -1098,20 +1008,18 @@ def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_p
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[0.0]], shape=(T := 1, K := 1)),
-                        y=array([[3.0]], shape=(T, K)),
-                        heading=array([[np.pi / 2]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
-                array([[[0.0], [0.0], [0.0]]], shape=(T, D_x := 3, M := 1))
+                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
             ),
             # Ego at (0,0), obstacle center at (0,3)
             # Front circle at (0,4), rear circle at (0,2) in global
             # Distance to rear circle (closest): 2 - 1 - 0.5 = 0.5
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[0.0]], shape=(T, K := 1)),
+                y=array([[3.0]], shape=(T, K)),
+                heading=array([[np.pi / 2]], shape=(T, K)),
+            ),
             expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
         ),
         (
@@ -1128,19 +1036,17 @@ def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_p
                     x=np.asarray(states)[:, 0, :],
                     y=np.asarray(states)[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.numpy.obstacle_states.create(
-                        x=array([[3.0]], shape=(T := 1, K := 1)),
-                        y=array([[0.0]], shape=(T, K)),
-                        heading=array([[np.pi / 4]], shape=(T, K)),
-                    )
-                ),
             ),
             states := data.numpy.state_batch(
-                array([[[0.0], [0.0], [0.0]]], shape=(T, D_x := 3, M := 1))
+                array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
             ),
             # rear circle at (3 - sqrt(2)/2, -sqrt(2)/2) ≈ (2.293, -0.707)
             # distance = sqrt(2.293^2 + 0.707^2) - 1.5 ≈ 2.4 - 1.5 = 0.9
+            obstacle_states := types.numpy.obstacle_states.create(
+                x=array([[3.0]], shape=(T, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
+                heading=array([[np.pi / 4]], shape=(T, K)),
+            ),
             expected_distances := array(
                 [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
                 shape=(T, V := 1, M),
@@ -1160,16 +1066,14 @@ def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_p
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[0.0]]),
-                        y=jnp.array([[3.0]]),
-                        heading=jnp.array([[np.pi / 2]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[0.0]]),
+                y=jnp.array([[3.0]]),
+                heading=jnp.array([[np.pi / 2]]),
             ),
             expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
         ),
@@ -1187,16 +1091,14 @@ def test_that_distance_is_computed_correctly_when_explicit_obstacle_states_are_p
                     x=states.array[:, 0, :],
                     y=states.array[:, 1, :],
                 ),
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    types.jax.obstacle_states.create(
-                        x=jnp.array([[3.0]]),
-                        y=jnp.array([[0.0]]),
-                        heading=jnp.array([[np.pi / 4]]),
-                    )
-                ),
             ),
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
+            ),
+            obstacle_states := types.jax.obstacle_states.create(
+                x=jnp.array([[3.0]]),
+                y=jnp.array([[0.0]]),
+                heading=jnp.array([[np.pi / 4]]),
             ),
             expected_distances := array(
                 [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
@@ -1212,9 +1114,13 @@ def test_that_distance_accounts_for_obstacle_heading[
 ](
     extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
     states: StateT,
+    obstacle_states: ObstacleStatesT,
     expected_distances: Array,
 ) -> None:
-    assert np.allclose(distance := extractor(states), expected_distances), (
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
         f"Obstacle heading should rotate circle offsets correctly. "
-        f"Expected: {expected_distances}, Got: {distance}"
+        f"Expected: {expected_distances}, Got: {computed}"
     )
