@@ -9,24 +9,19 @@ from trajax.mppi import (
     NumPyControlInputBatch,
 )
 from trajax.states import NumPySimpleCosts
-from trajax.costs.risk import RiskMetric, NoMetric
+from trajax.costs.collision.base import NoMetric
 from trajax.costs.collision.common import (
     ObstacleStateProvider,
     ObstacleStateSampler,
     Distance,
+    SampleCostFunction,
     D_o,
 )
 
 
 from numtypes import Array, Dims, D
-from riskit import risk, sampler
 
-import riskit
 import numpy as np
-
-type SampleCostFunction[StateT, SampleT] = riskit.NumPyBatchCostFunction[
-    StateT, SampleT
-]
 
 
 class NumPySampledObstacleStates[T: int, K: int, N: int](Protocol):
@@ -105,6 +100,27 @@ class NumPyObstacleStateSampler[
 ](ObstacleStateSampler[StateT, SampleT], Protocol): ...
 
 
+class NumPyRiskMetric(Protocol):
+    def compute[
+        StateT: StateBatch,
+        ObstacleStateT: NumPyObstacleStates,
+        SampledObstacleStateT: NumPySampledObstacleStates,
+        T: int,
+        M: int,
+    ](
+        self,
+        cost_function: SampleCostFunction[
+            StateT, SampledObstacleStateT, Array[Dims[T, M, int]]
+        ],
+        *,
+        states: StateT,
+        obstacle_states: ObstacleStateT,
+        sampler: NumPyObstacleStateSampler[ObstacleStateT, SampledObstacleStateT],
+    ) -> Array[Dims[T, M]]:
+        """Computes the risk metric based on the provided cost function and returns it as a NumPy array."""
+        ...
+
+
 @dataclass(frozen=True)
 class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
     array: Array[Dims[T, V, M, N]]
@@ -126,7 +142,7 @@ class NumPyCollisionCost[
     distance: NumPyDistanceExtractor[StateT, SampledObstacleStatesT, DistanceT]
     distance_threshold: Array[Dims[V]]
     weight: float
-    metric: RiskMetric
+    metric: NumPyRiskMetric
 
     @staticmethod
     def create[
@@ -142,7 +158,7 @@ class NumPyCollisionCost[
         distance: NumPyDistanceExtractor[S, SOS, D],
         distance_threshold: Array[Dims[V_]],
         weight: float,
-        metric: RiskMetric = NoMetric(),
+        metric: NumPyRiskMetric = NoMetric(),
     ) -> "NumPyCollisionCost[S, OS, SOS, D, V_]":
         return NumPyCollisionCost(
             obstacle_states=obstacle_states,
@@ -156,57 +172,20 @@ class NumPyCollisionCost[
     def __call__[T: int, M: int](
         self, *, inputs: NumPyControlInputBatch[T, int, M], states: StateT
     ) -> NumPySimpleCosts[T, M]:
-        metric = risk.expected_value_of(self.cost_function()).sampled_with(
-            sampler.monte_carlo(self.metric.sample_count)
-        )
-
-        return NumPySimpleCosts(
-            metric.compute(
-                trajectories=StateTrajectories(states),
-                uncertainties=ObstacleStateUncertainties(
-                    obstacle_states=self.obstacle_states(), sampler=self.sampler
-                ),
-            )
-        )
-
-    def cost_function(self) -> SampleCostFunction[StateT, SampledObstacleStatesT]:
-        def J(
-            *, trajectories: StateT, uncertainties: SampledObstacleStatesT
-        ) -> riskit.NumPyCosts:
+        def cost(
+            *, states: StateT, samples: SampledObstacleStatesT
+        ) -> Array[Dims[T, M, int]]:
             cost = self.distance_threshold[
                 np.newaxis, :, np.newaxis, np.newaxis
-            ] - np.asarray(
-                self.distance(states=trajectories, obstacle_states=uncertainties)
-            )
+            ] - np.asarray(self.distance(states=states, obstacle_states=samples))
 
             return self.weight * np.clip(cost, 0, None).sum(axis=1)
 
-        return J
-
-
-@dataclass(frozen=True)
-class StateTrajectories[StateT: NumPyStateBatch]:
-    states: StateT
-
-    def get(self) -> StateT:
-        return self.states
-
-    @property
-    def time_steps(self) -> int:
-        return self.states.horizon
-
-    @property
-    def trajectory_count(self) -> int:
-        return self.states.rollout_count
-
-
-@dataclass(frozen=True)
-class ObstacleStateUncertainties[
-    StateT: NumPyObstacleStates,
-    SampleT: NumPySampledObstacleStates,
-]:
-    obstacle_states: StateT
-    sampler: NumPyObstacleStateSampler[StateT, SampleT]
-
-    def sample(self, count: int) -> SampleT:
-        return self.sampler(self.obstacle_states, count=count)
+        return NumPySimpleCosts(
+            self.metric.compute(
+                cost,
+                states=states,
+                obstacle_states=self.obstacle_states(),
+                sampler=self.sampler,
+            )
+        )

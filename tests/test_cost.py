@@ -1,11 +1,18 @@
+from typing import Callable
+from functools import partial
+
 from trajax import (
     ControlInputBatch,
     StateBatch,
     Costs,
     CostFunction,
+    Circles,
     types,
     trajectory,
     costs,
+    obstacles,
+    distance as distance_measure,
+    risk,
 )
 
 from numtypes import array
@@ -62,7 +69,7 @@ from pytest import mark, approx
                 ),
                 # Doesn't matter for this cost function.
                 inputs := data.numpy.control_input_batch(
-                    np.random.uniform(size=(T := 3, 2, M := 2))
+                    np.random.uniform(size=(T := 3, 2, M := 2))  # type: ignore
                 ),
                 states := data.numpy.state_batch(
                     array(
@@ -218,7 +225,7 @@ from pytest import mark, approx
                     weight=k,
                 ),
                 inputs := data.jax.control_input_batch(
-                    np.random.uniform(size=(T := 3, 2, M := 2))
+                    np.random.uniform(size=(T := 3, 2, M := 2))  # type: ignore
                 ),
                 states := data.jax.state_batch(
                     array(
@@ -405,7 +412,7 @@ M = clear_type
                 weight=1.0,
             ),
             inputs := data.numpy.control_input_batch(
-                np.random.uniform(size=(T := 2, 2, M := 5))
+                np.random.uniform(size=(T := 2, 2, M := 5))  # type: ignore
             ),
             states := data.numpy.state_batch(
                 array(
@@ -451,7 +458,7 @@ M = clear_type
                 weight=1.0,
             ),
             inputs := data.jax.control_input_batch(
-                np.random.uniform(size=(T := 2, 2, M := 5))
+                np.random.uniform(size=(T := 2, 2, M := 5))  # type: ignore
             ),
             states := data.jax.state_batch(
                 array(
@@ -540,7 +547,7 @@ def test_that_contouring_cost_increases_with_lateral_deviation[
                 weight=1.0,
             ),
             inputs := data.numpy.control_input_batch(
-                np.random.uniform(size=(T := 2, 2, M := 5))
+                np.random.uniform(size=(T := 2, 2, M := 5))  # type: ignore
             ),
             states := data.numpy.state_batch(
                 array(
@@ -586,7 +593,7 @@ def test_that_contouring_cost_increases_with_lateral_deviation[
                 weight=1.0,
             ),
             inputs := data.jax.control_input_batch(
-                np.random.uniform(size=(T := 2, 2, M := 5))
+                np.random.uniform(size=(T := 2, 2, M := 5))  # type: ignore
             ),
             states := data.jax.state_batch(
                 array(
@@ -655,46 +662,32 @@ M = clear_type
 
 
 @mark.parametrize(
-    [
-        "inputs",
-        "states",
-        "low_weight_cost",
-        "high_weight_cost",
-    ],
+    ["inputs", "states", "create_cost"],
     [
         *[
             (
                 inputs := data.numpy.control_input_batch(
-                    np.random.uniform(size=(T := 2, 2, M := 2))
+                    np.random.uniform(size=(T := 2, 2, M := 2))  # type: ignore
                 ),
                 states := data.numpy.state_batch(
                     np.random.uniform(size=(T, 3, M))  # type: ignore
                 ),
-                low_weight_cost := tracking_cost(
-                    reference=(
-                        reference := trajectory.numpy.line(
-                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
-                        )
+                create_cost := lambda weight: tracking_cost(
+                    reference=trajectory.numpy.line(
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
                     ),
                     path_parameter_extractor=(
-                        path_parameter_extractor
-                        := lambda states: types.numpy.path_parameters(
+                        lambda states: types.numpy.path_parameters(
                             np.asarray(states)[:, 2]
                         )
                     ),
                     position_extractor=(
-                        position_extractor := lambda states: types.numpy.positions(
+                        lambda states: types.numpy.positions(
                             x=np.asarray(states)[:, 0],
                             y=np.asarray(states)[:, 1],
                         )
                     ),
-                    weight=1.0,
-                ),
-                high_weight_cost := tracking_cost(
-                    reference=reference,
-                    path_parameter_extractor=path_parameter_extractor,
-                    position_extractor=position_extractor,
-                    weight=10.0,
+                    weight=weight,
                 ),
             )
             for tracking_cost in (
@@ -705,40 +698,29 @@ M = clear_type
         *[
             (
                 inputs := data.jax.control_input_batch(
-                    np.random.uniform(size=(T := 2, 2, M := 2))
+                    np.random.uniform(size=(T := 2, 2, M := 2))  # type: ignore
                 ),
                 states := data.jax.state_batch(
                     np.random.uniform(size=(T, 3, M))  # type: ignore
                 ),
-                low_weight_cost := tracking_cost(
-                    reference=(
-                        reference := trajectory.jax.line(
-                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
-                        )
+                create_cost := lambda weight: tracking_cost(
+                    reference=trajectory.jax.line(
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
                     ),
-                    path_parameter_extractor=(
-                        path_parameter_extractor
-                        := lambda states: types.jax.path_parameters(
-                            states.array[:, 2],
-                            horizon=states.horizon,
-                            rollout_count=states.rollout_count,
-                        )
+                    path_parameter_extractor=lambda states: types.jax.path_parameters(
+                        states.array[:, 2],
+                        horizon=states.horizon,
+                        rollout_count=states.rollout_count,
                     ),
                     position_extractor=(
-                        position_extractor := lambda states: types.jax.positions(
+                        lambda states: types.jax.positions(
                             x=states.array[:, 0],
                             y=states.array[:, 1],
                             horizon=states.horizon,
                             rollout_count=states.rollout_count,
                         )
                     ),
-                    weight=1.0,
-                ),
-                high_weight_cost := tracking_cost(
-                    reference=reference,
-                    path_parameter_extractor=path_parameter_extractor,  # type: ignore
-                    position_extractor=position_extractor,  # type: ignore
-                    weight=10.0,
+                    weight=weight,
                 ),
             )
             for tracking_cost in (costs.jax.tracking.contouring, costs.jax.tracking.lag)
@@ -751,24 +733,17 @@ M = clear_type
                 states := data.numpy.state_batch(
                     np.random.uniform(size=(T, 3, M))  # type: ignore
                 ),
-                low_weight_cost := costs.numpy.tracking.progress(
-                    path_velocity_extractor=(
-                        path_velocity_extractor := lambda u: np.asarray(u)[:, 1]
+                create_cost := partial(
+                    lambda weight, *, weight_time_step: costs.numpy.tracking.progress(
+                        path_velocity_extractor=(lambda u: np.asarray(u)[:, 1]),
+                        # Increasing either weight or time step size should increase cost
+                        time_step_size=weight if weight_time_step else 1.0,
+                        weight=weight if not weight_time_step else 1.0,
                     ),
-                    time_step_size=low_time_step_size,
-                    weight=low_weight,
-                ),
-                high_weight_cost := costs.numpy.tracking.progress(
-                    path_velocity_extractor=path_velocity_extractor,
-                    time_step_size=high_time_step_size,
-                    weight=high_weight,
+                    weight_time_step=weight_time_step,
                 ),
             )
-            for (low_time_step_size, high_time_step_size, low_weight, high_weight) in (
-                (0.1, 0.1, 1.0, 10.0),
-                # Increasing the time step size should also increase cost
-                (0.1, 1.0, 1.0, 1.0),
-            )
+            for weight_time_step in (True, False)
         ],
         *[
             (
@@ -778,125 +753,87 @@ M = clear_type
                 states := data.jax.state_batch(
                     np.random.uniform(size=(T, 3, M))  # type: ignore
                 ),
-                low_weight_cost := costs.jax.tracking.progress(
-                    path_velocity_extractor=(
-                        path_velocity_extractor := lambda u: u.array[:, 1]
+                create_cost := partial(
+                    lambda weight, *, weight_time_step: costs.jax.tracking.progress(
+                        path_velocity_extractor=lambda u: u.array[:, 1],
+                        time_step_size=weight if weight_time_step else 1.0,
+                        weight=weight if not weight_time_step else 1.0,
                     ),
-                    time_step_size=low_time_step_size,
-                    weight=low_weight,
-                ),
-                high_weight_cost := costs.jax.tracking.progress(
-                    path_velocity_extractor=path_velocity_extractor,  # type: ignore
-                    time_step_size=high_time_step_size,
-                    weight=high_weight,
+                    weight_time_step=weight_time_step,
                 ),
             )
-            for (low_time_step_size, high_time_step_size, low_weight, high_weight) in (
-                (0.1, 0.1, 1.0, 10.0),
-                # Increasing the time step size should also increase cost
-                (0.1, 1.0, 1.0, 1.0),
-            )
+            for weight_time_step in (True, False)
         ],
         (
             inputs := data.numpy.control_input_batch(
-                np.random.uniform(size=(T := 3, D_u := 2, M := 2))
+                np.random.uniform(size=(T := 3, D_u := 2, M := 2))  # type: ignore
             ),
             states := data.numpy.state_batch(
                 np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
             ),
-            low_weight_cost := costs.numpy.safety.collision(
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    obstacle_states := data.numpy.obstacle_states(
-                        x=np.random.uniform(size=(T, K := 3)),  # type: ignore
-                        y=np.random.uniform(size=(T, K)),  # type: ignore
-                    )
-                ),
-                sampler=stubs.ObstacleStateSampler.returns(
-                    obstacle_state_samples := data.numpy.obstacle_state_samples(
-                        x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
-                        y=np.random.uniform(size=(T, K, N)),  # type: ignore
+            create_cost := partial(
+                lambda weight, *, expected_states: costs.numpy.safety.collision(
+                    obstacle_states=stubs.ObstacleStateProvider.returns(
+                        obstacle_states := data.numpy.obstacle_states(
+                            x=np.random.uniform(size=(T := 3, K := 3)),  # type: ignore
+                            y=np.random.uniform(size=(T, K)),  # type: ignore
+                        )
                     ),
-                    when_obstacle_states_are=obstacle_states,
-                    and_sample_count_is=N,
-                ),
-                distance=stubs.DistanceExtractor.returns(
-                    distance := data.numpy.distance(
-                        np.random.uniform(size=(T, V := 3, M, N))  # type: ignore
+                    sampler=stubs.ObstacleStateSampler.returns(
+                        obstacle_state_samples := data.numpy.obstacle_state_samples(
+                            x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
+                            y=np.random.uniform(size=(T, K, N)),  # type: ignore
+                        ),
+                        when_obstacle_states_are=obstacle_states,
+                        and_sample_count_is=N,
                     ),
-                    when_states_are=states,
-                    and_obstacle_states_are=obstacle_state_samples,
+                    distance=stubs.DistanceExtractor.returns(
+                        data.numpy.distance(
+                            np.random.uniform(size=(T, V := 3, M := 2, N))  # type: ignore
+                        ),
+                        when_states_are=expected_states,
+                        and_obstacle_states_are=obstacle_state_samples,
+                    ),
+                    distance_threshold=array([1.0, 2.0, 3.0], shape=(V,)),
+                    weight=weight,
                 ),
-                distance_threshold=(
-                    distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
-                ),
-                weight=2.0,
-            ),
-            high_weight_cost := costs.numpy.safety.collision(
-                obstacle_states=stubs.ObstacleStateProvider.returns(obstacle_states),
-                sampler=stubs.ObstacleStateSampler.returns(
-                    obstacle_state_samples,
-                    when_obstacle_states_are=obstacle_states,
-                    and_sample_count_is=N,
-                ),
-                distance=stubs.DistanceExtractor.returns(
-                    distance,
-                    when_states_are=states,
-                    and_obstacle_states_are=obstacle_state_samples,
-                ),
-                distance_threshold=distance_threshold,
-                weight=20.0,
+                expected_states=states,
             ),
         ),
         (
             inputs := data.jax.control_input_batch(
-                np.random.uniform(size=(T := 3, D_u := 2, M := 2))
+                np.random.uniform(size=(T := 3, D_u := 2, M := 2))  # type: ignore
             ),
             jax_states := data.jax.state_batch(
                 np.random.uniform(size=(T, D_x := 4, M))  # type: ignore
             ),
-            low_weight_cost := costs.jax.safety.collision(
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    jax_obstacle_states := data.jax.obstacle_states(
-                        x=np.random.uniform(size=(T, K := 3)),  # type: ignore
-                        y=np.random.uniform(size=(T, K)),  # type: ignore
-                    )
-                ),
-                sampler=stubs.ObstacleStateSampler.returns(
-                    jax_obstacle_state_samples := data.jax.obstacle_state_samples(
-                        x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
-                        y=np.random.uniform(size=(T, K, N)),  # type: ignore
+            create_cost := partial(
+                lambda weight, *, expected_states: costs.jax.safety.collision(
+                    obstacle_states=stubs.ObstacleStateProvider.returns(
+                        obstacle_states := data.jax.obstacle_states(
+                            x=np.random.uniform(size=(T := 3, K := 3)),  # type: ignore
+                            y=np.random.uniform(size=(T, K)),  # type: ignore
+                        )
                     ),
-                    when_obstacle_states_are=jax_obstacle_states,
-                    and_sample_count_is=N,
-                ),
-                distance=stubs.DistanceExtractor.returns(
-                    jax_distance := data.jax.distance(
-                        np.random.uniform(size=(T, V := 3, M, N))  # type: ignore
+                    sampler=stubs.ObstacleStateSampler.returns(
+                        obstacle_state_samples := data.jax.obstacle_state_samples(
+                            x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
+                            y=np.random.uniform(size=(T, K, N)),  # type: ignore
+                        ),
+                        when_obstacle_states_are=obstacle_states,
+                        and_sample_count_is=N,
                     ),
-                    when_states_are=jax_states,
-                    and_obstacle_states_are=jax_obstacle_state_samples,
+                    distance=stubs.DistanceExtractor.returns(
+                        data.jax.distance(
+                            np.random.uniform(size=(T, V := 3, M := 2, N))  # type: ignore
+                        ),
+                        when_states_are=expected_states,
+                        and_obstacle_states_are=obstacle_state_samples,
+                    ),
+                    distance_threshold=array([1.0, 2.0, 3.0], shape=(V,)),
+                    weight=weight,
                 ),
-                distance_threshold=(
-                    distance_threshold := array([1.0, 2.0, 3.0], shape=(V,))
-                ),
-                weight=2.0,
-            ),
-            high_weight_cost := costs.jax.safety.collision(
-                obstacle_states=stubs.ObstacleStateProvider.returns(
-                    jax_obstacle_states
-                ),
-                sampler=stubs.ObstacleStateSampler.returns(
-                    jax_obstacle_state_samples,
-                    when_obstacle_states_are=jax_obstacle_states,
-                    and_sample_count_is=N,
-                ),
-                distance=stubs.DistanceExtractor.returns(
-                    jax_distance,
-                    when_states_are=jax_states,
-                    and_obstacle_states_are=jax_obstacle_state_samples,
-                ),
-                distance_threshold=distance_threshold,
-                weight=20.0,
+                expected_states=jax_states,
             ),
         ),
     ],
@@ -908,11 +845,12 @@ def test_that_cost_increases_with_weight[
 ](
     inputs: ControlInputBatchT,
     states: StateBatchT,
-    low_weight_cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
-    high_weight_cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+    create_cost: Callable[
+        [float], CostFunction[ControlInputBatchT, StateBatchT, CostsT]
+    ],
 ) -> None:
-    J_low = np.abs(low_weight_cost(inputs=inputs, states=states))
-    J_high = np.abs(high_weight_cost(inputs=inputs, states=states))
+    J_low = np.abs(create_cost(1.0)(inputs=inputs, states=states))
+    J_high = np.abs(create_cost(20.0)(inputs=inputs, states=states))
 
     assert np.all(J_high > J_low), (
         f"Absolute value of cost should increase with weight. Got low weight costs: {J_low}, "
@@ -930,7 +868,7 @@ def test_that_cost_increases_with_weight[
                 weight=1.0,
             ),
             inputs_slow := data.numpy.control_input_batch(
-                np.full((T := 2, D_u := 2, M := 2), 2.0)
+                np.full((T := 2, D_u := 2, M := 2), 2.0)  # type: ignore
             ),
             inputs_fast := data.numpy.control_input_batch(
                 np.full((T, D_u, M), 4.0)  # type: ignore
@@ -945,7 +883,7 @@ def test_that_cost_increases_with_weight[
                 weight=1.0,
             ),
             inputs_slow := data.jax.control_input_batch(
-                np.full((T := 2, D_u := 2, M := 2), 2.0)
+                np.full((T := 2, D_u := 2, M := 2), 2.0)  # type: ignore
             ),
             inputs_fast := data.jax.control_input_batch(
                 np.full((T, D_u, M), 4.0)  # type: ignore
@@ -1188,8 +1126,8 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
             cost := costs.numpy.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     obstacle_states := data.numpy.obstacle_states(
-                        x=np.random.uniform(size=(T := 4, K := 1)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 4, K := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1253,8 +1191,8 @@ def test_that_control_smoothing_cost_respects_dimension_weights[
             cost := costs.jax.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     jax_obstacle_states := data.jax.obstacle_states(
-                        x=np.random.uniform(size=(T := 4, K := 1)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 4, K := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1353,8 +1291,8 @@ def test_that_collision_cost_decreases_with_distance[
             cost := costs.numpy.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     obstacle_states := data.numpy.obstacle_states(
-                        x=np.random.uniform(size=(T := 4, K := 1)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 4, K := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1403,8 +1341,8 @@ def test_that_collision_cost_decreases_with_distance[
             cost := costs.jax.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     jax_obstacle_states := data.jax.obstacle_states(
-                        x=np.random.uniform(size=(T := 4, K := 1)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 4, K := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1478,8 +1416,8 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
             cost := costs.numpy.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     obstacle_states := data.numpy.obstacle_states(
-                        x=np.random.uniform(size=(T := 2, K := 0)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 2, K := 0)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1491,7 +1429,9 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
                     and_sample_count_is=N,
                 ),
                 distance=stubs.DistanceExtractor.returns(
-                    data.numpy.distance(np.full((T, V := 2, M := 3, N), np.inf)),
+                    data.numpy.distance(
+                        np.full((T, V := 2, M := 3, N), np.inf)  # type: ignore
+                    ),
                     when_states_are=(
                         states := data.numpy.state_batch(
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
@@ -1509,8 +1449,8 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
             cost := costs.jax.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     jax_obstacle_states := data.jax.obstacle_states(
-                        x=np.random.uniform(size=(T := 2, K := 0)),
-                        y=np.random.uniform(size=(T, K)),
+                        x=np.random.uniform(size=(T := 2, K := 0)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
                     )
                 ),
                 sampler=stubs.ObstacleStateSampler.returns(
@@ -1522,7 +1462,9 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
                     and_sample_count_is=N,
                 ),
                 distance=stubs.DistanceExtractor.returns(
-                    data.jax.distance(np.full((T, V := 2, M := 3, N), np.inf)),
+                    data.jax.distance(
+                        np.full((T, V := 2, M := 3, N), np.inf)  # type: ignore
+                    ),
                     when_states_are=(
                         states := data.jax.state_batch(
                             np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
@@ -1551,4 +1493,144 @@ def test_that_collision_cost_is_zero_when_no_obstacles_are_present[
 
     assert np.allclose(J, 0.0), (
         f"Collision cost should be zero when no obstacles are present. Got costs: {J}"
+    )
+
+
+@mark.parametrize(
+    ["inputs", "states", "create_cost"],
+    [
+        (
+            inputs := data.numpy.control_input_batch(
+                np.zeros((T := 10, D_u := 2, M := 5))
+            ),
+            states := data.numpy.state_batch(
+                array(
+                    np.tile(  # type: ignore
+                        [
+                            [[-1.0], [-2.0], [np.pi / 4]],
+                        ],
+                        (T, 1, M),
+                    ),
+                    shape=(T, D_x := 3, M),
+                )
+            ),
+            create_cost := lambda variance: costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=(rng := np.random.default_rng(seed=42)).uniform(
+                            low=-1.0, high=1.0, size=(T := 10, K := 5)
+                        ),
+                        y=rng.uniform(low=0.0, high=2.0, size=(T, K)),
+                        heading=rng.uniform(low=-np.pi, high=np.pi, size=(T, K)),
+                        covariance=array(
+                            # Each covariance matrix is diagonal with `variance` on the diagonal.
+                            (variance * np.eye(D_O := types.obstacle.D_O))[
+                                None, ..., None
+                            ]
+                            * np.ones((T, D_O, D_O, K)),
+                            shape=(T, D_O, D_O, K),
+                        ),
+                    )
+                ),
+                sampler=obstacles.sampler.numpy.gaussian(),
+                distance=distance_measure.numpy.circles(
+                    ego=Circles(
+                        origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                        radii=array([2.5], shape=(V,)),
+                    ),
+                    obstacle=Circles(
+                        origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                        radii=array([2.5], shape=(C,)),
+                    ),
+                    position_extractor=lambda states: types.numpy.positions(
+                        x=np.asarray(states)[:, 0],
+                        y=np.asarray(states)[:, 1],
+                    ),
+                    heading_extractor=lambda states: types.numpy.headings(
+                        theta=np.asarray(states)[:, 2]
+                    ),
+                ),
+                distance_threshold=array([0.5], shape=(V,)),
+                weight=10.0,
+                metric=risk.numpy.mean_variance(gamma=2.0, sample_count=100),
+            ),
+        ),
+        (
+            inputs := data.jax.control_input_batch(
+                np.zeros((T := 10, D_u := 2, M := 5))
+            ),
+            states := data.jax.state_batch(
+                array(
+                    np.tile(  # type: ignore
+                        [
+                            [[-1.0], [-2.0], [np.pi / 4]],
+                        ],
+                        (T, 1, M),
+                    ),
+                    shape=(T, D_x := 3, M),
+                )
+            ),
+            create_cost := lambda variance: costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    data.jax.obstacle_states(
+                        x=(rng := np.random.default_rng(seed=42)).uniform(
+                            low=-1.0, high=1.0, size=(T := 10, K := 5)
+                        ),
+                        y=rng.uniform(low=0.0, high=2.0, size=(T, K)),
+                        heading=rng.uniform(low=-np.pi, high=np.pi, size=(T, K)),
+                        covariance=array(
+                            (variance * np.eye(D_O := types.obstacle.D_O))[
+                                None, ..., None
+                            ]
+                            * np.ones((T, D_O, D_O, K)),
+                            shape=(T, D_O, D_O, K),
+                        ),
+                    )
+                ),
+                sampler=obstacles.sampler.jax.gaussian(),
+                distance=distance_measure.jax.circles(
+                    ego=Circles(
+                        origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                        radii=array([2.5], shape=(V,)),
+                    ),
+                    obstacle=Circles(
+                        origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                        radii=array([2.5], shape=(C,)),
+                    ),
+                    position_extractor=lambda states: types.jax.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                        horizon=states.horizon,
+                        rollout_count=states.rollout_count,
+                    ),
+                    heading_extractor=lambda states: types.jax.headings(
+                        theta=states.array[:, 2],
+                        horizon=states.horizon,
+                        rollout_count=states.rollout_count,
+                    ),
+                ),
+                distance_threshold=array([0.5], shape=(V,)),
+                weight=10.0,
+                metric=risk.jax.mean_variance(gamma=2.0, sample_count=100),
+            ),
+        ),
+    ],
+)
+def test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty[
+    ControlInputBatchT: ControlInputBatch,
+    StateBatchT: StateBatch,
+    CostsT: Costs,
+](
+    inputs: ControlInputBatchT,
+    states: StateBatchT,
+    create_cost: Callable[
+        [float], CostFunction[ControlInputBatchT, StateBatchT, CostsT]
+    ],
+) -> None:
+    J_low = np.asarray(create_cost(0.01)(inputs=inputs, states=states))
+    J_high = np.asarray(create_cost(0.5)(inputs=inputs, states=states))
+
+    assert np.all(J_high > J_low), (
+        f"Collision cost should increase with higher position uncertainty. "
+        f"Got costs: {J_low} (low variance) vs {J_high} (high variance)"
     )

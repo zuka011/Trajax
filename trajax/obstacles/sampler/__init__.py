@@ -1,7 +1,7 @@
 from .basic import (
-    NumPyObstaclePositionAndHeadingSampler as NumPyObstaclePositionAndHeadingSampler,
+    NumPyGaussianObstacleStateSampler as NumPyGaussianObstacleStateSampler,
 )
 from .accelerated import (
-    JaxObstaclePositionAndHeadingSampler as JaxObstaclePositionAndHeadingSampler,
+    JaxGaussianObstacleStateSampler as JaxGaussianObstacleStateSampler,
 )
 from .factory import sampler as sampler

@@ -342,7 +342,7 @@ class configure:
                 ),
                 costs.numpy.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.sampler.numpy.position_and_heading(),
+                    sampler=create_obstacles.sampler.numpy.gaussian(),
                     distance=(
                         circles_distance := distance.numpy.circles(
                             ego=Circles(

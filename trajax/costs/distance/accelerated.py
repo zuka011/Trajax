@@ -6,6 +6,7 @@ from trajax.mppi import JaxStateBatch
 from trajax.costs.accelerated import JaxPositionExtractor, JaxHeadingExtractor
 from trajax.costs.collision import (
     D_o,
+    D_O,
     JaxObstacleStates,
     JaxSampledObstacleStates,
     JaxDistance,
@@ -18,6 +19,11 @@ from jaxtyping import Array as JaxArray, Float
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+
+type ObstacleCovarianceArray[T: int = int, K: int = int] = Float[
+    JaxArray, f"T {D_O} {D_O} K"
+]
 
 
 @jaxtyped
@@ -74,6 +80,7 @@ class JaxObstaclePositionsAndHeading[T: int, K: int](JaxObstacleStates[T, K]):
     _x: Float[JaxArray, "T K"]
     _y: Float[JaxArray, "T K"]
     _heading: Float[JaxArray, "T K"]
+    _covariance: ObstacleCovarianceArray[T, K] | None = None
 
     @staticmethod
     def sampled[N: int](  # type: ignore
@@ -93,10 +100,13 @@ class JaxObstaclePositionsAndHeading[T: int, K: int](JaxObstacleStates[T, K]):
         x: Float[JaxArray, "T K"],
         y: Float[JaxArray, "T K"],
         heading: Float[JaxArray, "T K"],
+        covariance: ObstacleCovarianceArray[T_, K_] | None = None,
         horizon: T_ | None = None,
         obstacle_count: K_ | None = None,
     ) -> "JaxObstaclePositionsAndHeading[T_, K_]":
-        return JaxObstaclePositionsAndHeading(_x=x, _y=y, _heading=heading)
+        return JaxObstaclePositionsAndHeading(
+            _x=x, _y=y, _heading=heading, _covariance=covariance
+        )
 
     @staticmethod
     def of_states[T_: int, K_: int](
@@ -128,8 +138,8 @@ class JaxObstaclePositionsAndHeading[T: int, K: int](JaxObstacleStates[T, K]):
     def heading(self) -> Array[Dims[T, K]]:
         return np.asarray(self._heading)
 
-    def covariance(self) -> None:
-        return
+    def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
+        return np.asarray(self._covariance) if self._covariance is not None else None
 
     def single(self) -> JaxSampledObstaclePositionsAndHeading[T, K, D[1]]:
         return JaxSampledObstaclePositionsAndHeading.create(
@@ -151,8 +161,8 @@ class JaxObstaclePositionsAndHeading[T: int, K: int](JaxObstacleStates[T, K]):
         return self._heading
 
     @property
-    def covariance_array(self) -> None:
-        return None
+    def covariance_array(self) -> ObstacleCovarianceArray[T, K] | None:
+        return self._covariance
 
 
 @dataclass(frozen=True)

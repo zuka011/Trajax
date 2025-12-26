@@ -1,14 +1,14 @@
 from typing import Final
 
 from trajax.obstacles.sampler import (
-    NumPyObstaclePositionAndHeadingSampler,
-    JaxObstaclePositionAndHeadingSampler,
+    NumPyGaussianObstacleStateSampler,
+    JaxGaussianObstacleStateSampler,
 )
 
 
 class sampler:
     class numpy:
-        position_and_heading: Final = NumPyObstaclePositionAndHeadingSampler
+        gaussian: Final = NumPyGaussianObstacleStateSampler
 
     class jax:
-        position_and_heading: Final = JaxObstaclePositionAndHeadingSampler
+        gaussian: Final = JaxGaussianObstacleStateSampler

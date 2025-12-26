@@ -79,3 +79,9 @@ class DistanceExtractor[
         """Computes the distances between each part of the ego and the corresponding closest
         obstacles."""
         ...
+
+
+class SampleCostFunction[StateT, SampledObstacleStateT, CostsT](Protocol):
+    def __call__(self, *, states: StateT, samples: SampledObstacleStateT) -> CostsT:
+        """Computes the cost given the states and sampled obstacle states."""
+        ...

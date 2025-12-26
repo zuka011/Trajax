@@ -6,6 +6,7 @@ from .basic import (
     NumPySampledObstacleStates as NumPySampledObstacleStates,
     NumPyDistance as NumPyDistance,
     NumPyCollisionCost as NumPyCollisionCost,
+    NumPyRiskMetric as NumPyRiskMetric,
 )
 from .accelerated import (
     JaxDistanceExtractor as JaxDistanceExtractor,
@@ -15,6 +16,7 @@ from .accelerated import (
     JaxSampledObstacleStates as JaxSampledObstacleStates,
     JaxDistance as JaxDistance,
     JaxCollisionCost as JaxCollisionCost,
+    JaxRiskMetric as JaxRiskMetric,
 )
 from .common import (
     D_o as D_o,
@@ -25,4 +27,6 @@ from .common import (
     ObstacleStateSampler as ObstacleStateSampler,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
+    SampleCostFunction as SampleCostFunction,
 )
+from .base import NoMetric as NoMetric

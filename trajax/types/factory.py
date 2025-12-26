@@ -52,6 +52,8 @@ from trajax.trajectory import (
     JaxHeadings,
 )
 from trajax.costs import (
+    D_o as D_o_,
+    D_O as D_O_,
     NumPyPathParameterExtractor,
     NumPyPathVelocityExtractor,
     NumPyPositionExtractor,
@@ -116,6 +118,11 @@ class types:
     type ContouringCost[I: ControlInputBatch, S: StateBatch, C: Costs, D: Error] = (
         ContouringCost[I, S, C, D]
     )
+
+    class obstacle:
+        type D_o = D_o_
+
+        D_O: Final = D_O_
 
     class bicycle:
         type D_x = BicycleD_x

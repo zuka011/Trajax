@@ -1,3 +1,5 @@
+from typing import Final
+
 from trajax import types
 
 from jaxtyping import Array as JaxArray, Float
@@ -7,6 +9,7 @@ import numpy as np
 import jax.numpy as jnp
 
 
+type D_o = types.obstacle.D_o
 type NumPyState[D_x: int] = types.numpy.simple.State[D_x]
 type NumPyStateBatch[T: int, D_x: int, M: int] = types.numpy.simple.StateBatch[
     T, D_x, M
@@ -36,6 +39,9 @@ type JaxSampledObstacleStates[T: int, K: int, N: int] = types.jax.SampledObstacl
     T, K, N
 ]
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
+
+
+D_O: Final = types.obstacle.D_O
 
 
 class numpy:
@@ -125,11 +131,15 @@ class jax:
         x: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         y: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         heading: Array[Dims[T, K]] | Float[JaxArray, "T K"] | None = None,
+        covariance: Array[Dims[T, D_o, D_o, K]]
+        | Float[JaxArray, f"T {D_o} {D_o} K"]
+        | None = None,
     ) -> JaxObstacleStates[T, K]:
         return types.jax.obstacle_states.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
             heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
+            covariance=jnp.asarray(covariance) if covariance is not None else None,
         )
 
     @staticmethod

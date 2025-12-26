@@ -3,30 +3,28 @@ from dataclasses import dataclass
 
 from trajax.type import jaxtyped, DataType
 from trajax.mppi import (
+    StateBatch,
     CostFunction,
     JaxControlInputBatch,
     JaxStateBatch,
 )
 from trajax.states import JaxSimpleCosts
-from trajax.costs.risk import RiskMetric, NoMetric
+from trajax.costs.collision.base import NoMetric
 from trajax.costs.collision.common import (
     ObstacleStateProvider,
     ObstacleStateSampler,
     Distance,
+    SampleCostFunction,
     D_o,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D
-from riskit import risk, sampler
 
 import riskit
 import numpy as np
 import jax
 import jax.numpy as jnp
-
-
-type SampleCostFunction[StateT, SampleT] = riskit.JaxBatchCostFunction[StateT, SampleT]
 
 
 class JaxSampledObstacleStates[T: int, K: int, N: int](Protocol):
@@ -144,6 +142,25 @@ class JaxObstacleStateSampler[
 ](ObstacleStateSampler[StateT, SampleT], Protocol): ...
 
 
+class JaxRiskMetric(Protocol):
+    def compute[
+        StateT: StateBatch,
+        ObstacleStateT: JaxObstacleStates,
+        SampledObstacleStateT: JaxSampledObstacleStates,
+    ](
+        self,
+        cost_function: SampleCostFunction[
+            StateT, SampledObstacleStateT, Float[JaxArray, "T M N"]
+        ],
+        *,
+        states: StateT,
+        obstacle_states: ObstacleStateT,
+        sampler: JaxObstacleStateSampler[ObstacleStateT, SampledObstacleStateT],
+    ) -> Float[JaxArray, "T M"]:
+        """Computes the risk metric based on the provided cost function and returns it as a JAX array."""
+        ...
+
+
 @jaxtyped
 @dataclass(frozen=True)
 class JaxDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
@@ -170,7 +187,7 @@ class JaxCollisionCost[
     distance: JaxDistanceExtractor[StateT, SampledObstacleStatesT, DistanceT]
     distance_threshold: Float[JaxArray, "V"]
     weight: float
-    metric: RiskMetric
+    metric: JaxRiskMetric
 
     @staticmethod
     def create[
@@ -186,7 +203,7 @@ class JaxCollisionCost[
         distance: JaxDistanceExtractor[S, SOS, D],
         distance_threshold: Array[Dims[V_]],
         weight: float,
-        metric: RiskMetric = NoMetric(),
+        metric: JaxRiskMetric = NoMetric(),
     ) -> "JaxCollisionCost[S, OS, SOS, D, V_]":
         return JaxCollisionCost(
             obstacle_states=obstacle_states,
@@ -200,60 +217,21 @@ class JaxCollisionCost[
     def __call__[T: int, M: int](
         self, *, inputs: JaxControlInputBatch[T, int, M], states: StateT
     ) -> JaxSimpleCosts[T, M]:
-        metric = risk.expected_value_of(self.cost_function()).sampled_with(
-            sampler.monte_carlo(self.metric.sample_count)
-        )
-
-        return JaxSimpleCosts(
-            metric.compute(
-                trajectories=StateTrajectories(states),
-                uncertainties=ObstacleStateUncertainties(
-                    obstacle_states=self.obstacle_states(), sampler=self.sampler
-                ),
-            )
-        )
-
-    def cost_function(self) -> SampleCostFunction[StateT, SampledObstacleStatesT]:
-        def J(
-            *, trajectories: StateT, uncertainties: SampledObstacleStatesT
-        ) -> riskit.JaxCosts:
+        def cost(*, states: StateT, samples: SampledObstacleStatesT) -> riskit.JaxCosts:
             return collision_cost(
-                distance=self.distance(
-                    states=trajectories, obstacle_states=uncertainties
-                ).array,
+                distance=self.distance(states=states, obstacle_states=samples).array,
                 distance_threshold=self.distance_threshold,
                 weight=self.weight,
             )
 
-        return J
-
-
-@dataclass(frozen=True)
-class StateTrajectories[StateT: JaxStateBatch]:
-    states: StateT
-
-    def get(self) -> StateT:
-        return self.states
-
-    @property
-    def time_steps(self) -> int:
-        return self.states.horizon
-
-    @property
-    def trajectory_count(self) -> int:
-        return self.states.rollout_count
-
-
-@dataclass(frozen=True)
-class ObstacleStateUncertainties[
-    StateT: JaxObstacleStates,
-    SampleT: JaxSampledObstacleStates,
-]:
-    obstacle_states: StateT
-    sampler: JaxObstacleStateSampler[StateT, SampleT]
-
-    def sample(self, count: int) -> SampleT:
-        return self.sampler(self.obstacle_states, count=count)
+        return JaxSimpleCosts(
+            self.metric.compute(
+                cost,
+                states=states,
+                obstacle_states=self.obstacle_states(),
+                sampler=self.sampler,
+            )
+        )
 
 
 @jax.jit

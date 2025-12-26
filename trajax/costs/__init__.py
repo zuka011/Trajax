@@ -33,6 +33,8 @@ from .distance import (
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
 from .collision import (
+    D_o as D_o,
+    D_O as D_O,
     ObstacleStates as ObstacleStates,
     SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,
