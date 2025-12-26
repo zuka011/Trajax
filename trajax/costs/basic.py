@@ -18,29 +18,11 @@ from trajax.trajectory import (
     NumPyHeadings,
 )
 from trajax.states import NumPySimpleCosts
-from trajax.costs.common import ContouringCost, Error, Distance, ObstacleStateProvider
+from trajax.costs.common import ContouringCost, Error
 
 from numtypes import Array, Dims, Dim2
 
 import numpy as np
-
-
-class NumPyObstacleStates[T: int, D_o: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        """Returns the states of obstacles as a NumPy array."""
-        ...
-
-    def x(self) -> Array[Dims[T, K]]:
-        """Returns the x positions of obstacles over time."""
-        ...
-
-    def y(self) -> Array[Dims[T, K]]:
-        """Returns the y positions of obstacles over time."""
-        ...
-
-    def heading(self) -> Array[Dims[T, K]]:
-        """Returns the headings of obstacles over time."""
-        ...
 
 
 class NumPyPathParameterExtractor[StateT: NumPyStateBatch](Protocol):
@@ -67,36 +49,11 @@ class NumPyHeadingExtractor[StateT: NumPyStateBatch](Protocol):
         ...
 
 
-class NumPyDistanceExtractor[
-    StateT: NumPyStateBatch,
-    ObstacleStatesT: NumPyObstacleStates,
-    DistanceT: "NumPyDistance",
-](Protocol):
-    def __call__(
-        self, *, states: StateT, obstacle_states: ObstacleStatesT
-    ) -> DistanceT:
-        """Extracts minimum distances to obstacles in the environment from a batch of states."""
-        ...
-
-
-class NumPyObstacleStateProvider[ObstacleStateT: NumPyObstacleStates](
-    ObstacleStateProvider[ObstacleStateT]
-): ...
-
-
 @dataclass(frozen=True)
 class NumPyError[T: int, M: int](Error[T, M]):
     array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
-        return self.array
-
-
-@dataclass(frozen=True)
-class NumPyDistance[T: int, V: int, M: int](Distance[T, V, M]):
-    array: Array[Dims[T, V, M]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M]]:
         return self.array
 
 
@@ -264,40 +221,3 @@ class NumPyControlSmoothingCost[D_u: int](
         cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)
 
         return NumPySimpleCosts(cost_per_time_step)
-
-
-@dataclass(kw_only=True, frozen=True)
-class NumPyCollisionCost[
-    StateT: NumPyStateBatch,
-    ObstacleStatesT: NumPyObstacleStates,
-    DistanceT: NumPyDistance,
-    V: int,
-](CostFunction[NumPyControlInputBatch[int, int, int], StateT, NumPySimpleCosts]):
-    obstacle_states: NumPyObstacleStateProvider[ObstacleStatesT]
-    distance: NumPyDistanceExtractor[StateT, ObstacleStatesT, DistanceT]
-    distance_threshold: Array[Dims[V]]
-    weight: float
-
-    @staticmethod
-    def create[S: StateBatch, OS: NumPyObstacleStates, D: NumPyDistance, V_: int](
-        *,
-        obstacle_states: NumPyObstacleStateProvider[OS],
-        distance: NumPyDistanceExtractor[S, OS, D],
-        distance_threshold: Array[Dims[V_]],
-        weight: float,
-    ) -> "NumPyCollisionCost[S, OS, D, V_]":
-        return NumPyCollisionCost(
-            obstacle_states=obstacle_states,
-            distance=distance,
-            distance_threshold=distance_threshold,
-            weight=weight,
-        )
-
-    def __call__[T: int, M: int](
-        self, *, inputs: NumPyControlInputBatch[T, int, M], states: StateT
-    ) -> NumPySimpleCosts[T, M]:
-        cost = self.distance_threshold[np.newaxis, :, np.newaxis] - np.asarray(
-            self.distance(states=states, obstacle_states=self.obstacle_states())
-        )
-
-        return NumPySimpleCosts(self.weight * np.clip(cost, 0, None).sum(axis=1))

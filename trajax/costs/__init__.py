@@ -3,10 +3,6 @@ from .basic import (
     NumPyPathVelocityExtractor as NumPyPathVelocityExtractor,
     NumPyPositionExtractor as NumPyPositionExtractor,
     NumPyHeadingExtractor as NumPyHeadingExtractor,
-    NumPyDistanceExtractor as NumPyDistanceExtractor,
-    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
-    NumPyObstacleStates as NumPyObstacleStates,
-    NumPyDistance as NumPyDistance,
     NumPyContouringCost as NumPyContouringCost,
     NumPyLagCost as NumPyLagCost,
     NumPyProgressCost as NumPyProgressCost,
@@ -17,25 +13,12 @@ from .accelerated import (
     JaxPathVelocityExtractor as JaxPathVelocityExtractor,
     JaxPositionExtractor as JaxPositionExtractor,
     JaxHeadingExtractor as JaxHeadingExtractor,
-    JaxDistanceExtractor as JaxDistanceExtractor,
-    JaxObstacleStateProvider as JaxObstacleStateProvider,
-    JaxObstacleStates as JaxObstacleStates,
-    JaxDistance as JaxDistance,
     JaxContouringCost as JaxContouringCost,
     JaxLagCost as JaxLagCost,
     JaxProgressCost as JaxProgressCost,
     JaxControlSmoothingCost as JaxControlSmoothingCost,
-    JaxCollisionCost as JaxCollisionCost,
 )
-from .common import (
-    Error as Error,
-    ContouringCost as ContouringCost,
-    ObstacleStates as ObstacleStates,
-    ObstacleStateProvider as ObstacleStateProvider,
-    Distance as Distance,
-    DistanceExtractor as DistanceExtractor,
-    CollisionCost as CollisionCost,
-)
+from .common import Error as Error, ContouringCost as ContouringCost
 from .combined import (
     CombinedCost as CombinedCost,
     CostSumFunction as CostSumFunction,
@@ -44,9 +27,32 @@ from .combined import (
 )
 from .distance import (
     Circles as Circles,
-    NumPyObstaclePositions as NumPyObstaclePositions,
+    NumPyObstaclePositionsAndHeading as NumPyObstaclePositionsAndHeading,
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
-    JaxObstaclePositions as JaxObstaclePositions,
+    JaxObstaclePositionsAndHeading as JaxObstaclePositionsAndHeading,
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
+from .collision import (
+    ObstacleStates as ObstacleStates,
+    SampledObstacleStates as SampledObstacleStates,
+    ObstacleStateProvider as ObstacleStateProvider,
+    ObstacleStateSampler as ObstacleStateSampler,
+    Distance as Distance,
+    DistanceExtractor as DistanceExtractor,
+    NumPyDistanceExtractor as NumPyDistanceExtractor,
+    NumPyObstacleStateProvider as NumPyObstacleStateProvider,
+    NumPyObstacleStateSampler as NumPyObstacleStateSampler,
+    NumPyObstacleStates as NumPyObstacleStates,
+    NumPySampledObstacleStates as NumPySampledObstacleStates,
+    NumPyDistance as NumPyDistance,
+    NumPyCollisionCost as NumPyCollisionCost,
+    JaxDistanceExtractor as JaxDistanceExtractor,
+    JaxObstacleStateProvider as JaxObstacleStateProvider,
+    JaxObstacleStateSampler as JaxObstacleStateSampler,
+    JaxObstacleStates as JaxObstacleStates,
+    JaxSampledObstacleStates as JaxSampledObstacleStates,
+    JaxDistance as JaxDistance,
+    JaxCollisionCost as JaxCollisionCost,
+)
+from .risk import risk as risk
 from .factory import costs as costs, distance as distance

@@ -23,10 +23,17 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
-dependencies = ["numtypes>=0.5.1", "jax>=0.8.1", "jaxtyping>=0.3.4"]
+dependencies = [
+    "numtypes>=0.5.1",
+    "jax>=0.8.2",
+    "jaxtyping>=0.3.4",
+    "riskit>=0.2.0",
+]
 
 [project.optional-dependencies]
-type-checking = ["beartype>=0.22.9"]
+type-checking = [
+    "beartype>=0.22.9",
+]
 
 [dependency-groups]
 dev = [

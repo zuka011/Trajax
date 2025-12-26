@@ -41,7 +41,7 @@ class JaxBicycleState(JaxState[BicycleD_x]):
     _array: StateArray
 
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[BicycleD_x]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @property
     def array(self) -> StateArray:
@@ -112,7 +112,7 @@ class JaxBicycleStateBatch[T: int, M: int](JaxStateBatch[T, BicycleD_x, M]):
         return JaxBicycleStateBatch(array)
 
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_x, M]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     def orientations(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array[:, 2, :])
@@ -154,7 +154,7 @@ class JaxBicyclePositions[T: int, M: int]:
     array: JaxBicycleStateBatch
 
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u, M]]:
-        return np.asarray(self.array.array[:, :2, :], dtype=dtype)
+        return np.asarray(self.array.array[:, :2, :])
 
     def x(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array.array[:, 0, :])
@@ -181,7 +181,7 @@ class JaxBicycleControlInputSequence[T: int](JaxControlInputSequence[T, BicycleD
         return JaxBicycleControlInputSequence(jnp.zeros((horizon, BICYCLE_D_U)))
 
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
@@ -250,7 +250,7 @@ class JaxBicycleControlInputBatch[T: int, M: int](
         return JaxBicycleControlInputBatch(array)
 
     def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[T, BicycleD_u, M]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @property
     def array(self) -> ControlInputBatchArray:

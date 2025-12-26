@@ -8,7 +8,7 @@ from tests.benchmarks.runner import (
     NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
-from tests.examples import mpcc
+from tests.examples import mpcc, obstacles
 
 from pytest import mark
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -52,6 +52,71 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
 )
 @mark.benchmark(group="mpcc-single-step")
 def bench_mpcc_single_step(
+    benchmark: BenchmarkFixture,
+    id: str,
+    runner: BenchmarkRunner,
+    configuration: MpccConfiguration,
+) -> None:
+    planner = configuration.planner
+    initial_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+
+    async def single_step() -> ControlInputSequence:
+        control = await planner.step(
+            temperature=0.05,
+            nominal_input=nominal_input,
+            initial_state=initial_state,
+        )
+        return control.nominal
+
+    run_benchmark(benchmark, runner, target=single_step)
+
+
+@mark.parametrize(
+    ["id", "runner", "configuration"],
+    [
+        *[
+            (
+                id,
+                NumPyBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "NumPy",
+                    mpcc.numpy.planner_from_augmented(
+                        obstacles=obstacles.numpy.static.loop
+                    ),
+                ),
+            )
+        ],
+        *[
+            (
+                id,
+                JaxBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "JAX",
+                    mpcc.jax.planner_from_augmented(
+                        obstacles=obstacles.jax.static.loop
+                    ),
+                ),
+            )
+        ],
+    ],
+)
+@mark.benchmark(group="mpcc-static-obstacles-single-step")
+def bench_mpcc_static_obstacles_single_step(
     benchmark: BenchmarkFixture,
     id: str,
     runner: BenchmarkRunner,

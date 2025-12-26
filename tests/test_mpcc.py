@@ -11,6 +11,7 @@ from trajax import (
     Distance,
     DistanceExtractor,
     ObstacleStates,
+    SampledObstacleStates,
     ObstacleStateProvider,
     Mppi,
 )
@@ -312,9 +313,15 @@ def contouring_errors[InputT: ControlInputBatch, StateT: StateBatch](
     return np.asarray(contouring.error(inputs=inputs, states=states))[:, 0]
 
 
-def min_distance_to_obstacles[StateT: StateBatch, ObstacleStatesT: ObstacleStates](
+def min_distance_to_obstacles[
+    StateT: StateBatch,
+    ObstacleStatesT: ObstacleStates,
+    SampleT: SampledObstacleStates,
+](
     distance_extractor: DistanceExtractor[StateT, ObstacleStatesT, Distance],
     states: StateT,
     obstacle_states: ObstacleStatesT,
 ) -> float:
-    return np.min(distance_extractor(states=states, obstacle_states=obstacle_states))
+    return np.min(
+        distance_extractor(states=states, obstacle_states=obstacle_states.single())
+    )

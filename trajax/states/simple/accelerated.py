@@ -23,7 +23,7 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
     _array: Float[JaxArray, "D_x"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
@@ -53,7 +53,7 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
         return JaxSimpleStateBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @property
     def array(self) -> Float[JaxArray, "T D_x M"]:
@@ -87,7 +87,7 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
         return JaxSimpleControlInputSequence(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
@@ -143,7 +143,7 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     @property
     def array(self) -> Float[JaxArray, "T D_u M"]:
@@ -168,7 +168,7 @@ class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
     _array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
-        return np.asarray(self.array, dtype=dtype)
+        return np.asarray(self.array)
 
     def similar(self, *, array: Float[JaxArray, "T M"]) -> Self:
         return self.__class__(array)

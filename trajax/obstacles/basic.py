@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from trajax.costs import NumPyObstacleStateProvider, NumPyObstaclePositions
+from trajax.costs import NumPyObstacleStateProvider, NumPyObstaclePositionsAndHeading
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -9,9 +9,9 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyStaticObstacleStateProvider[T: int, K: int](
-    NumPyObstacleStateProvider[NumPyObstaclePositions[T, K]]
+    NumPyObstacleStateProvider[NumPyObstaclePositionsAndHeading[T, K]]
 ):
-    positions: NumPyObstaclePositions[T, K]
+    positions: NumPyObstaclePositionsAndHeading[T, K]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "NumPyStaticObstacleStateProvider[T_, D[0]]":
@@ -44,8 +44,8 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         assert shape_of(heading, matches=(horizon, K))
 
         return NumPyStaticObstacleStateProvider(
-            NumPyObstaclePositions.create(x=x, y=y, heading=heading)
+            NumPyObstaclePositionsAndHeading.create(x=x, y=y, heading=heading)
         )
 
-    def __call__(self) -> NumPyObstaclePositions[T, K]:
+    def __call__(self) -> NumPyObstaclePositionsAndHeading[T, K]:
         return self.positions

@@ -12,15 +12,17 @@ from .trajectory import (
 from .costs import (
     costs as costs,
     distance as distance,
+    risk as risk,
     CombinedCost as CombinedCost,
     Error as Error,
     ContouringCost as ContouringCost,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
-    CollisionCost as CollisionCost,
     Circles as Circles,
     ObstacleStates as ObstacleStates,
+    SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,
+    ObstacleStateSampler as ObstacleStateSampler,
 )
 from .samplers import sampler as sampler
 from .states import (

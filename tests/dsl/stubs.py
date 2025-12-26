@@ -7,7 +7,10 @@ from trajax import (
     ControlInputSequence,
     Distance,
     ObstacleStates,
+    SampledObstacleStates,
     Sampler as SamplerLike,
+    ObstacleStateProvider as ObstacleStateProviderLike,
+    ObstacleStateSampler as ObstacleStateSamplerLike,
     UpdateFunction as UpdateFunctionLike,
     PaddingFunction as PaddingFunctionLike,
     FilterFunction as FilterFunctionLike,
@@ -179,27 +182,25 @@ class DynamicalModel[
 
 @dataclass(frozen=True)
 class DistanceExtractor[
-    StateBatchT: StateBatch,
-    ObstacleStatesT: ObstacleStates,
+    StateT: StateBatch,
+    SampleT: SampledObstacleStates,
     DistanceT: Distance,
-](DistanceExtractorLike[StateBatchT, ObstacleStatesT, DistanceT]):
-    expected_states: StateBatchT
-    expected_obstacle_states: ObstacleStatesT
+](DistanceExtractorLike[StateT, SampleT, DistanceT]):
+    expected_states: StateT
+    expected_obstacle_states: SampleT
     result: DistanceT
 
     @staticmethod
-    def returns[SB: StateBatch, OS: ObstacleStates, D: Distance](
-        distances: D, *, when_states_are: SB, and_obstacle_states_are: OS
-    ) -> "DistanceExtractor[SB, OS, D]":
+    def returns[SB: StateBatch, SOS: SampledObstacleStates, D: Distance](
+        distances: D, *, when_states_are: SB, and_obstacle_states_are: SOS
+    ) -> "DistanceExtractor[SB, SOS, D]":
         return DistanceExtractor(
             expected_states=when_states_are,
             expected_obstacle_states=and_obstacle_states_are,
             result=distances,
         )
 
-    def __call__(
-        self, *, states: StateBatchT, obstacle_states: ObstacleStatesT
-    ) -> DistanceT:
+    def __call__(self, *, states: StateT, obstacle_states: SampleT) -> DistanceT:
         assert np.array_equal(self.expected_states, states), (
             f"DistanceExtractor received unexpected states. "
             f"Expected: {self.expected_states}, Got: {states}"
@@ -212,12 +213,47 @@ class DistanceExtractor[
 
 
 @dataclass(frozen=True)
-class ObstacleStateProvider[ObstacleStatesT]:
+class ObstacleStateProvider[ObstacleStatesT: ObstacleStates](
+    ObstacleStateProviderLike[ObstacleStatesT]
+):
     result: ObstacleStatesT
 
     @staticmethod
-    def returns[O](result: O) -> "ObstacleStateProvider[O]":
+    def returns[O: ObstacleStates](result: O) -> "ObstacleStateProvider[O]":
         return ObstacleStateProvider(result=result)
 
     def __call__(self) -> ObstacleStatesT:
+        return self.result
+
+
+@dataclass(frozen=True)
+class ObstacleStateSampler[StateT: ObstacleStates, SampleT: SampledObstacleStates](
+    ObstacleStateSamplerLike[StateT, SampleT]
+):
+    expected_obstacle_states: StateT
+    expected_sample_count: int
+    result: SampleT
+
+    @staticmethod
+    def returns[O: ObstacleStates, S: SampledObstacleStates](
+        result: S,
+        *,
+        when_obstacle_states_are: O,
+        and_sample_count_is: int,
+    ) -> "ObstacleStateSampler[O, S]":
+        return ObstacleStateSampler(
+            expected_obstacle_states=when_obstacle_states_are,
+            expected_sample_count=and_sample_count_is,
+            result=result,
+        )
+
+    def __call__(self, states: StateT, *, count: int) -> SampleT:
+        assert np.array_equal(self.expected_obstacle_states, states), (
+            f"ObstacleStateSampler received unexpected obstacle states. "
+            f"Expected: {self.expected_obstacle_states}, Got: {states}"
+        )
+        assert self.expected_sample_count == count, (
+            f"ObstacleStateSampler received an unexpected sample count. "
+            f"Expected: {self.expected_sample_count}, Got: {count}"
+        )
         return self.result

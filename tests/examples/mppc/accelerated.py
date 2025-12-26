@@ -360,6 +360,7 @@ class configure:
                 costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
                 costs.jax.safety.collision(
                     obstacle_states=obstacles,
+                    sampler=create_obstacles.sampler.jax.position_and_heading(),
                     distance=(
                         circles_distance := distance.jax.circles(
                             ego=Circles(

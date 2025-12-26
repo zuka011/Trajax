@@ -45,11 +45,15 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(  # K = 1 Obstacle
-                x=array([[x_o := 5.0]], shape=(T, K := 1)),
-                y=array([[y_o := 0.0]], shape=(T, K)),
+            # K = 1 Obstacle, N = 1 Sample
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[x_o := 5.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[y_o := 0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
-            expected_distances := array([[[x_o - x - r - r_o]]], shape=(T, V := 1, M)),
+            expected_distances := array(
+                [[[[x_o - x - r - r_o]]]], shape=(T, V := 1, M, N)
+            ),
         ),
         # Distance with diagonal (3-4-5 triangle)
         (
@@ -76,12 +80,13 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[x_o := 3.0]], shape=(T, K := 1)),
-                y=array([[y_o := 4.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[x_o := 3.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[y_o := 4.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             # distance = sqrt(3^2 + 4^2) - 1 - 1 = 5 - 2 = 3
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N)),
         ),
         # Penetration (negative distance)
         (
@@ -108,12 +113,13 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[x_o := 1.0]], shape=(T, K := 1)),
-                y=array([[y_o := 0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[x_o := 1.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[y_o := 0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             # distance = 1 - 1 - 1 = -1 (penetration)
-            expected_distances := array([[[-1.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[-1.0]]]], shape=(T, V := 1, M, N)),
         ),
         (  # Equivalent JAX tests
             extractor := distance.jax.circles(
@@ -139,11 +145,14 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(  # K = 1 Obstacle
-                x=jnp.array([[x_o := 5.0]]),
-                y=jnp.array([[y_o := 0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[x_o := 5.0]]]),
+                y=jnp.array([[[y_o := 0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[x_o - x - r - r_o]]], shape=(T, V := 1, M)),
+            expected_distances := array(
+                [[[[x_o - x - r - r_o]]]], shape=(T, V := 1, M, N := 1)
+            ),
         ),
         (
             extractor := distance.jax.circles(
@@ -169,11 +178,12 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[3.0]]),
-                y=jnp.array([[4.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[3.0]]]),
+                y=jnp.array([[[4.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N := 1)),
         ),
         (
             extractor := distance.jax.circles(
@@ -199,11 +209,12 @@ from pytest import mark
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[1.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[1.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[-1.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[-1.0]]]], shape=(T, V := 1, M, N := 1)),
         ),
     ],
 )
@@ -255,11 +266,14 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[10.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[10.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
-            expected_distances := array([[[8.5], [6.5], [4.5]]], shape=(T, V := 3, M)),
+            expected_distances := array(
+                [[[[8.5]], [[6.5]], [[4.5]]]], shape=(T, V := 3, M, N)
+            ),
         ),
         (
             extractor := distance.jax.circles(
@@ -287,11 +301,14 @@ def test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_ci
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[10.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[10.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[8.5], [6.5], [4.5]]], shape=(T, V := 3, M)),
+            expected_distances := array(
+                [[[[8.5]], [[6.5]], [[4.5]]]], shape=(T, V := 3, M, N := 1)
+            ),
         ),
     ],
 )
@@ -343,12 +360,13 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[0.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             # Closest is circle at (5,0) with r=0.5: 5 - 1 - 0.5 = 3.5
-            expected_distances := array([[[3.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.5]]]], shape=(T, V := 1, M, N)),
         ),
         (
             extractor := distance.jax.circles(
@@ -376,11 +394,12 @@ def test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles[
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[0.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[0.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[3.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.5]]]], shape=(T, V := 1, M, N := 1)),
         ),
     ],
 )
@@ -434,18 +453,19 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[5.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             expected_distances := array(
                 [
                     [
-                        [3.0],  # ||(5,0)-(1,0)|| - 1.0 = 4 - 1 = 3.0
-                        [5.0],  # ||(5,0)-(-1,0)|| - 1.0 = 6 - 1 = 5.0
+                        [[3.0]],  # ||(5,0)-(1,0)|| - 1.0 = 4 - 1 = 3.0
+                        [[5.0]],  # ||(5,0)-(-1,0)|| - 1.0 = 6 - 1 = 5.0
                     ]
                 ],
-                shape=(T, V := 2, M),
+                shape=(T, V := 2, M, N),
             ),
         ),
         (
@@ -469,11 +489,14 @@ def test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circles[
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[5.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[5.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[3.0], [5.0]]], shape=(T, V := 2, M := 1)),
+            expected_distances := array(
+                [[[[3.0]], [[5.0]]]], shape=(T, V := 2, M := 1, N := 1)
+            ),
         ),
     ],
 )
@@ -525,12 +548,13 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[5.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             # Closest is circle at (4, 0): ||(0,0)-(4,0)|| - 1.0 = 4 - 1 = 3.0
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N)),
         ),
         (
             extractor := distance.jax.circles(
@@ -556,11 +580,12 @@ def test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered_a
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[5.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[5.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N := 1)),
         ),
     ],
 )
@@ -611,12 +636,13 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                 )
             ),
             # Obstacle A at (9, 0), Obstacle B at (4, 0)
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[9.0, 4.0]], shape=(T, K := 2)),
-                y=array([[0.0, 0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[9.0], [4.0]]], shape=(T, K := 2, N := 1)),
+                y=array([[[0.0], [0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0], [0.0]]], shape=(T, K, N)),
             ),
             # Obstacle B rear circle at (3,0): 3 - 1 - 0.5 = 1.5
-            expected_distances := array([[[1.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[1.5]]]], shape=(T, V := 1, M, N)),
         ),
         (
             extractor := distance.jax.circles(
@@ -642,11 +668,12 @@ def test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_not_
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[9.0, 4.0]]),
-                y=jnp.array([[0.0, 0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[9.0], [4.0]]]),
+                y=jnp.array([[[0.0], [0.0]]]),
+                heading=jnp.array([[[0.0], [0.0]]]),
             ),
-            expected_distances := array([[[1.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[1.5]]]], shape=(T, V := 1, M, N := 1)),
         ),
     ],
 )
@@ -704,12 +731,13 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                 )
             ),
             # One obstacle at origin
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[0.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             expected_distances := array(
-                [[[1.0, 3.0, 0.0]]], shape=(T, V := 1, M)
+                [[[[1.0], [3.0], [0.0]]]], shape=(T, V := 1, M, N)
             ),  # 3-2, 5-2, 2-2
         ),
         (
@@ -742,11 +770,14 @@ def test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacles
                     shape=(T := 1, D_x := 3, M := 3),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[0.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[0.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[1.0, 3.0, 0.0]]], shape=(T, V := 1, M)),
+            expected_distances := array(
+                [[[[1.0], [3.0], [0.0]]]], shape=(T, V := 1, M, N := 1)
+            ),
         ),
     ],
 )
@@ -802,12 +833,13 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                 )
             ),
             # Obstacle moving: t=0 at (5,0), t=1 at (4,0), t=2 at (3,0)
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[5.0], [4.0], [3.0]], shape=(T, K := 1)),
-                y=array([[0.0], [0.0], [0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[5.0]], [[4.0]], [[3.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
             ),
             expected_distances := array(
-                [[[3.0]], [[2.0]], [[1.0]]], shape=(T, V := 1, M)
+                [[[[3.0]]], [[[2.0]]], [[[1.0]]]], shape=(T, V := 1, M, N)
             ),  # 5-2, 4-2, 3-2
         ),
         (
@@ -838,12 +870,13 @@ def test_that_distances_are_computed_when_there_are_multiple_rollouts[
                     shape=(T := 3, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[5.0], [4.0], [3.0]]),
-                y=jnp.array([[0.0], [0.0], [0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[5.0]], [[4.0]], [[3.0]]]),
+                y=jnp.array([[[0.0]], [[0.0]], [[0.0]]]),
+                heading=jnp.array([[[0.0]], [[0.0]], [[0.0]]]),
             ),
             expected_distances := array(
-                [[[3.0]], [[2.0]], [[1.0]]], shape=(T, V := 1, M)
+                [[[[3.0]]], [[[2.0]]], [[[1.0]]]], shape=(T, V := 1, M, N := 1)
             ),
         ),
     ],
@@ -894,11 +927,14 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[4.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[4.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),  # 4 - 1 - 0
+            expected_distances := array(
+                [[[[3.0]]]], shape=(T, V := 1, M, N := 1)
+            ),  # 4 - 1 - 0
         ),
         (
             extractor := distance.jax.circles(
@@ -924,11 +960,12 @@ def test_that_distances_are_computed_when_there_are_multiple_time_steps[
                     shape=(T := 1, D_x := 3, M := 1),
                 )
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[4.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[4.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[3.0]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N := 1)),
         ),
     ],
 )
@@ -977,9 +1014,10 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                     )
                 ),
                 # No obstacles means infinite distance (represented as a large value)
-                obstacle_states := types.numpy.obstacle_states.create(
-                    x=np.empty((T, K := 0)),
-                    y=np.empty((T, K)),
+                obstacle_states := types.numpy.obstacle_states.sampled(
+                    x=np.empty((T, K := 0, N := 1)),
+                    y=np.empty((T, K, N)),
+                    heading=np.empty((T, K, N)),
                 ),
                 expected_distances,
             )
@@ -989,14 +1027,14 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                         origins=array([[0.0, 0.0]], shape=(1, 2)),
                         radii=array([1.0], shape=(1,)),
                     ),
-                    array([[[np.inf]]], shape=(1, 1, 1)),
+                    array([[[[np.inf]]]], shape=(1, 1, 1, 1)),
                 ),
                 (
                     Circles(
                         origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(2, 2)),
                         radii=array([0.5, 0.5], shape=(2,)),
                     ),
-                    array([[[np.inf], [np.inf]]], shape=(1, 2, 1)),
+                    array([[[[np.inf]], [[np.inf]]]], shape=(1, 2, 1, 1)),
                 ),
             )
         ],
@@ -1019,9 +1057,10 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                 state := data.jax.state_batch(
                     array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
                 ),
-                obstacle_states := types.jax.obstacle_states.create(
-                    x=jnp.empty((T, K := 0)),
-                    y=jnp.empty((T, K)),
+                obstacle_states := types.jax.obstacle_states.sampled(
+                    x=jnp.empty((T, K := 0, N := 1)),
+                    y=jnp.empty((T, K, N)),
+                    heading=jnp.empty((T, K, N)),
                 ),
                 expected_distances,
             )
@@ -1031,14 +1070,14 @@ def test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_radiu
                         origins=array([[0.0, 0.0]], shape=(1, 2)),
                         radii=array([1.0], shape=(1,)),
                     ),
-                    array([[[np.inf]]], shape=(1, 1, 1)),
+                    array([[[[np.inf]]]], shape=(1, 1, 1, 1)),
                 ),
                 (
                     Circles(
                         origins=array([[1.0, 0.0], [-1.0, 0.0]], shape=(2, 2)),
                         radii=array([0.5, 0.5], shape=(2,)),
                     ),
-                    array([[[np.inf], [np.inf]]], shape=(1, 2, 1)),
+                    array([[[[np.inf]], [[np.inf]]]], shape=(1, 2, 1, 1)),
                 ),
             )
         ],
@@ -1090,12 +1129,12 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
             # Ego at (0,0), obstacle center at (0,3)
             # Front circle at (0,4), rear circle at (0,2) in global
             # Distance to rear circle (closest): 2 - 1 - 0.5 = 0.5
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[0.0]], shape=(T, K := 1)),
-                y=array([[3.0]], shape=(T, K)),
-                heading=array([[np.pi / 2]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[3.0]]], shape=(T, K, N)),
+                heading=array([[[np.pi / 2]]], shape=(T, K, N)),
             ),
-            expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[0.5]]]], shape=(T, V := 1, M, N)),
         ),
         (
             extractor := distance.numpy.circles(
@@ -1120,14 +1159,25 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
             ),
             # rear circle at (3 - sqrt(2)/2, -sqrt(2)/2) ≈ (2.293, -0.707)
             # distance = sqrt(2.293^2 + 0.707^2) - 1.5 ≈ 2.4 - 1.5 = 0.9
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[3.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
-                heading=array([[np.pi / 4]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[np.pi / 4]]], shape=(T, K, N)),
             ),
             expected_distances := array(
-                [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
-                shape=(T, V := 1, M),
+                [
+                    [
+                        [
+                            [
+                                np.sqrt(
+                                    (3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.5
+                            ]
+                        ]
+                    ]
+                ],
+                shape=(T, V := 1, M, N),
             ),
         ),
         (
@@ -1151,12 +1201,12 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[0.0]]),
-                y=jnp.array([[3.0]]),
-                heading=jnp.array([[np.pi / 2]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[0.0]]]),
+                y=jnp.array([[[3.0]]]),
+                heading=jnp.array([[[np.pi / 2]]]),
             ),
-            expected_distances := array([[[0.5]]], shape=(T, V := 1, M)),
+            expected_distances := array([[[[0.5]]]], shape=(T, V := 1, M, N)),
         ),
         (
             extractor := distance.jax.circles(
@@ -1179,14 +1229,25 @@ def test_that_distance_is_infinite_when_no_obstacles_are_present[
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[3.0]]),
-                y=jnp.array([[0.0]]),
-                heading=jnp.array([[np.pi / 4]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[3.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[np.pi / 4]]]),
             ),
             expected_distances := array(
-                [[[np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2) - 1.5]]],
-                shape=(T, V := 1, M),
+                [
+                    [
+                        [
+                            [
+                                np.sqrt(
+                                    (3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.5
+                            ]
+                        ]
+                    ]
+                ],
+                shape=(T, V := 1, M, N),
             ),
         ),
     ],
@@ -1234,14 +1295,15 @@ def test_that_distance_accounts_for_obstacle_heading[
             states := data.numpy.state_batch(
                 array([[[0.0], [0.0], [np.pi / 2]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[0.0]], shape=(T, K := 1)),
-                y=array([[3.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[3.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             # Front ego circle at (0, 1), rear at (0, -1)
             # Distance from front (0,1) to obstacle (0,3): 3-1 - 0.5 - 0.5 = 1.0
             # Distance from rear (0,-1) to obstacle (0,3): 4 - 1.0 = 3.0
-            expected_distances := array([[[1.0], [3.0]]], shape=(T, V := 2, M)),
+            expected_distances := array([[[[1.0]], [[3.0]]]], shape=(T, V := 2, M, N)),
         ),
         (  # Ego facing 45 degrees (pi/4)
             extractor := distance.numpy.circles(
@@ -1264,9 +1326,10 @@ def test_that_distance_accounts_for_obstacle_heading[
             states := data.numpy.state_batch(
                 array([[[0.0], [0.0], [np.pi / 4]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.numpy.obstacle_states.create(
-                x=array([[3.0]], shape=(T, K := 1)),
-                y=array([[0.0]], shape=(T, K)),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                y=array([[[0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0]]], shape=(T, K, N)),
             ),
             expected_distances := array(
                 [
@@ -1274,18 +1337,26 @@ def test_that_distance_accounts_for_obstacle_heading[
                         # Front circle at (cos(pi/4), sin(pi/4)) = (sqrt(2)/2, sqrt(2)/2)
                         # Distance = sqrt((3 - sqrt(2)/2)^2 + (sqrt(2)/2)^2) - 1.0
                         [
-                            np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
-                            - 1.0
+                            [
+                                np.sqrt(
+                                    (3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.0
+                            ]
                         ],
                         # Rear circle at (-sqrt(2)/2, -sqrt(2)/2)
                         # Distance = sqrt((3 + sqrt(2)/2)^2 + (sqrt(2)/2)^2) - 1.0
                         [
-                            np.sqrt((3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
-                            - 1.0
+                            [
+                                np.sqrt(
+                                    (3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.0
+                            ]
                         ],
                     ]
                 ],
-                shape=(T, V := 2, M),
+                shape=(T, V := 2, M, N),
             ),
         ),
         (
@@ -1309,11 +1380,14 @@ def test_that_distance_accounts_for_obstacle_heading[
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [np.pi / 2]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[0.0]]),
-                y=jnp.array([[3.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[0.0]]]),
+                y=jnp.array([[[3.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
-            expected_distances := array([[[1.0], [3.0]]], shape=(T, V := 2, M)),
+            expected_distances := array(
+                [[[[1.0]], [[3.0]]]], shape=(T, V := 2, M, N := 1)
+            ),
         ),
         (
             extractor := distance.jax.circles(
@@ -1336,24 +1410,33 @@ def test_that_distance_accounts_for_obstacle_heading[
             states := data.jax.state_batch(
                 array([[[0.0], [0.0], [np.pi / 4]]], shape=(T := 1, D_x := 3, M := 1))
             ),
-            obstacle_states := types.jax.obstacle_states.create(
-                x=jnp.array([[3.0]]),
-                y=jnp.array([[0.0]]),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[3.0]]]),
+                y=jnp.array([[[0.0]]]),
+                heading=jnp.array([[[0.0]]]),
             ),
             expected_distances := array(
                 [
                     [
                         [
-                            np.sqrt((3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
-                            - 1.0
+                            [
+                                np.sqrt(
+                                    (3 - np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.0
+                            ]
                         ],
                         [
-                            np.sqrt((3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2)
-                            - 1.0
+                            [
+                                np.sqrt(
+                                    (3 + np.sqrt(2) / 2) ** 2 + (np.sqrt(2) / 2) ** 2
+                                )
+                                - 1.0
+                            ]
                         ],
                     ]
                 ],
-                shape=(T, V := 2, M),
+                shape=(T, V := 2, M, N := 1),
             ),
         ),
     ],
@@ -1373,5 +1456,233 @@ def test_that_distance_accounts_for_ego_heading[
         expected_distances,
     ), (
         f"Ego heading should rotate ego circle offsets correctly. "
+        f"Expected: {expected_distances}, Got: {computed}"
+    )
+
+
+@mark.parametrize(
+    ["extractor", "states", "obstacle_states", "expected_distances"],
+    [
+        (  # Single timestep, single ego circle, single obstacle, multiple samples
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array(
+                    [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
+                    shape=(T := 1, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                # Obstacle sample 0 at (5, 0), sample 1 at (7, 0)
+                x=array([[[5.0, 7.0]]], shape=(T, K := 1, N := 2)),
+                y=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
+            ),
+            # Expected shape: (T, V, M, N) = (1, 1, 1, 2)
+            # Sample 0: 5 - 1 - 1 = 3.0, Sample 1: 7 - 1 - 1 = 5.0
+            expected_distances := array([[[[3.0, 5.0]]]], shape=(T, V := 1, M, N)),
+        ),
+        (  # Multiple rollouts, multiple samples
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array(
+                    [[[0.0, 2.0], [0.0, 0.0], [0.0, 0.0]]],
+                    shape=(T := 1, D_x := 3, M := 2),
+                )
+            ),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                # Samples of one obstacle at (6, 0) and (8, 0)
+                x=array([[[6.0, 8.0]]], shape=(T, K := 1, N := 2)),
+                y=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
+            ),
+            # Rollout 0 (x=0): sample 0 -> 6-2=4, sample 1 -> 8-2=6
+            # Rollout 1 (x=2): sample 0 -> 6-2-2=2, sample 1 -> 8-2-2=4
+            expected_distances := array(
+                [[[[4.0, 6.0], [2.0, 4.0]]]], shape=(T, V := 1, M, N)
+            ),
+        ),
+        (  # Multiple timesteps, Multiple ego circles, No Obstacles, Multiple samples
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0], [2.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([r := 1.0, r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0], [-1.0, -1.0]], shape=(C := 2, 2)),
+                    radii=array([r_o := 1.0, r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=np.asarray(states)[:, 0, :],
+                    y=np.asarray(states)[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=np.asarray(states)[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array(
+                    [
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                    ],
+                    shape=(T := 3, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                x=np.empty((T, K := 0, N := 2)),
+                y=np.empty((T, K, N)),
+                heading=np.empty((T, K, N)),
+            ),
+            expected_distances := np.full((T, V := 2, M, N), np.inf),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array(
+                    [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
+                    shape=(T := 1, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[5.0, 7.0]]]),  # T=1, K=1, N=2
+                y=jnp.array([[[0.0, 0.0]]]),
+                heading=jnp.array([[[0.0, 0.0]]]),
+            ),
+            expected_distances := array([[[[3.0, 5.0]]]], shape=(T, V := 1, M, N := 2)),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array(
+                    [[[0.0, 2.0], [0.0, 0.0], [0.0, 0.0]]],
+                    shape=(T := 1, D_x := 3, M := 2),
+                )
+            ),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array([[[6.0, 8.0]]]),
+                y=jnp.array([[[0.0, 0.0]]]),
+                heading=jnp.array([[[0.0, 0.0]]]),
+            ),
+            expected_distances := array(
+                [[[[4.0, 6.0], [2.0, 4.0]]]], shape=(T, V := 1, M, N := 2)
+            ),
+        ),
+        (
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0], [2.0, 0.0]], shape=(V := 2, 2)),
+                    radii=array([r := 1.0, r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0], [-1.0, -1.0]], shape=(C := 2, 2)),
+                    radii=array([r_o := 1.0, r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array(
+                    [
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                    ],
+                    shape=(T := 3, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.empty((T, K := 0, N := 2)),
+                y=jnp.empty((T, K, N)),
+                heading=jnp.empty((T, K, N)),
+            ),
+            expected_distances := np.full((T, V := 2, M, N), np.inf),
+        ),
+    ],
+)
+def test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle_states_are_provided[
+    DistanceT: Distance,
+    ObstacleStatesT: ObstacleStates,
+    StateT: StateBatch,
+](
+    extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+    states: StateT,
+    obstacle_states: ObstacleStatesT,
+    expected_distances: Array,
+) -> None:
+    assert np.allclose(
+        computed := extractor(states=states, obstacle_states=obstacle_states),
+        expected_distances,
+    ), (
+        f"Distance should be computed correctly for multiple obstacle samples. "
         f"Expected: {expected_distances}, Got: {computed}"
     )

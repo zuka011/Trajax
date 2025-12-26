@@ -3,6 +3,7 @@ from trajax import types
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims, D
 
+import numpy as np
 import jax.numpy as jnp
 
 
@@ -16,10 +17,11 @@ type NumPyControlInputSequence[T: int, D_u: int] = (
 type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
     types.numpy.simple.ControlInputBatch[T, D_u, M]
 )
-type NumPyObstacleStates[T: int, D_o: int, K: int] = types.numpy.ObstacleStates[
-    T, D_o, K
-]
-type NumPyDistance[T: int, V: int, M: int] = types.numpy.Distance[T, V, M]
+type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
+type NumPySampledObstacleStates[T: int, K: int, N: int] = (
+    types.numpy.SampledObstacleStates[T, K, N]
+)
+type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
 
 type JaxState[D_x: int] = types.jax.simple.State[D_x]
 type JaxStateBatch[T: int, D_x: int, M: int] = types.jax.simple.StateBatch[T, D_x, M]
@@ -29,8 +31,11 @@ type JaxControlInputSequence[T: int, D_u: int] = types.jax.simple.ControlInputSe
 type JaxControlInputBatch[T: int, D_u: int, M: int] = (
     types.jax.simple.ControlInputBatch[T, D_u, M]
 )
-type JaxObstacleStates[T: int, D_o: int, K: int] = types.jax.ObstacleStates[T, D_o, K]
-type JaxDistance[T: int, V: int, M: int] = types.jax.Distance[T, V, M]
+type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
+type JaxSampledObstacleStates[T: int, K: int, N: int] = types.jax.SampledObstacleStates[
+    T, K, N
+]
+type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
 
 
 class numpy:
@@ -62,13 +67,32 @@ class numpy:
         x: Array[Dims[T, K]],
         y: Array[Dims[T, K]],
         heading: Array[Dims[T, K]] | None = None,
-    ) -> NumPyObstacleStates[T, D[3], K]:
-        return types.numpy.obstacle_states.create(x=x, y=y, heading=heading)
+        covariance: Array[Dims[T, D[3], D[3], K]] | None = None,
+    ) -> NumPyObstacleStates[T, K]:
+        return types.numpy.obstacle_states.create(
+            x=x,
+            y=y,
+            heading=heading if heading is not None else np.zeros_like(x),
+            covariance=covariance,
+        )
 
     @staticmethod
-    def distance[T: int, V: int, M: int](
-        array: Array[Dims[T, V, M]],
-    ) -> NumPyDistance[T, V, M]:
+    def obstacle_state_samples[T: int, K: int, N: int](
+        *,
+        x: Array[Dims[T, K, N]],
+        y: Array[Dims[T, K, N]],
+        heading: Array[Dims[T, K, N]] | None = None,
+    ) -> NumPySampledObstacleStates[T, K, N]:
+        return types.numpy.obstacle_states.sampled(
+            x=x,
+            y=y,
+            heading=heading if heading is not None else np.zeros_like(x),
+        )
+
+    @staticmethod
+    def distance[T: int, V: int, M: int, N: int](
+        array: Array[Dims[T, V, M, N]],
+    ) -> NumPyDistance[T, V, M, N]:
         return types.numpy.distance(array)
 
 
@@ -101,15 +125,28 @@ class jax:
         x: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         y: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         heading: Array[Dims[T, K]] | Float[JaxArray, "T K"] | None = None,
-    ) -> JaxObstacleStates[T, D[3], K]:
+    ) -> JaxObstacleStates[T, K]:
         return types.jax.obstacle_states.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
-            heading=jnp.asarray(heading) if heading is not None else None,
+            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
         )
 
     @staticmethod
-    def distance[T: int, V: int, M: int](
-        array: Array[Dims[T, V, M]],
-    ) -> JaxDistance[T, V, M]:
+    def obstacle_state_samples[T: int, K: int, N: int](
+        *,
+        x: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
+        y: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
+        heading: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"] | None = None,
+    ) -> JaxSampledObstacleStates[T, K, N]:
+        return types.jax.obstacle_states.sampled(
+            x=jnp.asarray(x),
+            y=jnp.asarray(y),
+            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
+        )
+
+    @staticmethod
+    def distance[T: int, V: int, M: int, N: int](
+        array: Array[Dims[T, V, M, N]],
+    ) -> JaxDistance[T, V, M, N]:
         return types.jax.distance(jnp.asarray(array))

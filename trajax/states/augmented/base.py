@@ -26,12 +26,7 @@ class BaseAugmentedState[P: State, V: State](AugmentedState[P, V]):
         return BaseAugmentedState(_physical=physical, _virtual=virtual)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
-        return np.concatenate(
-            [
-                np.asarray(self.physical, dtype=dtype),
-                np.asarray(self.virtual, dtype=dtype),
-            ]
-        )
+        return np.concatenate([np.asarray(self.physical), np.asarray(self.virtual)])
 
     @property
     def physical(self) -> P:
@@ -72,10 +67,7 @@ class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](AugmentedStateBatch[
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
-            [
-                np.asarray(self.physical, dtype=dtype),
-                np.asarray(self.virtual, dtype=dtype),
-            ],
+            [np.asarray(self.physical), np.asarray(self.virtual)],
             axis=1,
         )
 
@@ -122,10 +114,7 @@ class BaseAugmentedControlInputSequence[
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return np.concatenate(
-            [
-                np.asarray(self.physical, dtype=dtype),
-                np.asarray(self.virtual, dtype=dtype),
-            ],
+            [np.asarray(self.physical), np.asarray(self.virtual)],
             axis=1,
         )
 
@@ -171,10 +160,7 @@ class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
-            [
-                np.asarray(self.physical, dtype=dtype),
-                np.asarray(self.virtual, dtype=dtype),
-            ],
+            [np.asarray(self.physical), np.asarray(self.virtual)],
             axis=1,
         )
 

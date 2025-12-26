@@ -12,16 +12,15 @@ from trajax.costs.basic import (
     NumPyLagCost,
     NumPyProgressCost,
     NumPyControlSmoothingCost,
-    NumPyCollisionCost,
 )
 from trajax.costs.accelerated import (
     JaxContouringCost,
     JaxLagCost,
     JaxProgressCost,
     JaxControlSmoothingCost,
-    JaxCollisionCost,
 )
 from trajax.costs.combined import CombinedCost, NumPyCostSumFunction, JaxCostSumFunction
+from trajax.costs.collision import NumPyCollisionCost, JaxCollisionCost
 from trajax.costs.distance import (
     NumPyCircleDistanceExtractor,
     JaxCircleDistanceExtractor,

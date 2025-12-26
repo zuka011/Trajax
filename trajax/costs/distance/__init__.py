@@ -1,9 +1,9 @@
 from .basic import (
-    NumPyObstaclePositions as NumPyObstaclePositions,
+    NumPyObstaclePositionsAndHeading as NumPyObstaclePositionsAndHeading,
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
 )
 from .accelerated import (
-    JaxObstaclePositions as JaxObstaclePositions,
+    JaxObstaclePositionsAndHeading as JaxObstaclePositionsAndHeading,
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
 from .common import Circles as Circles

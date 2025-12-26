@@ -63,11 +63,13 @@ from trajax.costs import (
     Error as Error,  # NOTE: Aliased to workaround ruff bug.
     ContouringCost as ContouringCost,
     NumPyObstacleStates,
-    NumPyObstaclePositions,
+    NumPySampledObstacleStates,
+    NumPyObstaclePositionsAndHeading,
     NumPyObstacleStateProvider,
     NumPyDistance,
     JaxObstacleStates,
-    JaxObstaclePositions,
+    JaxSampledObstacleStates,
+    JaxObstaclePositionsAndHeading,
     JaxObstacleStateProvider,
     JaxDistance,
 )
@@ -160,10 +162,13 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = NumPyHeadings[T, M]
-        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
-            NumPyObstacleStates[T, D_o, K]
+        type ObstacleStates[T: int = Any, K: int = Any] = NumPyObstacleStates[T, K]
+        type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
+            NumPySampledObstacleStates[T, K, N]
         )
-        type Distance[T: int = Any, V: int = Any, M: int = Any] = NumPyDistance[T, V, M]
+        type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
+            NumPyDistance[T, V, M, N]
+        )
 
         type CostFunction[
             T: int = Any,
@@ -190,7 +195,7 @@ class types:
         positions: Final = NumPyPositions.create
         headings: Final = NumPyHeadings.create
         distance: Final = NumPyDistance
-        obstacle_states: Final = NumPyObstaclePositions
+        obstacle_states: Final = NumPyObstaclePositionsAndHeading
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -263,10 +268,13 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = JaxHeadings[T, M]
-        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
-            JaxObstacleStates[T, D_o, K]
+        type ObstacleStates[T: int = Any, K: int = Any] = JaxObstacleStates[T, K]
+        type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
+            JaxSampledObstacleStates[T, K, N]
         )
-        type Distance[T: int = Any, V: int = Any, M: int = Any] = JaxDistance[T, V, M]
+        type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
+            JaxDistance[T, V, M, N]
+        )
 
         type CostFunction[
             T: int = Any,
@@ -289,7 +297,7 @@ class types:
         positions: Final = JaxPositions.create
         headings: Final = JaxHeadings.create
         distance: Final = JaxDistance
-        obstacle_states: Final = JaxObstaclePositions
+        obstacle_states: Final = JaxObstaclePositionsAndHeading
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

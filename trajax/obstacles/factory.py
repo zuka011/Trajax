@@ -2,9 +2,12 @@ from typing import Final
 
 from trajax.obstacles.basic import NumPyStaticObstacleStateProvider
 from trajax.obstacles.accelerated import JaxStaticObstacleStateProvider
+from trajax.obstacles.sampler import sampler
 
 
 class obstacles:
+    sampler: Final = sampler
+
     class numpy:
         empty: Final = NumPyStaticObstacleStateProvider.empty
         static: Final = NumPyStaticObstacleStateProvider.create
