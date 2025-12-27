@@ -1,3 +1,4 @@
+from typing import Protocol
 from dataclasses import dataclass
 
 from trajax.mppi import StateBatch
@@ -5,7 +6,71 @@ from trajax.costs.collision import (
     ObstacleStates,
     ObstacleStateSampler,
     SampledObstacleStates,
+    SampleCostFunction,
 )
+
+import riskit as rk
+
+
+class RiskMetricCreator[
+    StateT: StateBatch,
+    SampledObstacleStateT: SampledObstacleStates,
+    CostsT: rk.Costs,
+    RiskT: rk.Risk,
+    ArrayT: rk.ArrayLike,
+](Protocol):
+    def __call__(
+        self,
+        *,
+        cost: rk.BatchCostFunction[StateT, SampledObstacleStateT, CostsT],
+        backend: rk.Backend[CostsT, RiskT, ArrayT],
+    ) -> rk.RiskMetric[StateT, SampledObstacleStateT, RiskT]:
+        """Creates a risk metric based on the provided cost function and backend."""
+        ...
+
+
+@dataclass(kw_only=True, frozen=True)
+class RisKitRiskMetric[
+    StateT: StateBatch,
+    SampleT: SampledObstacleStates,
+    RiskT: rk.Risk,
+    CostsT: rk.Costs,
+    ArrayT: rk.ArrayLike,
+]:
+    backend: rk.Backend[CostsT, RiskT, ArrayT]
+    creator: RiskMetricCreator[StateT, SampleT, CostsT, RiskT, ArrayT]
+
+    @staticmethod
+    def create[
+        SB: StateBatch,
+        SOS: SampledObstacleStates,
+        R: rk.Risk,
+        C: rk.Costs,
+        A: rk.ArrayLike,
+    ](
+        *,
+        backend: rk.Backend[C, R, A],
+        creator: RiskMetricCreator[SB, SOS, C, R, A],
+    ) -> "RisKitRiskMetric[SB, SOS, R, C, A]":
+        return RisKitRiskMetric(backend=backend, creator=creator)
+
+    def compute[ObstacleStateT: ObstacleStates](
+        self,
+        cost_function: SampleCostFunction[StateT, SampleT, CostsT],
+        *,
+        states: StateT,
+        obstacle_states: ObstacleStateT,
+        sampler: ObstacleStateSampler[ObstacleStateT, SampleT],
+    ) -> RiskT:
+        def cost(*, trajectories: StateT, uncertainties: SampleT) -> CostsT:
+            return cost_function(states=trajectories, samples=uncertainties)
+
+        return self.creator(cost=cost, backend=self.backend).compute(
+            trajectories=StateTrajectories(states),
+            uncertainties=ObstacleStateUncertainties(
+                obstacle_states=obstacle_states, sampler=sampler
+            ),
+        )
 
 
 @dataclass(frozen=True)

@@ -142,6 +142,28 @@ class NumPySamplingOptions:
 
 
 class reference:
+    small_circle: Final = trajectory.numpy.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [3.0, 1.0],
+                [4.0, 2.0],
+                [5.0, 5.0],
+                [4.0, 8.0],
+                [3.0, 9.0],
+                [0.0, 10.0],
+                [-3.0, 9.0],
+                [-4.0, 8.0],
+                [-5.0, 5.0],
+                [-4.0, 2.0],
+                [-3.0, 1.0],
+                [0.0, 0.0],
+            ],
+            shape=(13, 2),
+        ),
+        path_length=30.0,
+    )
+
     loop: Final = trajectory.numpy.waypoints(
         points=array(
             [
@@ -202,7 +224,7 @@ class obstacles:
 class configure:
     @staticmethod
     def planner_from_base(
-        reference: Trajectory = reference.loop,
+        reference: Trajectory = reference.small_circle,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
     ) -> NumPyMpccPlannerConfiguration:
@@ -281,7 +303,7 @@ class configure:
     @staticmethod
     def planner_from_augmented(
         *,
-        reference: Trajectory = reference.loop,
+        reference: Trajectory = reference.small_circle,
         obstacles: ObstacleStateProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),

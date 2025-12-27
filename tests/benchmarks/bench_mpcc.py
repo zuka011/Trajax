@@ -8,7 +8,7 @@ from tests.benchmarks.runner import (
     NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
-from tests.examples import mpcc, obstacles
+from tests.examples import mpcc, reference, obstacles
 
 from pytest import mark
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -89,7 +89,8 @@ def bench_mpcc_single_step(
                 (
                     "NumPy",
                     mpcc.numpy.planner_from_augmented(
-                        obstacles=obstacles.numpy.static.loop
+                        reference=reference.numpy.small_circle,
+                        obstacles=obstacles.numpy.static.loop,
                     ),
                 ),
             )
@@ -108,7 +109,8 @@ def bench_mpcc_single_step(
                 (
                     "JAX",
                     mpcc.jax.planner_from_augmented(
-                        obstacles=obstacles.jax.static.loop
+                        reference=reference.jax.small_circle,
+                        obstacles=obstacles.jax.static.loop,
                     ),
                 ),
             )

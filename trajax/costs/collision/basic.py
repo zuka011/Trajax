@@ -100,14 +100,12 @@ class NumPyObstacleStateSampler[
 ](ObstacleStateSampler[StateT, SampleT], Protocol): ...
 
 
-class NumPyRiskMetric(Protocol):
-    def compute[
-        StateT: StateBatch,
-        ObstacleStateT: NumPyObstacleStates,
-        SampledObstacleStateT: NumPySampledObstacleStates,
-        T: int,
-        M: int,
-    ](
+class NumPyRiskMetric[
+    StateT: StateBatch,
+    ObstacleStateT: NumPyObstacleStates,
+    SampledObstacleStateT: NumPySampledObstacleStates,
+](Protocol):
+    def compute[T: int, M: int](
         self,
         cost_function: SampleCostFunction[
             StateT, SampledObstacleStateT, Array[Dims[T, M, int]]

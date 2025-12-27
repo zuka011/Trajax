@@ -148,10 +148,10 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     L = configuration.wheelbase
 
     states: list[StateT] = []
-    min_progress = reference.path_length * 0.7
+    min_progress = reference.path_length * 0.9
     progress = 0.0
 
-    for _ in range(max_steps := 300):
+    for _ in range(max_steps := 150):
         control = await planner.step(
             temperature=0.05,
             nominal_input=nominal_input,
@@ -190,7 +190,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
     )
 
-    assert (deviation := errors.max()) < max_deviation, (
+    assert (deviation := np.abs(errors).max()) < max_deviation, (
         f"Vehicle deviated too far from the reference trajectory. "
         f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
     )
@@ -287,7 +287,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_collision_when_obsta
         f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
     )
 
-    assert (deviation := errors.max()) < max_deviation, (
+    assert (deviation := np.abs(errors).max()) < max_deviation, (
         f"Vehicle deviated too far from the reference trajectory. "
         f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
     )

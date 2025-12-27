@@ -142,12 +142,12 @@ class JaxObstacleStateSampler[
 ](ObstacleStateSampler[StateT, SampleT], Protocol): ...
 
 
-class JaxRiskMetric(Protocol):
-    def compute[
-        StateT: StateBatch,
-        ObstacleStateT: JaxObstacleStates,
-        SampledObstacleStateT: JaxSampledObstacleStates,
-    ](
+class JaxRiskMetric[
+    StateT: StateBatch,
+    ObstacleStateT: JaxObstacleStates,
+    SampledObstacleStateT: JaxSampledObstacleStates,
+](Protocol):
+    def compute(
         self,
         cost_function: SampleCostFunction[
             StateT, SampledObstacleStateT, Float[JaxArray, "T M N"]

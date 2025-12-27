@@ -820,14 +820,14 @@ wheels = [
 
 [[package]]
 name = "pytest-watcher"
-version = "0.6.0"
+version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "watchdog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/71/83/9d6ffd35243b678d50de01ec38392d098d7c7f849890b9d18cd9c577a90d/pytest_watcher-0.6.0.tar.gz", hash = "sha256:d06c6633cc92ba177a7257a54a2ec9705e3116ef5ae7a2cba0eed708fa768c58", size = 598249 }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/c6/5ca81317decf5e814b994a3f71773c1c435f1b45f52d53af68183bdfb0b8/pytest_watcher-0.6.1.tar.gz", hash = "sha256:3dd0230fea6a32c6fd566c06214188f1a2971bd81a359c1a08ce5ff44c1759f1", size = 600676 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/c0/d242b8b5d8c32b001006a4d85088cb20ece494c61e56558d1fdc87429d5e/pytest_watcher-0.6.0-py3-none-any.whl", hash = "sha256:8da8ad71b72a2f333590012461d277d33e25ca8f1e33f509a345db410110d576", size = 11407 },
+    { url = "https://files.pythonhosted.org/packages/85/6c/c903396615807b8024949a2f8f1e573ea4ea8efeeabcb311be4695e8c9c3/pytest_watcher-0.6.1-py3-none-any.whl", hash = "sha256:e7bc839ad213bae1ac502b236c101be80848d4c01ff20c061f6ca7b51de4eb6b", size = 11477 },
 ]
 
 [[package]]
@@ -902,14 +902,14 @@ wheels = [
 
 [[package]]
 name = "riskit"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numtypes" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/be/f4/a6f1f11e6726e33fb808d8f3ff5d2158cc769c9bbdcecb626db3fb796e77/riskit-0.2.0.tar.gz", hash = "sha256:40710ed6572a75e4bda32accb5516ba8a9083d085805f5cd17f687b9e08a304b", size = 42856 }
+sdist = { url = "https://files.pythonhosted.org/packages/65/c6/1bd9cae4e5854d01b041d359961e7c4d46db372ecddfe75af5ff51879525/riskit-0.2.1.tar.gz", hash = "sha256:aa19631f6ba1f272e993b65453d29fcbeddabc457e9478b7856d2512f8385c53", size = 40470 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/23/a89ac89c38721d6e84a92b7dd1d224ecd143ccdf7b9ec488963e08bb0717/riskit-0.2.0-py3-none-any.whl", hash = "sha256:33ae2d1786ad701185859e928cfd013386e26b8601e297cfe8e1a809307a2615", size = 15721 },
+    { url = "https://files.pythonhosted.org/packages/95/fc/19fc7522703a71853753660e9790bbc5e4abfe3c010ba187b34e0b128166/riskit-0.2.1-py3-none-any.whl", hash = "sha256:45b724b971a3dae2d181f3674698d9c2908a60c04bb92da1acfb44bea26cbe62", size = 15836 },
 ]
 
 [[package]]
@@ -1073,7 +1073,7 @@ requires-dist = [
     { name = "jax", specifier = ">=0.8.2" },
     { name = "jaxtyping", specifier = ">=0.3.4" },
     { name = "numtypes", specifier = ">=0.5.1" },
-    { name = "riskit", specifier = ">=0.2.0" },
+    { name = "riskit", specifier = ">=0.2.1" },
 ]
 provides-extras = ["type-checking"]
 
@@ -1097,7 +1097,7 @@ test = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "pytest-watcher", specifier = ">=0.6.0" },
+    { name = "pytest-watcher", specifier = ">=0.6.1" },
 ]
 
 [[package]]
