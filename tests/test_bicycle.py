@@ -16,7 +16,6 @@ type ControlInputSequence = types.bicycle.ControlInputSequence
 type ControlInputBatch = types.bicycle.ControlInputBatch
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "M", "T", "x_0", "y_0", "theta_0", "v_0"],
     [
@@ -58,7 +57,7 @@ type ControlInputBatch = types.bicycle.ControlInputBatch
         ),
     ],
 )
-async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
+def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -74,7 +73,7 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     theta_0: float,
     v_0: float,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(
         rollouts,
@@ -92,7 +91,6 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
     assert np.allclose(rollouts.velocities(), array([[v_0] * M] * T, shape=(T, M)))
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "model",
@@ -174,7 +172,7 @@ async def test_that_vehicle_position_does_not_change_when_velocity_and_input_are
         ),
     ],
 )
-async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
+def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -188,7 +186,7 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     expected_theta: Array,
     expected_v: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts.positions.x(), expected_x)
     assert np.allclose(rollouts.positions.y(), expected_y)
@@ -196,7 +194,6 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     assert np.allclose(rollouts.velocities(), expected_v)
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "model",
@@ -287,7 +284,7 @@ async def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
         ),
     ],
 )
-async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
+def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -302,7 +299,7 @@ async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
     expected_v_middle: Array,
     expected_v_final: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
     T = inputs.horizon
 
     assert np.allclose(rollouts.positions.x()[-1], expected_x_final, atol=1e-6)
@@ -315,7 +312,6 @@ async def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
 T = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_final_theta"],
     [
@@ -346,7 +342,7 @@ T = clear_type
         ),
     ],
 )
-async def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
+def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -357,12 +353,11 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
     initial_state: StateT,
     expected_final_theta: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts.orientations()[-1], expected_final_theta, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_final_v"],
     [
@@ -389,7 +384,7 @@ async def test_that_vehicle_orientation_returns_to_start_when_steering_is_revers
         ),
     ],
 )
-async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
+def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -400,12 +395,11 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
     initial_state: StateT,
     expected_final_v: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts.velocities()[-1], expected_final_v, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "model",
@@ -453,7 +447,7 @@ async def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_rever
         ),
     ],
 )
-async def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed[
+def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -466,14 +460,13 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
     expected_final_y: Array,
     expected_final_theta: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts.positions.x()[-1], expected_final_x, atol=1e-6)
     assert np.allclose(rollouts.positions.y()[-1], expected_final_y, atol=1e-6)
     assert np.allclose(rollouts.orientations()[-1], expected_final_theta, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "time_step_size"],
     [  # Time step and maximum steering angle must be small for 1st order integrators in these tests.
@@ -499,7 +492,7 @@ async def test_that_vehicle_returns_to_starting_position_when_initially_not_movi
         ),
     ],
 )
-async def test_that_displacement_is_consistent_with_velocity_state[
+def test_that_displacement_is_consistent_with_velocity_state[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -510,7 +503,7 @@ async def test_that_displacement_is_consistent_with_velocity_state[
     initial_state: StateT,
     time_step_size: float,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     # Prepend initial state to get full trajectory
     full_x = np.insert(rollouts.positions.x(), 0, initial_state.x, axis=0)
@@ -535,7 +528,6 @@ async def test_that_displacement_is_consistent_with_velocity_state[
     )
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "model",
@@ -590,7 +582,7 @@ async def test_that_displacement_is_consistent_with_velocity_state[
         ),
     ],
 )
-async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering[
+def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -603,7 +595,7 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     expected_final_y: Array,
     expected_final_theta: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     final_x = rollouts.positions.x()[-1]
     final_y = rollouts.positions.y()[-1]
@@ -614,7 +606,6 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
     assert np.all(compute.angular_distance(final_theta, expected_final_theta) < 0.1)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "time_step_size", "expected_angular_velocity"],
     [
@@ -649,7 +640,7 @@ async def test_that_vehicle_returns_to_start_when_completing_a_circle_with_const
         ),
     ],
 )
-async def test_that_angular_velocity_depends_on_wheelbase[
+def test_that_angular_velocity_depends_on_wheelbase[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -661,7 +652,7 @@ async def test_that_angular_velocity_depends_on_wheelbase[
     time_step_size: float,
     expected_angular_velocity: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     theta = rollouts.orientations()
     theta_with_initial = np.insert(theta, 0, initial_state.theta, axis=0)
@@ -670,7 +661,6 @@ async def test_that_angular_velocity_depends_on_wheelbase[
     assert np.allclose(angular_velocities, expected_angular_velocity, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "max_speed", "min_speed"],
     [
@@ -710,7 +700,7 @@ async def test_that_angular_velocity_depends_on_wheelbase[
         ],
     ],
 )
-async def test_that_velocity_is_clamped_to_speed_limits[
+def test_that_velocity_is_clamped_to_speed_limits[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -722,7 +712,7 @@ async def test_that_velocity_is_clamped_to_speed_limits[
     max_speed: float,
     min_speed: float,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     velocities = rollouts.velocities()
 
@@ -730,7 +720,6 @@ async def test_that_velocity_is_clamped_to_speed_limits[
     assert np.all(velocities >= min_speed - 1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_theta_change"],
     [
@@ -791,7 +780,7 @@ async def test_that_velocity_is_clamped_to_speed_limits[
         ],
     ],
 )
-async def test_that_steering_input_is_clipped_to_max_steering[
+def test_that_steering_input_is_clipped_to_max_steering[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -802,7 +791,7 @@ async def test_that_steering_input_is_clipped_to_max_steering[
     initial_state: StateT,
     expected_theta_change: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     final_theta = rollouts.orientations()[-1]
     actual_theta_change = final_theta - initial_state.theta
@@ -810,7 +799,6 @@ async def test_that_steering_input_is_clipped_to_max_steering[
     assert np.allclose(actual_theta_change, expected_theta_change, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_velocity"],
     [
@@ -862,7 +850,7 @@ async def test_that_steering_input_is_clipped_to_max_steering[
         ],
     ],
 )
-async def test_that_acceleration_input_is_clipped_to_max_acceleration[
+def test_that_acceleration_input_is_clipped_to_max_acceleration[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -873,14 +861,13 @@ async def test_that_acceleration_input_is_clipped_to_max_acceleration[
     initial_state: StateT,
     expected_velocity: Array,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     final_velocity = rollouts.velocities()[-1]
 
     assert np.allclose(final_velocity, expected_velocity, atol=1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "input_batch", "initial_state", "horizon", "input_at"],
     [
@@ -924,7 +911,7 @@ async def test_that_acceleration_input_is_clipped_to_max_acceleration[
         ),
     ],
 )
-async def test_that_simulating_individual_steps_matches_horizon_simulation[
+def test_that_simulating_individual_steps_matches_horizon_simulation[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -936,11 +923,11 @@ async def test_that_simulating_individual_steps_matches_horizon_simulation[
     horizon: int,
     input_at: Callable[[int], ControlInputSequenceT],
 ) -> None:
-    rollout = (await model.simulate(input_batch, initial_state)).rollout(0)
+    rollout = (model.simulate(input_batch, initial_state)).rollout(0)
     current_state = initial_state
 
     for t in range(horizon):
-        current_state = await model.step(input_at(t), current_state)
+        current_state = model.step(input_at(t), current_state)
 
         assert np.allclose(current_state, rollout.step(t), atol=1e-6), (
             f"Mismatch at time step {t}: expected {rollout.step(t)}, got {current_state}"

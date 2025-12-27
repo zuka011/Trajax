@@ -123,14 +123,14 @@ class BicycleModel[
     ControlInputSequenceT: BicycleControlInputSequence,
     ControlInputBatchT: BicycleControlInputBatch,
 ](Protocol):
-    async def simulate(
+    def simulate(
         self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         """Simulates the kinematic bicycle model over the given control inputs starting from the
         provided initial state."""
         ...
 
-    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
+    def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the kinematic bicycle model given the control input
         and current state."""
         ...

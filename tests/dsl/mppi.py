@@ -67,6 +67,9 @@ class numpy:
     ) -> NumPyControlInputBatch[T, D_u, M]:
         return types.numpy.simple.control_input_batch(array)
 
+    # @staticmethod
+    # def obstacle_state
+
     @staticmethod
     def obstacle_states[T: int, K: int](
         *,

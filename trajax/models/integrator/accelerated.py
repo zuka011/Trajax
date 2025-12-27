@@ -99,7 +99,7 @@ class JaxIntegratorModel(
             else NO_LIMITS,
         )
 
-    async def simulate[T: int, D_u: int, D_x: int, M: int](
+    def simulate[T: int, D_u: int, D_x: int, M: int](
         self,
         inputs: JaxIntegratorControlInputBatch[T, D_u, M],
         initial_state: JaxIntegratorState[D_x],
@@ -116,7 +116,7 @@ class JaxIntegratorModel(
             )
         )
 
-    async def step[T: int, D_u: int, D_x: int](
+    def step[T: int, D_u: int, D_x: int](
         self,
         input: JaxIntegratorControlInputSequence[T, D_u],
         state: JaxIntegratorState[D_x],

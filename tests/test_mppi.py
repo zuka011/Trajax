@@ -20,7 +20,6 @@ from tests.dsl import mppi as data, costs, stubs, clear_type
 from pytest import mark
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "mppi",
@@ -149,7 +148,7 @@ from pytest import mark
         ),
     ],
 )
-async def test_that_mppi_favors_samples_with_lower_costs[
+def test_that_mppi_favors_samples_with_lower_costs[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -160,7 +159,7 @@ async def test_that_mppi_favors_samples_with_lower_costs[
     expected_optimal_control: ControlInputSequenceT,
     tolerance: float,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=temperature,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -172,7 +171,6 @@ async def test_that_mppi_favors_samples_with_lower_costs[
 T = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state", "expected_nominal_control"],
     [
@@ -285,7 +283,7 @@ T = clear_type
         ),
     ],
 )
-async def test_that_mppi_shifts_control_sequence_left_when_replanning[
+def test_that_mppi_shifts_control_sequence_left_when_replanning[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -294,7 +292,7 @@ async def test_that_mppi_shifts_control_sequence_left_when_replanning[
     initial_state: StateT,
     expected_nominal_control: ControlInputSequenceT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -307,7 +305,6 @@ sampled_inputs = clear_type
 nominal_input = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state", "expected_optimal_control"],
     [
@@ -408,7 +405,7 @@ nominal_input = clear_type
         ),
     ],
 )
-async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high[
+def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -417,7 +414,7 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
     initial_state: StateT,
     expected_optimal_control: ControlInputSequenceT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=3e3,  # High temperature, should use all samples equally.
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -426,7 +423,6 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
     assert np.allclose(control.optimal, expected_optimal_control, rtol=0.1)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state", "sampled_inputs"],
     [
@@ -506,7 +502,7 @@ async def test_that_mppi_uses_samples_with_higher_costs_when_temperature_is_high
         ),
     ],
 )
-async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
+def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -515,7 +511,7 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     initial_state: StateT,
     sampled_inputs: ControlInputBatch,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -531,7 +527,6 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     assert np.all(optimal_array <= sample_max + 1e-6)
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "mppi",
@@ -583,7 +578,7 @@ async def test_that_mppi_optimal_control_is_convex_combination_of_samples[
         ),
     ],
 )
-async def test_that_mppi_converges_to_target_state[
+def test_that_mppi_converges_to_target_state[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -596,7 +591,7 @@ async def test_that_mppi_converges_to_target_state[
     convergence_threshold: float,
 ) -> None:
     for _ in range(max_iterations):
-        control = await mppi.step(
+        control = mppi.step(
             temperature=temperature,
             nominal_input=nominal_input,
             initial_state=current_state,
@@ -604,9 +599,7 @@ async def test_that_mppi_converges_to_target_state[
         nominal_input = control.nominal
 
         if (
-            np.linalg.norm(
-                current_state := await model.step(control.optimal, current_state)
-            )
+            np.linalg.norm(current_state := model.step(control.optimal, current_state))
             < convergence_threshold
         ):
             break
@@ -617,7 +610,6 @@ async def test_that_mppi_converges_to_target_state[
     )
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state"],
     [
@@ -701,7 +693,7 @@ async def test_that_mppi_converges_to_target_state[
         ),
     ],
 )
-async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very_large[
+def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very_large[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -709,7 +701,7 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1e-10,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -720,7 +712,6 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
     )
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state"],
     [
@@ -804,7 +795,7 @@ async def test_that_mppi_does_not_overflow_when_sample_cost_differences_are_very
         ),
     ],
 )
-async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_very_small[
+def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_very_small[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -812,7 +803,7 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
     nominal_input: ControlInputSequenceT,
     initial_state: StateT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -826,7 +817,6 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
     )
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state", "expected_updated_input"],
     [
@@ -913,7 +903,7 @@ async def test_that_mppi_does_not_underflow_when_sample_cost_differences_are_ver
         ),
     ],
 )
-async def test_that_mppi_uses_update_function_to_update_nominal_input[
+def test_that_mppi_uses_update_function_to_update_nominal_input[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -922,7 +912,7 @@ async def test_that_mppi_uses_update_function_to_update_nominal_input[
     initial_state: StateT,
     expected_updated_input: ControlInputSequenceT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -940,7 +930,6 @@ padding_size = clear_type
 sampled_inputs = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     ["mppi", "nominal_input", "initial_state", "expected_nominal_control"],
     [
@@ -1037,7 +1026,7 @@ sampled_inputs = clear_type
         ),
     ],
 )
-async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
+def test_that_mppi_uses_padding_function_to_pad_nominal_input[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -1046,7 +1035,7 @@ async def test_that_mppi_uses_padding_function_to_pad_nominal_input[
     initial_state: StateT,
     expected_nominal_control: ControlInputSequenceT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,
@@ -1064,7 +1053,6 @@ D_x = clear_type
 M = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "mppi",
@@ -1164,7 +1152,7 @@ M = clear_type
         ),
     ],
 )
-async def test_that_mppi_uses_filter_function_to_filter_optimal_control[
+def test_that_mppi_uses_filter_function_to_filter_optimal_control[
     StateT: State,
     ControlInputSequenceT: ControlInputSequence,
 ](
@@ -1174,7 +1162,7 @@ async def test_that_mppi_uses_filter_function_to_filter_optimal_control[
     expected_optimal_control: ControlInputSequenceT,
     expected_nominal_control: ControlInputSequenceT,
 ) -> None:
-    control = await mppi.step(
+    control = mppi.step(
         temperature=1.0,
         nominal_input=nominal_input,
         initial_state=initial_state,

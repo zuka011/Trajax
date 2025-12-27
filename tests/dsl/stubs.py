@@ -163,7 +163,7 @@ class DynamicalModel[
             expected_initial_state=and_initial_state_is,
         )
 
-    async def simulate(
+    def simulate(
         self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         assert np.array_equal(self.expected_control_inputs, inputs), (
@@ -176,7 +176,7 @@ class DynamicalModel[
         )
         return self.rollouts
 
-    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
+    def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")
 
 

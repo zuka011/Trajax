@@ -81,14 +81,14 @@ class DynamicalModel[
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
 ](Protocol):
-    async def simulate(
+    def simulate(
         self, inputs: ControlInputBatchT, initial_state: StateT
     ) -> StateBatchT:
         """Simulates the dynamical model over the given control inputs starting from the
         provided initial state."""
         ...
 
-    async def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
+    def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the dynamical model given the control input and current
         state."""
         ...
@@ -140,7 +140,7 @@ class Control[InputT: ControlInputSequence]:
 
 
 class Mppi[StateT: State, ControlInputSequenceT: ControlInputSequence](Protocol):
-    async def step(
+    def step(
         self,
         *,
         temperature: float,

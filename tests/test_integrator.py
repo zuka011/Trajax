@@ -15,7 +15,6 @@ from tests.dsl import mppi as data, clear_type
 from pytest import mark
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_states"],
     [
@@ -95,7 +94,7 @@ from pytest import mark
         ),
     ],
 )
-async def test_that_integration_is_exact_for_constant_inputs[
+def test_that_integration_is_exact_for_constant_inputs[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -108,7 +107,7 @@ async def test_that_integration_is_exact_for_constant_inputs[
     initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts, expected_states)
 
@@ -119,7 +118,6 @@ D_x = clear_type
 M = clear_type
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_states"],
     [
@@ -155,7 +153,7 @@ M = clear_type
         ),
     ],
 )
-async def test_that_zero_velocity_results_in_standstill[
+def test_that_zero_velocity_results_in_standstill[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -168,12 +166,11 @@ async def test_that_zero_velocity_results_in_standstill[
     initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts, expected_states)
 
 
-@mark.asyncio
 @mark.parametrize(
     [
         "model",
@@ -262,7 +259,7 @@ async def test_that_zero_velocity_results_in_standstill[
         ),
     ],
 )
-async def test_that_state_limits_are_respected_during_integration[
+def test_that_state_limits_are_respected_during_integration[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -277,7 +274,7 @@ async def test_that_state_limits_are_respected_during_integration[
     state_max: float,
     expected_final_state: StateBatchT,
 ) -> None:
-    rollouts = np.asarray(await model.simulate(inputs, initial_state))
+    rollouts = np.asarray(model.simulate(inputs, initial_state))
 
     assert np.all(rollouts >= state_min)
     assert np.all(rollouts <= state_max)
@@ -285,7 +282,6 @@ async def test_that_state_limits_are_respected_during_integration[
     assert np.allclose(rollouts[-1], expected_final_state)
 
 
-@mark.asyncio
 @mark.parametrize(
     ["model", "inputs", "initial_state", "expected_states"],
     [
@@ -392,7 +388,7 @@ async def test_that_state_limits_are_respected_during_integration[
         ),
     ],
 )
-async def test_that_velocity_limits_are_respected_during_integration[
+def test_that_velocity_limits_are_respected_during_integration[
     StateT: State,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -405,6 +401,6 @@ async def test_that_velocity_limits_are_respected_during_integration[
     initial_state: StateT,
     expected_states: StateBatchT,
 ) -> None:
-    rollouts = await model.simulate(inputs, initial_state)
+    rollouts = model.simulate(inputs, initial_state)
 
     assert np.allclose(rollouts, expected_states)

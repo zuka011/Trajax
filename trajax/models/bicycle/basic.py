@@ -261,7 +261,7 @@ class NumPyBicycleModel(
             else no_limits,
         )
 
-    async def simulate[T: int, M: int](
+    def simulate[T: int, M: int](
         self,
         inputs: NumPyBicycleControlInputBatch[T, M],
         initial_state: NumPyBicycleState,
@@ -289,7 +289,7 @@ class NumPyBicycleModel(
             )
         )
 
-    async def step[T: int](
+    def step[T: int](
         self, input: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
     ) -> NumPyBicycleState:
         state_as_rollouts = state.array.reshape(-1, 1)

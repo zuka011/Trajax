@@ -10,8 +10,8 @@ class NumPyBenchmarkRunner:
         """Creates a benchmark runner for NumPy implementations."""
         return NumPyBenchmarkRunner()
 
-    async def warm_up(self, target: BenchmarkTarget) -> None:
-        await target()
+    def warm_up(self, target: BenchmarkTarget) -> None:
+        target()
 
-    async def execute[T](self, target: BenchmarkTarget[T]) -> T:
-        return await target()
+    def execute[T](self, target: BenchmarkTarget[T]) -> T:
+        return target()

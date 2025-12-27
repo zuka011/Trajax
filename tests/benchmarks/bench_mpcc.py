@@ -61,8 +61,8 @@ def bench_mpcc_single_step(
     initial_state = configuration.initial_state
     nominal_input = configuration.nominal_input
 
-    async def single_step() -> ControlInputSequence:
-        control = await planner.step(
+    def single_step() -> ControlInputSequence:
+        control = planner.step(
             temperature=0.05,
             nominal_input=nominal_input,
             initial_state=initial_state,
@@ -128,8 +128,8 @@ def bench_mpcc_static_obstacles_single_step(
     initial_state = configuration.initial_state
     nominal_input = configuration.nominal_input
 
-    async def single_step() -> ControlInputSequence:
-        control = await planner.step(
+    def single_step() -> ControlInputSequence:
+        control = planner.step(
             temperature=0.05,
             nominal_input=nominal_input,
             initial_state=initial_state,

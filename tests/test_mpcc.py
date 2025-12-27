@@ -114,7 +114,6 @@ class MpccPlannerConfiguration[
         ...
 
 
-@mark.asyncio
 @mark.parametrize(
     ["configuration", "configuration_name"],
     [
@@ -126,7 +125,7 @@ class MpccPlannerConfiguration[
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: seed)
 @mark.integration
-async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
+def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -152,7 +151,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     progress = 0.0
 
     for _ in range(max_steps := 150):
-        control = await planner.step(
+        control = planner.step(
             temperature=0.05,
             nominal_input=nominal_input,
             initial_state=current_state,
@@ -161,7 +160,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         nominal_input = control.nominal
 
         states.append(
-            current_state := await augmented_model.step(
+            current_state := augmented_model.step(
                 input=control.optimal, state=current_state
             )
         )
@@ -196,7 +195,6 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     )
 
 
-@mark.asyncio
 @mark.parametrize(
     ["configuration", "configuration_name"],
     [
@@ -216,7 +214,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"{seed}-obstacles")
 @mark.integration
-async def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_are_present[
+def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_are_present[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
@@ -246,7 +244,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_collision_when_obsta
     progress = 0.0
 
     for _ in range(max_steps := 350):
-        control = await planner.step(
+        control = planner.step(
             temperature=0.05,
             nominal_input=nominal_input,
             initial_state=current_state,
@@ -255,7 +253,7 @@ async def test_that_mpcc_planner_follows_trajectory_without_collision_when_obsta
         nominal_input = control.nominal
 
         states.append(
-            current_state := await augmented_model.step(
+            current_state := augmented_model.step(
                 input=control.optimal, state=current_state
             )
         )

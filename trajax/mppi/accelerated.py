@@ -175,7 +175,7 @@ class JaxMppi[
     def __post_init__(self) -> None:
         assert self.planning_interval > 0, "Planning interval must be positive."
 
-    async def step(
+    def step(
         self,
         *,
         temperature: float,
@@ -186,9 +186,7 @@ class JaxMppi[
 
         samples = self.sampler.sample(around=nominal_input)
 
-        rollouts = await self.model.simulate(
-            inputs=samples, initial_state=initial_state
-        )
+        rollouts = self.model.simulate(inputs=samples, initial_state=initial_state)
         costs = self.cost_function(inputs=samples, states=rollouts)
 
         optimal_control = compute_weighted_control(

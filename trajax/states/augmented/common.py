@@ -1,4 +1,3 @@
-import asyncio
 from typing import Callable, Protocol
 from dataclasses import dataclass
 
@@ -131,12 +130,12 @@ class AugmentedModel[
             physical=physical, virtual=virtual, state=state, batch=batch
         )
 
-    async def simulate(
+    def simulate(
         self,
         inputs: AugmentedControlInputBatch[PControlInputBatchT, VControlInputBatchT],
         initial_state: AStateT,
     ) -> AStateBatchT:
-        physical, virtual = await asyncio.gather(
+        physical, virtual = (
             self.physical.simulate(
                 inputs=inputs.physical, initial_state=initial_state.physical
             ),
@@ -147,14 +146,14 @@ class AugmentedModel[
 
         return self.batch.of(physical=physical, virtual=virtual)
 
-    async def step(
+    def step(
         self,
         input: AugmentedControlInputSequence[
             PControlInputSequenceT, VControlInputSequenceT
         ],
         state: AStateT,
     ) -> AStateT:
-        physical, virtual = await asyncio.gather(
+        physical, virtual = (
             self.physical.step(input=input.physical, state=state.physical),
             self.virtual.step(input=input.virtual, state=state.virtual),
         )

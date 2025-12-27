@@ -79,7 +79,7 @@ class NumPyIntegratorModel(
             else NO_LIMITS,
         )
 
-    async def simulate[T: int, D_u: int, D_x: int, M: int](
+    def simulate[T: int, D_u: int, D_x: int, M: int](
         self,
         inputs: IntegratorControlInputBatch[T, D_u, M],
         initial_state: IntegratorState[D_x],
@@ -100,7 +100,7 @@ class NumPyIntegratorModel(
             )
         )
 
-    async def step[T: int, D_u: int, D_x: int](
+    def step[T: int, D_u: int, D_x: int](
         self, input: IntegratorControlInputSequence[T, D_u], state: IntegratorState[D_x]
     ) -> SimpleState[D_x]:
         controls = np.asarray(input)

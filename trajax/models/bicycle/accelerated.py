@@ -308,7 +308,7 @@ class JaxBicycleModel(
             else no_limits,
         )
 
-    async def simulate[T: int, M: int](
+    def simulate[T: int, M: int](
         self, inputs: JaxBicycleControlInputBatch[T, M], initial_state: JaxBicycleState
     ) -> JaxBicycleStateBatch[T, M]:
         rollout_count = inputs.rollout_count
@@ -334,7 +334,7 @@ class JaxBicycleModel(
             )
         )
 
-    async def step[T: int](
+    def step[T: int](
         self, input: JaxBicycleControlInputSequence[T], state: JaxBicycleState
     ) -> JaxBicycleState:
         return JaxBicycleState(
