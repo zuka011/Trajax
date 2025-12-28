@@ -1,19 +1,30 @@
-from typing import Final, Protocol
+from typing import Final
 from dataclasses import dataclass
 
+from trajax.types import (
+    DynamicalModel,
+    ObstacleModel,
+    NumPyIntegratorState,
+    NumPyIntegratorStateBatch,
+    NumPyIntegratorControlInputSequence,
+    NumPyIntegratorControlInputBatch,
+    NumPyIntegratorObstacleStates,
+    NumPyIntegratorObstacleStateSequences,
+    NumPyIntegratorObstacleVelocities,
+    NumPyIntegratorObstacleControlInputSequences,
+    NumPyObstacleStates,
+    EstimatedObstacleStates,
+)
 from trajax.states import (
     NumPySimpleState as SimpleState,
     NumPySimpleStateBatch as SimpleStateBatch,
+    NumPySimpleObstacleStates as SimpleObstacleStates,
+    NumPySimpleObstacleVelocities as SimpleObstacleVelocities,
+    NumPySimpleObstacleControlInputSequences as SimpleObstacleControlInputSequences,
 )
-from trajax.models.integrator.common import (
-    IntegratorModel,
-    IntegratorState,
-    IntegratorStateBatch,
-    IntegratorControlInputSequence,
-    IntegratorControlInputBatch,
-)
+from trajax.obstacles import NumPyObstaclePositionsAndHeadings
 
-from numtypes import Array, Dims
+from numtypes import Array, Dims, shape_of, D
 
 import numpy as np
 
@@ -21,27 +32,9 @@ import numpy as np
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 
-class NumPyIntegratorState[D_x: int](IntegratorState[D_x], Protocol): ...
-
-
-class NumPyIntegratorStateBatch[T: int, D_x: int, M: int](
-    IntegratorStateBatch[T, D_x, M], Protocol
-): ...
-
-
-class NumPyIntegratorControlInputSequence[T: int, D_u: int](
-    IntegratorControlInputSequence[T, D_u], Protocol
-): ...
-
-
-class NumPyIntegratorControlInputBatch[T: int, D_u: int, M: int](
-    IntegratorControlInputBatch[T, D_u, M], Protocol
-): ...
-
-
 @dataclass(kw_only=True, frozen=True)
 class NumPyIntegratorModel(
-    IntegratorModel[
+    DynamicalModel[
         NumPyIntegratorState,
         NumPyIntegratorStateBatch,
         NumPyIntegratorControlInputSequence,
@@ -79,39 +72,39 @@ class NumPyIntegratorModel(
             else NO_LIMITS,
         )
 
-    def simulate[T: int, D_u: int, D_x: int, M: int](
+    def simulate[T: int, D_x: int, M: int](
         self,
-        inputs: IntegratorControlInputBatch[T, D_u, M],
-        initial_state: IntegratorState[D_x],
+        inputs: NumPyIntegratorControlInputBatch[T, D_x, M],
+        initial_state: NumPyIntegratorState[D_x],
     ) -> SimpleStateBatch[T, D_x, M]:
-        initial = np.asarray(initial_state)
-        clipped_inputs = np.clip(inputs, *self.velocity_limits)
+        clipped_inputs = np.clip(inputs.array, *self.velocity_limits)
 
         return SimpleStateBatch(
             simulate_with_state_limits(
                 inputs=clipped_inputs,
-                initial_state=initial,
+                initial_state=initial_state.array,
                 time_step=self.time_step,
                 state_limits=self.state_limits,
             )
             if self.has_state_limits
-            else simulate_without_state_limits(
-                inputs=clipped_inputs, initial_state=initial, time_step=self.time_step
+            else simulate(
+                inputs=clipped_inputs,
+                initial_states=initial_state.array[:, np.newaxis],
+                time_step=self.time_step,
             )
         )
 
-    def step[T: int, D_u: int, D_x: int](
-        self, input: IntegratorControlInputSequence[T, D_u], state: IntegratorState[D_x]
+    def step[T: int, D_x: int](
+        self,
+        input: NumPyIntegratorControlInputSequence[T, D_x],
+        state: NumPyIntegratorState[D_x],
     ) -> SimpleState[D_x]:
-        controls = np.asarray(input)
-        current_state = np.asarray(state)
-
-        clipped_control = np.clip(controls[0], *self.velocity_limits)
+        clipped_control = np.clip(input.array[0], *self.velocity_limits)
         new_state = np.clip(
-            current_state + clipped_control * self.time_step, *self.state_limits
+            state.array + clipped_control * self.time_step, *self.state_limits
         )
 
-        return SimpleState(array=new_state)
+        return SimpleState(new_state)
 
     @property
     def has_state_limits(self) -> bool:
@@ -134,6 +127,74 @@ class NumPyIntegratorModel(
         return self.velocity_limits[1]
 
 
+@dataclass(kw_only=True, frozen=True)
+class NumPyIntegratorObstacleModel(
+    ObstacleModel[
+        NumPyIntegratorObstacleStateSequences,
+        NumPyIntegratorObstacleStates,
+        NumPyIntegratorObstacleVelocities,
+        NumPyIntegratorObstacleControlInputSequences,
+        NumPyObstacleStates,
+    ]
+):
+    time_step: float
+
+    @staticmethod
+    def create(*, time_step_size: float) -> "NumPyIntegratorObstacleModel":
+        """Creates a NumPy integrator obstacle model.
+
+        See `NumPyIntegratorModel.create` for details on the integrator dynamics.
+        """
+        return NumPyIntegratorObstacleModel(time_step=time_step_size)
+
+    def estimate_state_from[D_x: int, K: int](
+        self, history: NumPyIntegratorObstacleStateSequences[int, D_x, K]
+    ) -> EstimatedObstacleStates[
+        NumPyIntegratorObstacleStates[D_x, K], NumPyIntegratorObstacleVelocities[D_x, K]
+    ]:
+        if history.horizon < 2:
+            velocities = np.zeros((history.dimension, history.count))
+        else:
+            states = history.array
+            deltas = states[-1, :, :] - states[-2, :, :]
+            velocities = deltas / self.time_step
+
+        assert shape_of(velocities, matches=(history.dimension, history.count))
+
+        return EstimatedObstacleStates(
+            states=SimpleObstacleStates(history.array[-1, :, :]),
+            velocities=SimpleObstacleVelocities(velocities),
+        )
+
+    def input_to_maintain[T: int, D_x: int, K: int](
+        self,
+        velocities: NumPyIntegratorObstacleVelocities[D_x, K],
+        *,
+        states: NumPyIntegratorObstacleStates[D_x, K],
+        horizon: T,
+    ) -> NumPyIntegratorObstacleControlInputSequences[T, D_x, K]:
+        return SimpleObstacleControlInputSequences(
+            np.tile(velocities.array[np.newaxis, :, :], (horizon, 1, 1))
+        )
+
+    def forward[T: int, K: int](
+        self,
+        *,
+        current: NumPyIntegratorObstacleStates[D[3], K],
+        input: NumPyIntegratorObstacleControlInputSequences[T, D[3], K],
+    ) -> NumPyObstacleStates[T, K]:
+        result = simulate(
+            inputs=input.array,
+            initial_states=current.array,
+            time_step=self.time_step,
+        )
+
+        # TODO: Remove implicit assumption about state structure
+        return NumPyObstaclePositionsAndHeadings.create(
+            x=result[:, 0, :], y=result[:, 1, :], heading=result[:, 2, :]
+        )
+
+
 def simulate_with_state_limits[T: int, D_u: int, D_x: int, M: int](
     *,
     inputs: Array[Dims[T, D_u, M]],
@@ -153,12 +214,11 @@ def simulate_with_state_limits[T: int, D_u: int, D_x: int, M: int](
     return states
 
 
-def simulate_without_state_limits[T: int, D_u: int, D_x: int, M: int](
+def simulate[T: int, D_x: int, N: int](
     *,
-    inputs: Array[Dims[T, D_u, M]],
-    initial_state: Array[Dims[D_x]],
+    inputs: Array[Dims[T, D_x, N]],
+    initial_states: Array[Dims[D_x, N]],
     time_step: float,
-) -> Array[Dims[T, D_u, M]]:
-    initial_broadcasted = initial_state[:, np.newaxis]
-    states = initial_broadcasted + np.cumsum(inputs * time_step, axis=0)
+) -> Array[Dims[T, D_x, N]]:
+    states = initial_states + np.cumsum(inputs * time_step, axis=0)
     return states

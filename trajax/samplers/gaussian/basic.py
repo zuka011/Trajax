@@ -1,21 +1,16 @@
-from typing import Protocol
+from typing import Final
 from dataclasses import dataclass
 
-from trajax.mppi import NumPyControlInputSequence, NumPyControlInputBatch, NumPySampler
+from trajax.types import (
+    NumPyControlInputBatchCreator,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
+    NumPySampler,
+)
 
 from numtypes import Array, Dims
 
 import numpy as np
-
-
-class NumPyControlInputBatchCreator[
-    ControlInputBatchT: NumPyControlInputBatch,
-    D_u: int = int,
-    M: int = int,
-](Protocol):
-    def __call__(self, *, array: Array[Dims[int, D_u, M]]) -> ControlInputBatchT:
-        """Creates a ControlInputBatch from the given array."""
-        ...
 
 
 @dataclass(frozen=True)
@@ -24,11 +19,11 @@ class NumPyGaussianSampler[
     D_u: int = int,
     M: int = int,
 ](NumPySampler[NumPyControlInputSequence, BatchT]):
-    standard_deviation: Array[Dims[D_u]]
-    to_batch: NumPyControlInputBatchCreator[BatchT, D_u, M]
+    standard_deviation: Final[Array[Dims[D_u]]]
+    to_batch: Final[NumPyControlInputBatchCreator[BatchT, D_u, M]]
     rng: np.random.Generator
 
-    _rollout_count: M
+    _rollout_count: Final[M]
 
     @staticmethod
     def create[B: NumPyControlInputBatch, D_u_: int, M_: int](
@@ -49,13 +44,10 @@ class NumPyGaussianSampler[
         )
 
     def sample(self, *, around: NumPyControlInputSequence) -> BatchT:
-        nominal = np.asarray(around)
-        time_horizon, control_dimension = nominal.shape
-
-        samples = nominal[..., None] + self.rng.normal(
+        samples = around.array[..., None] + self.rng.normal(
             loc=0.0,
             scale=self.standard_deviation[None, :, None],
-            size=(time_horizon, control_dimension, self.rollout_count),
+            size=(around.horizon, around.dimension, self.rollout_count),
         )
 
         return self.to_batch(array=samples)

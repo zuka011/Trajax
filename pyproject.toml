@@ -81,14 +81,8 @@ markers = [
 addopts = "--benchmark-skip -m 'not integration'"
 
 [tool.pyright]
-include = ["trajax", "tests"]
-exclude = [
-    "**/__pycache__",
-    "tests/test_cost.py", # Pyright can't handle inference in these files.
-    "tests/test_distance.py",
-    "tests/test_mpcc.py",
-    "tests/examples/**"
-]
+include = ["trajax", "tests/visualize", "tests/benchmarks"]
+exclude = ["**/__pycache__"]
 
 [tool.ruff.lint]
 extend-select = ["RUF018"]
@@ -105,6 +99,9 @@ extend-select = ["RUF018"]
 "**/accelerated.py" = [
     "F722", # Ignore syntax error in forward references for jaxtyping types
     "F821", # Ignore undefined names in JIT-compiled functions
+]
+"**/namespace.py" = [
+    "F811", # Ignore redefinition of imported names (ruff bug)
 ]
 "trajax/types/factory.py" = [
     "F811", # Ignore redefinition of imported names (ruff bug)

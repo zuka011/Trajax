@@ -1,11 +1,4 @@
-from trajax import (
-    model as create_model,
-    IntegratorModel,
-    State,
-    StateBatch,
-    ControlInputSequence,
-    ControlInputBatch,
-)
+from trajax import model as create_model, DynamicalModel, StateBatch
 
 from numtypes import array
 
@@ -19,7 +12,9 @@ from pytest import mark
     ["model", "inputs", "initial_state", "expected_states"],
     [
         (
-            model := create_model.numpy.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.numpy.integrator.dynamical(
+                time_step_size=(dt := 0.1)
+            ),
             inputs := data.numpy.control_input_batch(
                 array(
                     [[[(v_theta := 10.0)] * (M := 2)]] * (T := 1),
@@ -34,7 +29,9 @@ from pytest import mark
             ),
         ),
         (
-            model := create_model.numpy.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.numpy.integrator.dynamical(
+                time_step_size=(dt := 0.1)
+            ),
             inputs := data.numpy.control_input_batch(
                 array(
                     [[[(v_theta := 10.0)] * (M := 1)]] * (T := 5),
@@ -95,12 +92,12 @@ from pytest import mark
     ],
 )
 def test_that_integration_is_exact_for_constant_inputs[
-    StateT: State,
+    StateT,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    ControlInputSequenceT,
+    ControlInputBatchT,
 ](
-    model: IntegratorModel[
+    model: DynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -122,7 +119,9 @@ M = clear_type
     ["model", "inputs", "initial_state", "expected_states"],
     [
         (
-            model := create_model.numpy.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.numpy.integrator.dynamical(
+                time_step_size=(dt := 0.1)
+            ),
             inputs := data.numpy.control_input_batch(
                 array(
                     [[[(v_theta := 0.0)] * (M := 1)]] * (T := 100),
@@ -154,12 +153,12 @@ M = clear_type
     ],
 )
 def test_that_zero_velocity_results_in_standstill[
-    StateT: State,
+    StateT,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    ControlInputSequenceT,
+    ControlInputBatchT,
 ](
-    model: IntegratorModel[
+    model: DynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -182,7 +181,7 @@ def test_that_zero_velocity_results_in_standstill[
     ],
     [
         (
-            model := create_model.numpy.integrator(
+            model := create_model.numpy.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 state_limits=((state_min := -1.0), (state_max := 10.0)),
             ),
@@ -202,7 +201,7 @@ def test_that_zero_velocity_results_in_standstill[
             expected_final_state := array([[state_max] * M], shape=(D_x, M)),
         ),
         (
-            model := create_model.numpy.integrator(
+            model := create_model.numpy.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 state_limits=((state_min := 2.0), (state_max := 10.0)),
             ),
@@ -260,12 +259,12 @@ def test_that_zero_velocity_results_in_standstill[
     ],
 )
 def test_that_state_limits_are_respected_during_integration[
-    StateT: State,
+    StateT,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    ControlInputSequenceT,
+    ControlInputBatchT,
 ](
-    model: IntegratorModel[
+    model: DynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
@@ -286,7 +285,7 @@ def test_that_state_limits_are_respected_during_integration[
     ["model", "inputs", "initial_state", "expected_states"],
     [
         (
-            model := create_model.numpy.integrator(
+            model := create_model.numpy.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 velocity_limits=((v_min := -1.0), (v_max := 2.0)),
             ),
@@ -313,7 +312,7 @@ def test_that_state_limits_are_respected_during_integration[
             ),
         ),
         (
-            model := create_model.numpy.integrator(
+            model := create_model.numpy.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 velocity_limits=((v_min := -2.0), (v_max := 4.0)),
             ),
@@ -389,12 +388,12 @@ def test_that_state_limits_are_respected_during_integration[
     ],
 )
 def test_that_velocity_limits_are_respected_during_integration[
-    StateT: State,
+    StateT,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    ControlInputSequenceT,
+    ControlInputBatchT,
 ](
-    model: IntegratorModel[
+    model: DynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,

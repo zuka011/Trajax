@@ -177,7 +177,7 @@ T = clear_type
         (
             mppi := create_mppi.numpy.base(
                 planning_interval=3,
-                update_function=update.numpy.no_update(),
+                update_function=update.numpy.no_update(),  # type: ignore
                 padding_function=padding.numpy.zero(),
                 model=stubs.DynamicalModel.returns(
                     rollouts := data.numpy.state_batch(
@@ -230,7 +230,7 @@ T = clear_type
         (
             mppi := create_mppi.jax.base(
                 planning_interval=4,
-                update_function=update.jax.no_update(),
+                update_function=update.jax.no_update(),  # type: ignore
                 padding_function=padding.jax.zero(),
                 model=stubs.DynamicalModel.returns(
                     rollouts := data.jax.state_batch(
@@ -540,7 +540,9 @@ def test_that_mppi_optimal_control_is_convex_combination_of_samples[
     [
         (
             mppi := create_mppi.numpy.base(
-                model=(model := create_model.numpy.integrator(time_step_size=0.1)),
+                model=(
+                    model := create_model.numpy.integrator.dynamical(time_step_size=0.1)
+                ),
                 cost_function=costs.numpy.quadratic_distance_to_origin(),
                 sampler=samplers.sampler.numpy.gaussian(
                     standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),
@@ -936,7 +938,7 @@ sampled_inputs = clear_type
         (
             mppi := create_mppi.numpy.base(
                 planning_interval=(padding_size := 2),
-                update_function=update.numpy.no_update(),
+                update_function=update.numpy.no_update(),  # type: ignore
                 padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.numpy.control_input_sequence(
                         array(
@@ -981,7 +983,7 @@ sampled_inputs = clear_type
         (
             mppi := create_mppi.jax.base(
                 planning_interval=(padding_size := 3),
-                update_function=update.jax.no_update(),
+                update_function=update.jax.no_update(),  # type: ignore
                 padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.jax.control_input_sequence(
                         array(

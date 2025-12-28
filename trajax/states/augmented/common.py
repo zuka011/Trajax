@@ -1,138 +1,73 @@
-from typing import Callable, Protocol
+from typing import Callable
 from dataclasses import dataclass
 
-from trajax.mppi import (
-    State,
-    StateBatch,
-    ControlInputSequence,
-    ControlInputBatch,
+from trajax.types import (
     DynamicalModel,
     Sampler,
+    AugmentedState,
+    AugmentedStateBatch,
+    AugmentedControlInputSequence,
+    AugmentedControlInputBatch,
+    AugmentedStateCreator,
+    AugmentedStateBatchCreator,
+    AugmentedControlInputBatchCreator,
+    HasPhysical,
+    HasVirtual,
 )
-
-
-class AugmentedState[P, V](State, Protocol):
-    @property
-    def physical(self) -> P:
-        """Returns the physical part of the augmented state."""
-        ...
-
-    @property
-    def virtual(self) -> V:
-        """Returns the virtual part of the augmented state."""
-        ...
-
-
-class AugmentedStateBatch[P, V](StateBatch, Protocol):
-    @property
-    def physical(self) -> P:
-        """Returns the physical part of the augmented state batch."""
-        ...
-
-    @property
-    def virtual(self) -> V:
-        """Returns the virtual part of the augmented state batch."""
-        ...
-
-
-class AugmentedControlInputSequence[P, V](ControlInputSequence, Protocol):
-    @property
-    def physical(self) -> P:
-        """Returns the physical part of the augmented control input sequence."""
-        ...
-
-    @property
-    def virtual(self) -> V:
-        """Returns the virtual part of the augmented control input sequence."""
-        ...
-
-
-class AugmentedControlInputBatch[P, V](ControlInputBatch, Protocol):
-    @property
-    def physical(self) -> P:
-        """Returns the physical part of the augmented control input batch."""
-        ...
-
-    @property
-    def virtual(self) -> V:
-        """Returns the virtual part of the augmented control input batch."""
-        ...
-
-
-class AugmentedStateCreator[P, V, A](Protocol):
-    def of(self, *, physical: P, virtual: V) -> A:
-        """Creates an augmented state from physical and virtual parts."""
-        ...
-
-
-class AugmentedStateBatchCreator[P, V, A](Protocol):
-    def of(self, *, physical: P, virtual: V) -> A:
-        """Creates an augmented state batch from physical and virtual parts."""
-        ...
-
-
-class AugmentedControlInputBatchCreator[P, V, A](Protocol):
-    def of(self, *, physical: P, virtual: V) -> A:
-        """Creates an augmented control input batch from physical and virtual parts."""
-        ...
 
 
 @dataclass(kw_only=True, frozen=True)
 class AugmentedModel[
-    PStateT: State,
-    PStateBatchT: StateBatch,
-    PControlInputSequenceT: ControlInputSequence,
-    PControlInputBatchT: ControlInputBatch,
-    VStateT: State,
-    VStateBatchT: StateBatch,
-    VControlInputSequenceT: ControlInputSequence,
-    VControlInputBatchT: ControlInputBatch,
+    PStateT,
+    PStateBatchT,
+    PInputSequenceT,
+    PInputBatchT,
+    VStateT,
+    VStateBatchT,
+    VInputSequenceT,
+    VInputBatchT,
     AStateT: AugmentedState,
     AStateBatchT: AugmentedStateBatch,
 ](
     DynamicalModel[
         AStateT,
         AStateBatchT,
-        AugmentedControlInputSequence[PControlInputSequenceT, VControlInputSequenceT],
-        AugmentedControlInputBatch[PControlInputBatchT, VControlInputBatchT],
+        AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
+        AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
     ]
 ):
-    physical: DynamicalModel[
-        PStateT, PStateBatchT, PControlInputSequenceT, PControlInputBatchT
-    ]
-    virtual: DynamicalModel[
-        VStateT, VStateBatchT, VControlInputSequenceT, VControlInputBatchT
-    ]
+    physical: DynamicalModel[PStateT, PStateBatchT, PInputSequenceT, PInputBatchT]
+    virtual: DynamicalModel[VStateT, VStateBatchT, VInputSequenceT, VInputBatchT]
 
     state: AugmentedStateCreator[PStateT, VStateT, AStateT]
     batch: AugmentedStateBatchCreator[PStateBatchT, VStateBatchT, AStateBatchT]
 
     @staticmethod
     def of[
-        PS: State,
-        PSB: StateBatch,
-        PCIS: ControlInputSequence,
-        PCIB: ControlInputBatch,
-        VS: State,
-        VSB: StateBatch,
-        VCIS: ControlInputSequence,
-        VCIB: ControlInputBatch,
+        PS,
+        PSB,
+        PIS,
+        PIB,
+        VS,
+        VSB,
+        VIS,
+        VIB,
         AS: AugmentedState,
         ASB: AugmentedStateBatch,
     ](
         *,
-        physical: DynamicalModel[PS, PSB, PCIS, PCIB],
-        virtual: DynamicalModel[VS, VSB, VCIS, VCIB],
+        physical: DynamicalModel[PS, PSB, PIS, PIB],
+        virtual: DynamicalModel[VS, VSB, VIS, VIB],
         state: AugmentedStateCreator[PS, VS, AS],
         batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
-    ) -> "AugmentedModel[PS, PSB, PCIS, PCIB, VS, VSB, VCIS, VCIB, AS, ASB]":
+    ) -> "AugmentedModel[PS, PSB, PIS, PIB, VS, VSB, VIS, VIB, AS, ASB]":
         return AugmentedModel(
             physical=physical, virtual=virtual, state=state, batch=batch
         )
 
     def simulate(
         self,
-        inputs: AugmentedControlInputBatch[PControlInputBatchT, VControlInputBatchT],
+        inputs: AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
         initial_state: AStateT,
     ) -> AStateBatchT:
         physical, virtual = (
@@ -148,9 +83,7 @@ class AugmentedModel[
 
     def step(
         self,
-        input: AugmentedControlInputSequence[
-            PControlInputSequenceT, VControlInputSequenceT
-        ],
+        input: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         state: AStateT,
     ) -> AStateT:
         physical, virtual = (
@@ -163,24 +96,18 @@ class AugmentedModel[
 
 @dataclass(kw_only=True, frozen=True)
 class AugmentedSampler[
-    PhysicalSequenceT: ControlInputSequence,
-    PhysicalBatchT: ControlInputBatch,
-    VirtualSequenceT: ControlInputSequence,
-    VirtualBatchT: ControlInputBatch,
+    PInputSequenceT,
+    PInputBatchT,
+    VInputSequenceT,
+    VInputBatchT,
     ABatchT: AugmentedControlInputBatch,
-](Sampler[AugmentedControlInputSequence[PhysicalSequenceT, VirtualSequenceT], ABatchT]):
-    physical: Sampler[PhysicalSequenceT, PhysicalBatchT]
-    virtual: Sampler[VirtualSequenceT, VirtualBatchT]
-    batch: AugmentedControlInputBatchCreator[PhysicalBatchT, VirtualBatchT, ABatchT]
+](Sampler[AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT], ABatchT]):
+    physical: Sampler[PInputSequenceT, PInputBatchT]
+    virtual: Sampler[VInputSequenceT, VInputBatchT]
+    batch: AugmentedControlInputBatchCreator[PInputBatchT, VInputBatchT, ABatchT]
 
     @staticmethod
-    def of[
-        PS: ControlInputSequence,
-        PB: ControlInputBatch,
-        VS: ControlInputSequence,
-        VB: ControlInputBatch,
-        AB: AugmentedControlInputBatch,
-    ](
+    def of[PS, PB, VS, VB, AB: AugmentedControlInputBatch](
         *,
         physical: Sampler[PS, PB],
         virtual: Sampler[VS, VB],
@@ -197,7 +124,7 @@ class AugmentedSampler[
     def sample(
         self,
         *,
-        around: AugmentedControlInputSequence[PhysicalSequenceT, VirtualSequenceT],
+        around: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
     ) -> ABatchT:
         physical_batch = self.physical.sample(around=around.physical)
         virtual_batch = self.virtual.sample(around=around.virtual)
@@ -207,20 +134,6 @@ class AugmentedSampler[
     @property
     def rollout_count(self) -> int:
         return self.physical.rollout_count
-
-
-class HasPhysical[P](Protocol):
-    @property
-    def physical(self) -> P:
-        """Returns the physical part."""
-        ...
-
-
-class HasVirtual[V](Protocol):
-    @property
-    def virtual(self) -> V:
-        """Returns the virtual part."""
-        ...
 
 
 class extract:

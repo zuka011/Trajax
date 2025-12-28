@@ -1,17 +1,17 @@
-from typing import Protocol, Final
+from typing import Final
 from dataclasses import dataclass
 
-from trajax.type import jaxtyped
+from trajax.types import (
+    jaxtyped,
+    DynamicalModel,
+    JaxIntegratorState,
+    JaxIntegratorStateBatch,
+    JaxIntegratorControlInputSequence,
+    JaxIntegratorControlInputBatch,
+)
 from trajax.states import (
     JaxSimpleState as SimpleState,
     JaxSimpleStateBatch as SimpleStateBatch,
-)
-from trajax.models.integrator.common import (
-    IntegratorModel,
-    IntegratorState,
-    IntegratorStateBatch,
-    IntegratorControlInputSequence,
-    IntegratorControlInputBatch,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -23,44 +23,9 @@ import jax.numpy as jnp
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 
-class JaxIntegratorState[D_x: int](IntegratorState[D_x], Protocol):
-    @property
-    def array(self) -> Float[JaxArray, "D_x"]:
-        """Returns the underlying JAX array."""
-        ...
-
-
-class JaxIntegratorStateBatch[T: int, D_x: int, M: int](
-    IntegratorStateBatch[T, D_x, M], Protocol
-): ...
-
-
-class JaxIntegratorControlInputSequence[T: int, D_u: int](
-    IntegratorControlInputSequence[T, D_u], Protocol
-):
-    @property
-    def array(self) -> Float[JaxArray, "T D_u"]:
-        """Returns the underlying JAX array."""
-        ...
-
-    @property
-    def dimension(self) -> D_u:
-        """Returns the dimension of the control input."""
-        ...
-
-
-class JaxIntegratorControlInputBatch[T: int, D_u: int, M: int](
-    IntegratorControlInputBatch[T, D_u, M], Protocol
-):
-    @property
-    def array(self) -> Float[JaxArray, "T D_u M"]:
-        """Returns the underlying JAX array."""
-        ...
-
-
 @dataclass(kw_only=True, frozen=True)
 class JaxIntegratorModel(
-    IntegratorModel[
+    DynamicalModel[
         JaxIntegratorState,
         JaxIntegratorStateBatch,
         JaxIntegratorControlInputSequence,

@@ -1,6 +1,7 @@
 from typing import Final
 
-from trajax.costs.collision import NoMetric, NumPyRiskMetric, JaxRiskMetric
+from trajax.types import NumPyRiskMetric, JaxRiskMetric
+from trajax.costs.collision import NoMetric
 from trajax.costs.risk.base import RisKitRiskMetric
 
 import riskit as rk

@@ -1,52 +1,26 @@
-from typing import Protocol
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.mppi import (
+from trajax.types import (
+    DataType,
     StateBatch,
     ControlInputBatch,
     CostFunction,
-    NumPyStateBatch,
+    ContouringCost,
+    Error,
+    Trajectory,
     NumPyControlInputBatch,
     NumPyCosts,
-)
-from trajax.trajectory import (
-    Trajectory,
     NumPyPathParameters,
     NumPyReferencePoints,
-    NumPyPositions,
-    NumPyHeadings,
+    NumPyPositionExtractor,
+    NumPyPathParameterExtractor,
+    NumPyPathVelocityExtractor,
 )
 from trajax.states import NumPySimpleCosts
-from trajax.costs.common import ContouringCost, Error
 
-from numtypes import Array, Dims, Dim2
+from numtypes import Array, Dims
 
 import numpy as np
-
-
-class NumPyPathParameterExtractor[StateT: NumPyStateBatch](Protocol):
-    def __call__(self, states: StateT, /) -> NumPyPathParameters:
-        """Extracts path parameters from a batch of states."""
-        ...
-
-
-class NumPyPathVelocityExtractor[InputT: NumPyControlInputBatch](Protocol):
-    def __call__(self, inputs: InputT, /) -> Array[Dim2]:
-        """Extracts path velocities from a batch of control inputs."""
-        ...
-
-
-class NumPyPositionExtractor[StateT: NumPyStateBatch](Protocol):
-    def __call__(self, states: StateT, /) -> NumPyPositions:
-        """Extracts (x, y) positions from a batch of states."""
-        ...
-
-
-class NumPyHeadingExtractor[StateT: NumPyStateBatch](Protocol):
-    def __call__(self, states: StateT, /) -> NumPyHeadings:
-        """Extracts heading angles from a batch of states."""
-        ...
 
 
 @dataclass(frozen=True)
@@ -58,16 +32,17 @@ class NumPyError[T: int, M: int](Error[T, M]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyContouringCost[StateT: NumPyStateBatch](
-    ContouringCost[ControlInputBatch, StateT, NumPyCosts, NumPyError]
+class NumPyContouringCost[StateBatchT](
+    ContouringCost[ControlInputBatch, StateBatchT, NumPyError],
+    CostFunction[ControlInputBatch, StateBatchT, NumPyCosts],
 ):
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
-    path_parameter_extractor: NumPyPathParameterExtractor[StateT]
-    position_extractor: NumPyPositionExtractor[StateT]
+    path_parameter_extractor: NumPyPathParameterExtractor[StateBatchT]
+    position_extractor: NumPyPositionExtractor[StateBatchT]
     weight: float
 
     @staticmethod
-    def create[S: NumPyStateBatch](
+    def create[S](
         *,
         reference: Trajectory[NumPyPathParameters, NumPyReferencePoints],
         path_parameter_extractor: NumPyPathParameterExtractor[S],
@@ -90,13 +65,13 @@ class NumPyContouringCost[StateT: NumPyStateBatch](
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateT
-    ) -> NumPySimpleCosts[T, M]:
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    ) -> NumPyCosts[T, M]:
         error = self.error(inputs=inputs, states=states)
         return NumPySimpleCosts(self.weight * error.array**2)
 
     def error[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateT
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
     ) -> NumPyError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()
@@ -109,16 +84,16 @@ class NumPyContouringCost[StateT: NumPyStateBatch](
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyLagCost[StateT: NumPyStateBatch](
-    CostFunction[ControlInputBatch, StateT, NumPyCosts]
+class NumPyLagCost[StateBatchT](
+    CostFunction[ControlInputBatch, StateBatchT, NumPyCosts]
 ):
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
-    path_parameter_extractor: NumPyPathParameterExtractor[StateT]
-    position_extractor: NumPyPositionExtractor[StateT]
+    path_parameter_extractor: NumPyPathParameterExtractor[StateBatchT]
+    position_extractor: NumPyPositionExtractor[StateBatchT]
     weight: float
 
     @staticmethod
-    def create[S: NumPyStateBatch](
+    def create[S](
         *,
         reference: Trajectory[NumPyPathParameters, NumPyReferencePoints],
         path_parameter_extractor: NumPyPathParameterExtractor[S],
@@ -141,8 +116,8 @@ class NumPyLagCost[StateT: NumPyStateBatch](
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateT
-    ) -> NumPySimpleCosts[T, M]:
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    ) -> NumPyCosts[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()
         positions = self.position_extractor(states)
@@ -155,15 +130,13 @@ class NumPyLagCost[StateT: NumPyStateBatch](
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyProgressCost[InputT: NumPyControlInputBatch](
-    CostFunction[InputT, StateBatch, NumPySimpleCosts]
-):
-    path_velocity_extractor: NumPyPathVelocityExtractor[InputT]
+class NumPyProgressCost[InputBatchT](CostFunction[InputBatchT, StateBatch, NumPyCosts]):
+    path_velocity_extractor: NumPyPathVelocityExtractor[InputBatchT]
     time_step_size: float
     weight: float
 
     @staticmethod
-    def create[I: NumPyControlInputBatch](
+    def create[I](
         *,
         path_velocity_extractor: NumPyPathVelocityExtractor[I],
         time_step_size: float,
@@ -183,8 +156,8 @@ class NumPyProgressCost[InputT: NumPyControlInputBatch](
         )
 
     def __call__[T: int, M: int](
-        self, *, inputs: InputT, states: StateBatch[T, int, M]
-    ) -> NumPySimpleCosts[T, M]:
+        self, *, inputs: InputBatchT, states: StateBatch[T, int, M]
+    ) -> NumPyCosts[T, M]:
         path_velocities = self.path_velocity_extractor(inputs)
 
         return NumPySimpleCosts(-self.weight * path_velocities * self.time_step_size)
@@ -192,7 +165,7 @@ class NumPyProgressCost[InputT: NumPyControlInputBatch](
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyControlSmoothingCost[D_u: int](
-    CostFunction[NumPyControlInputBatch[int, D_u, int], StateBatch, NumPySimpleCosts]
+    CostFunction[NumPyControlInputBatch[int, D_u, int], StateBatch, NumPyCosts]
 ):
     weights: Array[Dims[D_u]]
 
@@ -213,9 +186,8 @@ class NumPyControlSmoothingCost[D_u: int](
         *,
         inputs: NumPyControlInputBatch[T, D_u, M],
         states: StateBatch[T, int, M],
-    ) -> NumPySimpleCosts[T, M]:
-        input_array = np.asarray(inputs)
-        diffs = np.diff(input_array, axis=0, prepend=input_array[0:1, :, :])
+    ) -> NumPyCosts[T, M]:
+        diffs = np.diff(inputs.array, axis=0, prepend=inputs.array[0:1, :, :])
         squared_diffs = diffs**2
         weighted_squared_diffs = squared_diffs * self.weights[np.newaxis, :, np.newaxis]
         cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)

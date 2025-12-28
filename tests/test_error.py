@@ -1,13 +1,4 @@
-from trajax import (
-    costs,
-    trajectory,
-    types,
-    ContouringCost,
-    ControlInputBatch,
-    StateBatch,
-    Costs,
-    Error,
-)
+from trajax import costs, trajectory, types, ContouringCost, Error
 
 from numtypes import array, Array
 
@@ -46,14 +37,11 @@ def jax_path_parameter_extractor(
                     path_length=(path_length := 10.0),
                 ),
                 path_parameter_extractor=numpy_path_parameter_extractor(
-                    lambda states: types.numpy.path_parameters(
-                        np.asarray(states)[:, 0, :]
-                    )
+                    lambda states: types.numpy.path_parameters(states.array[:, 0, :])
                 ),
                 position_extractor=(
                     lambda states: types.numpy.positions(
-                        x=np.asarray(states)[:, 1, :],
-                        y=np.asarray(states)[:, 2, :],
+                        x=states.array[:, 1, :], y=states.array[:, 2, :]
                     )
                 ),
                 weight=1.0,
@@ -75,13 +63,12 @@ def jax_path_parameter_extractor(
                     ),
                     path_parameter_extractor=numpy_path_parameter_extractor(
                         lambda states: types.numpy.path_parameters(
-                            np.asarray(states)[:, 0, :]
+                            states.array[:, 0, :]
                         )
                     ),
                     position_extractor=(
                         lambda states: types.numpy.positions(
-                            x=np.asarray(states)[:, 1, :],
-                            y=np.asarray(states)[:, 2, :],
+                            x=states.array[:, 1, :], y=states.array[:, 2, :]
                         )
                     ),
                     weight=1.0,
@@ -135,7 +122,7 @@ def jax_path_parameter_extractor(
                         points=array([[0.0, 0.0], [10.0, 0.0]], shape=(2, 2)),
                         path_length=10.0,
                     ),
-                    path_parameter_extractor=(
+                    path_parameter_extractor=jax_path_parameter_extractor(
                         lambda states: types.jax.path_parameters(
                             states.array[:, 0, :],
                             horizon=states.horizon,
@@ -165,13 +152,10 @@ def jax_path_parameter_extractor(
         ],
     ],
 )
-def test_that_contouring_cost_computes_correct_lateral_error[
-    InputsT: ControlInputBatch,
-    StatesT: StateBatch,
-](
-    contouring_cost: ContouringCost[InputsT, StatesT, Costs, Error],
-    inputs: InputsT,
-    states: StatesT,
+def test_that_contouring_cost_computes_correct_lateral_error[InputBatchT, StateBatchT](
+    contouring_cost: ContouringCost[InputBatchT, StateBatchT, Error],
+    inputs: InputBatchT,
+    states: StateBatchT,
     expected_error: float,
 ) -> None:
     error = contouring_cost.error(inputs=inputs, states=states)
@@ -192,14 +176,11 @@ M = clear_type
                     path_length=10.0,
                 ),
                 path_parameter_extractor=numpy_path_parameter_extractor(
-                    lambda states: types.numpy.path_parameters(
-                        np.asarray(states)[:, 0, :]
-                    )
+                    lambda states: types.numpy.path_parameters(states.array[:, 0, :])
                 ),
                 position_extractor=(
                     lambda states: types.numpy.positions(
-                        x=np.asarray(states)[:, 1, :],
-                        y=np.asarray(states)[:, 2, :],
+                        x=states.array[:, 1, :], y=states.array[:, 2, :]
                     )
                 ),
                 weight=1.0,
@@ -258,12 +239,12 @@ M = clear_type
     ],
 )
 def test_that_contouring_error_handles_multiple_timesteps_and_rollouts[
-    InputsT: ControlInputBatch,
-    StatesT: StateBatch,
+    InputBatchT,
+    StateBatchT,
 ](
-    contouring_cost: ContouringCost[InputsT, StatesT, Costs, Error],
-    inputs: InputsT,
-    states: StatesT,
+    contouring_cost: ContouringCost[InputBatchT, StateBatchT, Error],
+    inputs: InputBatchT,
+    states: StateBatchT,
     expected_errors: Array,
 ) -> None:
     error = contouring_cost.error(inputs=inputs, states=states)

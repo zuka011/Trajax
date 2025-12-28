@@ -1,8 +1,9 @@
 from typing import cast, Self, overload, Sequence
 from dataclasses import dataclass
 
-from trajax.type import DataType, jaxtyped
-from trajax.mppi import (
+from trajax.types import (
+    DataType,
+    jaxtyped,
     JaxState,
     JaxStateBatch,
     JaxControlInputSequence,
@@ -26,12 +27,12 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
         return np.asarray(self.array)
 
     @property
-    def array(self) -> Float[JaxArray, "D_x"]:
-        return self._array
-
-    @property
     def dimension(self) -> D_x:
         return cast(D_x, self.array.shape[0])
+
+    @property
+    def array(self) -> Float[JaxArray, "D_x"]:
+        return self._array
 
 
 @jaxtyped
@@ -56,10 +57,6 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
         return np.asarray(self.array)
 
     @property
-    def array(self) -> Float[JaxArray, "T D_x M"]:
-        return self._array
-
-    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
@@ -70,6 +67,10 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     @property
     def rollout_count(self) -> M:
         return cast(M, self.array.shape[2])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_x M"]:
+        return self._array
 
 
 @jaxtyped
@@ -109,16 +110,16 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
         return self.__class__(array)
 
     @property
-    def array(self) -> Float[JaxArray, "T D_u"]:
-        return self._array
-
-    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
     @property
     def dimension(self) -> D_u:
         return cast(D_u, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_u"]:
+        return self._array
 
 
 @jaxtyped
@@ -146,10 +147,6 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
         return np.asarray(self.array)
 
     @property
-    def array(self) -> Float[JaxArray, "T D_u M"]:
-        return self._array
-
-    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
@@ -160,6 +157,10 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
     @property
     def rollout_count(self) -> M:
         return cast(M, self.array.shape[2])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_u M"]:
+        return self._array
 
 
 @jaxtyped
@@ -177,13 +178,13 @@ class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
         return self.__class__(jnp.zeros_like(self.array))
 
     @property
-    def array(self) -> Float[JaxArray, "T M"]:
-        return self._array
-
-    @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
     @property
     def rollout_count(self) -> M:
         return cast(M, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T M"]:
+        return self._array

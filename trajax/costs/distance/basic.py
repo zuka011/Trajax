@@ -1,20 +1,15 @@
-from typing import Sequence, overload
+from typing import overload
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.mppi import NumPyStateBatch
-from trajax.trajectory import NumPyHeadings
-from trajax.costs.basic import (
+from trajax.types import (
+    DistanceExtractor,
+    NumPyHeadings,
     NumPyPositions,
     NumPyPositionExtractor,
     NumPyHeadingExtractor,
-)
-from trajax.costs.collision import (
-    D_o,
-    NumPyDistance,
-    NumPyObstacleStates,
     NumPySampledObstacleStates,
 )
+from trajax.costs.collision import NumPyDistance
 from trajax.costs.distance.common import Circles
 
 from numtypes import Array, Dims, D, shape_of
@@ -24,106 +19,12 @@ import numpy as np
 
 type OriginsArray[N: int = int] = Array[Dims[N, D[2]]]
 type RadiiArray[N: int = int] = Array[Dims[N]]
-type ObstacleCovarianceArray[T: int = int, K: int = int] = Array[Dims[T, D_o, D_o, K]]
-
-
-@dataclass(kw_only=True, frozen=True)
-class NumPySampledObstaclePositionsAndHeading[T: int, K: int, N: int]:
-    _x: Array[Dims[T, K, N]]
-    _y: Array[Dims[T, K, N]]
-    _heading: Array[Dims[T, K, N]]
-
-    @staticmethod
-    def create[T_: int, K_: int, N_: int](
-        *,
-        x: Array[Dims[T_, K_, N_]],
-        y: Array[Dims[T_, K_, N_]],
-        heading: Array[Dims[T_, K_, N_]],
-    ) -> "NumPySampledObstaclePositionsAndHeading[T_, K_, N_]":
-        return NumPySampledObstaclePositionsAndHeading(_x=x, _y=y, _heading=heading)
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
-
-    def x(self) -> Array[Dims[T, K, N]]:
-        return self._x
-
-    def y(self) -> Array[Dims[T, K, N]]:
-        return self._y
-
-    def heading(self) -> Array[Dims[T, K, N]]:
-        return self._heading
-
-
-@dataclass(kw_only=True, frozen=True)
-class NumPyObstaclePositionsAndHeading[T: int, K: int](NumPyObstacleStates[T, K]):
-    _x: Array[Dims[T, K]]
-    _y: Array[Dims[T, K]]
-    _heading: Array[Dims[T, K]]
-    _covariance: ObstacleCovarianceArray[T, K] | None
-
-    @staticmethod
-    def sampled[T_: int, K_: int, N_: int](  # type: ignore
-        *,
-        x: Array[Dims[T_, K_, N_]],
-        y: Array[Dims[T_, K_, N_]],
-        heading: Array[Dims[T_, K_, N_]],
-    ) -> NumPySampledObstaclePositionsAndHeading[T_, K_, N_]:
-        return NumPySampledObstaclePositionsAndHeading.create(x=x, y=y, heading=heading)
-
-    @staticmethod
-    def create[T_: int, K_: int](
-        *,
-        x: Array[Dims[T_, K_]],
-        y: Array[Dims[T_, K_]],
-        heading: Array[Dims[T_, K_]],
-        covariance: ObstacleCovarianceArray[T_, K_] | None = None,
-    ) -> "NumPyObstaclePositionsAndHeading[T_, K_]":
-        return NumPyObstaclePositionsAndHeading(
-            _x=x, _y=y, _heading=heading, _covariance=covariance
-        )
-
-    @staticmethod
-    def of_states[T_: int, K_: int](
-        obstacle_states: Sequence["NumPyObstaclePositionsAndHeading[int, K_]"],
-        *,
-        horizon: T_ | None = None,
-    ) -> "NumPyObstaclePositionsAndHeading[T_, K_]":
-        assert horizon is None or len(obstacle_states) == horizon, (
-            f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
-        )
-
-        x = np.stack([states.x()[0] for states in obstacle_states], axis=0)
-        y = np.stack([states.y()[0] for states in obstacle_states], axis=0)
-        heading = np.stack([states.heading()[0] for states in obstacle_states], axis=0)
-
-        return NumPyObstaclePositionsAndHeading.create(x=x, y=y, heading=heading)
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
-
-    def x(self) -> Array[Dims[T, K]]:
-        return self._x
-
-    def y(self) -> Array[Dims[T, K]]:
-        return self._y
-
-    def heading(self) -> Array[Dims[T, K]]:
-        return self._heading
-
-    def covariance(self) -> ObstacleCovarianceArray[T, K] | None:
-        return self._covariance
-
-    def single(self) -> NumPySampledObstaclePositionsAndHeading[T, K, D[1]]:
-        return NumPySampledObstaclePositionsAndHeading.create(
-            x=self._x[..., np.newaxis],
-            y=self._y[..., np.newaxis],
-            heading=self._heading[..., np.newaxis],
-        )
 
 
 @dataclass(frozen=True)
-class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
+class NumPyCircleDistanceExtractor[StateT, V: int, C: int](
+    DistanceExtractor[StateT, NumPySampledObstacleStates, NumPyDistance]
+):
     """
     Computes the distances between parts of the ego robot and obstacles. Both the ego
     and the obstacles are represented as collections of circles.
@@ -135,7 +36,7 @@ class NumPyCircleDistanceExtractor[StateT: NumPyStateBatch, V: int, C: int]:
     headings_from: NumPyHeadingExtractor[StateT]
 
     @staticmethod
-    def create[S: NumPyStateBatch, V_: int, C_: int](
+    def create[S, V_: int, C_: int](
         *,
         ego: Circles[V_],
         obstacle: Circles[C_],

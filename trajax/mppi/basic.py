@@ -1,108 +1,32 @@
-from typing import Protocol, Self, cast, overload
+from typing import cast
 from dataclasses import dataclass
 
-from trajax.mppi.common import (
-    State,
-    StateBatch,
-    ControlInputSequence,
-    ControlInputBatch,
-    DynamicalModel,
-    Costs,
-    CostFunction,
-    Sampler,
+from trajax.types import (
+    NumPyState,
+    NumPyStateBatch,
+    NumPyControlInputSequence,
+    NumPyControlInputBatch,
+    NumPyDynamicalModel,
+    NumPyCosts,
+    NumPyCostFunction,
+    NumPySampler,
+    NumPyUpdateFunction,
+    NumPyPaddingFunction,
+    NumPyFilterFunction,
     Mppi,
     Control,
-    UseOptimalControlUpdate,
-    NoFilter,
-    UpdateFunction,
-    PaddingFunction,
-    FilterFunction,
 )
+from trajax.mppi.common import UseOptimalControlUpdate, NoFilter
 
-from numtypes import Array, Dims, shape_of
+from numtypes import shape_of
 
 import numpy as np
 
 
-class NumPyState[D_x: int](State[D_x], Protocol): ...
-
-
-class NumPyStateBatch[T: int, D_x: int, M: int](StateBatch[T, D_x, M], Protocol): ...
-
-
-class NumPyControlInputSequence[T: int, D_u: int](
-    ControlInputSequence[T, D_u], Protocol
+class NumPyZeroPadding(
+    NumPyPaddingFunction[NumPyControlInputSequence, NumPyControlInputSequence]
 ):
-    @overload
-    def similar(self, *, array: Array[Dims[T, D_u]]) -> Self:
-        """Creates a new control input sequence similar to this one but with the given
-        array as its data.
-        """
-        ...
-
-    @overload
-    def similar[L: int](
-        self, *, array: Array[Dims[L, D_u]], length: L
-    ) -> "NumPyControlInputSequence[L, D_u]":
-        """Creates a new control input sequence similar to this one but with the given
-        array as its data. The length of the new sequence may differ from the original.
-        """
-        ...
-
-
-class NumPyControlInputBatch[T: int, D_u: int, M: int](
-    ControlInputBatch[T, D_u, M], Protocol
-): ...
-
-
-class NumPyCosts[T: int, M: int](Costs[T, M], Protocol):
-    def similar(self, *, array: Array[Dims[T, M]]) -> Self:
-        """Creates new costs similar to this one but with the given array as its data."""
-        ...
-
-
-class NumPyDynamicalModel[
-    StateT: NumPyState,
-    StateBatchT: NumPyStateBatch,
-    ControlInputSequenceT: NumPyControlInputSequence,
-    ControlInputBatchT: NumPyControlInputBatch,
-](
-    DynamicalModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT],
-    Protocol,
-): ...
-
-
-class NumPySampler[
-    SequenceT: NumPyControlInputSequence,
-    BatchT: NumPyControlInputBatch,
-](Sampler[SequenceT, BatchT], Protocol): ...
-
-
-class NumPyCostFunction[
-    ControlInputBatchT: NumPyControlInputBatch,
-    StateBatchT: NumPyStateBatch,
-    CostsT: NumPyCosts,
-](CostFunction[ControlInputBatchT, StateBatchT, CostsT], Protocol): ...
-
-
-class NumPyUpdateFunction[C: NumPyControlInputSequence](
-    UpdateFunction[C], Protocol
-): ...
-
-
-class NumPyPaddingFunction[
-    N: NumPyControlInputSequence,
-    P: NumPyControlInputSequence,
-](PaddingFunction[N, P], Protocol): ...
-
-
-class NumPyFilterFunction[C: NumPyControlInputSequence](
-    FilterFunction[C], Protocol
-): ...
-
-
-class NumPyZeroPadding[T: int, D_u: int, L: int]:
-    def __call__(
+    def __call__[T: int, D_u: int, L: int](
         self, *, nominal_input: NumPyControlInputSequence[T, D_u], padding_size: L
     ) -> NumPyControlInputSequence[L, D_u]:
         array = np.zeros(shape := (padding_size, nominal_input.dimension))
@@ -178,7 +102,7 @@ class NumPyMppi[
 
         rollouts = self.model.simulate(inputs=samples, initial_state=initial_state)
         costs = self.cost_function(inputs=samples, states=rollouts)
-        costs_per_rollout = np.sum(costs, axis=0)
+        costs_per_rollout = np.sum(costs.array, axis=0)
 
         assert shape_of(
             costs_per_rollout, matches=(rollout_count,), name="costs per rollout"
@@ -201,12 +125,10 @@ class NumPyMppi[
 
         shifted_control = np.concat(
             [
-                np.asarray(nominal_input)[self.planning_interval :],
-                np.asarray(
-                    self.padding_function(
-                        nominal_input=nominal_input, padding_size=self.planning_interval
-                    )
-                ),
+                nominal_input.array[self.planning_interval :],
+                self.padding_function(
+                    nominal_input=nominal_input, padding_size=self.planning_interval
+                ).array,
             ],
             axis=0,
         )

@@ -1,6 +1,6 @@
 from typing import Final
 
-from trajax.mppi import (
+from trajax.types import (
     ControlInputBatch,
     StateBatch,
     CostFunction,

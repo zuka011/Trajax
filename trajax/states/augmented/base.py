@@ -1,12 +1,17 @@
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.mppi import State, StateBatch, ControlInputSequence, ControlInputBatch
-from trajax.states.augmented.common import (
+from trajax.types import (
+    DataType,
+    State,
+    StateBatch,
+    ControlInputSequence,
+    ControlInputBatch,
     AugmentedState,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
+    HasPhysical,
+    HasVirtual,
 )
 
 from numtypes import Array, Dim1, Dim2, Dim3
@@ -15,7 +20,9 @@ import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class BaseAugmentedState[P: State, V: State](AugmentedState[P, V]):
+class BaseAugmentedState[P: State, V: State](
+    AugmentedState[P, V], HasPhysical[P], HasVirtual[V], State
+):
     _physical: P
     _virtual: V
 
@@ -42,7 +49,9 @@ class BaseAugmentedState[P: State, V: State](AugmentedState[P, V]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](AugmentedStateBatch[P, V]):
+class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
+    AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], StateBatch
+):
     _physical: P
     _virtual: V
 
@@ -96,7 +105,12 @@ class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](AugmentedStateBatch[
 class BaseAugmentedControlInputSequence[
     P: ControlInputSequence,
     V: ControlInputSequence,
-](AugmentedControlInputSequence[P, V]):
+](
+    AugmentedControlInputSequence[P, V],
+    HasPhysical[P],
+    HasVirtual[V],
+    ControlInputSequence,
+):
     _physical: P
     _virtual: V
 
@@ -137,7 +151,7 @@ class BaseAugmentedControlInputSequence[
 
 @dataclass(kw_only=True, frozen=True)
 class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch](
-    AugmentedControlInputBatch[P, V]
+    AugmentedControlInputBatch[P, V], HasPhysical[P], HasVirtual[V], ControlInputBatch
 ):
     _physical: P
     _virtual: V

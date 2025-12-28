@@ -1,8 +1,4 @@
-from .type import DataType as DataType, jaxtyped as jaxtyped
-from .trajectory import (
-    Trajectory as Trajectory,
-    PathParameters as PathParameters,
-    ReferencePoints as ReferencePoints,
+from .trajectories import (
     trajectory as trajectory,
     NumPyLineTrajectory as NumPyLineTrajectory,
     NumPyWaypointsTrajectory as NumPyWaypointsTrajectory,
@@ -14,25 +10,31 @@ from .costs import (
     distance as distance,
     risk as risk,
     CombinedCost as CombinedCost,
-    Error as Error,
-    ContouringCost as ContouringCost,
-    Distance as Distance,
-    DistanceExtractor as DistanceExtractor,
     Circles as Circles,
-    ObstacleStates as ObstacleStates,
-    SampledObstacleStates as SampledObstacleStates,
-    ObstacleStateProvider as ObstacleStateProvider,
-    ObstacleStateSampler as ObstacleStateSampler,
 )
 from .samplers import sampler as sampler
 from .states import (
-    AugmentedState as AugmentedState,
     AugmentedModel as AugmentedModel,
     AugmentedSampler as AugmentedSampler,
     AugmentedMppi as AugmentedMppi,
     extract as extract,
 )
 from .mppi import (
+    NumPyMppi as NumPyMppi,
+    JaxMppi as JaxMppi,
+)
+from .models import (
+    model as model,
+)
+from .obstacles import (
+    obstacles as obstacles,
+)
+from .predictors import (
+    predictor as predictor,
+)
+from .types import (
+    DataType as DataType,
+    jaxtyped as jaxtyped,
     State as State,
     StateBatch as StateBatch,
     ControlInputSequence as ControlInputSequence,
@@ -46,14 +48,20 @@ from .mppi import (
     FilterFunction as FilterFunction,
     Control as Control,
     Mppi as Mppi,
-    NumPyMppi as NumPyMppi,
-    JaxMppi as JaxMppi,
+    Trajectory as Trajectory,
+    PathParameters as PathParameters,
+    ReferencePoints as ReferencePoints,
+    AugmentedState as AugmentedState,
+    ObstacleStates as ObstacleStates,
+    SampledObstacleStates as SampledObstacleStates,
+    ObstacleStateProvider as ObstacleStateProvider,
+    ObstacleStateSampler as ObstacleStateSampler,
+    Distance as Distance,
+    DistanceExtractor as DistanceExtractor,
+    Error as Error,
+    ContouringCost as ContouringCost,
+    ObstacleModel as ObstacleModel,
+    ObstacleMotionPredictor as ObstacleMotionPredictor,
 )
-from .models import (
-    IntegratorModel as IntegratorModel,
-    BicycleModel as BicycleModel,
-    model as model,
-)
-from .types import types as types
+from .namespace import types as types
 from .factory import mppi as mppi, update as update, padding as padding
-from .obstacles import obstacles as obstacles

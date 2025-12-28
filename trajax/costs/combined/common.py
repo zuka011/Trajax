@@ -1,22 +1,10 @@
-from typing import Protocol, Sequence
 from dataclasses import dataclass
 
-from trajax.mppi import (
-    StateBatch,
-    ControlInputBatch,
-    CostFunction,
-    Costs,
-)
-
-
-class CostSumFunction[CostsT: Costs](Protocol):
-    def __call__(self, costs: Sequence[CostsT], *, initial: CostsT) -> CostsT:
-        """Sums an iterable of costs into a single cost."""
-        ...
+from trajax.types import CostFunction, Costs, CostSumFunction
 
 
 @dataclass(frozen=True)
-class CombinedCost[InputT: ControlInputBatch, StateT: StateBatch, CostsT: Costs]:
+class CombinedCost[InputT, StateT, CostsT: Costs]:
     costs: list[CostFunction[InputT, StateT, CostsT]]
     sum: CostSumFunction[CostsT]
 

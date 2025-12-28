@@ -1,20 +1,14 @@
 from typing import Protocol
 from dataclasses import dataclass
 
-from trajax.mppi import StateBatch
-from trajax.costs.collision import (
-    ObstacleStates,
-    ObstacleStateSampler,
-    SampledObstacleStates,
-    SampleCostFunction,
-)
+from trajax.types import StateBatch, ObstacleStateSampler, SampleCostFunction
 
 import riskit as rk
 
 
 class RiskMetricCreator[
-    StateT: StateBatch,
-    SampledObstacleStateT: SampledObstacleStates,
+    StateT,
+    SampledObstacleStateT,
     CostsT: rk.Costs,
     RiskT: rk.Risk,
     ArrayT: rk.ArrayLike,
@@ -32,7 +26,7 @@ class RiskMetricCreator[
 @dataclass(kw_only=True, frozen=True)
 class RisKitRiskMetric[
     StateT: StateBatch,
-    SampleT: SampledObstacleStates,
+    SampleT,
     RiskT: rk.Risk,
     CostsT: rk.Costs,
     ArrayT: rk.ArrayLike,
@@ -41,20 +35,14 @@ class RisKitRiskMetric[
     creator: RiskMetricCreator[StateT, SampleT, CostsT, RiskT, ArrayT]
 
     @staticmethod
-    def create[
-        SB: StateBatch,
-        SOS: SampledObstacleStates,
-        R: rk.Risk,
-        C: rk.Costs,
-        A: rk.ArrayLike,
-    ](
+    def create[SB: StateBatch, SOS, R: rk.Risk, C: rk.Costs, A: rk.ArrayLike](
         *,
         backend: rk.Backend[C, R, A],
         creator: RiskMetricCreator[SB, SOS, C, R, A],
     ) -> "RisKitRiskMetric[SB, SOS, R, C, A]":
         return RisKitRiskMetric(backend=backend, creator=creator)
 
-    def compute[ObstacleStateT: ObstacleStates](
+    def compute[ObstacleStateT](
         self,
         cost_function: SampleCostFunction[StateT, SampleT, CostsT],
         *,
@@ -90,10 +78,7 @@ class StateTrajectories[StateT: StateBatch]:
 
 
 @dataclass(frozen=True)
-class ObstacleStateUncertainties[
-    StateT: ObstacleStates,
-    SampleT: SampledObstacleStates,
-]:
+class ObstacleStateUncertainties[StateT, SampleT]:
     obstacle_states: StateT
     sampler: ObstacleStateSampler[StateT, SampleT]
 

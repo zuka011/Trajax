@@ -1,172 +1,25 @@
-from typing import Sequence, cast
 from dataclasses import dataclass
 
-from trajax.type import DataType, jaxtyped
-from trajax.mppi import JaxStateBatch
-from trajax.costs.accelerated import JaxPositionExtractor, JaxHeadingExtractor
-from trajax.costs.collision import (
-    D_o,
-    D_O,
-    JaxObstacleStates,
+from trajax.types import (
+    jaxtyped,
+    DistanceExtractor,
+    JaxPositionExtractor,
+    JaxHeadingExtractor,
     JaxSampledObstacleStates,
-    JaxDistance,
 )
+from trajax.costs.collision import JaxDistance
 from trajax.costs.distance.common import Circles
 
-from numtypes import Array, Dims, D
 from jaxtyping import Array as JaxArray, Float
 
 import jax
 import jax.numpy as jnp
-import numpy as np
-
-
-type ObstacleCovarianceArray[T: int = int, K: int = int] = Float[
-    JaxArray, f"T {D_O} {D_O} K"
-]
-
-
-@jaxtyped
-@dataclass(kw_only=True, frozen=True)
-class JaxSampledObstaclePositionsAndHeading[T: int, K: int, N: int]:
-    _x: Float[JaxArray, "T K N"]
-    _y: Float[JaxArray, "T K N"]
-    _heading: Float[JaxArray, "T K N"]
-
-    @staticmethod
-    def create[T_: int, K_: int, N_: int](
-        *,
-        x: Float[JaxArray, "T K N"],
-        y: Float[JaxArray, "T K N"],
-        heading: Float[JaxArray, "T K N"],
-        horizon: T_ | None = None,
-        obstacle_count: K_ | None = None,
-        sample_count: N_ | None = None,
-    ) -> "JaxSampledObstaclePositionsAndHeading[T_, K_, N_]":
-        return JaxSampledObstaclePositionsAndHeading(_x=x, _y=y, _heading=heading)
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
-
-    def x(self) -> Array[Dims[T, K, N]]:
-        return np.asarray(self._x)
-
-    def y(self) -> Array[Dims[T, K, N]]:
-        return np.asarray(self._y)
-
-    def heading(self) -> Array[Dims[T, K, N]]:
-        return np.asarray(self._heading)
-
-    @property
-    def x_array(self) -> Float[JaxArray, "T K N"]:
-        return self._x
-
-    @property
-    def y_array(self) -> Float[JaxArray, "T K N"]:
-        return self._y
-
-    @property
-    def heading_array(self) -> Float[JaxArray, "T K N"]:
-        return self._heading
-
-    @property
-    def sample_count(self) -> N:
-        return cast(N, self._x.shape[2])
-
-
-@jaxtyped
-@dataclass(kw_only=True, frozen=True)
-class JaxObstaclePositionsAndHeading[T: int, K: int](JaxObstacleStates[T, K]):
-    _x: Float[JaxArray, "T K"]
-    _y: Float[JaxArray, "T K"]
-    _heading: Float[JaxArray, "T K"]
-    _covariance: ObstacleCovarianceArray[T, K] | None = None
-
-    @staticmethod
-    def sampled[N: int](  # type: ignore
-        *,
-        x: Float[JaxArray, "T K N"],
-        y: Float[JaxArray, "T K N"],
-        heading: Float[JaxArray, "T K N"],
-        sample_count: N | None = None,
-    ) -> JaxSampledObstaclePositionsAndHeading[T, K, N]:
-        return JaxSampledObstaclePositionsAndHeading.create(
-            x=x, y=y, heading=heading, sample_count=sample_count
-        )
-
-    @staticmethod
-    def create[T_: int, K_: int](
-        *,
-        x: Float[JaxArray, "T K"],
-        y: Float[JaxArray, "T K"],
-        heading: Float[JaxArray, "T K"],
-        covariance: ObstacleCovarianceArray[T_, K_] | None = None,
-        horizon: T_ | None = None,
-        obstacle_count: K_ | None = None,
-    ) -> "JaxObstaclePositionsAndHeading[T_, K_]":
-        return JaxObstaclePositionsAndHeading(
-            _x=x, _y=y, _heading=heading, _covariance=covariance
-        )
-
-    @staticmethod
-    def of_states[T_: int, K_: int](
-        obstacle_states: Sequence[JaxObstacleStates[int, K_]],
-        *,
-        horizon: T_ | None = None,
-    ) -> "JaxObstaclePositionsAndHeading[T_, K_]":
-        assert horizon is None or len(obstacle_states) == horizon
-
-        x = jnp.stack([states.x_array[0] for states in obstacle_states], axis=0)
-        y = jnp.stack([states.y_array[0] for states in obstacle_states], axis=0)
-        heading = jnp.stack(
-            [states.heading_array[0] for states in obstacle_states], axis=0
-        )
-
-        return JaxObstaclePositionsAndHeading.create(
-            x=x, y=y, heading=heading, horizon=horizon
-        )
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=-1)
-
-    def x(self) -> Array[Dims[T, K]]:
-        return np.asarray(self._x)
-
-    def y(self) -> Array[Dims[T, K]]:
-        return np.asarray(self._y)
-
-    def heading(self) -> Array[Dims[T, K]]:
-        return np.asarray(self._heading)
-
-    def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
-        return np.asarray(self._covariance) if self._covariance is not None else None
-
-    def single(self) -> JaxSampledObstaclePositionsAndHeading[T, K, D[1]]:
-        return JaxSampledObstaclePositionsAndHeading.create(
-            x=self._x[..., jnp.newaxis],
-            y=self._y[..., jnp.newaxis],
-            heading=self._heading[..., jnp.newaxis],
-        )
-
-    @property
-    def x_array(self) -> Float[JaxArray, "T K"]:
-        return self._x
-
-    @property
-    def y_array(self) -> Float[JaxArray, "T K"]:
-        return self._y
-
-    @property
-    def heading_array(self) -> Float[JaxArray, "T K"]:
-        return self._heading
-
-    @property
-    def covariance_array(self) -> ObstacleCovarianceArray[T, K] | None:
-        return self._covariance
 
 
 @dataclass(frozen=True)
-class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
+class JaxCircleDistanceExtractor[StateT, V: int, C: int](
+    DistanceExtractor[StateT, JaxSampledObstacleStates, JaxDistance]
+):
     """
     Computes the distances between parts of the ego robot and obstacles. Both the ego
     and the obstacles are represented as collections of circles.
@@ -180,7 +33,7 @@ class JaxCircleDistanceExtractor[StateT: JaxStateBatch, V: int, C: int]:
     headings_from: JaxHeadingExtractor[StateT]
 
     @staticmethod
-    def create[S: JaxStateBatch, V_: int, C_: int](
+    def create[S, V_: int, C_: int](
         *,
         ego: Circles[V_],
         obstacle: Circles[C_],

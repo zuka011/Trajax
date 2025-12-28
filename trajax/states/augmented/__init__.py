@@ -11,10 +11,6 @@ from .accelerated import (
     JaxAugmentedControlInputBatch as JaxAugmentedControlInputBatch,
 )
 from .common import (
-    AugmentedState as AugmentedState,
-    AugmentedStateBatch as AugmentedStateBatch,
-    AugmentedControlInputSequence as AugmentedControlInputSequence,
-    AugmentedControlInputBatch as AugmentedControlInputBatch,
     AugmentedModel as AugmentedModel,
     AugmentedSampler as AugmentedSampler,
     extract as extract,

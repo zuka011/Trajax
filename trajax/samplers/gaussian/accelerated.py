@@ -1,8 +1,13 @@
-from typing import Protocol, Final, overload, cast
+from typing import Final, overload, cast
 from dataclasses import dataclass
 
-from trajax.type import jaxtyped
-from trajax.mppi import JaxControlInputSequence, JaxControlInputBatch, JaxSampler
+from trajax.types import (
+    jaxtyped,
+    JaxControlInputBatchCreator,
+    JaxControlInputSequence,
+    JaxControlInputBatch,
+    JaxSampler,
+)
 
 from jaxtyping import Array as JaxArray, Float, PRNGKeyArray
 from numtypes import Array, Dims
@@ -12,14 +17,8 @@ import jax.random as jrandom
 import jax.numpy as jnp
 
 
-class JaxControlInputBatchCreator[ControlInputBatchT: JaxControlInputBatch](Protocol):
-    def __call__(self, *, array: Float[JaxArray, "T D_u M"]) -> ControlInputBatchT:
-        """Creates a ControlInputBatch from the given array."""
-        ...
-
-
 @dataclass(kw_only=True)
-class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int, M: int](
+class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = int](
     JaxSampler[JaxControlInputSequence, BatchT]
 ):
     standard_deviation: Final[Float[JaxArray, "D_u"]]

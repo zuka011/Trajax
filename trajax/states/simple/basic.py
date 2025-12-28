@@ -1,13 +1,17 @@
 from typing import Self, overload, cast, Sequence
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.mppi import (
+from trajax.types import (
+    DataType,
     NumPyState,
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
     NumPyCosts,
+    NumPyIntegratorObstacleStates,
+    NumPyIntegratorObstacleStateSequences,
+    NumPyIntegratorObstacleVelocities,
+    NumPyIntegratorObstacleControlInputSequences,
 )
 
 import numpy as np
@@ -16,7 +20,7 @@ from numtypes import Array, Dims, D, shape_of
 
 @dataclass(frozen=True)
 class NumPySimpleState[D_x: int](NumPyState[D_x]):
-    array: Array[Dims[D_x]]
+    _array: Array[Dims[D_x]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         return self.array
@@ -25,10 +29,14 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
     def dimension(self) -> D_x:
         return self.array.shape[0]
 
+    @property
+    def array(self) -> Array[Dims[D_x]]:
+        return self._array
+
 
 @dataclass(frozen=True)
 class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]):
-    array: Array[Dims[T, D_x, M]]
+    _array: Array[Dims[T, D_x, M]]
 
     @staticmethod
     def of_states[D_x_: int, T_: int = int](
@@ -61,12 +69,16 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
     def rollout_count(self) -> M:
         return self.array.shape[2]
 
+    @property
+    def array(self) -> Array[Dims[T, D_x, M]]:
+        return self._array
+
 
 @dataclass(frozen=True)
 class NumPySimpleControlInputSequence[T: int, D_u: int](
     NumPyControlInputSequence[T, D_u]
 ):
-    array: Array[Dims[T, D_u]]
+    _array: Array[Dims[T, D_u]]
 
     @staticmethod
     def zeroes[T_: int, D_u_: int](
@@ -108,12 +120,16 @@ class NumPySimpleControlInputSequence[T: int, D_u: int](
     def dimension(self) -> D_u:
         return self.array.shape[1]
 
+    @property
+    def array(self) -> Array[Dims[T, D_u]]:
+        return self._array
+
 
 @dataclass(frozen=True)
 class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
     NumPyControlInputBatch[T, D_u, M]
 ):
-    array: Array[Dims[T, D_u, M]]
+    _array: Array[Dims[T, D_u, M]]
 
     @staticmethod
     def zero[T_: int, D_u_: int, M_: int](
@@ -124,6 +140,13 @@ class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
 
         assert shape_of(array, matches=(horizon, dimension, rollout_count))
 
+        return NumPySimpleControlInputBatch(array)
+
+    @staticmethod
+    def create[T_: int, D_u_: int, M_: int](
+        *, array: Array[Dims[T_, D_u_, M_]]
+    ) -> "NumPySimpleControlInputBatch[T_, D_u_, M_]":
+        """Creates a NumPy simple control input batch from the given array."""
         return NumPySimpleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
@@ -141,10 +164,14 @@ class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
     def rollout_count(self) -> M:
         return self.array.shape[2]
 
+    @property
+    def array(self) -> Array[Dims[T, D_u, M]]:
+        return self._array
+
 
 @dataclass(frozen=True)
-class NumPySimpleCosts[T: int = int, M: int = int](NumPyCosts[T, M]):
-    array: Array[Dims[T, M]]
+class NumPySimpleCosts[T: int, M: int](NumPyCosts[T, M]):
+    _array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
         return self.array
@@ -162,3 +189,103 @@ class NumPySimpleCosts[T: int = int, M: int = int](NumPyCosts[T, M]):
     @property
     def rollout_count(self) -> M:
         return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[T, M]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleStates[D_x: int, K: int](
+    NumPyIntegratorObstacleStates[D_x, K]
+):
+    _array: Array[Dims[D_x, K]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x, K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[D_x, K]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleStateSequences[T: int, D_x: int, K: int](
+    NumPyIntegratorObstacleStateSequences[T, D_x, K]
+):
+    _array: Array[Dims[T, D_x, K]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D_x, K]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleVelocities[D_v: int, K: int](
+    NumPyIntegratorObstacleVelocities[D_v, K]
+):
+    _array: Array[Dims[D_v, K]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_v, K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> D_v:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[D_v, K]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleControlInputSequences[T: int, D_u: int, K: int](
+    NumPyIntegratorObstacleControlInputSequences[T, D_u, K]
+):
+    _array: Array[Dims[T, D_u, K]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_u:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D_u, K]]:
+        return self._array

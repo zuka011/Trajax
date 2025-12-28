@@ -1,6 +1,6 @@
 from typing import cast
 
-from trajax.costs import (
+from trajax.types import (
     NumPyObstacleStates,
     NumPySampledObstacleStates,
     NumPyObstacleStateSampler,

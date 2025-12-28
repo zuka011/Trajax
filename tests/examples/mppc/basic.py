@@ -233,14 +233,14 @@ class configure:
         planner: Planner = mppi.numpy.base(
             model=(
                 augmented_model := AugmentedModel.of(
-                    physical=model.numpy.kinematic_bicycle(
+                    physical=model.numpy.kinematic_bicycle.dynamical(
                         time_step_size=(dt := 0.1),
                         wheelbase=(L := 2.5),
                         speed_limits=(0.0, 15.0),
                         steering_limits=(-0.5, 0.5),
                         acceleration_limits=(-3.0, 3.0),
                     ),
-                    virtual=model.numpy.integrator(
+                    virtual=model.numpy.integrator.dynamical(
                         time_step_size=dt,
                         state_limits=(0, reference.path_length),
                         velocity_limits=(0, 15),
@@ -279,13 +279,13 @@ class configure:
                 physical=sampler.numpy.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.bicycle.control_input_batch,
+                    to_batch=types.numpy.bicycle.control_input_batch.create,
                     seed=sampling.physical_seed,
                 ),
                 virtual=sampler.numpy.gaussian(
                     standard_deviation=sampling.virtual_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.simple.control_input_batch,
+                    to_batch=types.numpy.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
                 ),
                 batch=types.numpy.augmented.control_input_batch,
@@ -310,14 +310,14 @@ class configure:
     ) -> NumPyMpccPlannerConfiguration:
         planner, augmented_model = mppi.numpy.augmented(
             models=(
-                model.numpy.kinematic_bicycle(
+                model.numpy.kinematic_bicycle.dynamical(
                     time_step_size=(dt := 0.1),
                     wheelbase=(L := 2.5),
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),
                 ),
-                model.numpy.integrator(
+                model.numpy.integrator.dynamical(
                     time_step_size=dt,
                     state_limits=(0, reference.path_length),
                     velocity_limits=(0, 15),
@@ -327,13 +327,13 @@ class configure:
                 sampler.numpy.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.bicycle.control_input_batch,
+                    to_batch=types.numpy.bicycle.control_input_batch.create,
                     seed=sampling.physical_seed,
                 ),
                 sampler.numpy.gaussian(
                     standard_deviation=sampling.virtual_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.simple.control_input_batch,
+                    to_batch=types.numpy.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
                 ),
             ),

@@ -1,8 +1,6 @@
 from typing import Sequence
 
-from trajax.type import jaxtyped
-from trajax.mppi import JaxCosts
-from trajax.costs.combined.common import CostSumFunction
+from trajax.types import jaxtyped, JaxCosts, CostSumFunction
 
 from jaxtyping import Array as JaxArray, Float
 

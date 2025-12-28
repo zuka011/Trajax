@@ -1,18 +1,18 @@
-from typing import Self, overload
+from typing import Self, overload, cast
 from dataclasses import dataclass
 
-from trajax.type import DataType
-from trajax.mppi import (
+from trajax.types import (
+    DataType,
     JaxState,
     JaxStateBatch,
     JaxControlInputSequence,
     JaxControlInputBatch,
-)
-from trajax.states.augmented.common import (
     AugmentedState,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
+    HasPhysical,
+    HasVirtual,
 )
 from trajax.states.augmented.base import (
     BaseAugmentedState,
@@ -28,25 +28,24 @@ import jax.numpy as jnp
 
 
 @dataclass(frozen=True)
-class JaxAugmentedState[P: JaxState, V: JaxState](AugmentedState[P, V], JaxState):
-    inner: AugmentedState[P, V]
+class JaxAugmentedState[P: JaxState, V: JaxState](
+    AugmentedState[P, V], HasPhysical[P], HasVirtual[V], JaxState
+):
+    inner: BaseAugmentedState[P, V]
 
     @staticmethod
     def of[P_: JaxState, V_: JaxState](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedState[P_, V_]":
         return JaxAugmentedState(
-            BaseAugmentedState.of(physical=physical, virtual=virtual)
+            cast(
+                BaseAugmentedState[P_, V_],
+                BaseAugmentedState.of(physical=physical, virtual=virtual),
+            )
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
         return self.inner.__array__(dtype=dtype)
-
-    @property
-    def array(self) -> Float[JaxArray, "D_x"]:
-        return jnp.concatenate(
-            [self.inner.physical.array, self.inner.virtual.array], axis=0
-        )
 
     @property
     def physical(self) -> P:
@@ -60,29 +59,32 @@ class JaxAugmentedState[P: JaxState, V: JaxState](AugmentedState[P, V], JaxState
     def dimension(self) -> int:
         return self.inner.dimension
 
+    @property
+    def array(self) -> Float[JaxArray, "D_x"]:
+        return jnp.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=0
+        )
+
 
 @dataclass(frozen=True)
 class JaxAugmentedStateBatch[P: JaxStateBatch, V: JaxStateBatch](
-    AugmentedStateBatch[P, V], JaxStateBatch
+    AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], JaxStateBatch
 ):
-    inner: AugmentedStateBatch[P, V]
+    inner: BaseAugmentedStateBatch[P, V]
 
     @staticmethod
     def of[P_: JaxStateBatch, V_: JaxStateBatch](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedStateBatch[P_, V_]":
         return JaxAugmentedStateBatch(
-            BaseAugmentedStateBatch.of(physical=physical, virtual=virtual)
+            cast(
+                BaseAugmentedStateBatch[P_, V_],
+                BaseAugmentedStateBatch.of(physical=physical, virtual=virtual),
+            )
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return self.inner.__array__(dtype=dtype)
-
-    @property
-    def array(self) -> Float[JaxArray, "T D_x M"]:
-        return jnp.concatenate(
-            [self.inner.physical.array, self.inner.virtual.array], axis=1
-        )
 
     @property
     def physical(self) -> P:
@@ -104,30 +106,40 @@ class JaxAugmentedStateBatch[P: JaxStateBatch, V: JaxStateBatch](
     def rollout_count(self) -> int:
         return self.inner.rollout_count
 
+    @property
+    def array(self) -> Float[JaxArray, "T D_x M"]:
+        return jnp.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=1
+        )
+
 
 @dataclass(frozen=True)
 class JaxAugmentedControlInputSequence[
     P: JaxControlInputSequence,
     V: JaxControlInputSequence,
-](AugmentedControlInputSequence[P, V], JaxControlInputSequence):
-    inner: AugmentedControlInputSequence[P, V]
+](
+    AugmentedControlInputSequence[P, V],
+    HasPhysical[P],
+    HasVirtual[V],
+    JaxControlInputSequence,
+):
+    inner: BaseAugmentedControlInputSequence[P, V]
 
     @staticmethod
     def of[P_: JaxControlInputSequence, V_: JaxControlInputSequence](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedControlInputSequence[P_, V_]":
         return JaxAugmentedControlInputSequence(
-            BaseAugmentedControlInputSequence.of(physical=physical, virtual=virtual)
+            cast(
+                BaseAugmentedControlInputSequence[P_, V_],
+                BaseAugmentedControlInputSequence.of(
+                    physical=physical, virtual=virtual
+                ),
+            )
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return self.inner.__array__(dtype=dtype)
-
-    @property
-    def array(self) -> Float[JaxArray, "T D_u"]:
-        return jnp.concatenate(
-            [self.inner.physical.array, self.inner.virtual.array], axis=1
-        )
 
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
@@ -149,12 +161,15 @@ class JaxAugmentedControlInputSequence[
         virtual_dim = self.inner.virtual.dimension
 
         return self.__class__(
-            BaseAugmentedControlInputSequence.of(
-                physical=self.inner.physical.similar(
-                    array=jnp.asarray(array[:, :physical_dim])
-                ),
-                virtual=self.inner.virtual.similar(
-                    array=jnp.asarray(array[:, -virtual_dim:])
+            cast(
+                BaseAugmentedControlInputSequence[P, V],
+                BaseAugmentedControlInputSequence.of(
+                    physical=self.inner.physical.similar(
+                        array=jnp.asarray(array[:, :physical_dim])
+                    ),
+                    virtual=self.inner.virtual.similar(
+                        array=jnp.asarray(array[:, -virtual_dim:])
+                    ),
                 ),
             )
         )
@@ -175,30 +190,38 @@ class JaxAugmentedControlInputSequence[
     def dimension(self) -> int:
         return self.inner.dimension
 
+    @property
+    def array(self) -> Float[JaxArray, "T D_u"]:
+        return jnp.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=1
+        )
+
 
 @dataclass(frozen=True)
 class JaxAugmentedControlInputBatch[
     P: JaxControlInputBatch,
     V: JaxControlInputBatch,
-](AugmentedControlInputBatch[P, V], JaxControlInputBatch):
-    inner: AugmentedControlInputBatch[P, V]
+](
+    AugmentedControlInputBatch[P, V],
+    HasPhysical[P],
+    HasVirtual[V],
+    JaxControlInputBatch,
+):
+    inner: BaseAugmentedControlInputBatch[P, V]
 
     @staticmethod
     def of[P_: JaxControlInputBatch, V_: JaxControlInputBatch](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedControlInputBatch[P_, V_]":
         return JaxAugmentedControlInputBatch(
-            BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual)
+            cast(
+                BaseAugmentedControlInputBatch[P_, V_],
+                BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual),
+            )
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return self.inner.__array__(dtype=dtype)
-
-    @property
-    def array(self) -> Float[JaxArray, "T D_u M"]:
-        return jnp.concatenate(
-            [self.inner.physical.array, self.inner.virtual.array], axis=1
-        )
 
     @property
     def physical(self) -> P:
@@ -219,3 +242,9 @@ class JaxAugmentedControlInputBatch[
     @property
     def rollout_count(self) -> int:
         return self.inner.rollout_count
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_u M"]:
+        return jnp.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=1
+        )
