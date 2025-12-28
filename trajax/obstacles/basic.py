@@ -5,8 +5,8 @@ from trajax.types import (
     DataType,
     D_o,
     D_O,
-    NumPySampledObstacleStates,
-    NumPyObstacleStates,
+    SampledObstacleStates,
+    ObstacleStates,
     NumPyObstacleStateProvider,
 )
 
@@ -19,8 +19,8 @@ type ObstacleCovarianceArray[T: int = int, K: int = int] = Array[Dims[T, D_o, D_
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPySampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
-    NumPySampledObstacleStates[T, K, N]
+class NumPySampledObstacleStates[T: int, K: int, N: int](
+    SampledObstacleStates[T, K, N]
 ):
     _x: Array[Dims[T, K, N]]
     _y: Array[Dims[T, K, N]]
@@ -32,8 +32,8 @@ class NumPySampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
         x: Array[Dims[T_, K_, N_]],
         y: Array[Dims[T_, K_, N_]],
         heading: Array[Dims[T_, K_, N_]],
-    ) -> "NumPySampledObstaclePositionsAndHeadings[T_, K_, N_]":
-        return NumPySampledObstaclePositionsAndHeadings(_x=x, _y=y, _heading=heading)
+    ) -> "NumPySampledObstacleStates[T_, K_, N_]":
+        return NumPySampledObstacleStates(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
@@ -49,7 +49,9 @@ class NumPySampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K]):
+class NumPyObstacleStates[T: int, K: int](
+    ObstacleStates[T, K, NumPySampledObstacleStates[T, K, D[1]]]
+):
     _x: Array[Dims[T, K]]
     _y: Array[Dims[T, K]]
     _heading: Array[Dims[T, K]]
@@ -61,10 +63,8 @@ class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K
         x: Array[Dims[T_, K_, N_]],
         y: Array[Dims[T_, K_, N_]],
         heading: Array[Dims[T_, K_, N_]],
-    ) -> NumPySampledObstaclePositionsAndHeadings[T_, K_, N_]:
-        return NumPySampledObstaclePositionsAndHeadings.create(
-            x=x, y=y, heading=heading
-        )
+    ) -> NumPySampledObstacleStates[T_, K_, N_]:
+        return NumPySampledObstacleStates.create(x=x, y=y, heading=heading)
 
     @staticmethod
     def create[T_: int, K_: int](
@@ -73,17 +73,15 @@ class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K
         y: Array[Dims[T_, K_]],
         heading: Array[Dims[T_, K_]],
         covariance: ObstacleCovarianceArray[T_, K_] | None = None,
-    ) -> "NumPyObstaclePositionsAndHeadings[T_, K_]":
-        return NumPyObstaclePositionsAndHeadings(
-            _x=x, _y=y, _heading=heading, _covariance=covariance
-        )
+    ) -> "NumPyObstacleStates[T_, K_]":
+        return NumPyObstacleStates(_x=x, _y=y, _heading=heading, _covariance=covariance)
 
     @staticmethod
     def of_states[T_: int, K_: int](
-        obstacle_states: Sequence["NumPyObstaclePositionsAndHeadings[int, K_]"],
+        obstacle_states: Sequence["NumPyObstacleStates[int, K_]"],
         *,
         horizon: T_ | None = None,
-    ) -> "NumPyObstaclePositionsAndHeadings[T_, K_]":
+    ) -> "NumPyObstacleStates[T_, K_]":
         assert horizon is None or len(obstacle_states) == horizon, (
             f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
         )
@@ -92,7 +90,7 @@ class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K
         y = np.stack([states.y()[0] for states in obstacle_states], axis=0)
         heading = np.stack([states.heading()[0] for states in obstacle_states], axis=0)
 
-        return NumPyObstaclePositionsAndHeadings.create(x=x, y=y, heading=heading)
+        return NumPyObstacleStates.create(x=x, y=y, heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
@@ -109,8 +107,8 @@ class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K
     def covariance(self) -> ObstacleCovarianceArray[T, K] | None:
         return self._covariance
 
-    def single(self) -> NumPySampledObstaclePositionsAndHeadings[T, K, D[1]]:
-        return NumPySampledObstaclePositionsAndHeadings.create(
+    def single(self) -> NumPySampledObstacleStates[T, K, D[1]]:
+        return NumPySampledObstacleStates.create(
             x=self._x[..., np.newaxis],
             y=self._y[..., np.newaxis],
             heading=self._heading[..., np.newaxis],
@@ -135,9 +133,9 @@ class NumPyObstaclePositionsAndHeadings[T: int, K: int](NumPyObstacleStates[T, K
 
 @dataclass(frozen=True)
 class NumPyStaticObstacleStateProvider[T: int, K: int](
-    NumPyObstacleStateProvider[NumPyObstaclePositionsAndHeadings[T, K]]
+    NumPyObstacleStateProvider[NumPyObstacleStates[T, K]]
 ):
-    positions: NumPyObstaclePositionsAndHeadings[T, K]
+    positions: NumPyObstacleStates[T, K]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "NumPyStaticObstacleStateProvider[T_, D[0]]":
@@ -170,8 +168,8 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         assert shape_of(heading, matches=(horizon, K))
 
         return NumPyStaticObstacleStateProvider(
-            NumPyObstaclePositionsAndHeadings.create(x=x, y=y, heading=heading)
+            NumPyObstacleStates.create(x=x, y=y, heading=heading)
         )
 
-    def __call__(self) -> NumPyObstaclePositionsAndHeadings[T, K]:
+    def __call__(self) -> NumPyObstacleStates[T, K]:
         return self.positions

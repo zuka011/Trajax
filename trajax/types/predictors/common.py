@@ -2,6 +2,7 @@ from typing import Protocol
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
+from trajax.types.costs import D_o
 
 from numtypes import Array, Dims
 
@@ -12,7 +13,7 @@ class EstimatedObstacleStates[StatesT, VelocitiesT]:
     velocities: VelocitiesT
 
 
-class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
+class ObstacleStatesHistory[T: int, K: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the obstacle history as a NumPy array."""
         ...

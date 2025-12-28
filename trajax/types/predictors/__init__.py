@@ -5,3 +5,6 @@ from .common import (
     EmptyPredictionCreator as EmptyPredictionCreator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
 )
+from .basic import (
+    NumPyObstacleStatesHistory as NumPyObstacleStatesHistory,
+)

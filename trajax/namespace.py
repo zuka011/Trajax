@@ -46,11 +46,7 @@ from trajax.types import (
     JaxPositionExtractor,
     Error as Error,  # NOTE: Aliased to workaround ruff bug.
     ContouringCost as ContouringCost,
-    NumPyObstacleStates,
-    NumPySampledObstacleStates,
     NumPyObstacleStateProvider,
-    JaxObstacleStates,
-    JaxSampledObstacleStates,
     JaxObstacleStateProvider,
     AugmentedState,
     AugmentedStateBatch,
@@ -76,8 +72,10 @@ from trajax.costs import (
     JaxDistance,
 )
 from trajax.obstacles import (
-    NumPyObstaclePositionsAndHeadings,
-    JaxObstaclePositionsAndHeadings,
+    NumPySampledObstacleStates,
+    NumPyObstacleStates,
+    JaxSampledObstacleStates,
+    JaxObstacleStates,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -190,7 +188,7 @@ class types:
         positions: Final = NumPyPositions.create
         headings: Final = NumPyHeadings.create
         distance: Final = NumPyDistance
-        obstacle_states: Final = NumPyObstaclePositionsAndHeadings
+        obstacle_states: Final = NumPyObstacleStates
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -290,7 +288,7 @@ class types:
         positions: Final = JaxPositions.create
         headings: Final = JaxHeadings.create
         distance: Final = JaxDistance
-        obstacle_states: Final = JaxObstaclePositionsAndHeadings
+        obstacle_states: Final = JaxObstacleStates
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

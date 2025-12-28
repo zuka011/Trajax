@@ -5,8 +5,8 @@ from trajax.types import (
     DistanceExtractor,
     JaxPositionExtractor,
     JaxHeadingExtractor,
-    JaxSampledObstacleStates,
 )
+from trajax.obstacles import JaxSampledObstacleStates
 from trajax.costs.collision import JaxDistance
 from trajax.costs.distance.common import Circles
 

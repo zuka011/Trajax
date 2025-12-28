@@ -7,8 +7,7 @@ from trajax.types import (
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
-    NumPyBicycleObstacleStatesHistory,
-    NumPyObstacleStates,
+    NumPyObstacleStatesHistory,
     BicycleState,
     BicycleStateSequence,
     BicycleStateBatch,
@@ -25,7 +24,7 @@ from trajax.types import (
     ObstacleModel,
     EstimatedObstacleStates,
 )
-from trajax.obstacles import NumPyObstaclePositionsAndHeadings
+from trajax.obstacles import NumPyObstacleStates
 
 from numtypes import Array, Dims, D, shape_of, array
 
@@ -257,7 +256,7 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleStates[K: int]:
-    _array: Array[Dims[BicycleD_x, K]]
+    array: Array[Dims[BicycleD_x, K]]
 
     @staticmethod
     def create(
@@ -274,64 +273,19 @@ class NumPyBicycleObstacleStates[K: int]:
 
         return NumPyBicycleObstacleStates(array)
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_x, K]]:
-        return self.array
-
-    @property
-    def dimension(self) -> BicycleD_x:
-        return self.array.shape[0]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[1]
-
-    @property
-    def array(self) -> Array[Dims[BicycleD_x, K]]:
-        return self._array
-
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleVelocities[K: int]:
-    _array: Array[Dims[BicycleD_v, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_v, K]]:
-        return self.array
-
-    @property
-    def dimension(self) -> BicycleD_v:
-        return self.array.shape[0]
+    array: Array[Dims[BicycleD_v, K]]
 
     @property
     def count(self) -> K:
         return self.array.shape[1]
-
-    @property
-    def array(self) -> Array[Dims[BicycleD_v, K]]:
-        return self._array
 
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
-    _array: Array[Dims[T, BicycleD_u, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, K]]:
-        return self.array
-
-    @property
-    def horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def dimension(self) -> BicycleD_u:
-        return self.array.shape[1]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[2]
-
-    @property
-    def array(self) -> Array[Dims[T, BicycleD_u, K]]:
-        return self._array
+    array: Array[Dims[T, BicycleD_u, K]]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -456,7 +410,7 @@ class NumPyBicycleModel(
 @dataclass(kw_only=True, frozen=True)
 class NumPyBicycleObstacleModel(
     ObstacleModel[
-        NumPyBicycleObstacleStatesHistory,
+        NumPyObstacleStatesHistory,
         NumPyBicycleObstacleStates,
         NumPyBicycleObstacleVelocities,
         NumPyBicycleObstacleControlInputSequences,
@@ -476,7 +430,7 @@ class NumPyBicycleObstacleModel(
         )
 
     def estimate_state_from[K: int](
-        self, history: NumPyBicycleObstacleStatesHistory[int, K]
+        self, history: NumPyObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
         NumPyBicycleObstacleStates[K], NumPyBicycleObstacleVelocities[K]
     ]:
@@ -532,7 +486,7 @@ class NumPyBicycleObstacleModel(
             acceleration_limits=(float("-inf"), float("inf")),
         )
 
-        return NumPyObstaclePositionsAndHeadings.create(
+        return NumPyObstacleStates.create(
             x=result[:, 0, :], y=result[:, 1, :], heading=result[:, 2, :]
         )
 
@@ -595,7 +549,7 @@ def step[M: int](
 
 
 def estimate_heading_from[K: int](
-    history: NumPyBicycleObstacleStatesHistory[int, K], *, time_step_size: float
+    history: NumPyObstacleStatesHistory[int, K], *, time_step_size: float
 ) -> Array[Dims[K]]:
     assert history.horizon >= 2, (
         "At least two history steps are required to estimate heading."
@@ -612,7 +566,7 @@ def estimate_heading_from[K: int](
 
 
 def estimate_speed_from[K: int](
-    history: NumPyBicycleObstacleStatesHistory[int, K], *, time_step_size: float
+    history: NumPyObstacleStatesHistory[int, K], *, time_step_size: float
 ) -> Array[Dims[K]]:
     assert history.horizon >= 2, (
         "At least two history steps are required to estimate speed."

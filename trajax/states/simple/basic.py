@@ -8,10 +8,6 @@ from trajax.types import (
     NumPyControlInputSequence,
     NumPyControlInputBatch,
     NumPyCosts,
-    NumPyIntegratorObstacleStates,
-    NumPyIntegratorObstacleStateSequences,
-    NumPyIntegratorObstacleVelocities,
-    NumPyIntegratorObstacleControlInputSequences,
 )
 
 import numpy as np
@@ -192,100 +188,4 @@ class NumPySimpleCosts[T: int, M: int](NumPyCosts[T, M]):
 
     @property
     def array(self) -> Array[Dims[T, M]]:
-        return self._array
-
-
-@dataclass(frozen=True)
-class NumPySimpleObstacleStates[D_x: int, K: int](
-    NumPyIntegratorObstacleStates[D_x, K]
-):
-    _array: Array[Dims[D_x, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x, K]]:
-        return self.array
-
-    @property
-    def dimension(self) -> D_x:
-        return self.array.shape[0]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[1]
-
-    @property
-    def array(self) -> Array[Dims[D_x, K]]:
-        return self._array
-
-
-@dataclass(frozen=True)
-class NumPySimpleObstacleStateSequences[T: int, D_x: int, K: int](
-    NumPyIntegratorObstacleStateSequences[T, D_x, K]
-):
-    _array: Array[Dims[T, D_x, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, K]]:
-        return self.array
-
-    @property
-    def horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def dimension(self) -> D_x:
-        return self.array.shape[1]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[2]
-
-    @property
-    def array(self) -> Array[Dims[T, D_x, K]]:
-        return self._array
-
-
-@dataclass(frozen=True)
-class NumPySimpleObstacleVelocities[D_v: int, K: int](
-    NumPyIntegratorObstacleVelocities[D_v, K]
-):
-    _array: Array[Dims[D_v, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_v, K]]:
-        return self.array
-
-    @property
-    def dimension(self) -> D_v:
-        return self.array.shape[0]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[1]
-
-    @property
-    def array(self) -> Array[Dims[D_v, K]]:
-        return self._array
-
-
-@dataclass(frozen=True)
-class NumPySimpleObstacleControlInputSequences[T: int, D_u: int, K: int](
-    NumPyIntegratorObstacleControlInputSequences[T, D_u, K]
-):
-    _array: Array[Dims[T, D_u, K]]
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, K]]:
-        return self.array
-
-    @property
-    def horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def dimension(self) -> D_u:
-        return self.array.shape[1]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[2]
-
-    @property
-    def array(self) -> Array[Dims[T, D_u, K]]:
         return self._array

@@ -8,28 +8,49 @@ from trajax.types import (
     NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch,
-    NumPyIntegratorObstacleStates,
-    NumPyIntegratorObstacleStateSequences,
-    NumPyIntegratorObstacleVelocities,
-    NumPyIntegratorObstacleControlInputSequences,
-    NumPyObstacleStates,
+    NumPyObstacleStatesHistory,
     EstimatedObstacleStates,
+    D_o,
 )
 from trajax.states import (
     NumPySimpleState as SimpleState,
     NumPySimpleStateBatch as SimpleStateBatch,
-    NumPySimpleObstacleStates as SimpleObstacleStates,
-    NumPySimpleObstacleVelocities as SimpleObstacleVelocities,
-    NumPySimpleObstacleControlInputSequences as SimpleObstacleControlInputSequences,
 )
-from trajax.obstacles import NumPyObstaclePositionsAndHeadings
+from trajax.obstacles import NumPyObstacleStates
 
-from numtypes import Array, Dims, shape_of, D
+from numtypes import Array, Dims, shape_of
 
 import numpy as np
 
 
 NO_LIMITS: Final = (float("-inf"), float("inf"))
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyIntegratorObstacleStates[K: int]:
+    x: Array[Dims[D_o, K]]
+    y: Array[Dims[D_o, K]]
+    heading: Array[Dims[D_o, K]]
+
+    @property
+    def array(self) -> Array[Dims[D_o, K]]:
+        return np.stack([self.x, self.y, self.heading], axis=0)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyIntegratorObstacleVelocities[K: int]:
+    x: Array[Dims[K]]
+    y: Array[Dims[K]]
+    heading: Array[Dims[K]]
+
+    @property
+    def array(self) -> Array[Dims[D_o, K]]:
+        return np.stack([self.x, self.y, self.heading], axis=0)
+
+
+@dataclass(frozen=True)
+class NumPyIntegratorObstacleControlInputSequences[T: int, K: int]:
+    array: Array[Dims[T, D_o, K]]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -130,7 +151,7 @@ class NumPyIntegratorModel(
 @dataclass(kw_only=True, frozen=True)
 class NumPyIntegratorObstacleModel(
     ObstacleModel[
-        NumPyIntegratorObstacleStateSequences,
+        NumPyObstacleStatesHistory,
         NumPyIntegratorObstacleStates,
         NumPyIntegratorObstacleVelocities,
         NumPyIntegratorObstacleControlInputSequences,
@@ -147,41 +168,53 @@ class NumPyIntegratorObstacleModel(
         """
         return NumPyIntegratorObstacleModel(time_step=time_step_size)
 
-    def estimate_state_from[D_x: int, K: int](
-        self, history: NumPyIntegratorObstacleStateSequences[int, D_x, K]
+    def estimate_state_from[K: int](
+        self, history: NumPyObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        NumPyIntegratorObstacleStates[D_x, K], NumPyIntegratorObstacleVelocities[D_x, K]
+        NumPyIntegratorObstacleStates[K], NumPyIntegratorObstacleVelocities[K]
     ]:
-        if history.horizon < 2:
-            velocities = np.zeros((history.dimension, history.count))
-        else:
-            states = history.array
-            deltas = states[-1, :, :] - states[-2, :, :]
-            velocities = deltas / self.time_step
+        x = history.x()
+        y = history.y()
+        heading = history.heading()
 
-        assert shape_of(velocities, matches=(history.dimension, history.count))
+        if history.horizon < 2:
+            v_x = np.zeros((history.count,))
+            v_y = np.zeros((history.count,))
+            v_heading = np.zeros((history.count,))
+        else:
+            v_x = (x[-1, :] - x[-2, :]) / self.time_step
+            v_y = (y[-1, :] - y[-2, :]) / self.time_step
+            v_heading = (heading[-1, :] - heading[-2, :]) / self.time_step
+
+        assert shape_of(v_x, matches=(history.count,))
+        assert shape_of(v_y, matches=(history.count,))
+        assert shape_of(v_heading, matches=(history.count,))
 
         return EstimatedObstacleStates(
-            states=SimpleObstacleStates(history.array[-1, :, :]),
-            velocities=SimpleObstacleVelocities(velocities),
+            states=NumPyIntegratorObstacleStates(
+                x=x[-1, :], y=y[-1, :], heading=heading[-1, :]
+            ),
+            velocities=NumPyIntegratorObstacleVelocities(
+                x=v_x, y=v_y, heading=v_heading
+            ),
         )
 
-    def input_to_maintain[T: int, D_x: int, K: int](
+    def input_to_maintain[T: int, K: int](
         self,
-        velocities: NumPyIntegratorObstacleVelocities[D_x, K],
+        velocities: NumPyIntegratorObstacleVelocities[K],
         *,
-        states: NumPyIntegratorObstacleStates[D_x, K],
+        states: NumPyIntegratorObstacleStates[K],
         horizon: T,
-    ) -> NumPyIntegratorObstacleControlInputSequences[T, D_x, K]:
-        return SimpleObstacleControlInputSequences(
+    ) -> NumPyIntegratorObstacleControlInputSequences[T, K]:
+        return NumPyIntegratorObstacleControlInputSequences(
             np.tile(velocities.array[np.newaxis, :, :], (horizon, 1, 1))
         )
 
     def forward[T: int, K: int](
         self,
         *,
-        current: NumPyIntegratorObstacleStates[D[3], K],
-        input: NumPyIntegratorObstacleControlInputSequences[T, D[3], K],
+        current: NumPyIntegratorObstacleStates[K],
+        input: NumPyIntegratorObstacleControlInputSequences[T, K],
     ) -> NumPyObstacleStates[T, K]:
         result = simulate(
             inputs=input.array,
@@ -189,8 +222,7 @@ class NumPyIntegratorObstacleModel(
             time_step=self.time_step,
         )
 
-        # TODO: Remove implicit assumption about state structure
-        return NumPyObstaclePositionsAndHeadings.create(
+        return NumPyObstacleStates.create(
             x=result[:, 0, :], y=result[:, 1, :], heading=result[:, 2, :]
         )
 

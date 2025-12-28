@@ -7,8 +7,8 @@ from trajax.types import (
     NumPyPositions,
     NumPyPositionExtractor,
     NumPyHeadingExtractor,
-    NumPySampledObstacleStates,
 )
+from trajax.obstacles import NumPySampledObstacleStates
 from trajax.costs.collision import NumPyDistance
 from trajax.costs.distance.common import Circles
 

@@ -1,9 +1,9 @@
 from .basic import (
-    NumPySampledObstaclePositionsAndHeadings as NumPySampledObstaclePositionsAndHeadings,
-    NumPyObstaclePositionsAndHeadings as NumPyObstaclePositionsAndHeadings,
+    NumPySampledObstacleStates as NumPySampledObstacleStates,
+    NumPyObstacleStates as NumPyObstacleStates,
 )
 from .accelerated import (
-    JaxSampledObstaclePositionsAndHeadings as JaxSampledObstaclePositionsAndHeadings,
-    JaxObstaclePositionsAndHeadings as JaxObstaclePositionsAndHeadings,
+    JaxSampledObstacleStates as JaxSampledObstacleStates,
+    JaxObstacleStates as JaxObstacleStates,
 )
 from .factory import obstacles as obstacles

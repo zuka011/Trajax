@@ -3,20 +3,12 @@ from .common import (
     IntegratorStateBatch as IntegratorStateBatch,
     IntegratorControlInputSequence as IntegratorControlInputSequence,
     IntegratorControlInputBatch as IntegratorControlInputBatch,
-    IntegratorObstacleStates as IntegratorObstacleStates,
-    IntegratorObstacleStateSequences as IntegratorObstacleStateSequences,
-    IntegratorObstacleVelocities as IntegratorObstacleVelocities,
-    IntegratorObstacleControlInputSequences as IntegratorObstacleControlInputSequences,
 )
 from .basic import (
     NumPyIntegratorState as NumPyIntegratorState,
     NumPyIntegratorStateBatch as NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence as NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch as NumPyIntegratorControlInputBatch,
-    NumPyIntegratorObstacleStates as NumPyIntegratorObstacleStates,
-    NumPyIntegratorObstacleStateSequences as NumPyIntegratorObstacleStateSequences,
-    NumPyIntegratorObstacleVelocities as NumPyIntegratorObstacleVelocities,
-    NumPyIntegratorObstacleControlInputSequences as NumPyIntegratorObstacleControlInputSequences,
 )
 from .accelerated import (
     JaxIntegratorState as JaxIntegratorState,

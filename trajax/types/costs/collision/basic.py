@@ -1,34 +1,13 @@
 from typing import Protocol
 
 from trajax.types.costs.collision.common import (
-    SampledObstacleStates,
-    ObstacleStates,
     ObstacleStateProvider,
     ObstacleStateSampler,
     DistanceExtractor,
     SampleCostFunction,
 )
 
-from numtypes import Array, Dims, D
-
-
-class NumPySampledObstacleStates[T: int, K: int, N: int](
-    SampledObstacleStates[T, K, N], Protocol
-): ...
-
-
-class NumPyObstacleStates[T: int, K: int](
-    ObstacleStates[T, K, NumPySampledObstacleStates[T, K, D[1]]], Protocol
-):
-    def sampled[N: int](
-        self,
-        *,
-        x: Array[Dims[T, K, N]],
-        y: Array[Dims[T, K, N]],
-        heading: Array[Dims[T, K, N]],
-    ) -> NumPySampledObstacleStates[T, K, N]:
-        """Returns sampled states of obstacles over time."""
-        ...
+from numtypes import Array, Dims
 
 
 class NumPyObstacleStateProvider[StateT](ObstacleStateProvider[StateT], Protocol): ...

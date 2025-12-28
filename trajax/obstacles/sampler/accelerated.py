@@ -1,10 +1,7 @@
 from typing import cast
 
-from trajax.types import (
-    JaxObstacleStates,
-    JaxSampledObstacleStates,
-    JaxObstacleStateSampler,
-)
+from trajax.types import JaxObstacleStateSampler
+from trajax.obstacles.accelerated import JaxSampledObstacleStates, JaxObstacleStates
 
 from riskit import distribution
 

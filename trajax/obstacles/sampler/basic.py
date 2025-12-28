@@ -1,10 +1,7 @@
 from typing import cast
 
-from trajax.types import (
-    NumPyObstacleStates,
-    NumPySampledObstacleStates,
-    NumPyObstacleStateSampler,
-)
+from trajax.types import NumPyObstacleStateSampler
+from trajax.obstacles.basic import NumPySampledObstacleStates, NumPyObstacleStates
 
 from numtypes import shape_of
 from riskit import distribution

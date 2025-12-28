@@ -10,16 +10,12 @@ from .common import (
     SampleCostFunction as SampleCostFunction,
 )
 from .basic import (
-    NumPySampledObstacleStates as NumPySampledObstacleStates,
-    NumPyObstacleStates as NumPyObstacleStates,
     NumPyObstacleStateProvider as NumPyObstacleStateProvider,
     NumPyObstacleStateSampler as NumPyObstacleStateSampler,
     NumPyDistanceExtractor as NumPyDistanceExtractor,
     NumPyRiskMetric as NumPyRiskMetric,
 )
 from .accelerated import (
-    JaxSampledObstacleStates as JaxSampledObstacleStates,
-    JaxObstacleStates as JaxObstacleStates,
     JaxObstacleStateProvider as JaxObstacleStateProvider,
     JaxObstacleStateSampler as JaxObstacleStateSampler,
     JaxDistanceExtractor as JaxDistanceExtractor,

@@ -6,8 +6,8 @@ from trajax.types import (
     DataType,
     D_o,
     D_O,
-    JaxSampledObstacleStates,
-    JaxObstacleStates,
+    SampledObstacleStates,
+    ObstacleStates,
     JaxObstacleStateProvider,
 )
 
@@ -25,9 +25,7 @@ type ObstacleCovarianceArray[T: int = int, K: int = int] = Float[
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class JaxSampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
-    JaxSampledObstacleStates[T, K, N]
-):
+class JaxSampledObstacleStates[T: int, K: int, N: int](SampledObstacleStates[T, K, N]):
     _x: Float[JaxArray, "T K N"]
     _y: Float[JaxArray, "T K N"]
     _heading: Float[JaxArray, "T K N"]
@@ -41,8 +39,8 @@ class JaxSampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
         horizon: T_ | None = None,
         obstacle_count: K_ | None = None,
         sample_count: N_ | None = None,
-    ) -> "JaxSampledObstaclePositionsAndHeadings[T_, K_, N_]":
-        return JaxSampledObstaclePositionsAndHeadings(_x=x, _y=y, _heading=heading)
+    ) -> "JaxSampledObstacleStates[T_, K_, N_]":
+        return JaxSampledObstacleStates(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
@@ -75,7 +73,9 @@ class JaxSampledObstaclePositionsAndHeadings[T: int, K: int, N: int](
 
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
-class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
+class JaxObstacleStates[T: int, K: int](
+    ObstacleStates[T, K, JaxSampledObstacleStates[T, K, D[1]]]
+):
     _x: Float[JaxArray, "T K"]
     _y: Float[JaxArray, "T K"]
     _heading: Float[JaxArray, "T K"]
@@ -88,8 +88,8 @@ class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
         y: Float[JaxArray, "T K N"],
         heading: Float[JaxArray, "T K N"],
         sample_count: N | None = None,
-    ) -> JaxSampledObstaclePositionsAndHeadings[T, K, N]:
-        return JaxSampledObstaclePositionsAndHeadings.create(
+    ) -> JaxSampledObstacleStates[T, K, N]:
+        return JaxSampledObstacleStates.create(
             x=x, y=y, heading=heading, sample_count=sample_count
         )
 
@@ -102,17 +102,15 @@ class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
         covariance: ObstacleCovarianceArray[T_, K_] | None = None,
         horizon: T_ | None = None,
         obstacle_count: K_ | None = None,
-    ) -> "JaxObstaclePositionsAndHeadings[T_, K_]":
-        return JaxObstaclePositionsAndHeadings(
-            _x=x, _y=y, _heading=heading, _covariance=covariance
-        )
+    ) -> "JaxObstacleStates[T_, K_]":
+        return JaxObstacleStates(_x=x, _y=y, _heading=heading, _covariance=covariance)
 
     @staticmethod
     def of_states[T_: int, K_: int](
-        obstacle_states: Sequence[JaxObstacleStates[int, K_]],
+        obstacle_states: Sequence["JaxObstacleStates[int, K_]"],
         *,
         horizon: T_ | None = None,
-    ) -> "JaxObstaclePositionsAndHeadings[T_, K_]":
+    ) -> "JaxObstacleStates[T_, K_]":
         assert horizon is None or len(obstacle_states) == horizon
 
         x = jnp.stack([states.x_array[0] for states in obstacle_states], axis=0)
@@ -121,9 +119,7 @@ class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
             [states.heading_array[0] for states in obstacle_states], axis=0
         )
 
-        return JaxObstaclePositionsAndHeadings.create(
-            x=x, y=y, heading=heading, horizon=horizon
-        )
+        return JaxObstacleStates.create(x=x, y=y, heading=heading, horizon=horizon)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=-1)
@@ -140,8 +136,8 @@ class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
     def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
         return np.asarray(self._covariance) if self._covariance is not None else None
 
-    def single(self) -> JaxSampledObstaclePositionsAndHeadings[T, K, D[1]]:
-        return JaxSampledObstaclePositionsAndHeadings.create(
+    def single(self) -> JaxSampledObstacleStates[T, K, D[1]]:
+        return JaxSampledObstacleStates.create(
             x=self._x[..., jnp.newaxis],
             y=self._y[..., jnp.newaxis],
             heading=self._heading[..., jnp.newaxis],
@@ -166,9 +162,9 @@ class JaxObstaclePositionsAndHeadings[T: int, K: int](JaxObstacleStates[T, K]):
 
 @dataclass(frozen=True)
 class JaxStaticObstacleStateProvider[T: int, K: int](
-    JaxObstacleStateProvider[JaxObstaclePositionsAndHeadings[T, K]]
+    JaxObstacleStateProvider[JaxObstacleStates[T, K]]
 ):
-    positions: JaxObstaclePositionsAndHeadings[T, K]
+    states: JaxObstacleStates[T, K]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "JaxStaticObstacleStateProvider[T_, D[0]]":
@@ -200,8 +196,8 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
         )
 
         return JaxStaticObstacleStateProvider(
-            JaxObstaclePositionsAndHeadings.create(x=x, y=y, heading=heading)
+            JaxObstacleStates.create(x=x, y=y, heading=heading)
         )
 
-    def __call__(self) -> JaxObstaclePositionsAndHeadings[T, K]:
-        return self.positions
+    def __call__(self) -> JaxObstacleStates[T, K]:
+        return self.states
