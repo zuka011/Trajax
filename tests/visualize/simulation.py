@@ -17,6 +17,7 @@ from bokeh.events import DocumentReady
 
 type VehicleType = Literal["triangle", "car"]
 type ObstacleCoordinate[T: int = int, K: int = int] = Array[Dims[T, K]]
+type ObstacleForecast[T: int = int, H: int = int, K: int = int] = Array[Dims[T, H, K]]
 
 
 class Theme:
@@ -117,6 +118,9 @@ class SimulationData:
     obstacle_positions_x: Array[Dim2] | None = None
     obstacle_positions_y: Array[Dim2] | None = None
     obstacle_headings: Array[Dim2] | None = None
+    obstacle_forecast_x: ObstacleForecast | None = None
+    obstacle_forecast_y: ObstacleForecast | None = None
+    obstacle_forecast_heading: ObstacleForecast | None = None
 
     def __post_init__(self) -> None:
         assert len(self.positions_x) == self.time_step_count, (
@@ -218,6 +222,7 @@ async def create_animation_html(data: SimulationData, output: AsyncPath) -> None
     add_trajectory_trace_to_plot(trajectory_plot, sources["trajectory"])
     add_ghost_vehicle_to_plot(trajectory_plot, sources["ghost"])
     add_obstacles_to_plot(trajectory_plot, sources["obstacles"], data)
+    add_obstacle_forecasts_to_plot(trajectory_plot, sources["forecast"], data)
     add_progress_marker_to_plot(progress_plot, sources["progress"])
     add_error_marker_to_plot(error_plot, sources["error"])
 
@@ -251,6 +256,7 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
     errors = get_errors(data)
     ghost_x, ghost_y = get_ghost_positions(data)
     obstacle_x, obstacle_y, obstacle_heading = get_obstacle_positions(data)
+    forecast_x, forecast_y, forecast_heading = get_obstacle_forecasts(data)
 
     return {
         "vehicle": ColumnDataSource(
@@ -291,6 +297,24 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "heading": obstacle_heading[0].tolist(),
             }
         ),
+        "forecast": ColumnDataSource(
+            data={
+                "xs": (
+                    forecasts := extract_forecasts(
+                        forecast_x, forecast_y, forecast_heading, timestep=0
+                    )
+                )[0],
+                "ys": forecasts[1],
+                "headings": forecasts[2],
+                "arrow_x": (
+                    arrows := extract_forecast_arrows(
+                        forecast_x, forecast_y, forecast_heading, timestep=0
+                    )
+                )[0],
+                "arrow_y": arrows[1],
+                "arrow_heading": arrows[2],
+            }
+        ),
         "simulation": ColumnDataSource(
             data={
                 "positions_x": data.positions_x.tolist(),
@@ -303,6 +327,9 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "obstacle_positions_x": obstacle_x.tolist(),
                 "obstacle_positions_y": obstacle_y.tolist(),
                 "obstacle_headings": obstacle_heading.tolist(),
+                "obstacle_forecast_x": forecast_x.tolist(),
+                "obstacle_forecast_y": forecast_y.tolist(),
+                "obstacle_forecast_headings": forecast_heading.tolist(),
             }
         ),
         "reference": ColumnDataSource(
@@ -342,6 +369,66 @@ def get_obstacle_positions(
     )
 
     return data.obstacle_positions_x, data.obstacle_positions_y, obstacle_headings
+
+
+def get_obstacle_forecasts(
+    data: SimulationData,
+) -> tuple[ObstacleForecast, ObstacleForecast, ObstacleForecast]:
+    if data.obstacle_forecast_x is None or data.obstacle_forecast_y is None:
+        empty: ObstacleForecast = np.empty((data.time_step_count, 0, 0))
+        return empty, empty, empty
+
+    forecast_headings = (
+        # NOTE: -pi/2 to compensate for default arrow orientation in Bokeh
+        data.obstacle_forecast_heading - (np.pi / 2)
+        if data.obstacle_forecast_heading is not None
+        else np.zeros_like(data.obstacle_forecast_x)
+    )
+
+    return data.obstacle_forecast_x, data.obstacle_forecast_y, forecast_headings
+
+
+def extract_forecasts(
+    forecast_x: ObstacleForecast,
+    forecast_y: ObstacleForecast,
+    forecast_heading: ObstacleForecast,
+    *,
+    timestep: int,
+) -> tuple[list[list[float]], list[list[float]], list[list[float]]]:
+    if forecast_x.shape[1] == 0 or forecast_x.shape[2] == 0:
+        return [], [], []
+
+    obstacle_count = forecast_x.shape[2]
+
+    xs = [forecast_x[timestep, :, k].tolist() for k in range(obstacle_count)]
+    ys = [forecast_y[timestep, :, k].tolist() for k in range(obstacle_count)]
+    headings = [
+        forecast_heading[timestep, :, k].tolist() for k in range(obstacle_count)
+    ]
+
+    return xs, ys, headings
+
+
+def extract_forecast_arrows(
+    forecast_x: ObstacleForecast,
+    forecast_y: ObstacleForecast,
+    forecast_heading: ObstacleForecast,
+    *,
+    timestep: int,
+) -> tuple[list[float], list[float], list[float]]:
+    if forecast_x.shape[1] == 0 or forecast_x.shape[2] == 0:
+        return [], [], []
+
+    obstacle_count = forecast_x.shape[2]
+    last_idx = forecast_x.shape[1] - 1
+
+    arrow_x = [float(forecast_x[timestep, last_idx, k]) for k in range(obstacle_count)]
+    arrow_y = [float(forecast_y[timestep, last_idx, k]) for k in range(obstacle_count)]
+    arrow_heading = [
+        float(forecast_heading[timestep, last_idx, k]) for k in range(obstacle_count)
+    ]
+
+    return arrow_x, arrow_y, arrow_heading
 
 
 def compute_lateral_errors(data: SimulationData) -> Array[Dim1]:
@@ -647,6 +734,47 @@ def add_obstacles_to_plot(
     )
 
 
+def add_obstacle_forecasts_to_plot(
+    plot: Figure, source: ColumnDataSource, data: SimulationData
+) -> None:
+    if data.obstacle_forecast_x is None or data.obstacle_forecast_y is None:
+        return
+
+    if data.obstacle_forecast_x.shape[1] == 0 or data.obstacle_forecast_x.shape[2] == 0:
+        return
+
+    forecast_color = "#9b59b6"
+
+    plot.multi_line(  # type: ignore
+        "xs",
+        "ys",
+        source=source,
+        line_width=2,
+        line_color=forecast_color,
+        line_alpha=0.6,
+        legend_label="Obstacle Forecast",
+    )
+
+    add_forecast_arrows_to_plot(plot, source, forecast_color)
+
+
+def add_forecast_arrows_to_plot(
+    plot: Figure, source: ColumnDataSource, color: str
+) -> None:
+    arrow_length = 1.5
+
+    plot.scatter(  # type: ignore
+        "arrow_x",
+        "arrow_y",
+        source=source,
+        marker="triangle",
+        size=8,
+        angle="arrow_heading",
+        color=color,
+        alpha=0.7,
+    )
+
+
 def add_trajectory_trace_to_plot(plot: Figure, source: ColumnDataSource) -> None:
     plot.line(  # type: ignore
         "x",
@@ -696,6 +824,7 @@ def create_slider_callback(
             "ghost": sources["ghost"],
             "error": sources["error"],
             "obstacles": sources["obstacles"],
+            "forecast": sources["forecast"],
             "sim": sources["simulation"],
             "dt": data.time_step,
         },
@@ -738,6 +867,53 @@ def create_slider_callback(
                 y: obstacle_positions_y[t],
                 heading: obstacle_headings[t]
             };
+            
+            // Update forecast lines
+            const forecast_x = s.obstacle_forecast_x;
+            const forecast_y = s.obstacle_forecast_y;
+            const forecast_headings = s.obstacle_forecast_headings;
+            
+            if (forecast_x && forecast_x.length > 0 && forecast_x[0].length > 0) {
+                const obstacle_count = forecast_x[t][0].length;
+                const xs = [];
+                const ys = [];
+                const headings = [];
+                const arrow_x = [];
+                const arrow_y = [];
+                const arrow_heading = [];
+                
+                for (let k = 0; k < obstacle_count; k++) {
+                    const horizon = forecast_x[t].length;
+                    const x_line = [];
+                    const y_line = [];
+                    const h_line = [];
+                    
+                    for (let h = 0; h < horizon; h++) {
+                        x_line.push(forecast_x[t][h][k]);
+                        y_line.push(forecast_y[t][h][k]);
+                        h_line.push(forecast_headings[t][h][k]);
+                    }
+                    
+                    xs.push(x_line);
+                    ys.push(y_line);
+                    headings.push(h_line);
+                    
+                    // Add arrow at the end of each forecast line
+                    const last_idx = horizon - 1;
+                    arrow_x.push(x_line[last_idx]);
+                    arrow_y.push(y_line[last_idx]);
+                    arrow_heading.push(h_line[last_idx]);
+                }
+                
+                forecast.data = {
+                    xs: xs,
+                    ys: ys,
+                    headings: headings,
+                    arrow_x: arrow_x,
+                    arrow_y: arrow_y,
+                    arrow_heading: arrow_heading,
+                };
+            }
         """,
     )
 

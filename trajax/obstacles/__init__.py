@@ -7,5 +7,7 @@ from .basic import (
 from .accelerated import (
     JaxSampledObstacleStates as JaxSampledObstacleStates,
     JaxObstacleStates as JaxObstacleStates,
+    JaxObstacleStatesForTimeStep as JaxObstacleStatesForTimeStep,
+    JaxObstacleStatesRunningHistory as JaxObstacleStatesRunningHistory,
 )
 from .factory import obstacles as obstacles

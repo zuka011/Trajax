@@ -342,6 +342,18 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
     def theta(self) -> Array[Dims[T, K]]:
         return np.asarray(self.array[:, 2, :])
 
+    @property
+    def x_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 0, :]
+
+    @property
+    def y_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 1, :]
+
+    @property
+    def theta_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 2, :]
+
 
 @jaxtyped
 @dataclass(frozen=True)

@@ -10,6 +10,7 @@ from tests.visualize.simulation import (
     SimulationVisualizer,
     SimulationData,
     ReferenceTrajectory,
+    ObstacleForecast,
 )
 
 
@@ -58,6 +59,9 @@ class MpccVisualizer:
         obstacle_x, obstacle_y, obstacle_heading = self.obstacle_positions_from(
             result.obstacles
         )
+        forecast_x, forecast_y, forecast_heading = self.obstacle_forecasts_from(
+            result.obstacles
+        )
 
         return SimulationData(
             reference=reference,
@@ -76,6 +80,9 @@ class MpccVisualizer:
             obstacle_positions_x=obstacle_x,
             obstacle_positions_y=obstacle_y,
             obstacle_headings=obstacle_heading,
+            obstacle_forecast_x=forecast_x,
+            obstacle_forecast_y=forecast_y,
+            obstacle_forecast_heading=forecast_heading,
         )
 
     def query_ghost_positions(
@@ -109,4 +116,18 @@ class MpccVisualizer:
             np.array([it.x()[0] for it in obstacles]),
             np.array([it.y()[0] for it in obstacles]),
             np.array([it.heading()[0] for it in obstacles]),
+        )
+
+    def obstacle_forecasts_from(
+        self, obstacles: Sequence[ObstacleStates]
+    ) -> tuple[
+        ObstacleForecast | None, ObstacleForecast | None, ObstacleForecast | None
+    ]:
+        if len(obstacles) == 0:
+            return None, None, None
+
+        return (
+            np.array([it.x() for it in obstacles]),
+            np.array([it.y() for it in obstacles]),
+            np.array([it.heading() for it in obstacles]),
         )

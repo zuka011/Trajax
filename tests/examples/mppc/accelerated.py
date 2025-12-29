@@ -1,4 +1,4 @@
-from typing import Final, Sequence, Protocol
+from typing import Final, Sequence, Protocol, Self
 from dataclasses import dataclass, field
 
 from trajax import (
@@ -10,6 +10,7 @@ from trajax import (
     Distance,
     DistanceExtractor,
     Trajectory,
+    ObstacleMotionPredictor,
     mppi,
     model,
     sampler,
@@ -19,6 +20,7 @@ from trajax import (
     types,
     classes,
     extract,
+    predictor,
     obstacles as create_obstacles,
 )
 
@@ -69,11 +71,22 @@ type Sampler = AugmentedSampler[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.jax.ObstacleStates
+type ObstacleStatesHistory = types.jax.ObstacleStatesRunningHistory
 
 
 class ObstacleStateProvider(
     classes.jax.ObstacleStateProvider[ObstacleStates], Protocol
 ):
+    def with_time_step(self, time_step: float) -> Self:
+        """Returns a new obstacle state provider configured with the given time step size."""
+        ...
+
+    def with_predictor(
+        self, predictor: ObstacleMotionPredictor[ObstacleStatesHistory, ObstacleStates]
+    ) -> Self:
+        """Returns a new obstacle state provider configured with the given motion predictor."""
+        ...
+
     def step(self) -> None:
         """Advances the internal state of the obstacle state provider."""
         ...
@@ -93,6 +106,14 @@ def position(states: PhysicalStateBatch) -> types.jax.Positions:
 
 def heading(states: PhysicalStateBatch) -> types.jax.Headings:
     return types.jax.headings(theta=states.orientations_array)
+
+
+def bicycle_to_obstacle_states(
+    states: types.jax.bicycle.ObstacleStateSequences,
+) -> ObstacleStates:
+    return types.jax.obstacle_states.create(
+        x=states.x_array, y=states.y_array, heading=states.theta_array
+    )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -219,6 +240,23 @@ class reference:
         path_length=120.0,
     )
 
+    slalom: Final = trajectory.jax.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [30.0, 10.0],
+                [40.0, 5.0],
+                [50.0, 0.0],
+                [60.0, 0.0],
+                [70.0, 0.0],
+            ],
+            shape=(8, 2),
+        ),
+        path_length=100.0,
+    )
+
 
 class obstacles:
     none: Final = create_obstacles.jax.empty(horizon=HORIZON)
@@ -245,6 +283,27 @@ class obstacles:
                     jnp.pi / 8,
                     -jnp.pi / 6,
                     jnp.pi / 2,
+                ]
+            ),
+            horizon=HORIZON,
+        )
+
+    class dynamic:
+        slalom: Final = create_obstacles.jax.dynamic(
+            positions=jnp.array(
+                [
+                    [25.0, 22.5],
+                    [55.0, 0.0],
+                    [15.0, -5.0],
+                    [42.0, 4.0],
+                ]
+            ),
+            velocities=jnp.array(
+                [
+                    [0.0, -1.5],
+                    [-2.5, 0.0],
+                    [0.5, 1.5],
+                    [0.0, 0.0],
                 ]
             ),
             horizon=HORIZON,
@@ -336,11 +395,21 @@ class configure:
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
     ) -> JaxMpccPlannerConfiguration:
+        obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
+            predictor.constant_velocity(
+                horizon=HORIZON,
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=dt, wheelbase=(L := 2.5)
+                ),
+                prediction=bicycle_to_obstacle_states,
+            )
+        )
+
         planner, augmented_model = mppi.jax.augmented(
             models=(
                 model.jax.bicycle.dynamical(
-                    time_step_size=(dt := 0.1),
-                    wheelbase=(L := 2.5),
+                    time_step_size=dt,
+                    wheelbase=L,
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),

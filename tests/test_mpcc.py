@@ -225,6 +225,12 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             ),
             "jax-from-augmented-static",
         ),
+        (
+            mpcc.jax.planner_from_augmented(
+                reference=reference.jax.slalom, obstacles=obstacles.jax.dynamic.slalom
+            ),
+            "jax-from-augmented-dynamic",
+        ),
     ],
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"{seed}-obstacles")

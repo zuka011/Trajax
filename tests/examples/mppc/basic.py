@@ -10,6 +10,7 @@ from trajax import (
     Circles,
     Distance,
     DistanceExtractor,
+    ObstacleMotionPredictor,
     mppi,
     model,
     sampler,
@@ -21,7 +22,6 @@ from trajax import (
     distance,
     obstacles as create_obstacles,
     predictor,
-    ObstacleMotionPredictor,
 )
 
 import numpy as np

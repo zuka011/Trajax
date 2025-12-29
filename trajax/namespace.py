@@ -82,6 +82,8 @@ from trajax.obstacles import (
     NumPyObstacleStatesRunningHistory,
     JaxSampledObstacleStates,
     JaxObstacleStates,
+    JaxObstacleStatesForTimeStep,
+    JaxObstacleStatesRunningHistory,
 )
 from trajax.states import (
     NumPySimpleState,
@@ -282,6 +284,10 @@ class types:
         type ObstacleStates[T: int = Any, K: int = Any] = JaxObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
             JaxSampledObstacleStates[T, K, N]
+        )
+        type ObstacleStatesForTimeStep[K: int = Any] = JaxObstacleStatesForTimeStep[K]
+        type ObstacleStatesRunningHistory[K: int = Any] = (
+            JaxObstacleStatesRunningHistory[K]
         )
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]

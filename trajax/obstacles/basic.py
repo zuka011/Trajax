@@ -148,6 +148,18 @@ class NumPyObstacleStatesForTimeStep[K: int]:
     ) -> "NumPyObstacleStatesForTimeStep[K_]":
         return NumPyObstacleStatesForTimeStep(_x=x, _y=y, _heading=heading)
 
+    @property
+    def x(self) -> Array[Dims[K]]:
+        return self._x
+
+    @property
+    def y(self) -> Array[Dims[K]]:
+        return self._y
+
+    @property
+    def heading(self) -> Array[Dims[K]]:
+        return self._heading
+
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyObstacleStatesRunningHistory[K: int]:
@@ -167,10 +179,8 @@ class NumPyObstacleStatesRunningHistory[K: int]:
 
         return self.history[-1]
 
-    def append(
-        self, step: NumPyObstacleStatesForTimeStep[K]
-    ) -> "NumPyObstacleStatesRunningHistory[K]":
-        return NumPyObstacleStatesRunningHistory(history=self.history + [step])
+    def append(self, step: NumPyObstacleStatesForTimeStep[K]) -> Self:
+        return self.__class__(history=self.history + [step])
 
     def x(self) -> Array[Dims[int, K]]:
         return self._x
@@ -217,7 +227,7 @@ class NumPyObstacleStatesRunningHistory[K: int]:
 class NumPyStaticObstacleStateProvider[T: int, K: int](
     NumPyObstacleStateProvider[NumPyObstacleStates[T, K]]
 ):
-    positions: NumPyObstacleStates[T, K]
+    states: NumPyObstacleStates[T, K]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "NumPyStaticObstacleStateProvider[T_, D[0]]":
@@ -262,7 +272,7 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         return self
 
     def __call__(self) -> NumPyObstacleStates[T, K]:
-        return self.positions
+        return self.states
 
     def step(self) -> None:
         # Nothing to do, since the obstacles are static.
@@ -282,7 +292,7 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
 
     horizon: T
     time_step: float | None = None
-    predictor: MotionPredictor | None = None
+    predictor: MotionPredictor[T, K] | None = None
 
     @staticmethod
     def create[T_: int, K_: int](
@@ -326,9 +336,7 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
             "Motion predictor must be set to provide obstacle states."
         )
 
-        estimated_states = self.predictor.predict(history=self.history)
-
-        return estimated_states
+        return self.predictor.predict(history=self.history)
 
     def step(self) -> None:
         assert self.time_step is not None, (
@@ -336,21 +344,37 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
         )
 
         last = self.history.last()
-        new = NumPyObstacleStatesForTimeStep.create(
-            x=last._x + self.velocities[:, 0] * self.time_step,
-            y=last._y + self.velocities[:, 1] * self.time_step,
-            heading=last._heading,
+        x, y = step_obstacles(
+            x=last.x, y=last.y, velocities=self.velocities, time_step=self.time_step
         )
-        self.history = self.history.append(new)
+
+        self.history = self.history.append(
+            NumPyObstacleStatesForTimeStep.create(x=x, y=y, heading=last.heading)
+        )
+
+
+def step_obstacles[K: int](
+    *,
+    x: Array[Dims[K]],
+    y: Array[Dims[K]],
+    velocities: Array[Dims[K, D[2]]],
+    time_step: float,
+) -> tuple[Array[Dims[K]], Array[Dims[K]]]:
+    K = x.shape[0]
+    new_x = x + velocities[:, 0] * time_step
+    new_y = y + velocities[:, 1] * time_step
+
+    assert shape_of(new_x, matches=(K,))
+    assert shape_of(new_y, matches=(K,))
+
+    return new_x, new_y
 
 
 def headings_from[K: int](velocities: Array[Dims[K, D[2]]]) -> Array[Dims[K]]:
     K = velocities.shape[0]
     speed = np.linalg.norm(velocities, axis=1)
     heading = np.where(
-        speed > 1e-6,
-        np.arctan2(velocities[:, 1], velocities[:, 0]),
-        0.0,
+        speed > 1e-6, np.arctan2(velocities[:, 1], velocities[:, 0]), 0.0
     )
 
     assert shape_of(heading, matches=(K,))
