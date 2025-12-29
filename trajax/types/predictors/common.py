@@ -2,7 +2,6 @@ from typing import Protocol
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
-from trajax.types.costs import D_o
 
 from numtypes import Array, Dims
 
@@ -13,7 +12,7 @@ class EstimatedObstacleStates[StatesT, VelocitiesT]:
     velocities: VelocitiesT
 
 
-class ObstacleStatesHistory[T: int, K: int](Protocol):
+class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the obstacle history as a NumPy array."""
         ...
@@ -49,13 +48,17 @@ class ObstacleModel[HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequen
         """Generates control inputs to maintain the given velocities over the specified horizon."""
         ...
 
-    def forward(self, *, current: StatesT, input: InputSequencesT) -> StateSequencesT:
+    def forward(self, *, current: StatesT, inputs: InputSequencesT) -> StateSequencesT:
         """Simulates the objects forward in time given the current states and control inputs."""
         ...
 
 
-class EmptyPredictionCreator[PredictionT](Protocol):
-    def __call__(self, *, horizon: int) -> PredictionT:
+class PredictionCreator[StateSequencesT, PredictionT](Protocol):
+    def __call__(self, *, states: StateSequencesT) -> PredictionT:
+        """Creates a prediction from the given state sequences."""
+        ...
+
+    def empty(self, *, horizon: int) -> PredictionT:
         """Creates an empty prediction with the specified horizon."""
         ...
 

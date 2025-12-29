@@ -11,6 +11,7 @@ from .bicycle import (
     BicyclePositions as BicyclePositions,
     BicycleControlInputSequence as BicycleControlInputSequence,
     BicycleControlInputBatch as BicycleControlInputBatch,
+    NumPyBicycleObstacleStatesHistory as NumPyBicycleObstacleStatesHistory,
 )
 from .integrator import (
     IntegratorState as IntegratorState,
@@ -21,6 +22,7 @@ from .integrator import (
     NumPyIntegratorStateBatch as NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence as NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch as NumPyIntegratorControlInputBatch,
+    NumPyIntegratorObstacleStatesHistory as NumPyIntegratorObstacleStatesHistory,
     JaxIntegratorState as JaxIntegratorState,
     JaxIntegratorStateBatch as JaxIntegratorStateBatch,
     JaxIntegratorControlInputSequence as JaxIntegratorControlInputSequence,

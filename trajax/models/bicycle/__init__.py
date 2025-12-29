@@ -4,6 +4,7 @@ from .basic import (
     NumPyBicyclePositions as NumPyBicyclePositions,
     NumPyBicycleControlInputSequence as NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch as NumPyBicycleControlInputBatch,
+    NumPyBicycleObstacleStateSequences as NumPyBicycleObstacleStateSequences,
     NumPyBicycleModel as NumPyBicycleModel,
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
 )

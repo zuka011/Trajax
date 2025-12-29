@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from trajax.types.predictors import ObstacleStatesHistory
 from trajax.types.models.integrator.common import (
     IntegratorState,
     IntegratorStateBatch,
@@ -45,4 +46,13 @@ class NumPyIntegratorControlInputBatch[T: int, D_u: int, M: int](
         """Returns the underlying NumPy array representing the integrator control input
         batch.
         """
+        ...
+
+
+class NumPyIntegratorObstacleStatesHistory[T: int, D_o: int, K: int](
+    ObstacleStatesHistory[T, D_o, K], Protocol
+):
+    @property
+    def array(self) -> Array[Dims[T, D_o, K]]:
+        """Returns the obstacle history as a NumPy array."""
         ...

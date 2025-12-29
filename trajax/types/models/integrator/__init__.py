@@ -9,6 +9,7 @@ from .basic import (
     NumPyIntegratorStateBatch as NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence as NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch as NumPyIntegratorControlInputBatch,
+    NumPyIntegratorObstacleStatesHistory as NumPyIntegratorObstacleStatesHistory,
 )
 from .accelerated import (
     JaxIntegratorState as JaxIntegratorState,

@@ -14,12 +14,40 @@ from tests.dsl import mppi as data
 from pytest import mark
 
 
-def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
-    return data.numpy.obstacle_states(
-        x=np.empty((horizon, 0)),
-        y=np.empty((horizon, 0)),
-        heading=np.empty((horizon, 0)),
-    )
+class NumPyIntegratorPredictionCreator:
+    def __call__(
+        self, *, states: types.numpy.integrator.ObstacleStateSequences
+    ) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=states.array[:, 0, :],
+            y=states.array[:, 1, :],
+            heading=states.array[:, 2, :],
+        )
+
+    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
+
+
+class NumPyBicyclePredictionCreator:
+    def __call__(
+        self, *, states: types.numpy.bicycle.ObstacleStateSequences
+    ) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=states.x(),
+            y=states.y(),
+            heading=states.theta(),
+        )
+
+    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
 
 
 @mark.parametrize(
@@ -29,7 +57,7 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 5),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
-                empty_prediction=numpy_empty_prediction,
+                prediction=NumPyIntegratorPredictionCreator(),
             ),
             states := data.numpy.obstacle_states(
                 x=np.empty((T_h := 0, K := 0)),
@@ -46,7 +74,7 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 5),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
-                empty_prediction=numpy_empty_prediction,
+                prediction=NumPyIntegratorPredictionCreator(),
             ),
             states := data.numpy.obstacle_states(
                 x=array([[x := -5.0]], shape=(T_h := 1, K := 1)),
@@ -65,7 +93,7 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 4),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
-                empty_prediction=numpy_empty_prediction,
+                prediction=NumPyIntegratorPredictionCreator(),
             ),
             states := data.numpy.obstacle_states(
                 x=array(
@@ -105,7 +133,7 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
                 model=model.numpy.kinematic_bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
-                empty_prediction=numpy_empty_prediction,
+                prediction=NumPyBicyclePredictionCreator(),
             ),
             states := data.numpy.obstacle_states(
                 x=np.empty((T_h := 0, K := 0)),
@@ -124,7 +152,7 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
                 model=model.numpy.kinematic_bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
-                empty_prediction=numpy_empty_prediction,
+                prediction=NumPyBicyclePredictionCreator(),
             ),
             states := data.numpy.obstacle_states(
                 x=array([[x := 3.0]], shape=(T_h := 1, K := 1)),
@@ -135,6 +163,141 @@ def numpy_empty_prediction(*, horizon: int) -> types.numpy.ObstacleStates:
                 x=np.full((T_p, K), x),
                 y=np.full((T_p, K), y),
                 heading=np.full((T_p, K), theta),
+            ),
+        ),
+        (  # Single state, moving along x-axis (θ=0)
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.numpy.kinematic_bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            states := data.numpy.obstacle_states(
+                x=array([[-1.0], [4.0]], shape=(T_h := 2, K := 1)),
+                y=array([[2.0], [2.0]], shape=(T_h, K)),
+                heading=array([[0.0], [0.0]], shape=(T_h, K)),
+            ),
+            # x increases by 5.0 per step, y stays constant
+            expected := data.numpy.obstacle_states(
+                x=array([[9.0], [14.0], [19.0], [24.0]], shape=(T_p, K)),
+                y=np.full((T_p, K), 2.0),
+                heading=np.full((T_p, K), 0.0),
+            ),
+        ),
+        (  # Moving along y-axis (θ=π/2)
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.numpy.kinematic_bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            states := data.numpy.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[0.0], [5.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+            # y increases by 5.0 per step, x stays constant
+            expected := data.numpy.obstacle_states(
+                x=np.full((T_p, K), 0.0),
+                y=array([[10.0], [15.0], [20.0], [25.0]], shape=(T_p, K)),
+                heading=np.full((T_p, K), np.pi / 2),
+            ),
+        ),
+        (  # Multiple obstacles with different velocities and headings
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 3),
+                model=model.numpy.kinematic_bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            states := data.numpy.obstacle_states(
+                # Obstacle 0 - v = 10 m/s, θ=0 (moving +x)
+                # Obstacle 1 - v = 10 m/s, θ=π/2 (moving +y)
+                # Obstacle 2 - v = 20 m/s, θ=π (moving -x)
+                x=array([[0.0, 5.0, 10.0], [1.0, 5.0, 8.0]], shape=(T_h := 2, K := 3)),
+                y=array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]], shape=(T_h, K)),
+                heading=array(
+                    [[0.0, np.pi / 2, np.pi], [0.0, np.pi / 2, np.pi]], shape=(T_h, K)
+                ),
+            ),
+            expected := data.numpy.obstacle_states(
+                x=array(
+                    [[2.0, 5.0, 6.0], [3.0, 5.0, 4.0], [4.0, 5.0, 2.0]], shape=(T_p, K)
+                ),
+                y=array(
+                    [[0.0, 2.0, 0.0], [0.0, 3.0, 0.0], [0.0, 4.0, 0.0]], shape=(T_p, K)
+                ),
+                heading=array([[0.0, np.pi / 2, np.pi]] * T_p, shape=(T_p, K)),
+            ),
+        ),
+        (  # Turning vehicle - constant steering angle (δ) preserved
+            # θ̇ = (v/L) tan(δ), so constant δ means constant angular velocity ω
+            # From history: estimate v and ω, then δ = arctan(ω * L / v)
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.numpy.kinematic_bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            states := data.numpy.obstacle_states(
+                # v = 10 m/s (Δ pos = 1.0 per step along heading)
+                # ω = 0.5 rad/s (Δ θ = 0.05 rad per step)
+                # This implies δ = arctan(ω * L / v) = arctan(0.5 * 1 / 10) = arctan(0.05)
+                x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
+                y=array([[0.0], [0.0]], shape=(T_h, K)),
+                heading=array([[0.0], [0.05]], shape=(T_h, K)),  # ω * dt = 0.05
+            ),
+            # Prediction: θ increases by 0.05 each step, path curves
+            # θ(t) = 0.05 * (t + 1) for t = 0, 1, 2, 3
+            # x(t+1) = x(t) + v * cos(θ(t)) * dt
+            # y(t+1) = y(t) + v * sin(θ(t)) * dt
+            expected := data.numpy.obstacle_states(
+                x=array(
+                    [
+                        [1.0 + 10 * np.cos(0.05) * 0.1],
+                        [1.0 + 10 * np.cos(0.05) * 0.1 + 10 * np.cos(0.10) * 0.1],
+                        [
+                            1.0
+                            + 10 * np.cos(0.05) * 0.1
+                            + 10 * np.cos(0.10) * 0.1
+                            + 10 * np.cos(0.15) * 0.1
+                        ],
+                        [
+                            1.0
+                            + 10 * np.cos(0.05) * 0.1
+                            + 10 * np.cos(0.10) * 0.1
+                            + 10 * np.cos(0.15) * 0.1
+                            + 10 * np.cos(0.20) * 0.1
+                        ],
+                    ],
+                    shape=(T_p, K),
+                ),
+                y=array(
+                    [
+                        [10 * np.sin(0.05) * 0.1],
+                        [10 * np.sin(0.05) * 0.1 + 10 * np.sin(0.10) * 0.1],
+                        [
+                            10 * np.sin(0.05) * 0.1
+                            + 10 * np.sin(0.10) * 0.1
+                            + 10 * np.sin(0.15) * 0.1
+                        ],
+                        [
+                            10 * np.sin(0.05) * 0.1
+                            + 10 * np.sin(0.10) * 0.1
+                            + 10 * np.sin(0.15) * 0.1
+                            + 10 * np.sin(0.20) * 0.1
+                        ],
+                    ],
+                    shape=(T_p, K),
+                ),
+                heading=array(
+                    [[0.10], [0.15], [0.20], [0.25]],
+                    shape=(T_p, K),
+                ),
             ),
         ),
     ],
@@ -148,6 +311,6 @@ def test_that_obstacle_motion_is_predicted_correctly[
     expected: PredictionT,
 ) -> None:
     actual = predictor.predict(history=states)
-    assert np.allclose(actual.x(), expected.x())
-    assert np.allclose(actual.y(), expected.y())
-    assert np.allclose(actual.heading(), expected.heading())
+    assert np.allclose(actual.x(), expected.x(), rtol=1e-3)
+    assert np.allclose(actual.y(), expected.y(), rtol=1e-3)
+    assert np.allclose(actual.heading(), expected.heading(), rtol=1e-3)

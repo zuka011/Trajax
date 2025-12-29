@@ -59,6 +59,8 @@ from trajax.models import (
     NumPyBicyclePositions,
     NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch,
+    NumPyBicycleObstacleStateSequences,
+    NumPyIntegratorObstacleStateSequences,
     JaxBicycleState,
     JaxBicycleStateBatch,
     JaxBicyclePositions,
@@ -209,6 +211,11 @@ class types:
             control_input_batch: Final = NumPySimpleControlInputBatch
             costs: Final = NumPySimpleCosts
 
+        class integrator:
+            type ObstacleStateSequences[T: int = Any, D_o: int = Any, K: int = Any] = (
+                NumPyIntegratorObstacleStateSequences[T, D_o, K]
+            )
+
         class bicycle:
             type State = NumPyBicycleState
             type StateBatch[T: int = Any, M: int = Any] = NumPyBicycleStateBatch[T, M]
@@ -218,6 +225,9 @@ class types:
             ]
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 NumPyBicycleControlInputBatch[T, M]
+            )
+            type ObstacleStateSequences[T: int = Any, K: int = Any] = (
+                NumPyBicycleObstacleStateSequences[T, K]
             )
 
             state: Final = NumPyBicycleState.create

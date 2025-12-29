@@ -2,9 +2,6 @@ from .common import (
     EstimatedObstacleStates as EstimatedObstacleStates,
     ObstacleStatesHistory as ObstacleStatesHistory,
     ObstacleModel as ObstacleModel,
-    EmptyPredictionCreator as EmptyPredictionCreator,
+    PredictionCreator as PredictionCreator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
-)
-from .basic import (
-    NumPyObstacleStatesHistory as NumPyObstacleStatesHistory,
 )

@@ -12,3 +12,6 @@ from .common import (
     BicycleControlInputSequence as BicycleControlInputSequence,
     BicycleControlInputBatch as BicycleControlInputBatch,
 )
+from .basic import (
+    NumPyBicycleObstacleStatesHistory as NumPyBicycleObstacleStatesHistory,
+)
