@@ -1,13 +1,16 @@
-from typing import Final
+from typing import Final, cast
 from dataclasses import dataclass
 
 from trajax.types import (
     jaxtyped,
     DynamicalModel,
+    ObstacleModel,
     JaxIntegratorState,
     JaxIntegratorStateBatch,
     JaxIntegratorControlInputSequence,
     JaxIntegratorControlInputBatch,
+    JaxIntegratorObstacleStatesHistory,
+    EstimatedObstacleStates,
 )
 from trajax.states import (
     JaxSimpleState as SimpleState,
@@ -20,7 +23,71 @@ import jax
 import jax.numpy as jnp
 
 
-NO_LIMITS: Final = (float("-inf"), float("inf"))
+NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxIntegratorObstacleStates[D_o: int, K: int]:
+    array: Float[JaxArray, "D_o K"]
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
+    array: Float[JaxArray, "T D_o K"]
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxIntegratorObstacleVelocities[D_o: int, K: int]:
+    array: Float[JaxArray, "D_o K"]
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
+    array: Float[JaxArray, "T D_o K"]
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -32,9 +99,9 @@ class JaxIntegratorModel(
         JaxIntegratorControlInputBatch,
     ]
 ):
-    time_step: float
-    state_limits: tuple[float, float]
-    velocity_limits: tuple[float, float]
+    time_step: Scalar
+    state_limits: tuple[Scalar, Scalar]
+    velocity_limits: tuple[Scalar, Scalar]
 
     @staticmethod
     def create(
@@ -57,9 +124,9 @@ class JaxIntegratorModel(
         """
 
         return JaxIntegratorModel(
-            time_step=time_step_size,
-            state_limits=state_limits if state_limits is not None else NO_LIMITS,
-            velocity_limits=velocity_limits
+            time_step=jnp.asarray(time_step_size),
+            state_limits=wrap(state_limits) if state_limits is not None else NO_LIMITS,
+            velocity_limits=wrap(velocity_limits)
             if velocity_limits is not None
             else NO_LIMITS,
         )
@@ -69,15 +136,18 @@ class JaxIntegratorModel(
         inputs: JaxIntegratorControlInputBatch[T, D_u, M],
         initial_state: JaxIntegratorState[D_x],
     ) -> SimpleStateBatch[T, D_x, M]:
+        initial = jnp.broadcast_to(
+            initial_state.array[:, None],
+            (initial_state.dimension, inputs.rollout_count),
+        )
+
         return SimpleStateBatch(
-            integrator_simulate(
+            simulate(
                 controls=inputs.array,
-                initial_state=initial_state.array,
+                initial_state=initial,
                 time_step=self.time_step,
                 state_limits=self.state_limits,
                 velocity_limits=self.velocity_limits,
-                state_dimension=initial_state.dimension,
-                rollout_count=inputs.rollout_count,
             )
         )
 
@@ -87,7 +157,7 @@ class JaxIntegratorModel(
         state: JaxIntegratorState[D_x],
     ) -> SimpleState[D_x]:
         return SimpleState(
-            integrator_step(
+            step(
                 control=input.array,
                 state=state.array,
                 time_step=self.time_step,
@@ -96,52 +166,100 @@ class JaxIntegratorModel(
             )
         )
 
-    @property
-    def min_state(self) -> float:
-        return self.state_limits[0]
 
-    @property
-    def max_state(self) -> float:
-        return self.state_limits[1]
+@dataclass(kw_only=True, frozen=True)
+class JaxIntegratorObstacleModel(
+    ObstacleModel[
+        JaxIntegratorObstacleStatesHistory,
+        JaxIntegratorObstacleStates,
+        JaxIntegratorObstacleVelocities,
+        JaxIntegratorObstacleControlInputSequences,
+        JaxIntegratorObstacleStateSequences,
+    ]
+):
+    time_step: Scalar
 
-    @property
-    def min_velocity(self) -> float:
-        return self.velocity_limits[0]
+    @staticmethod
+    def create(*, time_step_size: float) -> "JaxIntegratorObstacleModel":
+        """Creates a JAX integrator obstacle model.
 
-    @property
-    def max_velocity(self) -> float:
-        return self.velocity_limits[1]
+        See `JaxIntegratorModel.create` for details on the integrator dynamics.
+        """
+        return JaxIntegratorObstacleModel(time_step=jnp.asarray(time_step_size))
+
+    def estimate_state_from[D_o: int, K: int](
+        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
+    ) -> EstimatedObstacleStates[
+        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleVelocities[D_o, K]
+    ]:
+        assert history.horizon > 0, "History must have at least one time step."
+
+        velocities = estimate_velocities(
+            history=history.array, time_step=self.time_step
+        )
+
+        return EstimatedObstacleStates(
+            states=JaxIntegratorObstacleStates(history.array[-1, :, :]),
+            velocities=JaxIntegratorObstacleVelocities(velocities),
+        )
+
+    def input_to_maintain[D_o: int, K: int](
+        self,
+        velocities: JaxIntegratorObstacleVelocities[D_o, K],
+        *,
+        states: JaxIntegratorObstacleStates[D_o, K],
+        horizon: int,
+    ) -> JaxIntegratorObstacleControlInputSequences[int, D_o, K]:
+        return JaxIntegratorObstacleControlInputSequences(
+            jnp.tile(velocities.array[jnp.newaxis, :, :], (horizon, 1, 1))
+        )
+
+    def forward[T: int, D_o: int, K: int](
+        self,
+        *,
+        current: JaxIntegratorObstacleStates[D_o, K],
+        inputs: JaxIntegratorObstacleControlInputSequences[T, D_o, K],
+    ) -> JaxIntegratorObstacleStateSequences[T, D_o, K]:
+        result = simulate(
+            controls=inputs.array,
+            initial_state=current.array,
+            time_step=self.time_step,
+            state_limits=NO_LIMITS,
+            velocity_limits=NO_LIMITS,
+        )
+        return JaxIntegratorObstacleStateSequences(result)
 
 
-@jax.jit(static_argnames=("state_dimension", "rollout_count"))
+def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
+    return (jnp.asarray(limits[0]), jnp.asarray(limits[1]))
+
+
+@jax.jit
 @jaxtyped
-def integrator_simulate(
+def simulate(
     *,
-    controls: Float[JaxArray, "T D_u M"],
-    initial_state: Float[JaxArray, "D_u"],
+    controls: Float[JaxArray, "T D_u N"],
+    initial_state: Float[JaxArray, "D_u N"],
     time_step: Scalar,
     state_limits: tuple[Scalar, Scalar],
     velocity_limits: tuple[Scalar, Scalar],
-    state_dimension: int,
-    rollout_count: int,
-) -> Float[JaxArray, "T D_u M"]:
+) -> Float[JaxArray, "T D_u N"]:
     clipped_controls = jnp.clip(controls, *velocity_limits)
-    initial = jnp.broadcast_to(initial_state[:, None], (state_dimension, rollout_count))
 
     @jaxtyped
     def step(
-        state: Float[JaxArray, "D_u M"], control: Float[JaxArray, "D_u M"]
-    ) -> tuple[Float[JaxArray, "D_u M"], Float[JaxArray, "D_u M"]]:
+        state: Float[JaxArray, "D_u N"], control: Float[JaxArray, "D_u N"]
+    ) -> tuple[Float[JaxArray, "D_u N"], Float[JaxArray, "D_u N"]]:
         new_state = jnp.clip(state + control * time_step, *state_limits)
         return new_state, new_state
 
-    _, states = jax.lax.scan(step, initial, clipped_controls)
+    _, states = jax.lax.scan(step, initial_state, clipped_controls)
     return states
 
 
 @jax.jit
 @jaxtyped
-def integrator_step(
+def step(
     *,
     control: Float[JaxArray, "T D_u"],
     state: Float[JaxArray, "D_u"],
@@ -151,3 +269,15 @@ def integrator_step(
 ) -> Float[JaxArray, "D_u"]:
     clipped_control = jnp.clip(control[0], *velocity_limits)
     return jnp.clip(state + clipped_control * time_step, *state_limits)
+
+
+@jax.jit
+@jaxtyped
+def estimate_velocities(
+    *, history: Float[JaxArray, "T D_o K"], time_step: Scalar
+) -> Float[JaxArray, "D_o K"]:
+    return jax.lax.cond(
+        history.shape[0] > 1,
+        lambda: (history[-1] - history[-2]) / time_step,
+        lambda: jnp.zeros_like(history[-1]),
+    )

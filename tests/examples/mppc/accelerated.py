@@ -255,14 +255,14 @@ class configure:
         planner: Planner = mppi.jax.base(
             model=(
                 augmented_model := AugmentedModel.of(
-                    physical=model.jax.kinematic_bicycle(
+                    physical=model.jax.bicycle.dynamical(
                         time_step_size=(dt := 0.1),
                         wheelbase=(L := 2.5),
                         speed_limits=(0.0, 15.0),
                         steering_limits=(-0.5, 0.5),
                         acceleration_limits=(-3.0, 3.0),
                     ),
-                    virtual=model.jax.integrator(
+                    virtual=model.jax.integrator.dynamical(
                         time_step_size=dt,
                         state_limits=(0, reference.path_length),
                         velocity_limits=(0, 15),
@@ -330,14 +330,14 @@ class configure:
     ) -> JaxMpccPlannerConfiguration:
         planner, augmented_model = mppi.jax.augmented(
             models=(
-                model.jax.kinematic_bicycle(
+                model.jax.bicycle.dynamical(
                     time_step_size=(dt := 0.1),
                     wheelbase=(L := 2.5),
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),
                 ),
-                model.jax.integrator(
+                model.jax.integrator.dynamical(
                     time_step_size=dt,
                     state_limits=(0, reference.path_length),
                     velocity_limits=(0, 15),

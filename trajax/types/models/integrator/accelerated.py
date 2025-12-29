@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from trajax.types.predictors import ObstacleStatesHistory
 from trajax.types.models.integrator.common import (
     IntegratorState,
     IntegratorStateBatch,
@@ -41,4 +42,13 @@ class JaxIntegratorControlInputBatch[T: int, D_u: int, M: int](
     @property
     def array(self) -> Float[JaxArray, "T D_u M"]:
         """Returns the underlying JAX array representing the integrator control input batch."""
+        ...
+
+
+class JaxIntegratorObstacleStatesHistory[T: int, D_o: int, K: int](
+    ObstacleStatesHistory[T, D_o, K], Protocol
+):
+    @property
+    def array(self) -> Float[JaxArray, "T D_o K"]:
+        """Returns the obstacle history as a JAX array."""
         ...

@@ -66,6 +66,8 @@ from trajax.models import (
     JaxBicyclePositions,
     JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStateSequences,
+    JaxIntegratorObstacleStateSequences,
 )
 from trajax.costs import (
     NumPyContouringCost,
@@ -319,6 +321,11 @@ class types:
             control_input_batch: Final = JaxSimpleControlInputBatch
             costs: Final = JaxSimpleCosts
 
+        class integrator:
+            type ObstacleStateSequences[T: int = Any, D_o: int = Any, K: int = Any] = (
+                JaxIntegratorObstacleStateSequences[T, D_o, K]
+            )
+
         class bicycle:
             type State = JaxBicycleState
             type StateBatch[T: int = Any, M: int = Any] = JaxBicycleStateBatch[T, M]
@@ -326,6 +333,9 @@ class types:
             type ControlInputSequence[T: int = Any] = JaxBicycleControlInputSequence[T]
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 JaxBicycleControlInputBatch[T, M]
+            )
+            type ObstacleStateSequences[T: int = Any, K: int = Any] = (
+                JaxBicycleObstacleStateSequences[T, K]
             )
 
             state: Final = JaxBicycleState

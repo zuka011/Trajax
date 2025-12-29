@@ -5,4 +5,6 @@ from .basic import (
 )
 from .accelerated import (
     JaxIntegratorModel as JaxIntegratorModel,
+    JaxIntegratorObstacleModel as JaxIntegratorObstacleModel,
+    JaxIntegratorObstacleStateSequences as JaxIntegratorObstacleStateSequences,
 )

@@ -12,12 +12,16 @@ from .bicycle import (
     JaxBicyclePositions as JaxBicyclePositions,
     JaxBicycleControlInputSequence as JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch as JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
     JaxBicycleModel as JaxBicycleModel,
+    JaxBicycleObstacleModel as JaxBicycleObstacleModel,
 )
 from .integrator import (
     NumPyIntegratorObstacleStateSequences as NumPyIntegratorObstacleStateSequences,
     NumPyIntegratorModel as NumPyIntegratorModel,
     NumPyIntegratorObstacleModel as NumPyIntegratorObstacleModel,
+    JaxIntegratorObstacleStateSequences as JaxIntegratorObstacleStateSequences,
     JaxIntegratorModel as JaxIntegratorModel,
+    JaxIntegratorObstacleModel as JaxIntegratorObstacleModel,
 )
 from .factory import model as model

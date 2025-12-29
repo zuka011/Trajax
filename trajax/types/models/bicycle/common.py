@@ -7,10 +7,12 @@ from numtypes import Array, Dims, D
 BICYCLE_D_X: Final = 4
 BICYCLE_D_V: Final = 2
 BICYCLE_D_U: Final = 2
+BICYCLE_D_O: Final = 3
 
 type BicycleD_x = D[4]
 type BicycleD_v = D[2]
 type BicycleD_u = D[2]
+type BicycleD_o = D[3]
 
 
 class BicycleState(Protocol):

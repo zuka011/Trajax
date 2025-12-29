@@ -144,6 +144,10 @@ class JaxObstacleStates[T: int, K: int](
         )
 
     @property
+    def array(self) -> Float[JaxArray, "T D_o K"]:
+        return jnp.stack([self._x, self._y, self._heading], axis=1)
+
+    @property
     def x_array(self) -> Float[JaxArray, "T K"]:
         return self._x
 
@@ -158,6 +162,18 @@ class JaxObstacleStates[T: int, K: int](
     @property
     def covariance_array(self) -> ObstacleCovarianceArray[T, K] | None:
         return self._covariance
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._x.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return D_O
+
+    @property
+    def count(self) -> K:
+        return cast(K, self._x.shape[1])
 
 
 @dataclass(frozen=True)

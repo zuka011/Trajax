@@ -54,7 +54,7 @@ from pytest import mark
             ),
         ),
         (
-            model := create_model.jax.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.jax.integrator.dynamical(time_step_size=(dt := 0.1)),
             inputs := data.jax.control_input_batch(
                 array(
                     [[[(v_theta := 10.0)] * (M := 4)]] * (T := 1),
@@ -69,7 +69,7 @@ from pytest import mark
             ),
         ),
         (
-            model := create_model.jax.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.jax.integrator.dynamical(time_step_size=(dt := 0.1)),
             inputs := data.jax.control_input_batch(
                 array(
                     [[[(v_theta := 10.0)] * (M := 1)]] * (T := 4),
@@ -136,7 +136,7 @@ M = clear_type
             ),
         ),
         (
-            model := create_model.jax.integrator(time_step_size=(dt := 0.1)),
+            model := create_model.jax.integrator.dynamical(time_step_size=(dt := 0.1)),
             inputs := data.jax.control_input_batch(
                 array(
                     [[[(v_theta := 0.0)] * (M := 1)]] * (T := 100),
@@ -221,7 +221,7 @@ def test_that_zero_velocity_results_in_standstill[
             expected_final_state := array([[state_min] * M], shape=(D_x, M)),
         ),
         (
-            model := create_model.jax.integrator(
+            model := create_model.jax.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 state_limits=((state_min := 1.0), (state_max := 10.0)),
             ),
@@ -239,7 +239,7 @@ def test_that_zero_velocity_results_in_standstill[
             expected_final_state := array([[state_max] * M], shape=(D_x, M)),
         ),
         (
-            model := create_model.jax.integrator(
+            model := create_model.jax.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 state_limits=((state_min := -4.0), (state_max := 10.0)),
             ),
@@ -337,7 +337,7 @@ def test_that_state_limits_are_respected_during_integration[
             ),
         ),
         (
-            model := create_model.jax.integrator(
+            model := create_model.jax.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 velocity_limits=((v_min := -4.0), (v_max := 2.0)),
             ),
@@ -362,7 +362,7 @@ def test_that_state_limits_are_respected_during_integration[
             ),
         ),
         (
-            model := create_model.jax.integrator(
+            model := create_model.jax.integrator.dynamical(
                 time_step_size=(dt := 0.1),
                 velocity_limits=((v_min := -2.0), (v_max := 5.0)),
             ),

@@ -562,7 +562,9 @@ def test_that_mppi_optimal_control_is_convex_combination_of_samples[
         ),
         (
             mppi := create_mppi.jax.base(
-                model=(model := create_model.jax.integrator(time_step_size=0.1)),
+                model=(
+                    model := create_model.jax.integrator.dynamical(time_step_size=0.1)
+                ),
                 cost_function=costs.jax.quadratic_distance_to_origin(),
                 sampler=samplers.sampler.jax.gaussian(
                     standard_deviation=array([5.0, 5.0], shape=(D_u := 2,)),

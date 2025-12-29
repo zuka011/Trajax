@@ -4,11 +4,13 @@ from trajax.models.integrator import (
     NumPyIntegratorModel,
     NumPyIntegratorObstacleModel,
     JaxIntegratorModel,
+    JaxIntegratorObstacleModel,
 )
 from trajax.models.bicycle import (
     NumPyBicycleModel,
     NumPyBicycleObstacleModel,
     JaxBicycleModel,
+    JaxBicycleObstacleModel,
 )
 
 
@@ -18,10 +20,15 @@ class model:
             dynamical: Final = NumPyIntegratorModel.create
             obstacle: Final = NumPyIntegratorObstacleModel.create
 
-        class kinematic_bicycle:
+        class bicycle:
             dynamical: Final = NumPyBicycleModel.create
             obstacle: Final = NumPyBicycleObstacleModel.create
 
     class jax:
-        integrator: Final = JaxIntegratorModel.create
-        kinematic_bicycle: Final = JaxBicycleModel.create
+        class integrator:
+            dynamical: Final = JaxIntegratorModel.create
+            obstacle: Final = JaxIntegratorObstacleModel.create
+
+        class bicycle:
+            dynamical: Final = JaxBicycleModel.create
+            obstacle: Final = JaxBicycleObstacleModel.create

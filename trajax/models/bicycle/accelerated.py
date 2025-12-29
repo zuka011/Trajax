@@ -1,4 +1,4 @@
-from typing import cast, overload, Self, Sequence
+from typing import cast, overload, Self, Sequence, Final
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -7,6 +7,7 @@ from trajax.types import (
     JaxStateBatch,
     JaxControlInputSequence,
     JaxControlInputBatch,
+    JaxBicycleObstacleStatesHistory,
     BicycleState,
     BicycleStateSequence,
     BicycleStateBatch,
@@ -18,6 +19,8 @@ from trajax.types import (
     BicycleD_u,
     BICYCLE_D_U,
     DynamicalModel,
+    ObstacleModel,
+    EstimatedObstacleStates,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -26,6 +29,8 @@ from numtypes import Array, Dims, D
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 
 
 type StateArray = Float[JaxArray, f"{BICYCLE_D_X}"]
@@ -292,6 +297,78 @@ class JaxBicycleControlInputBatch[T: int, M: int](
         return self._array
 
 
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleObstacleStates[K: int]:
+    array: Float[JaxArray, f"{BICYCLE_D_X} K"]
+
+    @staticmethod
+    def create[K_: int](
+        *,
+        x: Float[JaxArray, "K"],
+        y: Float[JaxArray, "K"],
+        theta: Float[JaxArray, "K"],
+        v: Float[JaxArray, "K"],
+        count: K_ | None = None,
+    ) -> "JaxBicycleObstacleStates[K_]":
+        """Creates a JAX bicycle obstacle states from individual state components."""
+        array = jnp.stack([x, y, theta, v], axis=0)
+        return JaxBicycleObstacleStates(array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleObstacleStateSequences[T: int, K: int]:
+    array: Float[JaxArray, f"T {BICYCLE_D_X} K"]
+
+    @staticmethod
+    def create(
+        *,
+        x: Float[JaxArray, "T K"],
+        y: Float[JaxArray, "T K"],
+        theta: Float[JaxArray, "T K"],
+        v: Float[JaxArray, "T K"],
+    ) -> "JaxBicycleObstacleStateSequences[int, int]":
+        """Creates a JAX bicycle obstacle state sequences from individual state components."""
+        array = jnp.stack([x, y, theta, v], axis=1)
+        return JaxBicycleObstacleStateSequences(array)
+
+    def x(self) -> Array[Dims[T, K]]:
+        return np.asarray(self.array[:, 0, :])
+
+    def y(self) -> Array[Dims[T, K]]:
+        return np.asarray(self.array[:, 1, :])
+
+    def theta(self) -> Array[Dims[T, K]]:
+        return np.asarray(self.array[:, 2, :])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleObstacleVelocities[K: int]:
+    steering_angles: Float[JaxArray, "K"]
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.steering_angles.shape[0])
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
+    array: Float[JaxArray, f"T {BICYCLE_D_U} K"]
+
+    @staticmethod
+    def create(
+        *,
+        accelerations: Float[JaxArray, "T K"],
+        steering_angles: Float[JaxArray, "T K"],
+    ) -> "JaxBicycleObstacleControlInputSequences[int, int]":
+        """Creates a JAX bicycle obstacle control input sequences from individual input components."""
+        array = jnp.stack([accelerations, steering_angles], axis=1)
+        return JaxBicycleObstacleControlInputSequences(array)
+
+
 @dataclass(kw_only=True, frozen=True)
 class JaxBicycleModel(
     DynamicalModel[
@@ -301,11 +378,11 @@ class JaxBicycleModel(
         JaxBicycleControlInputBatch,
     ],
 ):
-    time_step_size: float
-    wheelbase: float
-    speed_limits: tuple[float, float]
-    steering_limits: tuple[float, float]
-    acceleration_limits: tuple[float, float]
+    time_step_size: Scalar
+    wheelbase: Scalar
+    speed_limits: tuple[Scalar, Scalar]
+    steering_limits: tuple[Scalar, Scalar]
+    acceleration_limits: tuple[Scalar, Scalar]
 
     @staticmethod
     def create(
@@ -317,18 +394,17 @@ class JaxBicycleModel(
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "JaxBicycleModel":
         """Creates a kinematic bicycle model that uses JAX for computations."""
-        no_limits = (float("-inf"), float("inf"))
 
         return JaxBicycleModel(
-            time_step_size=time_step_size,
-            wheelbase=wheelbase,
-            speed_limits=speed_limits if speed_limits is not None else no_limits,
-            steering_limits=steering_limits
+            time_step_size=jnp.asarray(time_step_size),
+            wheelbase=jnp.asarray(wheelbase),
+            speed_limits=wrap(speed_limits) if speed_limits is not None else NO_LIMITS,
+            steering_limits=wrap(steering_limits)
             if steering_limits is not None
-            else no_limits,
-            acceleration_limits=acceleration_limits
+            else NO_LIMITS,
+            acceleration_limits=wrap(acceleration_limits)
             if acceleration_limits is not None
-            else no_limits,
+            else NO_LIMITS,
         )
 
     def simulate[T: int, M: int](
@@ -372,29 +448,89 @@ class JaxBicycleModel(
             )[:, 0]
         )
 
-    @property
-    def min_speed(self) -> float:
-        return self.speed_limits[0]
 
-    @property
-    def max_speed(self) -> float:
-        return self.speed_limits[1]
+@dataclass(kw_only=True, frozen=True)
+class JaxBicycleObstacleModel(
+    ObstacleModel[
+        JaxBicycleObstacleStatesHistory,
+        JaxBicycleObstacleStates,
+        JaxBicycleObstacleVelocities,
+        JaxBicycleObstacleControlInputSequences,
+        JaxBicycleObstacleStateSequences,
+    ]
+):
+    time_step_size: Scalar
+    wheelbase: Scalar
 
-    @property
-    def min_steering(self) -> float:
-        return self.steering_limits[0]
+    @staticmethod
+    def create(
+        *, time_step_size: float, wheelbase: float = 1.0
+    ) -> "JaxBicycleObstacleModel":
+        """Creates a JAX bicycle obstacle model."""
+        return JaxBicycleObstacleModel(
+            time_step_size=jnp.asarray(time_step_size), wheelbase=jnp.asarray(wheelbase)
+        )
 
-    @property
-    def max_steering(self) -> float:
-        return self.steering_limits[1]
+    def estimate_state_from[K: int](
+        self, history: JaxBicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        JaxBicycleObstacleStates[K], JaxBicycleObstacleVelocities[K]
+    ]:
+        assert history.horizon > 0, "History must have at least one time step."
 
-    @property
-    def min_acceleration(self) -> float:
-        return self.acceleration_limits[0]
+        speeds, steering_angles = estimate_velocities(
+            x_history=history.x_array,
+            y_history=history.y_array,
+            heading_history=history.heading_array,
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
 
-    @property
-    def max_acceleration(self) -> float:
-        return self.acceleration_limits[1]
+        return EstimatedObstacleStates(
+            states=JaxBicycleObstacleStates.create(
+                x=history.x_array[-1],
+                y=history.y_array[-1],
+                theta=history.heading_array[-1],
+                v=speeds,
+            ),
+            velocities=JaxBicycleObstacleVelocities(steering_angles=steering_angles),
+        )
+
+    def input_to_maintain[K: int](
+        self,
+        velocities: JaxBicycleObstacleVelocities[K],
+        *,
+        states: JaxBicycleObstacleStates[K],
+        horizon: int,
+    ) -> JaxBicycleObstacleControlInputSequences[int, K]:
+        return JaxBicycleObstacleControlInputSequences.create(  # type: ignore[return-value]
+            accelerations=jnp.zeros((horizon, velocities.count)),
+            steering_angles=jnp.tile(
+                velocities.steering_angles[jnp.newaxis, :], (horizon, 1)
+            ),
+        )
+
+    def forward[T: int, K: int](
+        self,
+        *,
+        current: JaxBicycleObstacleStates[K],
+        inputs: JaxBicycleObstacleControlInputSequences[T, K],
+    ) -> JaxBicycleObstacleStateSequences[T, K]:
+        return JaxBicycleObstacleStateSequences(
+            simulate(
+                inputs.array,
+                current.array,
+                time_step_size=self.time_step_size,
+                wheelbase=self.wheelbase,
+                speed_limits=NO_LIMITS,
+                steering_limits=NO_LIMITS,
+                acceleration_limits=NO_LIMITS,
+            )
+        )
+
+
+def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
+    return (jnp.asarray(limits[0]), jnp.asarray(limits[1]))
 
 
 @jax.jit
@@ -451,3 +587,49 @@ def step(
     new_v = jnp.clip(v + acceleration * time_step_size, *speed_limits)
 
     return jnp.stack([new_x, new_y, new_theta, new_v])
+
+
+@jax.jit
+@jaxtyped
+def estimate_velocities(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+    horizon = x_history.shape[0]
+    count = x_history.shape[1]
+    return jax.lax.cond(
+        horizon > 1,
+        lambda: _estimate_velocities_with_two_points(
+            x_history=x_history,
+            y_history=y_history,
+            heading_history=heading_history,
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+        ),
+        lambda: (jnp.zeros(count), jnp.zeros(count)),
+    )
+
+
+@jax.jit
+@jaxtyped
+def _estimate_velocities_with_two_points(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+    delta_x = x_history[-1] - x_history[-2]
+    delta_y = y_history[-1] - y_history[-2]
+
+    speeds = jnp.sqrt(delta_x**2 + delta_y**2) / time_step_size
+
+    heading_velocity = (heading_history[-1] - heading_history[-2]) / time_step_size
+    steering_angles = jnp.arctan(heading_velocity * wheelbase / speeds)
+
+    return speeds, steering_angles

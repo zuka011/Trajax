@@ -233,7 +233,7 @@ class configure:
         planner: Planner = mppi.numpy.base(
             model=(
                 augmented_model := AugmentedModel.of(
-                    physical=model.numpy.kinematic_bicycle.dynamical(
+                    physical=model.numpy.bicycle.dynamical(
                         time_step_size=(dt := 0.1),
                         wheelbase=(L := 2.5),
                         speed_limits=(0.0, 15.0),
@@ -310,7 +310,7 @@ class configure:
     ) -> NumPyMpccPlannerConfiguration:
         planner, augmented_model = mppi.numpy.augmented(
             models=(
-                model.numpy.kinematic_bicycle.dynamical(
+                model.numpy.bicycle.dynamical(
                     time_step_size=(dt := 0.1),
                     wheelbase=(L := 2.5),
                     speed_limits=(0.0, 15.0),

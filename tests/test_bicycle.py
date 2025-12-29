@@ -20,7 +20,7 @@ type ControlInputBatch = types.bicycle.ControlInputBatch
     ["model", "inputs", "initial_state", "M", "T", "x_0", "y_0", "theta_0", "v_0"],
     [
         (
-            model := create_model.numpy.kinematic_bicycle.dynamical(time_step_size=0.1),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=0.1),
             inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 5),
                 rollout_count=(M := 3),
@@ -38,7 +38,7 @@ type ControlInputBatch = types.bicycle.ControlInputBatch
             v_0,
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=0.25),
+            model := create_model.jax.bicycle.dynamical(time_step_size=0.25),
             inputs := data.jax.control_input_batch(
                 time_horizon=(T := 5),
                 rollout_count=(M := 3),
@@ -105,9 +105,7 @@ def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
     ],
     [
         (
-            model := create_model.numpy.kinematic_bicycle.dynamical(
-                time_step_size=(dt := 0.25)
-            ),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=(dt := 0.25)),
             inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 4),
                 rollout_count=(M := 3),
@@ -143,7 +141,7 @@ def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
             expected_v := array([[v_0] * M] * T, shape=(T, M)),
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=(dt := 0.75)),
+            model := create_model.jax.bicycle.dynamical(time_step_size=(dt := 0.75)),
             inputs := data.jax.control_input_batch(
                 time_horizon=(T := 2),
                 rollout_count=(M := 3),
@@ -213,9 +211,7 @@ def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     ],
     [  # Time step has to be small for 1st order integrators in these tests.
         (
-            model := create_model.numpy.kinematic_bicycle.dynamical(
-                time_step_size=(dt := 0.001)
-            ),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=(dt := 0.001)),
             inputs := data.numpy.control_input_batch(
                 time_horizon=(T := 20),
                 rollout_count=(M := 2),
@@ -255,7 +251,7 @@ def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
             expected_v_final := array([v_0 + a * (T * dt)] * M, shape=(M,)),
         ),
         (  # Similar test but using JAX implementation
-            model := create_model.jax.kinematic_bicycle(time_step_size=(dt := 0.001)),
+            model := create_model.jax.bicycle.dynamical(time_step_size=(dt := 0.001)),
             inputs := data.jax.control_input_batch(
                 time_horizon=(T := 15),
                 rollout_count=(M := 3),
@@ -327,7 +323,7 @@ T = clear_type
     [
         (
             # Reverse steering halfway through. Final orientation should be the same as start.
-            model := create_model.numpy.kinematic_bicycle.dynamical(time_step_size=0.5),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=0.5),
             inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
@@ -339,7 +335,7 @@ T = clear_type
             expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=0.25),
+            model := create_model.jax.bicycle.dynamical(time_step_size=0.25),
             inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([0.0] * (T := 6), shape=(T,)),
@@ -375,7 +371,7 @@ def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
     [
         (
             # Reverse acceleration halfway through. Final velocity should be the same as start.
-            model := create_model.numpy.kinematic_bicycle.dynamical(time_step_size=0.5),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=0.5),
             inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([2.0, 1.0, 0.5, -0.5, -1.0, -2.0], shape=(T := 6,)),
@@ -385,7 +381,7 @@ def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
             expected_final_v := array([v_0] * M, shape=(M,)),
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=0.25),
+            model := create_model.jax.bicycle.dynamical(time_step_size=0.25),
             inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array([3.0, 1.0, 0.5, -0.5, -1.0, -3.0], shape=(T := 6,)),
@@ -426,7 +422,7 @@ def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
     [
         (
             # Reverse acceleration halfway through. Final position and orientation should be the same as start.
-            model := create_model.numpy.kinematic_bicycle.dynamical(time_step_size=0.5),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=0.5),
             inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array(
@@ -443,7 +439,7 @@ def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
             expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=0.25),
+            model := create_model.jax.bicycle.dynamical(time_step_size=0.25),
             inputs := data.jax.control_input_batch(
                 rollout_count=(M := 8),
                 acceleration=array(
@@ -487,9 +483,7 @@ def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and
     ["model", "inputs", "initial_state", "time_step_size"],
     [  # Time step and maximum steering angle must be small for 1st order integrators in these tests.
         (
-            model := create_model.numpy.kinematic_bicycle.dynamical(
-                time_step_size=(dt := 0.1)
-            ),
+            model := create_model.numpy.bicycle.dynamical(time_step_size=(dt := 0.1)),
             inputs := data.numpy.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 12)),
@@ -499,7 +493,7 @@ def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and
             time_step_size := dt,
         ),
         (
-            model := create_model.jax.kinematic_bicycle(time_step_size=(dt := 0.05)),
+            model := create_model.jax.bicycle.dynamical(time_step_size=(dt := 0.05)),
             inputs := data.jax.control_input_batch(
                 rollout_count=(M := 2),
                 acceleration=np.random.uniform(-1.0, 1.0, size=(T := 10)),
@@ -563,7 +557,7 @@ def test_that_displacement_is_consistent_with_velocity_state[
             # angular_velocity = v * tan(steering) / L
             # For 2π rotation: T * dt * angular_velocity = 2π
             # So steering = atan(2π / (T * dt * v / L))
-            model := create_model.numpy.kinematic_bicycle.dynamical(
+            model := create_model.numpy.bicycle.dynamical(
                 time_step_size=(dt := 0.1), wheelbase=(L := 2.0)
             ),
             inputs := data.numpy.control_input_batch(
@@ -582,7 +576,7 @@ def test_that_displacement_is_consistent_with_velocity_state[
             expected_final_theta := array([theta_0] * M, shape=(M,)),
         ),
         (  # Analogous test with JAX implementation
-            model := create_model.jax.kinematic_bicycle(
+            model := create_model.jax.bicycle.dynamical(
                 time_step_size=(dt := 0.05), wheelbase=(L := 1.5)
             ),
             inputs := data.jax.control_input_batch(
@@ -633,7 +627,7 @@ def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_st
     [
         (
             # Angular velocity = v * tan(steering) / wheelbase
-            model := create_model.numpy.kinematic_bicycle.dynamical(
+            model := create_model.numpy.bicycle.dynamical(
                 time_step_size=(dt := 0.1), wheelbase=(L := 2.5)
             ),
             inputs := data.numpy.control_input_batch(
@@ -647,7 +641,7 @@ def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_st
             expected_angular_velocity := array([v * np.tan(delta) / L] * M, shape=(M,)),
         ),
         (  # Analogous test with JAX implementation
-            model := create_model.jax.kinematic_bicycle(
+            model := create_model.jax.bicycle.dynamical(
                 time_step_size=(dt := 0.1), wheelbase=(L := 3.0)
             ),
             inputs := data.jax.control_input_batch(
@@ -690,7 +684,7 @@ def test_that_angular_velocity_depends_on_wheelbase[
     [
         *[
             (
-                model := create_model.numpy.kinematic_bicycle.dynamical(
+                model := create_model.numpy.bicycle.dynamical(
                     time_step_size=1.0, speed_limits=(v_min := -5.0, v_max := 10.0)
                 ),
                 inputs := data.numpy.control_input_batch(
@@ -707,7 +701,7 @@ def test_that_angular_velocity_depends_on_wheelbase[
         ],
         *[
             (
-                model := create_model.jax.kinematic_bicycle(
+                model := create_model.jax.bicycle.dynamical(
                     time_step_size=1.0, speed_limits=(v_min := -3.0, v_max := 8.0)
                 ),
                 inputs := data.jax.control_input_batch(
@@ -754,7 +748,7 @@ def test_that_velocity_is_clamped_to_speed_limits[
                 # Steering input is larger than max_steering, but should be clipped
                 # angular velocity = v * tan(clipped_steering) / L
                 # Total theta_change = angular_velocity * dt * T
-                model := create_model.numpy.kinematic_bicycle.dynamical(
+                model := create_model.numpy.bicycle.dynamical(
                     time_step_size=(dt := 1.0),
                     wheelbase=(L := 1.0),
                     steering_limits=(delta_min := -0.2, delta_max := 0.3),
@@ -781,7 +775,7 @@ def test_that_velocity_is_clamped_to_speed_limits[
         ],
         *[
             (
-                model := create_model.jax.kinematic_bicycle(
+                model := create_model.jax.bicycle.dynamical(
                     time_step_size=(dt := 0.5),
                     wheelbase=(L := 2.0),
                     steering_limits=(delta_min := -0.3, delta_max := 0.4),
@@ -834,7 +828,7 @@ def test_that_steering_input_is_clipped_to_max_steering[
             (
                 # Acceleration input is larger than max_acceleration, but should be clipped
                 # Total velocity change = clipped_acceleration * dt * T
-                model := create_model.numpy.kinematic_bicycle.dynamical(
+                model := create_model.numpy.bicycle.dynamical(
                     time_step_size=(dt := 1.0),
                     acceleration_limits=(a_min := -2.0, a_max := 3.0),
                 ),
@@ -856,7 +850,7 @@ def test_that_steering_input_is_clipped_to_max_steering[
         ],
         *[
             (
-                model := create_model.jax.kinematic_bicycle(
+                model := create_model.jax.bicycle.dynamical(
                     time_step_size=(dt := 0.5),
                     acceleration_limits=(a_min := -8.0, a_max := 4.0),
                 ),
@@ -902,7 +896,7 @@ def test_that_acceleration_input_is_clipped_to_max_acceleration[
     ["model", "input_batch", "initial_state", "horizon", "input_at"],
     [
         (
-            model := create_model.numpy.kinematic_bicycle.dynamical(
+            model := create_model.numpy.bicycle.dynamical(
                 time_step_size=(dt := 0.1),
                 wheelbase=1.5,
                 speed_limits=(0.0, 20.0),
@@ -921,7 +915,7 @@ def test_that_acceleration_input_is_clipped_to_max_acceleration[
             ),
         ),
         (
-            model := create_model.jax.kinematic_bicycle(
+            model := create_model.jax.bicycle.dynamical(
                 time_step_size=(dt := 0.2),
                 wheelbase=2.0,
                 speed_limits=(0.0, 15.0),

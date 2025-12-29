@@ -1,4 +1,4 @@
-from typing import Self, overload, cast, Sequence
+from typing import Self, overload, cast, Sequence, Final
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -27,6 +27,7 @@ from numtypes import Array, Dims, D, shape_of, array
 
 import numpy as np
 
+NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 type StateArray = Array[Dims[BicycleD_x]]
 type ControlInputSequenceArray[T: int] = Array[Dims[T, BicycleD_u]]
@@ -354,18 +355,17 @@ class NumPyBicycleModel(
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "NumPyBicycleModel":
         """Creates a kinematic bicycle model that uses NumPy for computations."""
-        no_limits = (float("-inf"), float("inf"))
 
         return NumPyBicycleModel(
             time_step_size=time_step_size,
             wheelbase=wheelbase,
-            speed_limits=speed_limits if speed_limits is not None else no_limits,
+            speed_limits=speed_limits if speed_limits is not None else NO_LIMITS,
             steering_limits=steering_limits
             if steering_limits is not None
-            else no_limits,
+            else NO_LIMITS,
             acceleration_limits=acceleration_limits
             if acceleration_limits is not None
-            else no_limits,
+            else NO_LIMITS,
         )
 
     def simulate[T: int, M: int](
@@ -475,6 +475,8 @@ class NumPyBicycleObstacleModel(
     ) -> EstimatedObstacleStates[
         NumPyBicycleObstacleStates[K], NumPyBicycleObstacleVelocities[K]
     ]:
+        assert history.horizon > 0, "History must have at least one time step."
+
         if history.horizon < 2:
             speeds = np.zeros((history.count))
             steering_angles = np.zeros((history.count))
@@ -542,16 +544,16 @@ class NumPyBicycleObstacleModel(
         )
 
 
-def simulate[T: int, M: int](
-    inputs: ControlInputBatchArray[T, M],
-    initial: StatesAtTimeStep[M],
+def simulate[T: int, N: int](
+    inputs: ControlInputBatchArray[T, N],
+    initial: StatesAtTimeStep[N],
     *,
     time_step_size: float,
     wheelbase: float,
     speed_limits: tuple[float, float],
     steering_limits: tuple[float, float],
     acceleration_limits: tuple[float, float],
-) -> StateBatchArray[T, M]:
+) -> StateBatchArray[T, N]:
     horizon = inputs.shape[0]
     rollout_count = inputs.shape[2]
     states = np.zeros((horizon, BICYCLE_D_X, rollout_count))

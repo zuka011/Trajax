@@ -164,6 +164,8 @@ class NumPyIntegratorObstacleModel(
     ) -> EstimatedObstacleStates[
         NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleVelocities[D_o, K]
     ]:
+        assert history.horizon > 0, "History must have at least one time step."
+
         if history.horizon < 2:
             velocities = np.zeros((history.dimension, history.count))
         else:

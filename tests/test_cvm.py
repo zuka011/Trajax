@@ -8,6 +8,7 @@ from trajax import (
 
 from numtypes import array
 
+import jax.numpy as jnp
 import numpy as np
 
 from tests.dsl import mppi as data
@@ -50,8 +51,44 @@ class NumPyBicyclePredictionCreator:
         )
 
 
+class JaxIntegratorPredictionCreator:
+    def __call__(
+        self, *, states: types.jax.integrator.ObstacleStateSequences
+    ) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=states.array[:, 0, :],
+            y=states.array[:, 1, :],
+            heading=states.array[:, 2, :],
+        )
+
+    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=jnp.empty((horizon, 0)),
+            y=jnp.empty((horizon, 0)),
+            heading=jnp.empty((horizon, 0)),
+        )
+
+
+class JaxBicyclePredictionCreator:
+    def __call__(
+        self, *, states: types.jax.bicycle.ObstacleStateSequences
+    ) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=states.x(),
+            y=states.y(),
+            heading=states.theta(),
+        )
+
+    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=jnp.empty((horizon, 0)),
+            y=jnp.empty((horizon, 0)),
+            heading=jnp.empty((horizon, 0)),
+        )
+
+
 @mark.parametrize(
-    ["predictor", "states", "expected"],
+    ["predictor", "history", "expected"],
     [  # Single Integrator CVM tests
         (  # No history
             predictor := create_predictor.constant_velocity(
@@ -59,7 +96,7 @@ class NumPyBicyclePredictionCreator:
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=np.empty((T_h := 0, K := 0)),
                 y=np.empty((T_h, K)),
                 heading=np.empty((T_h, K)),
@@ -76,7 +113,7 @@ class NumPyBicyclePredictionCreator:
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=array([[x := -5.0]], shape=(T_h := 1, K := 1)),
                 y=array([[y := 2.0]], shape=(T_h, K)),
                 heading=array([[theta := 0.0]], shape=(T_h, K)),
@@ -95,7 +132,7 @@ class NumPyBicyclePredictionCreator:
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=array(
                     [[-1.0, 0.0], [0.0, 0.0], [1.0, 0.0]], shape=(T_h := 3, K := 2)
                 ),
@@ -130,12 +167,12 @@ class NumPyBicyclePredictionCreator:
         (  # No history
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 5),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=np.empty((T_h := 0, K := 0)),
                 y=np.empty((T_h, K)),
                 heading=np.empty((T_h, K)),
@@ -149,12 +186,12 @@ class NumPyBicyclePredictionCreator:
         (  # Single state, zero velocity - stays still
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 5),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=array([[x := 3.0]], shape=(T_h := 1, K := 1)),
                 y=array([[y := 2.0]], shape=(T_h, K)),
                 heading=array([[theta := np.pi / 4]], shape=(T_h, K)),
@@ -168,12 +205,12 @@ class NumPyBicyclePredictionCreator:
         (  # Single state, moving along x-axis (θ=0)
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 4),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=array([[-1.0], [4.0]], shape=(T_h := 2, K := 1)),
                 y=array([[2.0], [2.0]], shape=(T_h, K)),
                 heading=array([[0.0], [0.0]], shape=(T_h, K)),
@@ -188,12 +225,12 @@ class NumPyBicyclePredictionCreator:
         (  # Moving along y-axis (θ=π/2)
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 4),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
                 y=array([[0.0], [5.0]], shape=(T_h, K)),
                 heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
@@ -208,12 +245,12 @@ class NumPyBicyclePredictionCreator:
         (  # Multiple obstacles with different velocities and headings
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 3),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 # Obstacle 0 - v = 10 m/s, θ=0 (moving +x)
                 # Obstacle 1 - v = 10 m/s, θ=π/2 (moving +y)
                 # Obstacle 2 - v = 20 m/s, θ=π (moving -x)
@@ -238,12 +275,12 @@ class NumPyBicyclePredictionCreator:
             # From history: estimate v and ω, then δ = arctan(ω * L / v)
             predictor := create_predictor.constant_velocity(
                 horizon=(T_p := 4),
-                model=model.numpy.kinematic_bicycle.obstacle(
+                model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
-            states := data.numpy.obstacle_states(
+            history := data.numpy.obstacle_states(
                 # v = 10 m/s (Δ pos = 1.0 per step along heading)
                 # ω = 0.5 rad/s (Δ θ = 0.05 rad per step)
                 # This implies δ = arctan(ω * L / v) = arctan(0.5 * 1 / 10) = arctan(0.05)
@@ -300,6 +337,240 @@ class NumPyBicyclePredictionCreator:
                 ),
             ),
         ),
+    ]
+    + [  # Analogous tests for JAX Integrator Model CVM
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 5),
+                model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
+                prediction=JaxIntegratorPredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=np.empty((T_h := 0, K := 0)),
+                y=np.empty((T_h, K)),
+                heading=np.empty((T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.empty((T_p, K)),
+                y=np.empty((T_p, K)),
+                heading=np.empty((T_p, K)),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 5),
+                model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
+                prediction=JaxIntegratorPredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[x := -5.0]], shape=(T_h := 1, K := 1)),
+                y=array([[y := 2.0]], shape=(T_h, K)),
+                heading=array([[theta := 0.0]], shape=(T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.full((T_p, K), x),
+                y=np.full((T_p, K), y),
+                heading=np.full((T_p, K), theta),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
+                prediction=JaxIntegratorPredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array(
+                    [[-1.0, 0.0], [0.0, 0.0], [1.0, 0.0]], shape=(T_h := 3, K := 2)
+                ),
+                y=array([[0.0, 1.0], [0.0, 2.0], [0.0, 3.0]], shape=(T_h, K)),
+                heading=array(
+                    [[0.0, np.pi / 2], [0.0, np.pi / 4], [0.0, 0.0]],
+                    shape=(T_h, K),
+                ),
+            ),
+            expected := data.jax.obstacle_states(
+                x=array(
+                    [[2.0, 0.0], [3.0, 0.0], [4.0, 0.0], [5.0, 0.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                y=array(
+                    [[0.0, 4.0], [0.0, 5.0], [0.0, 6.0], [0.0, 7.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                heading=array(
+                    [
+                        [0.0, -np.pi / 4],
+                        [0.0, -np.pi / 2],
+                        [0.0, -3 * np.pi / 4],
+                        [0.0, -np.pi],
+                    ],
+                    shape=(T_p, K),  # type: ignore
+                ),
+            ),
+        ),
+    ]
+    + [  # JAX Bicycle Model CVM tests
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 5),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=np.empty((T_h := 0, K := 0)),
+                y=np.empty((T_h, K)),
+                heading=np.empty((T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.empty((T_p, K)),
+                y=np.empty((T_p, K)),
+                heading=np.empty((T_p, K)),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 5),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[x := 3.0]], shape=(T_h := 1, K := 1)),
+                y=array([[y := 2.0]], shape=(T_h, K)),
+                heading=array([[theta := np.pi / 4]], shape=(T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.full((T_p, K), x),
+                y=np.full((T_p, K), y),
+                heading=np.full((T_p, K), theta),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[-1.0], [4.0]], shape=(T_h := 2, K := 1)),
+                y=array([[2.0], [2.0]], shape=(T_h, K)),
+                heading=array([[0.0], [0.0]], shape=(T_h, K)),
+            ),
+            # x increases by 5.0 per step, y stays constant
+            expected := data.jax.obstacle_states(
+                x=array([[9.0], [14.0], [19.0], [24.0]], shape=(T_p, K)),
+                y=np.full((T_p, K), 2.0),
+                heading=np.full((T_p, K), 0.0),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[0.0], [5.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.full((T_p, K), 0.0),
+                y=array([[10.0], [15.0], [20.0], [25.0]], shape=(T_p, K)),
+                heading=np.full((T_p, K), np.pi / 2),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 3),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0, 5.0, 10.0], [1.0, 5.0, 8.0]], shape=(T_h := 2, K := 3)),
+                y=array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]], shape=(T_h, K)),
+                heading=array(
+                    [[0.0, np.pi / 2, np.pi], [0.0, np.pi / 2, np.pi]], shape=(T_h, K)
+                ),
+            ),
+            expected := data.jax.obstacle_states(
+                x=array(
+                    [[2.0, 5.0, 6.0], [3.0, 5.0, 4.0], [4.0, 5.0, 2.0]], shape=(T_p, K)
+                ),
+                y=array(
+                    [[0.0, 2.0, 0.0], [0.0, 3.0, 0.0], [0.0, 4.0, 0.0]], shape=(T_p, K)
+                ),
+                heading=array([[0.0, np.pi / 2, np.pi]] * T_p, shape=(T_p, K)),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
+                y=array([[0.0], [0.0]], shape=(T_h, K)),
+                heading=array([[0.0], [0.05]], shape=(T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=array(
+                    [
+                        [1.0 + 10 * np.cos(0.05) * 0.1],
+                        [1.0 + 10 * np.cos(0.05) * 0.1 + 10 * np.cos(0.10) * 0.1],
+                        [
+                            1.0
+                            + 10 * np.cos(0.05) * 0.1
+                            + 10 * np.cos(0.10) * 0.1
+                            + 10 * np.cos(0.15) * 0.1
+                        ],
+                        [
+                            1.0
+                            + 10 * np.cos(0.05) * 0.1
+                            + 10 * np.cos(0.10) * 0.1
+                            + 10 * np.cos(0.15) * 0.1
+                            + 10 * np.cos(0.20) * 0.1
+                        ],
+                    ],
+                    shape=(T_p, K),
+                ),
+                y=array(
+                    [
+                        [10 * np.sin(0.05) * 0.1],
+                        [10 * np.sin(0.05) * 0.1 + 10 * np.sin(0.10) * 0.1],
+                        [
+                            10 * np.sin(0.05) * 0.1
+                            + 10 * np.sin(0.10) * 0.1
+                            + 10 * np.sin(0.15) * 0.1
+                        ],
+                        [
+                            10 * np.sin(0.05) * 0.1
+                            + 10 * np.sin(0.10) * 0.1
+                            + 10 * np.sin(0.15) * 0.1
+                            + 10 * np.sin(0.20) * 0.1
+                        ],
+                    ],
+                    shape=(T_p, K),
+                ),
+                heading=array(
+                    [[0.10], [0.15], [0.20], [0.25]],
+                    shape=(T_p, K),
+                ),
+            ),
+        ),
     ],
 )
 def test_that_obstacle_motion_is_predicted_correctly[
@@ -307,10 +578,10 @@ def test_that_obstacle_motion_is_predicted_correctly[
     PredictionT: ObstacleStates,
 ](
     predictor: ObstacleMotionPredictor[HistoryT, PredictionT],
-    states: HistoryT,
+    history: HistoryT,
     expected: PredictionT,
 ) -> None:
-    actual = predictor.predict(history=states)
-    assert np.allclose(actual.x(), expected.x(), rtol=1e-3)
-    assert np.allclose(actual.y(), expected.y(), rtol=1e-3)
-    assert np.allclose(actual.heading(), expected.heading(), rtol=1e-3)
+    actual = predictor.predict(history=history)
+    assert np.allclose(actual.x(), expected.x(), rtol=1e-3, atol=1e-6)
+    assert np.allclose(actual.y(), expected.y(), rtol=1e-3, atol=1e-6)
+    assert np.allclose(actual.heading(), expected.heading(), rtol=1e-3, atol=1e-6)

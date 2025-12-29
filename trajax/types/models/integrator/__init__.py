@@ -16,4 +16,5 @@ from .accelerated import (
     JaxIntegratorStateBatch as JaxIntegratorStateBatch,
     JaxIntegratorControlInputSequence as JaxIntegratorControlInputSequence,
     JaxIntegratorControlInputBatch as JaxIntegratorControlInputBatch,
+    JaxIntegratorObstacleStatesHistory as JaxIntegratorObstacleStatesHistory,
 )

@@ -14,5 +14,7 @@ from .accelerated import (
     JaxBicyclePositions as JaxBicyclePositions,
     JaxBicycleControlInputSequence as JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch as JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
     JaxBicycleModel as JaxBicycleModel,
+    JaxBicycleObstacleModel as JaxBicycleObstacleModel,
 )
