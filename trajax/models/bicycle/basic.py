@@ -633,7 +633,9 @@ def estimate_steering_angles_from[K: int](
         history.heading()[-1, :] - history.heading()[-2, :]
     ) / time_step_size
 
-    steering_angles = np.arctan(heading_velocity * wheelbase / speeds)
+    steering_angles = np.where(
+        speeds > 1e-6, np.arctan(heading_velocity * wheelbase / speeds), 0.0
+    )
 
     assert shape_of(
         steering_angles, matches=(history.count,), name="estimated steering angles"

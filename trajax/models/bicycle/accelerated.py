@@ -630,6 +630,11 @@ def _estimate_velocities_with_two_points(
     speeds = jnp.sqrt(delta_x**2 + delta_y**2) / time_step_size
 
     heading_velocity = (heading_history[-1] - heading_history[-2]) / time_step_size
-    steering_angles = jnp.arctan(heading_velocity * wheelbase / speeds)
+
+    steering_angles = jnp.where(
+        speeds > 1e-6,
+        jnp.arctan(heading_velocity * wheelbase / speeds),
+        jnp.zeros_like(speeds),
+    )
 
     return speeds, steering_angles

@@ -78,6 +78,8 @@ from trajax.costs import (
 from trajax.obstacles import (
     NumPySampledObstacleStates,
     NumPyObstacleStates,
+    NumPyObstacleStatesForTimeStep,
+    NumPyObstacleStatesRunningHistory,
     JaxSampledObstacleStates,
     JaxObstacleStates,
 )
@@ -166,6 +168,10 @@ class types:
         type ObstacleStates[T: int = Any, K: int = Any] = NumPyObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
             NumPySampledObstacleStates[T, K, N]
+        )
+        type ObstacleStatesForTimeStep[K: int = Any] = NumPyObstacleStatesForTimeStep[K]
+        type ObstacleStatesRunningHistory[K: int = Any] = (
+            NumPyObstacleStatesRunningHistory[K]
         )
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
@@ -361,3 +367,115 @@ class types:
             state_batch: Final = JaxAugmentedStateBatch
             control_input_sequence: Final = JaxAugmentedControlInputSequence
             control_input_batch: Final = JaxAugmentedControlInputBatch
+
+
+class classes:
+    State: Final = State
+    StateBatch: Final = StateBatch
+    ControlInputSequence: Final = ControlInputSequence
+    ControlInputBatch: Final = ControlInputBatch
+    Costs: Final = Costs
+    CostFunction: Final = CostFunction
+    Error: Final = Error
+    ContouringCost: Final = ContouringCost
+
+    class bicycle:
+        State: Final = BicycleState
+        StateBatch: Final = BicycleStateBatch
+        Positions: Final = BicyclePositions
+        ControlInputSequence: Final = BicycleControlInputSequence
+        ControlInputBatch: Final = BicycleControlInputBatch
+
+    class augmented:
+        State: Final = AugmentedState
+        StateBatch: Final = AugmentedStateBatch
+        ControlInputSequence: Final = AugmentedControlInputSequence
+        ControlInputBatch: Final = AugmentedControlInputBatch
+
+    class numpy:
+        State: Final = NumPyState
+        StateBatch: Final = NumPyStateBatch
+        ControlInputSequence: Final = NumPyControlInputSequence
+        ControlInputBatch: Final = NumPyControlInputBatch
+        Costs: Final = NumPyCosts
+        PathParameters: Final = NumPyPathParameters
+        ReferencePoints: Final = NumPyReferencePoints
+        Positions: Final = NumPyPositions
+        Headings: Final = NumPyHeadings
+        ObstacleStates: Final = NumPyObstacleStates
+        SampledObstacleStates: Final = NumPySampledObstacleStates
+        Distance: Final = NumPyDistance
+        CostFunction: Final = NumPyCostFunction
+        PathParameterExtractor: Final = NumPyPathParameterExtractor
+        PathVelocityExtractor: Final = NumPyPathVelocityExtractor
+        PositionExtractor: Final = NumPyPositionExtractor
+        ContouringCost: Final = NumPyContouringCost
+        ObstacleStateProvider: Final = NumPyObstacleStateProvider
+
+        class simple:
+            State: Final = NumPySimpleState
+            StateBatch: Final = NumPySimpleStateBatch
+            ControlInputSequence: Final = NumPySimpleControlInputSequence
+            ControlInputBatch: Final = NumPySimpleControlInputBatch
+            Costs: Final = NumPySimpleCosts
+
+        class integrator:
+            ObstacleStateSequences: Final = NumPyIntegratorObstacleStateSequences
+
+        class bicycle:
+            State: Final = NumPyBicycleState
+            StateBatch: Final = NumPyBicycleStateBatch
+            Positions: Final = NumPyBicyclePositions
+            ControlInputSequence: Final = NumPyBicycleControlInputSequence
+            ControlInputBatch: Final = NumPyBicycleControlInputBatch
+            ObstacleStateSequences: Final = NumPyBicycleObstacleStateSequences
+
+        class augmented:
+            State: Final = NumPyAugmentedState
+            StateBatch: Final = NumPyAugmentedStateBatch
+            ControlInputSequence: Final = NumPyAugmentedControlInputSequence
+            ControlInputBatch: Final = NumPyAugmentedControlInputBatch
+
+    class jax:
+        State: Final = JaxState
+        StateBatch: Final = JaxStateBatch
+        ControlInputSequence: Final = JaxControlInputSequence
+        ControlInputBatch: Final = JaxControlInputBatch
+        Costs: Final = JaxCosts
+        PathParameters: Final = JaxPathParameters
+        ReferencePoints: Final = JaxReferencePoints
+        Positions: Final = JaxPositions
+        Headings: Final = JaxHeadings
+        ObstacleStates: Final = JaxObstacleStates
+        SampledObstacleStates: Final = JaxSampledObstacleStates
+        Distance: Final = JaxDistance
+        CostFunction: Final = JaxCostFunction
+        PathParameterExtractor: Final = JaxPathParameterExtractor
+        PathVelocityExtractor: Final = JaxPathVelocityExtractor
+        PositionExtractor: Final = JaxPositionExtractor
+        ContouringCost: Final = JaxContouringCost
+        ObstacleStateProvider: Final = JaxObstacleStateProvider
+
+        class simple:
+            State: Final = JaxSimpleState
+            StateBatch: Final = JaxSimpleStateBatch
+            ControlInputSequence: Final = JaxSimpleControlInputSequence
+            ControlInputBatch: Final = JaxSimpleControlInputBatch
+            Costs: Final = JaxSimpleCosts
+
+        class integrator:
+            ObstacleStateSequences: Final = JaxIntegratorObstacleStateSequences
+
+        class bicycle:
+            State: Final = JaxBicycleState
+            StateBatch: Final = JaxBicycleStateBatch
+            Positions: Final = JaxBicyclePositions
+            ControlInputSequence: Final = JaxBicycleControlInputSequence
+            ControlInputBatch: Final = JaxBicycleControlInputBatch
+            ObstacleStateSequences: Final = JaxBicycleObstacleStateSequences
+
+        class augmented:
+            State: Final = JaxAugmentedState
+            StateBatch: Final = JaxAugmentedStateBatch
+            ControlInputSequence: Final = JaxAugmentedControlInputSequence
+            ControlInputBatch: Final = JaxAugmentedControlInputBatch

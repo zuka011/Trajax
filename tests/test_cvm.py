@@ -162,6 +162,43 @@ class JaxBicyclePredictionCreator:
                 ),
             ),
         ),
+        (
+            # Multiple time steps, stationary obstacle (in last two steps)
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
+                prediction=NumPyIntegratorPredictionCreator(),
+            ),
+            history := data.numpy.obstacle_states(
+                x=array(
+                    [[-0.5, 0.0], [-1.0, 0.0], [-1.0, 0.0]], shape=(T_h := 3, K := 2)
+                ),
+                y=array([[0.0, 1.0], [0.0, 2.0], [0.0, 2.0]], shape=(T_h, K)),
+                heading=array(
+                    [[0.0, np.pi / 2], [0.0, np.pi / 4], [0.0, np.pi / 4]],
+                    shape=(T_h, K),
+                ),
+            ),
+            expected := data.numpy.obstacle_states(
+                x=array(
+                    [[-1.0, 0.0], [-1.0, 0.0], [-1.0, 0.0], [-1.0, 0.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                y=array(
+                    [[0.0, 2.0], [0.0, 2.0], [0.0, 2.0], [0.0, 2.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                heading=array(
+                    [
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                    ],
+                    shape=(T_p, K),  # type: ignore
+                ),
+            ),
+        ),
     ]
     + [  # Bicycle Model CVM tests
         (  # No history
@@ -239,6 +276,26 @@ class JaxBicyclePredictionCreator:
             expected := data.numpy.obstacle_states(
                 x=np.full((T_p, K), 0.0),
                 y=array([[10.0], [15.0], [20.0], [25.0]], shape=(T_p, K)),
+                heading=np.full((T_p, K), np.pi / 2),
+            ),
+        ),
+        (  # Multiple time steps, but obstacle is stationary
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.numpy.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            history := data.numpy.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+            # y increases by 5.0 per step, x stays constant
+            expected := data.numpy.obstacle_states(
+                x=np.full((T_p, K), 0.0),
+                y=np.full((T_p, K), 1.0),
                 heading=np.full((T_p, K), np.pi / 2),
             ),
         ),
@@ -409,6 +466,42 @@ class JaxBicyclePredictionCreator:
                 ),
             ),
         ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
+                prediction=JaxIntegratorPredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array(
+                    [[-0.5, 0.0], [-1.0, 0.0], [-1.0, 0.0]], shape=(T_h := 3, K := 2)
+                ),
+                y=array([[0.0, 1.0], [0.0, 2.0], [0.0, 2.0]], shape=(T_h, K)),
+                heading=array(
+                    [[0.0, np.pi / 2], [0.0, np.pi / 4], [0.0, np.pi / 4]],
+                    shape=(T_h, K),
+                ),
+            ),
+            expected := data.jax.obstacle_states(
+                x=array(
+                    [[-1.0, 0.0], [-1.0, 0.0], [-1.0, 0.0], [-1.0, 0.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                y=array(
+                    [[0.0, 2.0], [0.0, 2.0], [0.0, 2.0], [0.0, 2.0]],
+                    shape=(T_p, K),  # type: ignore
+                ),
+                heading=array(
+                    [
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                        [0.0, np.pi / 4],
+                    ],
+                    shape=(T_p, K),  # type: ignore
+                ),
+            ),
+        ),
     ]
     + [  # JAX Bicycle Model CVM tests
         (
@@ -485,6 +578,25 @@ class JaxBicyclePredictionCreator:
             expected := data.jax.obstacle_states(
                 x=np.full((T_p, K), 0.0),
                 y=array([[10.0], [15.0], [20.0], [25.0]], shape=(T_p, K)),
+                heading=np.full((T_p, K), np.pi / 2),
+            ),
+        ),
+        (
+            predictor := create_predictor.constant_velocity(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+            expected := data.jax.obstacle_states(
+                x=np.full((T_p, K), 0.0),
+                y=np.full((T_p, K), 1.0),
                 heading=np.full((T_p, K), np.pi / 2),
             ),
         ),

@@ -217,3 +217,6 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
 
     def __call__(self) -> JaxObstacleStates[T, K]:
         return self.states
+
+    def step(self) -> None:
+        pass

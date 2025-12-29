@@ -54,15 +54,17 @@ class ObstacleStates[T: int, K: int, SingleSampleT](Protocol):
         ...
 
 
-class ObstacleStateProvider[StateT](Protocol):
-    def __call__(self) -> StateT:
-        """Provides the current obstacle states."""
+class ObstacleStateProvider[ObstacleStatesT](Protocol):
+    def __call__(self) -> ObstacleStatesT:
+        """Provides a forecast of states over the time horizon for each obstacle."""
         ...
 
 
-class ObstacleStateSampler[StateT, SampleT](Protocol):
-    def __call__(self, states: StateT, *, count: int) -> SampleT:
-        """Samples the provided obstacle states."""
+class ObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT](Protocol):
+    def __call__(
+        self, states: ObstacleStatesT, *, count: int
+    ) -> SampledObstacleStatesT:
+        """Samples the obstacle state forecasts."""
         ...
 
 
@@ -72,14 +74,18 @@ class Distance[T: int, V: int, M: int, N: int](Protocol):
         ...
 
 
-class DistanceExtractor[StateT, SampleT, DistanceT](Protocol):
-    def __call__(self, *, states: StateT, obstacle_states: SampleT) -> DistanceT:
+class DistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT](Protocol):
+    def __call__(
+        self, *, states: StateBatchT, obstacle_states: SampledObstacleStatesT
+    ) -> DistanceT:
         """Computes the distances between each part of the ego and the corresponding closest
         obstacles."""
         ...
 
 
-class SampleCostFunction[StateT, SampledObstacleStateT, CostsT](Protocol):
-    def __call__(self, *, states: StateT, samples: SampledObstacleStateT) -> CostsT:
+class SampleCostFunction[StateBatchT, SampledObstacleStatesT, CostsT](Protocol):
+    def __call__(
+        self, *, states: StateBatchT, samples: SampledObstacleStatesT
+    ) -> CostsT:
         """Computes the cost given the states and sampled obstacle states."""
         ...

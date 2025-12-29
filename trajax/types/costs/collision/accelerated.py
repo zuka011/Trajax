@@ -10,29 +10,31 @@ from trajax.types.costs.collision.common import (
 from jaxtyping import Float, Array as JaxArray
 
 
-class JaxObstacleStateProvider[StateT](ObstacleStateProvider[StateT], Protocol): ...
-
-
-class JaxObstacleStateSampler[StateT, SampleT](
-    ObstacleStateSampler[StateT, SampleT], Protocol
+class JaxObstacleStateProvider[ObstacleStatesT](
+    ObstacleStateProvider[ObstacleStatesT], Protocol
 ): ...
 
 
-class JaxDistanceExtractor[StateT, SampleT, DistanceT](
-    DistanceExtractor[StateT, SampleT, DistanceT], Protocol
+class JaxObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT](
+    ObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT], Protocol
 ): ...
 
 
-class JaxRiskMetric[StateT, ObstacleStateT, SampledObstacleStateT](Protocol):
+class JaxDistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT](
+    DistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT], Protocol
+): ...
+
+
+class JaxRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT](Protocol):
     def compute(
         self,
         cost_function: SampleCostFunction[
-            StateT, SampledObstacleStateT, Float[JaxArray, "T M N"]
+            StateBatchT, SampledObstacleStatesT, Float[JaxArray, "T M N"]
         ],
         *,
-        states: StateT,
-        obstacle_states: ObstacleStateT,
-        sampler: JaxObstacleStateSampler[ObstacleStateT, SampledObstacleStateT],
+        states: StateBatchT,
+        obstacle_states: ObstacleStatesT,
+        sampler: JaxObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT],
     ) -> Float[JaxArray, "T M"]:
         """Computes the risk metric based on the provided cost function and returns it as a JAX array."""
         ...

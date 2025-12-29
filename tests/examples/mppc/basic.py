@@ -1,4 +1,4 @@
-from typing import Final, Sequence
+from typing import Final, Sequence, Protocol, Self
 from dataclasses import dataclass, field
 
 from trajax import (
@@ -16,9 +16,12 @@ from trajax import (
     costs,
     trajectory,
     types,
+    classes,
     extract,
     distance,
     obstacles as create_obstacles,
+    predictor,
+    ObstacleMotionPredictor,
 )
 
 import numpy as np
@@ -46,7 +49,25 @@ type MpccInputBatch = types.numpy.augmented.ControlInputBatch[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.numpy.ObstacleStates
-type ObstacleStateProvider = types.numpy.ObstacleStateProvider
+type ObstacleStatesHistory = types.numpy.ObstacleStatesRunningHistory
+
+
+class ObstacleStateProvider(
+    classes.numpy.ObstacleStateProvider[ObstacleStates], Protocol
+):
+    def with_time_step(self, time_step: float) -> Self:
+        """Returns a new obstacle state provider configured for the given time step size."""
+        ...
+
+    def with_predictor(
+        self, predictor: ObstacleMotionPredictor[ObstacleStatesHistory, ObstacleStates]
+    ) -> Self:
+        """Returns a new obstacle state provider using the given motion predictor."""
+        ...
+
+    def step(self) -> None:
+        """Advances the internal state of the obstacle state provider."""
+        ...
 
 
 def path_parameter(states: VirtualStateBatch) -> types.numpy.PathParameters:
@@ -63,6 +84,14 @@ def position(states: PhysicalStateBatch) -> types.numpy.Positions:
 
 def heading(states: PhysicalStateBatch) -> types.numpy.Headings:
     return types.numpy.headings(theta=states.orientations())
+
+
+def bicycle_to_obstacle_states(
+    states: types.numpy.bicycle.ObstacleStateSequences,
+) -> ObstacleStates:
+    return types.numpy.obstacle_states.create(
+        x=states.x(), y=states.y(), heading=states.theta()
+    )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -187,6 +216,23 @@ class reference:
         path_length=120.0,
     )
 
+    slalom: Final = trajectory.numpy.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [30.0, 10.0],
+                [40.0, 5.0],
+                [50.0, 0.0],
+                [60.0, 0.0],
+                [70.0, 0.0],
+            ],
+            shape=(8, 2),
+        ),
+        path_length=100.0,
+    )
+
 
 class obstacles:
     none: Final = create_obstacles.numpy.empty(horizon=HORIZON)
@@ -216,6 +262,29 @@ class obstacles:
                     np.pi / 2,
                 ],
                 shape=(7,),
+            ),
+            horizon=HORIZON,
+        )
+
+    class dynamic:
+        slalom: Final = create_obstacles.numpy.dynamic(
+            positions=array(
+                [
+                    [25.0, 22.5],
+                    [55.0, 0.0],
+                    [15.0, -5.0],
+                    [42.0, 4.0],
+                ],
+                shape=(4, 2),
+            ),
+            velocities=array(
+                [
+                    [0.0, -1.5],
+                    [-2.5, 0.0],
+                    [0.5, 1.5],
+                    [0.0, 0.0],
+                ],
+                shape=(4, 2),
             ),
             horizon=HORIZON,
         )
@@ -308,11 +377,21 @@ class configure:
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
     ) -> NumPyMpccPlannerConfiguration:
+        obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
+            predictor.constant_velocity(
+                horizon=HORIZON,
+                model=model.numpy.bicycle.obstacle(
+                    time_step_size=dt, wheelbase=(L := 2.5)
+                ),
+                prediction=bicycle_to_obstacle_states,
+            )
+        )
+
         planner, augmented_model = mppi.numpy.augmented(
             models=(
                 model.numpy.bicycle.dynamical(
-                    time_step_size=(dt := 0.1),
-                    wheelbase=(L := 2.5),
+                    time_step_size=dt,
+                    wheelbase=L,
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),

@@ -42,6 +42,14 @@ class ObstacleStacker[ObstacleStatesT](Protocol):
         ...
 
 
+class SimulatingObstacleStateProvider[ObstacleStatesT](
+    ObstacleStateProvider[ObstacleStatesT], Protocol
+):
+    def step(self) -> None:
+        """Advances the internal state of the obstacle state provider."""
+        ...
+
+
 class MpccPlannerConfiguration[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
@@ -55,7 +63,7 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def obstacles(self) -> ObstacleStateProvider | None:
+    def obstacles(self) -> SimulatingObstacleStateProvider[ObstacleStatesT] | None:
         """Returns the obstacle state provider."""
         ...
 
@@ -205,6 +213,13 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             "numpy-from-augmented-static",
         ),
         (
+            mpcc.numpy.planner_from_augmented(
+                reference=reference.numpy.slalom,
+                obstacles=obstacles.numpy.dynamic.slalom,
+            ),
+            "numpy-from-augmented-dynamic",
+        ),
+        (
             mpcc.jax.planner_from_augmented(
                 reference=reference.jax.loop, obstacles=obstacles.jax.static.loop
             ),
@@ -259,6 +274,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
         )
 
         obstacle_history.append(obstacles())
+        obstacles.step()
 
         if (progress := current_state.virtual.array[0]) >= min_progress:
             break

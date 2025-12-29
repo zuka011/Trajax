@@ -1,4 +1,4 @@
-from typing import Final, Sequence
+from typing import Final, Sequence, Protocol
 from dataclasses import dataclass, field
 
 from trajax import (
@@ -17,6 +17,7 @@ from trajax import (
     distance,
     trajectory,
     types,
+    classes,
     extract,
     obstacles as create_obstacles,
 )
@@ -68,7 +69,14 @@ type Sampler = AugmentedSampler[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.jax.ObstacleStates
-type ObstacleStateProvider = types.jax.ObstacleStateProvider
+
+
+class ObstacleStateProvider(
+    classes.jax.ObstacleStateProvider[ObstacleStates], Protocol
+):
+    def step(self) -> None:
+        """Advances the internal state of the obstacle state provider."""
+        ...
 
 
 def path_parameter(states: VirtualStateBatch) -> types.jax.PathParameters:
