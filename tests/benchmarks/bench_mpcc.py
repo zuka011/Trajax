@@ -137,3 +137,139 @@ def bench_mpcc_static_obstacles_single_step(
         return control.nominal
 
     run_benchmark(benchmark, runner, target=single_step)
+
+
+@mark.parametrize(
+    ["id", "runner", "configuration"],
+    [
+        *[
+            (
+                id,
+                NumPyBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "NumPy",
+                    mpcc.numpy.planner_from_augmented(
+                        reference=reference.numpy.slalom,
+                        obstacles=obstacles.numpy.dynamic.slalom,
+                    ),
+                ),
+            )
+        ],
+        *[
+            (
+                id,
+                JaxBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "JAX",
+                    mpcc.jax.planner_from_augmented(
+                        reference=reference.jax.slalom,
+                        obstacles=obstacles.jax.dynamic.slalom,
+                    ),
+                ),
+            )
+        ],
+    ],
+)
+@mark.benchmark(group="mpcc-dynamic-obstacles-single-step")
+def bench_mpcc_dynamic_obstacles_single_step(
+    benchmark: BenchmarkFixture,
+    id: str,
+    runner: BenchmarkRunner,
+    configuration: MpccConfiguration,
+) -> None:
+    planner = configuration.planner
+    initial_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+
+    def single_step() -> ControlInputSequence:
+        control = planner.step(
+            temperature=0.05,
+            nominal_input=nominal_input,
+            initial_state=initial_state,
+        )
+        return control.nominal
+
+    run_benchmark(benchmark, runner, target=single_step)
+
+
+@mark.parametrize(
+    ["id", "runner", "configuration"],
+    [
+        *[
+            (
+                id,
+                NumPyBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "NumPy",
+                    mpcc.numpy.planner_from_augmented(
+                        reference=reference.numpy.slalom,
+                        obstacles=obstacles.numpy.dynamic.slalom,
+                        use_covariance_propagation=True,
+                    ),
+                ),
+            )
+        ],
+        *[
+            (
+                id,
+                JaxBenchmarkRunner.create(),
+                MpccConfiguration(
+                    planner=configuration.planner,
+                    initial_state=configuration.initial_state,
+                    nominal_input=configuration.nominal_input,
+                ),
+            )
+            for id, configuration in (
+                (
+                    "JAX",
+                    mpcc.jax.planner_from_augmented(
+                        reference=reference.jax.slalom,
+                        obstacles=obstacles.jax.dynamic.slalom,
+                        use_covariance_propagation=True,
+                    ),
+                ),
+            )
+        ],
+    ],
+)
+@mark.benchmark(group="mpcc-dynamic-uncertain-obstacles-single-step")
+def bench_mpcc_dynamic_uncertain_obstacles_single_step(
+    benchmark: BenchmarkFixture,
+    id: str,
+    runner: BenchmarkRunner,
+    configuration: MpccConfiguration,
+) -> None:
+    planner = configuration.planner
+    initial_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+
+    def single_step() -> ControlInputSequence:
+        control = planner.step(
+            temperature=0.05,
+            nominal_input=nominal_input,
+            initial_state=initial_state,
+        )
+        return control.nominal
+
+    run_benchmark(benchmark, runner, target=single_step)
