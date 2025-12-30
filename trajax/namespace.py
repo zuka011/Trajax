@@ -52,6 +52,9 @@ from trajax.types import (
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
+    NumPyInitialPositionCovariance,
+    NumPyInitialVelocityCovariance,
+    NumPyInitialCovarianceProvider,
 )
 from trajax.models import (
     NumPyBicycleState,
@@ -178,6 +181,8 @@ class types:
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
         )
+        type InitialPositionCovariance[K: int = Any] = NumPyInitialPositionCovariance[K]
+        type InitialVelocityCovariance[K: int = Any] = NumPyInitialVelocityCovariance[K]
 
         type CostFunction[
             T: int = Any,
@@ -194,6 +199,7 @@ class types:
         type PositionExtractor[S] = NumPyPositionExtractor[S]
         type ContouringCost[S] = NumPyContouringCost[S]
         type ObstacleStateProvider[O] = NumPyObstacleStateProvider[O]
+        type InitialCovarianceProvider[S] = NumPyInitialCovarianceProvider[S]
 
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create

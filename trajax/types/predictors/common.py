@@ -33,6 +33,48 @@ class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
         ...
 
 
+class ObstacleStateSequences[T: int, D_o: int, K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
+        """Returns the obstacle state sequences as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon of the obstacle state sequences."""
+        ...
+
+    @property
+    def dimension(self) -> D_o:
+        """The dimension of the obstacle states."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+
+class CovarianceSequences[T: int, D_c: int, K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_c, D_c, K]]:
+        """Returns the covariance sequences as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon of the covariance sequences."""
+        ...
+
+    @property
+    def dimension(self) -> D_c:
+        """The dimension of the covariance matrices."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+
 class ObstacleModel[HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequencesT](
     Protocol
 ):
@@ -59,7 +101,13 @@ class PredictionCreator[StateSequencesT, PredictionT](Protocol):
         ...
 
     def empty(self, *, horizon: int) -> PredictionT:
-        """Creates an empty prediction with the specified horizon."""
+        """Creates an empty obstacle state prediction with the specified horizon."""
+        ...
+
+
+class CovariancePropagator[StateSequencesT, CovarianceSequencesT](Protocol):
+    def propagate(self, *, states: StateSequencesT) -> CovarianceSequencesT:
+        """Propagates the covariance of obstacle states over time."""
         ...
 
 

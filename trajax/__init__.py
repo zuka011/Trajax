@@ -31,6 +31,7 @@ from .obstacles import (
 )
 from .predictors import (
     predictor as predictor,
+    propagator as propagator,
 )
 from .types import (
     DataType as DataType,
@@ -61,6 +62,8 @@ from .types import (
     Error as Error,
     ContouringCost as ContouringCost,
     ObstacleModel as ObstacleModel,
+    CovarianceSequences as CovarianceSequences,
+    CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
 )
 from .namespace import types as types, classes as classes

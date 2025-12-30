@@ -1,1 +1,1 @@
-from .factory import predictor as predictor
+from .factory import predictor as predictor, propagator as propagator

@@ -202,6 +202,8 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
     )
 
+    # TODO: Add check on lag error.
+
 
 @mark.parametrize(
     ["configuration", "configuration_name"],
@@ -255,9 +257,13 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     current_state = configuration.initial_state
     nominal_input = configuration.nominal_input
     L = configuration.wheelbase
-    obstacles = configuration.obstacles
 
-    assert obstacles is not None, "Obstacles must be provided for this test."
+    assert (obstacles := configuration.obstacles) is not None, (
+        "Obstacles must be provided for this test."
+    )
+    assert (distance := configuration.distance) is not None, (
+        "A distance extractor must be provided for this test."
+    )
 
     states: list[StateT] = []
     obstacle_history: list[ObstacleStatesT] = []
@@ -312,9 +318,8 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
         f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
     )
 
-    assert (distance := configuration.distance) is not None, (
-        "Distance extractor is not defined in the configuration."
-    )
+    # TODO: Add check on lag error.
+
     assert (
         min_distance := min_distance_to_obstacles(
             distance,
