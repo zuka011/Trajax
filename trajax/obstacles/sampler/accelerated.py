@@ -17,6 +17,7 @@ class JaxGaussianObstacleStateSampler(
         self, states: JaxObstacleStates[T, K], *, count: N
     ) -> JaxSampledObstacleStates[T, K, N]:
         if (covariance := states.covariance_array) is None:
+            # TODO: Check hos the case where there are no obstacles is handled.
             assert count == 1, (
                 "It's pointless to take multiple samples, when covariance information is not available."
             )

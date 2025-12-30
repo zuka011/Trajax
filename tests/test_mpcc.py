@@ -222,6 +222,14 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             "numpy-from-augmented-dynamic",
         ),
         (
+            mpcc.numpy.planner_from_augmented(
+                reference=reference.numpy.short,
+                obstacles=obstacles.numpy.dynamic.short,
+                use_covariance_propagation=True,
+            ),
+            "numpy-from-augmented-dynamic-uncertain",
+        ),
+        (
             mpcc.jax.planner_from_augmented(
                 reference=reference.jax.loop, obstacles=obstacles.jax.static.loop
             ),
@@ -232,6 +240,14 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
                 reference=reference.jax.slalom, obstacles=obstacles.jax.dynamic.slalom
             ),
             "jax-from-augmented-dynamic",
+        ),
+        (
+            mpcc.jax.planner_from_augmented(
+                reference=reference.jax.short,
+                obstacles=obstacles.jax.dynamic.short,
+                use_covariance_propagation=True,
+            ),
+            "jax-from-augmented-dynamic-uncertain",
         ),
     ],
 )

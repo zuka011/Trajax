@@ -21,7 +21,9 @@ from trajax import (
     classes,
     extract,
     predictor,
+    propagator,
     obstacles as create_obstacles,
+    risk,
 )
 
 from numtypes import array, Array, Dim1
@@ -109,10 +111,13 @@ def heading(states: PhysicalStateBatch) -> types.jax.Headings:
 
 
 def bicycle_to_obstacle_states(
-    states: types.jax.bicycle.ObstacleStateSequences,
+    states: types.jax.bicycle.ObstacleStateSequences, covariances: JaxArray
 ) -> ObstacleStates:
     return types.jax.obstacle_states.create(
-        x=states.x_array, y=states.y_array, heading=states.theta_array
+        x=states.x_array,
+        y=states.y_array,
+        heading=states.theta_array,
+        covariance=covariances,
     )
 
 
@@ -257,6 +262,19 @@ class reference:
         path_length=100.0,
     )
 
+    short: Final = trajectory.jax.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [30.0, 5.0],
+            ],
+            shape=(4, 2),
+        ),
+        path_length=35.0,
+    )
+
 
 class obstacles:
     none: Final = create_obstacles.jax.empty(horizon=HORIZON)
@@ -304,6 +322,20 @@ class obstacles:
                     [-2.5, 0.0],
                     [0.5, 1.5],
                     [0.0, 0.0],
+                ]
+            ),
+            horizon=HORIZON,
+        )
+
+        short: Final = create_obstacles.jax.dynamic(
+            positions=jnp.array(
+                [
+                    [15.0, 10.0],
+                ]
+            ),
+            velocities=jnp.array(
+                [
+                    [0.0, -1.5],
                 ]
             ),
             horizon=HORIZON,
@@ -394,6 +426,7 @@ class configure:
         obstacles: ObstacleStateProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
+        use_covariance_propagation: bool = False,
     ) -> JaxMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
             predictor.curvilinear(
@@ -402,6 +435,15 @@ class configure:
                     time_step_size=dt, wheelbase=(L := 2.5)
                 ),
                 prediction=bicycle_to_obstacle_states,
+                propagator=propagator.jax.linear(
+                    time_step_size=dt,
+                    initial_covariance=propagator.jax.covariance.constant_variance(
+                        position_variance=0.01, velocity_variance=0.05
+                    ),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                )
+                if use_covariance_propagation
+                else None,
             )
         )
 
@@ -482,6 +524,9 @@ class configure:
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
                     weight=weights.collision,
+                    metric=risk.jax.mean_variance(gamma=0.5, sample_count=10)
+                    if use_covariance_propagation
+                    else None,
                 ),
             ),
             state=types.jax.augmented.state,

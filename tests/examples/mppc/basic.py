@@ -22,6 +22,8 @@ from trajax import (
     distance,
     obstacles as create_obstacles,
     predictor,
+    propagator,
+    risk,
 )
 
 import numpy as np
@@ -87,10 +89,10 @@ def heading(states: PhysicalStateBatch) -> types.numpy.Headings:
 
 
 def bicycle_to_obstacle_states(
-    states: types.numpy.bicycle.ObstacleStateSequences,
+    states: types.numpy.bicycle.ObstacleStateSequences, covariances: Array | None
 ) -> ObstacleStates:
     return types.numpy.obstacle_states.create(
-        x=states.x(), y=states.y(), heading=states.theta()
+        x=states.x(), y=states.y(), heading=states.theta(), covariance=covariances
     )
 
 
@@ -233,6 +235,19 @@ class reference:
         path_length=100.0,
     )
 
+    short: Final = trajectory.numpy.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [30.0, 5.0],
+            ],
+            shape=(4, 2),
+        ),
+        path_length=35.0,
+    )
+
 
 class obstacles:
     none: Final = create_obstacles.numpy.empty(horizon=HORIZON)
@@ -285,6 +300,18 @@ class obstacles:
                     [0.0, 0.0],
                 ],
                 shape=(4, 2),
+            ),
+            horizon=HORIZON,
+        )
+
+        short: Final = create_obstacles.numpy.dynamic(
+            positions=array(
+                [[15.0, 10.0]],
+                shape=(1, 2),
+            ),
+            velocities=array(
+                [[0.0, -1.5]],
+                shape=(1, 2),
             ),
             horizon=HORIZON,
         )
@@ -376,6 +403,7 @@ class configure:
         obstacles: ObstacleStateProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
+        use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
             predictor.curvilinear(
@@ -384,6 +412,15 @@ class configure:
                     time_step_size=dt, wheelbase=(L := 2.5)
                 ),
                 prediction=bicycle_to_obstacle_states,
+                propagator=propagator.numpy.linear(
+                    time_step_size=dt,
+                    initial_covariance=propagator.numpy.covariance.constant_variance(
+                        position_variance=0.01, velocity_variance=0.05
+                    ),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                )
+                if use_covariance_propagation
+                else None,
             )
         )
 
@@ -466,6 +503,9 @@ class configure:
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
                     weight=weights.collision,
+                    metric=risk.numpy.mean_variance(gamma=0.5, sample_count=10)
+                    if use_covariance_propagation
+                    else None,
                 ),
             ),
             state=types.numpy.augmented.state,

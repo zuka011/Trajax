@@ -1,114 +1,16 @@
-from dataclasses import dataclass
-
 from trajax import (
     CovarianceSequences,
     CovariancePropagator,
     propagator as create_propagator,
-    types,
 )
 
-from jaxtyping import Array as JaxArray, Float
 from numtypes import array
 
 import numpy as np
 import jax.numpy as jnp
 
-from tests.dsl import mppi as data
+from tests.dsl import mppi as data, covariance
 from pytest import mark
-
-type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
-type NumPyInitialPositionCovariance[T: int, K: int] = (
-    types.numpy.InitialPositionCovariance[K]
-)
-type NumPyInitialVelocityVariance[K: int] = types.numpy.InitialVelocityCovariance[K]
-type NumPyInitialCovarianceProvider = types.numpy.InitialCovarianceProvider[
-    NumPyObstacleStates
-]
-
-type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
-type JaxInitialPositionCovariance[K: int] = types.jax.InitialPositionCovariance[K]
-type JaxInitialVelocityCovariance[K: int] = types.jax.InitialVelocityCovariance[K]
-type JaxInitialCovarianceProvider = types.jax.InitialCovarianceProvider[
-    JaxObstacleStates
-]
-
-
-@dataclass(kw_only=True, frozen=True)
-class NumPyConstantVarianceProvider:
-    position_variance: float
-    velocity_variance: float
-
-    def position[K: int](
-        self, states: NumPyObstacleStates[int, K]
-    ) -> NumPyInitialPositionCovariance[K]:
-        return np.tile(
-            (np.eye(2) * self.position_variance)[..., np.newaxis], (1, 1, states.count)
-        )
-
-    def velocity[K: int](
-        self, states: NumPyObstacleStates[int, K]
-    ) -> NumPyInitialVelocityVariance[K]:
-        return np.tile(
-            (np.eye(2) * self.velocity_variance)[..., np.newaxis], (1, 1, states.count)
-        )
-
-
-@dataclass(kw_only=True, frozen=True)
-class NumPyConstantCovarianceProvider[K: int]:
-    position_covariance: NumPyInitialPositionCovariance[K]
-    velocity_covariance: NumPyInitialVelocityVariance[K]
-
-    def position(
-        self, states: NumPyObstacleStates[int, K]
-    ) -> NumPyInitialPositionCovariance[K]:
-        assert states.count == self.position_covariance.shape[2]
-        return self.position_covariance
-
-    def velocity(
-        self, states: NumPyObstacleStates[int, K]
-    ) -> NumPyInitialVelocityVariance[K]:
-        assert states.count == self.velocity_covariance.shape[2]
-        return self.velocity_covariance
-
-
-@dataclass(kw_only=True, frozen=True)
-class JaxConstantVarianceProvider:
-    position_variance: float
-    velocity_variance: float
-
-    def position[K: int](
-        self, states: JaxObstacleStates[int, K]
-    ) -> JaxInitialPositionCovariance[K]:
-        return jnp.tile(
-            (jnp.eye(2) * self.position_variance)[..., jnp.newaxis],
-            (1, 1, states.count),
-        )
-
-    def velocity[K: int](
-        self, states: JaxObstacleStates[int, K]
-    ) -> JaxInitialVelocityCovariance[K]:
-        return jnp.tile(
-            (jnp.eye(2) * self.velocity_variance)[..., jnp.newaxis],
-            (1, 1, states.count),
-        )
-
-
-@dataclass(kw_only=True, frozen=True)
-class JaxConstantCovarianceProvider[K: int]:
-    position_covariance: Float[JaxArray, "2 2 K"]
-    velocity_covariance: Float[JaxArray, "2 2 K"]
-
-    def position(
-        self, states: JaxObstacleStates[int, K]
-    ) -> JaxInitialPositionCovariance[K]:
-        assert states.count == self.position_covariance.shape[2]
-        return self.position_covariance
-
-    def velocity(
-        self, states: JaxObstacleStates[int, K]
-    ) -> JaxInitialVelocityCovariance[K]:
-        assert states.count == self.velocity_covariance.shape[2]
-        return self.velocity_covariance
 
 
 @mark.parametrize(
@@ -117,7 +19,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # No velocity uncertainty -> position covariance remains constant
             propagator := create_propagator.numpy.linear(
                 time_step_size=1.0,
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
             ),
@@ -142,7 +44,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # Linear growth: t * dt² * v_var
             propagator := create_propagator.numpy.linear(
                 time_step_size=2.0,
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=3.0, velocity_variance=1.5
                 ),
             ),
@@ -171,7 +73,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # Multiple obstacles with correlation.
             propagator := create_propagator.numpy.linear(
                 time_step_size=(dt := 1.0),
-                initial_covariance=NumPyConstantCovarianceProvider(
+                initial_covariance=covariance.NumPyConstantCovarianceProvider(
                     position_covariance=array(
                         [
                             [[x0 := 0.7, x1 := 0.4], [xy0 := 0.5, xy1 := 0.2]],
@@ -221,7 +123,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # Single time step
             propagator := create_propagator.numpy.linear(
                 time_step_size=(dt := 0.5),
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=(p := 0.0), velocity_variance=(v := 2.0)
                 ),
             ),
@@ -242,7 +144,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # No obstacles
             propagator := create_propagator.numpy.linear(
                 time_step_size=1.0,
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=0.1, velocity_variance=0.5
                 ),
             ),
@@ -257,7 +159,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (  # Analogous tests for JAX implementation
             propagator := create_propagator.jax.linear(
                 time_step_size=1.0,
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
             ),
@@ -282,7 +184,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=2.0,
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=3.0, velocity_variance=1.5
                 ),
             ),
@@ -311,7 +213,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=(dt := 1.0),
-                initial_covariance=JaxConstantCovarianceProvider(
+                initial_covariance=covariance.JaxConstantCovarianceProvider(
                     position_covariance=jnp.array(
                         [
                             [[x0 := 0.7, x1 := 0.4], [xy0 := 0.5, xy1 := 0.2]],
@@ -359,7 +261,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=(dt := 0.5),
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=(p := 0.0), velocity_variance=(v := 2.0)
                 ),
             ),
@@ -380,7 +282,7 @@ class JaxConstantCovarianceProvider[K: int]:
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=1.0,
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=0.1, velocity_variance=0.5
                 ),
             ),
@@ -409,7 +311,7 @@ def test_that_covariance_is_propagated[
         (
             propagator := create_propagator.numpy.linear(
                 time_step_size=1.0,
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
                 # A covariance array must not be singular in any dimension.
@@ -440,7 +342,7 @@ def test_that_covariance_is_propagated[
         (  # No padding is needed if the dimension is already sufficient.
             propagator := create_propagator.numpy.linear(
                 time_step_size=1.0,
-                initial_covariance=NumPyConstantVarianceProvider(
+                initial_covariance=create_propagator.numpy.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
                 padding=create_propagator.padding(
@@ -470,7 +372,7 @@ def test_that_covariance_is_propagated[
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=1.0,
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
                 padding=create_propagator.padding(
@@ -500,7 +402,7 @@ def test_that_covariance_is_propagated[
         (
             propagator := create_propagator.jax.linear(
                 time_step_size=1.0,
-                initial_covariance=JaxConstantVarianceProvider(
+                initial_covariance=create_propagator.jax.covariance.constant_variance(
                     position_variance=(var := 0.1), velocity_variance=0.0
                 ),
                 padding=create_propagator.padding(

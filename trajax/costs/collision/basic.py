@@ -1,3 +1,4 @@
+from typing import cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -51,7 +52,7 @@ class NumPyCollisionCost[
         distance: NumPyDistanceExtractor[S, SOS, D],
         distance_threshold: Array[Dims[V_]],
         weight: float,
-        metric: NumPyRiskMetric[S, OS, SOS] = NoMetric(),
+        metric: NumPyRiskMetric[S, OS, SOS] | None = None,
     ) -> "NumPyCollisionCost[S, OS, SOS, D, V_]":
         return NumPyCollisionCost(
             obstacle_states=obstacle_states,
@@ -59,7 +60,9 @@ class NumPyCollisionCost[
             distance=distance,
             distance_threshold=distance_threshold,
             weight=weight,
-            metric=metric,
+            metric=metric
+            if metric is not None
+            else cast(NumPyRiskMetric[S, OS, SOS], NoMetric()),
         )
 
     def __call__[T: int, M: int](

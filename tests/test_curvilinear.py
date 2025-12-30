@@ -12,7 +12,7 @@ from numtypes import array
 import jax.numpy as jnp
 import numpy as np
 
-from tests.dsl import mppi as data, covariance
+from tests.dsl import mppi as data
 from pytest import mark
 
 
@@ -765,7 +765,7 @@ def test_that_no_covariance_information_is_provided_when_propagator_is_not_avail
                 ),
                 propagator=propagator.numpy.linear(
                     time_step_size=dt,
-                    initial_covariance=covariance.NumPyConstantVarianceProvider(
+                    initial_covariance=propagator.numpy.covariance.constant_variance(
                         position_variance=0.1, velocity_variance=0.2
                     ),
                     padding=propagator.padding(to_dimension=3, epsilon=1e-15),
@@ -786,7 +786,7 @@ def test_that_no_covariance_information_is_provided_when_propagator_is_not_avail
                 ),
                 propagator=propagator.jax.linear(
                     time_step_size=dt,
-                    initial_covariance=covariance.JaxConstantVarianceProvider(
+                    initial_covariance=propagator.jax.covariance.constant_variance(
                         position_variance=0.1, velocity_variance=0.2
                     ),
                     padding=propagator.padding(to_dimension=3, epsilon=1e-15),

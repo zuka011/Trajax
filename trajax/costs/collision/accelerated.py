@@ -1,3 +1,4 @@
+from typing import cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -60,7 +61,7 @@ class JaxCollisionCost[
         distance: JaxDistanceExtractor[S, SOS, D],
         distance_threshold: Array[Dims[V_]],
         weight: float,
-        metric: JaxRiskMetric[S, OS, SOS] = NoMetric(),
+        metric: JaxRiskMetric[S, OS, SOS] | None = None,
     ) -> "JaxCollisionCost[S, OS, SOS, D, V_]":
         return JaxCollisionCost(
             obstacle_states=obstacle_states,
@@ -68,7 +69,9 @@ class JaxCollisionCost[
             distance=distance,
             distance_threshold=jnp.asarray(distance_threshold),
             weight=weight,
-            metric=metric,
+            metric=metric
+            if metric is not None
+            else cast(JaxRiskMetric[S, OS, SOS], NoMetric()),
         )
 
     def __call__[T: int, M: int](

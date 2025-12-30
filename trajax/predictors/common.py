@@ -1,3 +1,4 @@
+from typing import cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -54,10 +55,15 @@ class CurvilinearPredictor[
         horizon: int,
         model: ObstacleModel[H, S, V, IS, SS],
         prediction: PredictionCreator[SS, CS, P],
-        propagator: CovariancePropagator[SS, CS] = NoCovariance(),
+        propagator: CovariancePropagator[SS, CS] | None = None,
     ) -> "CurvilinearPredictor[H, S, V, IS, SS, CS, P]":
         return CurvilinearPredictor(
-            horizon=horizon, model=model, prediction=prediction, propagator=propagator
+            horizon=horizon,
+            model=model,
+            prediction=prediction,
+            propagator=propagator
+            if propagator is not None
+            else cast(CovariancePropagator[SS, CS], NoCovariance()),
         )
 
     def predict(self, *, history: HistoryT) -> PredictionT:
