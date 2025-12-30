@@ -95,8 +95,10 @@ class ObstacleModel[HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequen
         ...
 
 
-class PredictionCreator[StateSequencesT, PredictionT](Protocol):
-    def __call__(self, *, states: StateSequencesT) -> PredictionT:
+class PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT](Protocol):
+    def __call__(
+        self, *, states: StateSequencesT, covariances: CovarianceSequencesT
+    ) -> PredictionT:
         """Creates a prediction from the given state sequences."""
         ...
 

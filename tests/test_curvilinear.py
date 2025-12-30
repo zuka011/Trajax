@@ -1,5 +1,6 @@
 from trajax import (
     model,
+    propagator,
     predictor as create_predictor,
     types,
     ObstacleStates,
@@ -11,13 +12,16 @@ from numtypes import array
 import jax.numpy as jnp
 import numpy as np
 
-from tests.dsl import mppi as data
+from tests.dsl import mppi as data, covariance
 from pytest import mark
 
 
 class NumPyIntegratorPredictionCreator:
     def __call__(
-        self, *, states: types.numpy.integrator.ObstacleStateSequences
+        self,
+        *,
+        states: types.numpy.integrator.ObstacleStateSequences,
+        covariances: types.numpy.PositionCovariance,
     ) -> types.numpy.ObstacleStates:
         return data.numpy.obstacle_states(
             x=states.array[:, 0, :],
@@ -35,12 +39,16 @@ class NumPyIntegratorPredictionCreator:
 
 class NumPyBicyclePredictionCreator:
     def __call__(
-        self, *, states: types.numpy.bicycle.ObstacleStateSequences
+        self,
+        *,
+        states: types.numpy.bicycle.ObstacleStateSequences,
+        covariances: types.numpy.PositionCovariance | None,
     ) -> types.numpy.ObstacleStates:
         return data.numpy.obstacle_states(
             x=states.x(),
             y=states.y(),
             heading=states.theta(),
+            covariance=covariances,
         )
 
     def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
@@ -53,7 +61,10 @@ class NumPyBicyclePredictionCreator:
 
 class JaxIntegratorPredictionCreator:
     def __call__(
-        self, *, states: types.jax.integrator.ObstacleStateSequences
+        self,
+        *,
+        states: types.jax.integrator.ObstacleStateSequences,
+        covariances: types.jax.PositionCovariance,
     ) -> types.jax.ObstacleStates:
         return data.jax.obstacle_states(
             x=states.array[:, 0, :],
@@ -71,12 +82,16 @@ class JaxIntegratorPredictionCreator:
 
 class JaxBicyclePredictionCreator:
     def __call__(
-        self, *, states: types.jax.bicycle.ObstacleStateSequences
+        self,
+        *,
+        states: types.jax.bicycle.ObstacleStateSequences,
+        covariances: types.jax.PositionCovariance,
     ) -> types.jax.ObstacleStates:
         return data.jax.obstacle_states(
             x=states.x(),
             y=states.y(),
             heading=states.theta(),
+            covariance=covariances,
         )
 
     def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
@@ -697,3 +712,105 @@ def test_that_obstacle_motion_is_predicted_correctly[
     assert np.allclose(actual.x(), expected.x(), rtol=1e-3, atol=1e-6)
     assert np.allclose(actual.y(), expected.y(), rtol=1e-3, atol=1e-6)
     assert np.allclose(actual.heading(), expected.heading(), rtol=1e-3, atol=1e-6)
+
+
+@mark.parametrize(
+    ["predictor", "history"],
+    [
+        (
+            predictor := create_predictor.curvilinear(
+                horizon=(T_p := 4),
+                model=model.numpy.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            history := data.numpy.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+        ),
+        (
+            predictor := create_predictor.curvilinear(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+        ),
+    ],
+)
+def test_that_no_covariance_information_is_provided_when_propagator_is_not_available[
+    HistoryT,
+    PredictionT: ObstacleStates,
+](predictor: ObstacleMotionPredictor[HistoryT, PredictionT], history: HistoryT) -> None:
+    assert predictor.predict(history=history).covariance() is None
+
+
+@mark.parametrize(
+    ["predictor", "history"],
+    [
+        (
+            predictor := create_predictor.curvilinear(
+                horizon=(T_p := 4),
+                model=model.numpy.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                propagator=propagator.numpy.linear(
+                    time_step_size=dt,
+                    initial_covariance=covariance.NumPyConstantVarianceProvider(
+                        position_variance=0.1, velocity_variance=0.2
+                    ),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-15),
+                ),
+                prediction=NumPyBicyclePredictionCreator(),
+            ),
+            history := data.numpy.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+        ),
+        (
+            predictor := create_predictor.curvilinear(
+                horizon=(T_p := 4),
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=(dt := 0.1), wheelbase=1.0
+                ),
+                propagator=propagator.jax.linear(
+                    time_step_size=dt,
+                    initial_covariance=covariance.JaxConstantVarianceProvider(
+                        position_variance=0.1, velocity_variance=0.2
+                    ),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-15),
+                ),
+                prediction=JaxBicyclePredictionCreator(),
+            ),
+            history := data.jax.obstacle_states(
+                x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                y=array([[1.0], [1.0]], shape=(T_h, K)),
+                heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+            ),
+        ),
+    ],
+)
+def test_that_position_covariance_information_is_provided_when_propagator_is_available[
+    HistoryT,
+    PredictionT: ObstacleStates,
+](predictor: ObstacleMotionPredictor[HistoryT, PredictionT], history: HistoryT) -> None:
+    covariances = np.asarray(predictor.predict(history=history).covariance())
+
+    assert np.all(
+        [
+            (covariances[t + 1, 0, 0] > covariances[t, 0, 0])
+            & (covariances[t + 1, 1, 1] > covariances[t, 1, 1])
+            for t in range(T_p - 1)
+        ]
+    )

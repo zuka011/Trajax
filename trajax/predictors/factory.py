@@ -1,6 +1,6 @@
 from typing import Final
 
-from trajax.predictors.common import CurvilinearPredictor
+from trajax.predictors.common import CurvilinearPredictor, CovariancePadding
 from trajax.predictors.propagators import (
     NumPyLinearCovariancePropagator,
     JaxLinearCovariancePropagator,
@@ -17,3 +17,5 @@ class propagator:
 
     class jax:
         linear: Final = JaxLinearCovariancePropagator.create
+
+    padding: Final = CovariancePadding.create

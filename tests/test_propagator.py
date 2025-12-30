@@ -401,3 +401,138 @@ def test_that_covariance_is_propagated[
     expected: CovarianceSequencesT,
 ) -> None:
     assert np.allclose(propagator.propagate(states=states), expected)
+
+
+@mark.parametrize(
+    ["propagator", "states", "expected"],
+    [
+        (
+            propagator := create_propagator.numpy.linear(
+                time_step_size=1.0,
+                initial_covariance=NumPyConstantVarianceProvider(
+                    position_variance=(var := 0.1), velocity_variance=0.0
+                ),
+                # A covariance array must not be singular in any dimension.
+                padding=create_propagator.padding(
+                    to_dimension=(D_p := 4), epsilon=(eps := 0.001)
+                ),
+            ),
+            states := data.numpy.obstacle_states(
+                x=array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], shape=(T := 3, K := 2)),
+                y=array([[6.0, 1.0], [4.0, 3.0], [2.0, 5.0]], shape=(T, K)),
+            ),
+            expected := array(
+                [
+                    (
+                        initial_covariance := [
+                            [[var, var], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                            [[0.0, 0.0], [var, var], [0.0, 0.0], [0.0, 0.0]],
+                            [[0.0, 0.0], [0.0, 0.0], [eps, eps], [0.0, 0.0]],
+                            [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [eps, eps]],
+                        ]
+                    ),
+                    initial_covariance,
+                    initial_covariance,
+                ],
+                shape=(T, D_p, D_p, K),
+            ),
+        ),
+        (  # No padding is needed if the dimension is already sufficient.
+            propagator := create_propagator.numpy.linear(
+                time_step_size=1.0,
+                initial_covariance=NumPyConstantVarianceProvider(
+                    position_variance=(var := 0.1), velocity_variance=0.0
+                ),
+                padding=create_propagator.padding(
+                    to_dimension=(D_p := 2), epsilon=(eps := 0.001)
+                ),
+            ),
+            states := data.numpy.obstacle_states(
+                x=array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], shape=(T := 3, K := 2)),
+                y=array([[6.0, 1.0], [4.0, 3.0], [2.0, 5.0]], shape=(T, K)),
+            ),
+            expected := array(
+                [
+                    (
+                        initial_covariance := [
+                            [[var, var], [0.0, 0.0]],
+                            [[0.0, 0.0], [var, var]],
+                        ]
+                    ),
+                    initial_covariance,
+                    initial_covariance,
+                ],
+                shape=(T, D_p, D_p, K),
+            ),
+        ),
+    ]
+    + [  # Analogous tests for JAX implementation
+        (
+            propagator := create_propagator.jax.linear(
+                time_step_size=1.0,
+                initial_covariance=JaxConstantVarianceProvider(
+                    position_variance=(var := 0.1), velocity_variance=0.0
+                ),
+                padding=create_propagator.padding(
+                    to_dimension=(D_p := 4), epsilon=(eps := 0.001)
+                ),
+            ),
+            states := data.jax.obstacle_states(
+                x=array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], shape=(T := 3, K := 2)),
+                y=array([[6.0, 1.0], [4.0, 3.0], [2.0, 5.0]], shape=(T, K)),
+            ),
+            expected := array(
+                [
+                    (
+                        initial_covariance := [
+                            [[var, var], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                            [[0.0, 0.0], [var, var], [0.0, 0.0], [0.0, 0.0]],
+                            [[0.0, 0.0], [0.0, 0.0], [eps, eps], [0.0, 0.0]],
+                            [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [eps, eps]],
+                        ]
+                    ),
+                    initial_covariance,
+                    initial_covariance,
+                ],
+                shape=(T, D_p, D_p, K),
+            ),
+        ),
+        (
+            propagator := create_propagator.jax.linear(
+                time_step_size=1.0,
+                initial_covariance=JaxConstantVarianceProvider(
+                    position_variance=(var := 0.1), velocity_variance=0.0
+                ),
+                padding=create_propagator.padding(
+                    to_dimension=(D_p := 2), epsilon=(eps := 0.001)
+                ),
+            ),
+            states := data.jax.obstacle_states(
+                x=array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], shape=(T := 3, K := 2)),
+                y=array([[6.0, 1.0], [4.0, 3.0], [2.0, 5.0]], shape=(T, K)),
+            ),
+            expected := array(
+                [
+                    (
+                        initial_covariance := [
+                            [[var, var], [0.0, 0.0]],
+                            [[0.0, 0.0], [var, var]],
+                        ]
+                    ),
+                    initial_covariance,
+                    initial_covariance,
+                ],
+                shape=(T, D_p, D_p, K),
+            ),
+        ),
+    ],
+)
+def test_that_covariance_is_padded_to_the_given_dimension[
+    StateSequencesT,
+    CovarianceSequencesT: CovarianceSequences,
+](
+    propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT],
+    states: StateSequencesT,
+    expected: CovarianceSequencesT,
+) -> None:
+    assert np.allclose(propagator.propagate(states=states), expected)

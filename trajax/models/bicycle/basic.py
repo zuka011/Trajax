@@ -301,6 +301,18 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
     def theta(self) -> Array[Dims[T, K]]:
         return self.array[:, 2, :]
 
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> BicycleD_x:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleVelocities[K: int]:
@@ -633,9 +645,10 @@ def estimate_steering_angles_from[K: int](
         history.heading()[-1, :] - history.heading()[-2, :]
     ) / time_step_size
 
-    steering_angles = np.where(
-        speeds > 1e-6, np.arctan(heading_velocity * wheelbase / speeds), 0.0
-    )
+    with np.errstate(invalid="ignore"):
+        steering_angles = np.where(
+            speeds > 1e-6, np.arctan(heading_velocity * wheelbase / speeds), 0.0
+        )
 
     assert shape_of(
         steering_angles, matches=(history.count,), name="estimated steering angles"

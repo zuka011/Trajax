@@ -55,9 +55,11 @@ from trajax.types import (
     NumPyInitialPositionCovariance,
     NumPyInitialVelocityCovariance,
     NumPyInitialCovarianceProvider,
+    NumPyPositionCovariance,
     JaxInitialPositionCovariance,
     JaxInitialVelocityCovariance,
     JaxInitialCovarianceProvider,
+    JaxPositionCovariance,
 )
 from trajax.models import (
     NumPyBicycleState,
@@ -186,6 +188,9 @@ class types:
         )
         type InitialPositionCovariance[K: int = Any] = NumPyInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = NumPyInitialVelocityCovariance[K]
+        type PositionCovariance[T: int = Any, K: int = Any] = NumPyPositionCovariance[
+            T, K
+        ]
 
         type CostFunction[
             T: int = Any,
@@ -303,6 +308,9 @@ class types:
         )
         type InitialPositionCovariance[K: int = Any] = JaxInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = JaxInitialVelocityCovariance[K]
+        type PositionCovariance[T: int = Any, K: int = Any] = JaxPositionCovariance[
+            T, K
+        ]
 
         type CostFunction[
             T: int = Any,

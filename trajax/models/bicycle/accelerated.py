@@ -343,6 +343,18 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         return np.asarray(self.array[:, 2, :])
 
     @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> BicycleD_x:
+        return cast(BicycleD_x, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+    @property
     def x_array(self) -> Float[JaxArray, "T K"]:
         return self.array[:, 0, :]
 

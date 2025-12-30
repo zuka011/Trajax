@@ -3,6 +3,7 @@ from . import (
     mppi as mppi,
     costs as costs,
     stubs as stubs,
+    covariance as covariance,
 )
 from .numeric import estimate as estimate, compute as compute
 from .type import clear_type as clear_type
