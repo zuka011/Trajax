@@ -438,7 +438,7 @@ class configure:
                 propagator=propagator.jax.linear(
                     time_step_size=dt,
                     initial_covariance=propagator.jax.covariance.constant_variance(
-                        position_variance=0.01, velocity_variance=0.05
+                        position_variance=0.01, velocity_variance=1.0
                     ),
                     padding=propagator.padding(to_dimension=3, epsilon=1e-9),
                 )

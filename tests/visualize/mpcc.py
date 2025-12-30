@@ -11,6 +11,7 @@ from tests.visualize.simulation import (
     SimulationData,
     ReferenceTrajectory,
     ObstacleForecast,
+    ObstacleForecastCovariance,
 )
 
 
@@ -62,6 +63,7 @@ class MpccVisualizer:
         forecast_x, forecast_y, forecast_heading = self.obstacle_forecasts_from(
             result.obstacles
         )
+        forecast_covariance = self.obstacle_forecast_covariance_from(result.obstacles)
 
         return SimulationData(
             reference=reference,
@@ -83,6 +85,7 @@ class MpccVisualizer:
             obstacle_forecast_x=forecast_x,
             obstacle_forecast_y=forecast_y,
             obstacle_forecast_heading=forecast_heading,
+            obstacle_forecast_covariance=forecast_covariance,
         )
 
     def query_ghost_positions(
@@ -130,4 +133,27 @@ class MpccVisualizer:
             np.array([it.x() for it in obstacles]),
             np.array([it.y() for it in obstacles]),
             np.array([it.heading() for it in obstacles]),
+        )
+
+    def obstacle_forecast_covariance_from(
+        self, obstacles: Sequence[ObstacleStates]
+    ) -> ObstacleForecastCovariance | None:
+        if len(obstacles) == 0:
+            return None
+
+        covariances = [it.covariance() for it in obstacles]
+
+        if all(cov is None for cov in covariances):
+            return None
+
+        template_covariance = next(cov for cov in covariances if cov is not None)
+
+        # NOTE: we assume the first two dimensions are x and y
+        return np.array(
+            [
+                cov[:, :2, :2, :]
+                if cov is not None
+                else np.zeros_like(template_covariance[:, :2, :2, :])
+                for cov in covariances
+            ]
         )

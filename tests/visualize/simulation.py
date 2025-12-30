@@ -1,9 +1,9 @@
-from typing import Literal
+from typing import Literal, cast
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from numtypes import Array, Dims, Dim1, Dim2, IndexArray
+from numtypes import Array, D, Dims, Dim1, Dim2, IndexArray
 from aiopath import AsyncPath
 
 from bokeh.plotting import figure
@@ -14,10 +14,14 @@ from bokeh.models import ColumnDataSource, Slider, CustomJS, Div, Button, Column
 from bokeh.layouts import column, row
 from bokeh.events import DocumentReady
 
+# TODO: Refactor this visualization code into actual JS files.
 
 type VehicleType = Literal["triangle", "car"]
 type ObstacleCoordinate[T: int = int, K: int = int] = Array[Dims[T, K]]
 type ObstacleForecast[T: int = int, H: int = int, K: int = int] = Array[Dims[T, H, K]]
+type ObstacleForecastCovariance[T: int = int, H: int = int, K: int = int] = Array[
+    Dims[T, H, D[2], D[2], K]
+]
 
 
 class Theme:
@@ -121,6 +125,7 @@ class SimulationData:
     obstacle_forecast_x: ObstacleForecast | None = None
     obstacle_forecast_y: ObstacleForecast | None = None
     obstacle_forecast_heading: ObstacleForecast | None = None
+    obstacle_forecast_covariance: ObstacleForecastCovariance | None = None
 
     def __post_init__(self) -> None:
         assert len(self.positions_x) == self.time_step_count, (
@@ -223,6 +228,7 @@ async def create_animation_html(data: SimulationData, output: AsyncPath) -> None
     add_ghost_vehicle_to_plot(trajectory_plot, sources["ghost"])
     add_obstacles_to_plot(trajectory_plot, sources["obstacles"], data)
     add_obstacle_forecasts_to_plot(trajectory_plot, sources["forecast"], data)
+    add_covariance_ellipses_to_plot(trajectory_plot, sources["ellipse"], data)
     add_progress_marker_to_plot(progress_plot, sources["progress"])
     add_error_marker_to_plot(error_plot, sources["error"])
 
@@ -257,6 +263,12 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
     ghost_x, ghost_y = get_ghost_positions(data)
     obstacle_x, obstacle_y, obstacle_heading = get_obstacle_positions(data)
     forecast_x, forecast_y, forecast_heading = get_obstacle_forecasts(data)
+    forecast_covariance = get_obstacle_forecast_covariance(data)
+
+    ellipse_data = extract_forecast_ellipses(
+        forecast_x, forecast_y, forecast_covariance, timestep=0
+    )
+    flat_ellipse = flatten_ellipse_data(*ellipse_data)
 
     return {
         "vehicle": ColumnDataSource(
@@ -315,6 +327,15 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "arrow_heading": arrows[2],
             }
         ),
+        "ellipse": ColumnDataSource(
+            data={
+                "x": flat_ellipse[0],
+                "y": flat_ellipse[1],
+                "width": flat_ellipse[2],
+                "height": flat_ellipse[3],
+                "angle": flat_ellipse[4],
+            }
+        ),
         "simulation": ColumnDataSource(
             data={
                 "positions_x": data.positions_x.tolist(),
@@ -330,6 +351,7 @@ def create_data_sources(data: SimulationData) -> dict[str, ColumnDataSource]:
                 "obstacle_forecast_x": forecast_x.tolist(),
                 "obstacle_forecast_y": forecast_y.tolist(),
                 "obstacle_forecast_headings": forecast_heading.tolist(),
+                "obstacle_forecast_covariance": forecast_covariance.tolist(),
             }
         ),
         "reference": ColumnDataSource(
@@ -386,6 +408,106 @@ def get_obstacle_forecasts(
     )
 
     return data.obstacle_forecast_x, data.obstacle_forecast_y, forecast_headings
+
+
+def get_obstacle_forecast_covariance(
+    data: SimulationData,
+) -> ObstacleForecastCovariance:
+    if data.obstacle_forecast_covariance is None:
+        empty = np.empty((data.time_step_count, 0, 2, 2, 0))
+        return cast(ObstacleForecastCovariance, empty)
+
+    return data.obstacle_forecast_covariance
+
+
+def covariance_to_ellipse_parameters(
+    covariance: Array[Dims[D[2], D[2]]], *, confidence: float = 2.0
+) -> tuple[float, float, float]:
+    eigenvalues, eigenvectors = np.linalg.eigh(covariance)
+
+    order = eigenvalues.argsort()[::-1]
+    eigenvalues = eigenvalues[order]
+    eigenvectors = eigenvectors[:, order]
+
+    width = 2 * np.sqrt(max(eigenvalues[0], 0)) * confidence
+    height = 2 * np.sqrt(max(eigenvalues[1], 0)) * confidence
+
+    angle = np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0])
+
+    return float(width), float(height), float(angle)
+
+
+def extract_forecast_ellipses(
+    forecast_x: ObstacleForecast,
+    forecast_y: ObstacleForecast,
+    forecast_covariance: ObstacleForecastCovariance,
+    *,
+    timestep: int,
+    confidence: float = 2.0,
+) -> tuple[
+    list[list[float]],
+    list[list[float]],
+    list[list[float]],
+    list[list[float]],
+    list[list[float]],
+]:
+    if (
+        forecast_covariance.shape[1] == 0
+        or forecast_covariance.shape[4] == 0
+        or forecast_x.shape[1] == 0
+    ):
+        return [], [], [], [], []
+
+    obstacle_count = forecast_covariance.shape[4]
+    horizon = forecast_covariance.shape[1]
+
+    xs: list[list[float]] = []
+    ys: list[list[float]] = []
+    widths: list[list[float]] = []
+    heights: list[list[float]] = []
+    angles: list[list[float]] = []
+
+    for k in range(obstacle_count):
+        obstacle_xs: list[float] = []
+        obstacle_ys: list[float] = []
+        obstacle_widths: list[float] = []
+        obstacle_heights: list[float] = []
+        obstacle_angles: list[float] = []
+
+        for h in range(horizon):
+            cov = forecast_covariance[timestep, h, :, :, k]
+            width, height, angle = covariance_to_ellipse_parameters(
+                cov, confidence=confidence
+            )
+            obstacle_xs.append(float(forecast_x[timestep, h, k]))
+            obstacle_ys.append(float(forecast_y[timestep, h, k]))
+            obstacle_widths.append(width)
+            obstacle_heights.append(height)
+            obstacle_angles.append(angle)
+
+        xs.append(obstacle_xs)
+        ys.append(obstacle_ys)
+        widths.append(obstacle_widths)
+        heights.append(obstacle_heights)
+        angles.append(obstacle_angles)
+
+    return xs, ys, widths, heights, angles
+
+
+def flatten_ellipse_data(
+    xs: list[list[float]],
+    ys: list[list[float]],
+    widths: list[list[float]],
+    heights: list[list[float]],
+    angles: list[list[float]],
+) -> tuple[list[float], list[float], list[float], list[float], list[float]]:
+    flat_xs = [x for obstacle_xs in xs for x in obstacle_xs]
+    flat_ys = [y for obstacle_ys in ys for y in obstacle_ys]
+    flat_widths = [w for obstacle_ws in widths for w in obstacle_ws]
+    flat_heights = [h for obstacle_hs in heights for h in obstacle_hs]
+    flat_angles = [a for obstacle_as in angles for a in obstacle_as]
+
+    return flat_xs, flat_ys, flat_widths, flat_heights, flat_angles
 
 
 def extract_forecasts(
@@ -761,8 +883,6 @@ def add_obstacle_forecasts_to_plot(
 def add_forecast_arrows_to_plot(
     plot: Figure, source: ColumnDataSource, color: str
 ) -> None:
-    arrow_length = 1.5
-
     plot.scatter(  # type: ignore
         "arrow_x",
         "arrow_y",
@@ -772,6 +892,36 @@ def add_forecast_arrows_to_plot(
         angle="arrow_heading",
         color=color,
         alpha=0.7,
+    )
+
+
+def add_covariance_ellipses_to_plot(
+    plot: Figure, source: ColumnDataSource, data: SimulationData
+) -> None:
+    if data.obstacle_forecast_covariance is None:
+        return
+
+    if (
+        data.obstacle_forecast_covariance.shape[1] == 0
+        or data.obstacle_forecast_covariance.shape[4] == 0
+    ):
+        return
+
+    ellipse_color = "#9b59b6"
+
+    plot.ellipse(  # type: ignore
+        "x",
+        "y",
+        width="width",
+        height="height",
+        angle="angle",
+        source=source,
+        fill_color=ellipse_color,
+        fill_alpha=0.1,
+        line_color=ellipse_color,
+        line_alpha=0.25,
+        line_width=1,
+        legend_label="Position Uncertainty",
     )
 
 
@@ -825,6 +975,7 @@ def create_slider_callback(
             "error": sources["error"],
             "obstacles": sources["obstacles"],
             "forecast": sources["forecast"],
+            "ellipse": sources["ellipse"],
             "sim": sources["simulation"],
             "dt": data.time_step,
         },
@@ -872,6 +1023,7 @@ def create_slider_callback(
             const forecast_x = s.obstacle_forecast_x;
             const forecast_y = s.obstacle_forecast_y;
             const forecast_headings = s.obstacle_forecast_headings;
+            const forecast_cov = s.obstacle_forecast_covariance;
             
             if (forecast_x && forecast_x.length > 0 && forecast_x[0].length > 0) {
                 const obstacle_count = forecast_x[t][0].length;
@@ -912,6 +1064,69 @@ def create_slider_callback(
                     arrow_x: arrow_x,
                     arrow_y: arrow_y,
                     arrow_heading: arrow_heading,
+                };
+            }
+            
+            // Update covariance ellipses
+            if (forecast_cov && forecast_cov.length > 0 && forecast_cov[0].length > 0 && forecast_cov[0][0].length > 0) {
+                const obstacle_count = forecast_cov[t][0][0][0].length;
+                const horizon = forecast_cov[t].length;
+                const confidence = 2.0;
+                
+                const ellipse_x = [];
+                const ellipse_y = [];
+                const ellipse_width = [];
+                const ellipse_height = [];
+                const ellipse_angle = [];
+                
+                for (let k = 0; k < obstacle_count; k++) {
+                    for (let h = 0; h < horizon; h++) {
+                        // Get 2x2 covariance matrix
+                        const cov = [
+                            [forecast_cov[t][h][0][0][k], forecast_cov[t][h][0][1][k]],
+                            [forecast_cov[t][h][1][0][k], forecast_cov[t][h][1][1][k]]
+                        ];
+                        
+                        // Compute eigenvalues and eigenvectors for 2x2 matrix
+                        const a = cov[0][0];
+                        const b = cov[0][1];
+                        const c = cov[1][0];
+                        const d = cov[1][1];
+                        
+                        const trace = a + d;
+                        const det = a * d - b * c;
+                        const discriminant = Math.sqrt(Math.max(0, trace * trace / 4 - det));
+                        
+                        const lambda1 = trace / 2 + discriminant;
+                        const lambda2 = trace / 2 - discriminant;
+                        
+                        // Compute eigenvector for largest eigenvalue
+                        let angle;
+                        if (Math.abs(b) > 1e-10) {
+                            angle = Math.atan2(lambda1 - a, b);
+                        } else if (Math.abs(c) > 1e-10) {
+                            angle = Math.atan2(c, lambda1 - d);
+                        } else {
+                            angle = (a >= d) ? 0 : Math.PI / 2;
+                        }
+                        
+                        const width = 2 * Math.sqrt(Math.max(lambda1, 0)) * confidence;
+                        const height = 2 * Math.sqrt(Math.max(lambda2, 0)) * confidence;
+                        
+                        ellipse_x.push(forecast_x[t][h][k]);
+                        ellipse_y.push(forecast_y[t][h][k]);
+                        ellipse_width.push(width);
+                        ellipse_height.push(height);
+                        ellipse_angle.push(angle);
+                    }
+                }
+                
+                ellipse.data = {
+                    x: ellipse_x,
+                    y: ellipse_y,
+                    width: ellipse_width,
+                    height: ellipse_height,
+                    angle: ellipse_angle
                 };
             }
         """,
