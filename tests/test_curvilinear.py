@@ -89,9 +89,9 @@ class JaxBicyclePredictionCreator:
 
 @mark.parametrize(
     ["predictor", "history", "expected"],
-    [  # Single Integrator CVM tests
+    [  # Single Integrator CL model tests
         (  # No history
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
@@ -108,7 +108,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Single time step history, expected to stay still
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
@@ -127,7 +127,7 @@ class JaxBicyclePredictionCreator:
         (
             # Multiple time steps, constant velocity
             # Only last two time steps used for velocity calculation
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
@@ -164,7 +164,7 @@ class JaxBicyclePredictionCreator:
         ),
         (
             # Multiple time steps, stationary obstacle (in last two steps)
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=NumPyIntegratorPredictionCreator(),
@@ -200,9 +200,9 @@ class JaxBicyclePredictionCreator:
             ),
         ),
     ]
-    + [  # Bicycle Model CVM tests
+    + [  # Bicycle CL model tests
         (  # No history
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -221,7 +221,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Single state, zero velocity - stays still
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -240,7 +240,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Single state, moving along x-axis (θ=0)
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -260,7 +260,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Moving along y-axis (θ=π/2)
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -280,7 +280,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Multiple time steps, but obstacle is stationary
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -300,7 +300,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (  # Multiple obstacles with different velocities and headings
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 3),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -330,7 +330,7 @@ class JaxBicyclePredictionCreator:
         (  # Turning vehicle - constant steering angle (δ) preserved
             # θ̇ = (v/L) tan(δ), so constant δ means constant angular velocity ω
             # From history: estimate v and ω, then δ = arctan(ω * L / v)
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
@@ -395,9 +395,9 @@ class JaxBicyclePredictionCreator:
             ),
         ),
     ]
-    + [  # Analogous tests for JAX Integrator Model CVM
+    + [  # Analogous tests for JAX Integrator CL model
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=JaxIntegratorPredictionCreator(),
@@ -414,7 +414,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=JaxIntegratorPredictionCreator(),
@@ -431,7 +431,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=JaxIntegratorPredictionCreator(),
@@ -467,7 +467,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.integrator.obstacle(time_step_size=(dt := 0.1)),
                 prediction=JaxIntegratorPredictionCreator(),
@@ -503,9 +503,9 @@ class JaxBicyclePredictionCreator:
             ),
         ),
     ]
-    + [  # JAX Bicycle Model CVM tests
+    + [  # JAX Bicycle CL model tests
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -524,7 +524,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 5),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -543,7 +543,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -563,7 +563,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -582,7 +582,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -601,7 +601,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 3),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=1.0
@@ -626,7 +626,7 @@ class JaxBicyclePredictionCreator:
             ),
         ),
         (
-            predictor := create_predictor.constant_velocity(
+            predictor := create_predictor.curvilinear(
                 horizon=(T_p := 4),
                 model=model.jax.bicycle.obstacle(
                     time_step_size=(dt := 0.1), wheelbase=(L := 1.0)

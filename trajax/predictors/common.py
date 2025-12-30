@@ -4,7 +4,7 @@ from trajax.types import ObstacleStatesHistory, ObstacleModel, PredictionCreator
 
 
 @dataclass(kw_only=True, frozen=True)
-class ConstantVelocityPredictor[
+class CurvilinearPredictor[
     HistoryT: ObstacleStatesHistory,
     StatesT,
     VelocitiesT,
@@ -24,10 +24,8 @@ class ConstantVelocityPredictor[
         horizon: int,
         model: ObstacleModel[H, S, V, IS, SS],
         prediction: PredictionCreator[SS, P],
-    ) -> "ConstantVelocityPredictor[H, S, V, IS, SS, P]":
-        return ConstantVelocityPredictor(
-            horizon=horizon, model=model, prediction=prediction
-        )
+    ) -> "CurvilinearPredictor[H, S, V, IS, SS, P]":
+        return CurvilinearPredictor(horizon=horizon, model=model, prediction=prediction)
 
     def predict(self, *, history: HistoryT) -> PredictionT:
         if history.horizon == 0:

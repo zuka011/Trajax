@@ -1,7 +1,7 @@
 from typing import Final
 
-from trajax.predictors.common import ConstantVelocityPredictor
+from trajax.predictors.common import CurvilinearPredictor
 
 
 class predictor:
-    constant_velocity: Final = ConstantVelocityPredictor.create
+    curvilinear: Final = CurvilinearPredictor.create

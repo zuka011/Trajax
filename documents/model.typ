@@ -336,21 +336,101 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
 
 == Motion Prediction
 
-=== Constant Velocity Model
+=== Constant Velocity (CV) Model @Schubert2008
 
-To effectively avoid collisions, only considering the current state of moving obstacles is insufficient most of the time. Instead, we need to predict how these obstacles will move in the near future. Among the many ways to do this, a simple method is to assume that the obstacles will continue moving at a constant velocity. More specifically, we can assume that the state of each obstacle changes according to some known dynamics, and that the control inputs to these dynamics are zero.
+To effectively avoid collisions, only considering the current state of moving obstacles is insufficient in most cases. Instead, we need to predict how these obstacles will move in the near future. A simple method to predict the future motion of obstacles is to assume they will continue moving with their current velocity. We can call this a *constant velocity model*.
 
-For example, assume a robot follows the kinematic bicycle model described in @kinematic-bicycle-equations. Then, for the robot's current state $#state-single _("obs")$ and control input $#input-single _("obs") = [0 quad 0]$, we can predict its future trajectory by simulating the kinematic bicycle model with these values. In this specific case, we would predict that the robot will continue moving straight at its current speed.
+For example, assume a robot follows the kinematic bicycle model described in @kinematic-bicycle-equations. The state of this robot can then be represented as $#state-single _("obs") = [x quad y quad theta quad v]$. In this case, we can assume the state variable $v$, representing the robot's linear velocity, remains constant over the prediction horizon. This means that we predict the robot will continue moving on a straight line in the direction of its current heading $theta$ with speed $v$ for the next #horizon time steps.
 
-=== Constant Acceleration Model
+=== Constant Steering Angle & Velocity (CSAV) Model @Schubert2008
 
-Similarly, for the constant acceleration model, we can assume that the obstacles will continue moving with their current acceleration.
+Since the above model ignores the steering angle of the robot, it will yield inaccurate predictions when the robot is turning, or simply following a curved path. A slightly more sophisticated option is to also consider the steering angle $delta$ of the robot and assume it also remains constant over the prediction horizon. The resulting model is called a *constant steering angle & velocity model*.
 
-For example, for the case of the kinematic bicycle model, this means that we assume the control inputs $#input-single _("obs") = [a quad delta]$ remain constant over the prediction horizon. If a robot is following a curved path, this model's predictions will likely be more accurate than those of the constant velocity model.
+== State Estimation
 
-=== Incorporating Uncertainty
+#let observed-state-single = $#state-single _("obs")$
 
+Typically, only a small subset of the full robot state is directly observable through sensors. Let's assume we can directly observe the position $(x, y)$ and heading $theta$ of a robot, but not its velocity $v$. The observed state can then be represented as $#observed-state-single = [x quad y quad theta]$. The remaining information has to be inferred from these measurements.
 
+=== Velocity
+
+A simple approach to estimate the velocity $v$ of the robot is to compute the backward finite difference in position over time.
+
+#definition(title: "Finite Difference Velocity Estimate")[
+  Considering only the last two observed positions $(x_(t-1), y_(t-1))$ and $(x_t, y_t)$ at time steps $t-1$ and $t$, we can estimate the velocity at time step $t$ as:
+
+  #align(
+    center,
+    $v_t approx sqrt((x_t - x_(t-1))^2 + (y_t - y_(t-1))^2) / #delta-t$,
+  )
+]
+
+Although this is not exactly consistent with the kinematic bicycle model (e.g. if the robot's tires are slipping), it provides a reasonable approximation of the robot's speed.
+
+=== Steering Angle
+
+From @kinematic-bicycle-equations, we know that the heading rate $dot(theta)$ is related to the steering angle $delta$ as:
+
+#align(
+  center,
+  $dot(theta) = v / L tan(delta)$,
+)
+
+Inverting this relationship gives:
+
+#align(
+  center,
+  $delta = arctan(L dot(theta) / v)$,
+)
+
+#definition(title: "Finite Difference Steering Angle Estimate")[
+
+  Given observations of the heading $theta$ at time steps $t-1$ and $t$, and the (estimated) velocity $v_t$, we can estimate the heading rate, and subsequently the steering angle, as:
+
+  #align(
+    center,
+    $dot(theta)_t approx (theta_t - theta_(t-1)) / #delta-t, quad delta_t approx arctan(L dot(theta)_t / v_t)$,
+  )
+]
+
+If the velocity $v_t$ is very small, the steering angle estimate $delta_t$ will be unreliable. In such cases, we can assume the steering angle is zero.
+
+== Incorporating Uncertainty into Predictions
+
+When using motion prediction models like the CV or CSAV models, we make assumptions about the future motion of obstacles that we know may not hold exactly. Furthermore, sensor noise and inaccuracies in state estimation can also lead to uncertainty about the current state of obstacles. We can represent this uncertainty in a probabilistic manner in our predictions in several ways.
+
+=== Gaussian Noise
+
+#let velocity-covariance-(sub: none) = function(
+  name: $Sigma$,
+  sub: if sub != none { $v,#sub$ } else { $v$ },
+)
+#let position-covariance-(sub: none) = function(
+  name: $Sigma$,
+  sub: if sub != none { $p,#sub$ } else { $p$ },
+)
+#let velocity-covariance = velocity-covariance-()
+#let position-covariance = position-covariance-()
+
+A simple approach to represent the uncertainty in predictions is to consider future states of obstacles as Gaussian random variables. In this context, the predictions provided by the motion model (e.g. CV or CSAV) can be interpreted as the means of these Gaussian distributions. The only remaining component is the variance of these distributions, which can be defined depending on the particular motion model we are using.
+
+#definition(title: [Gaussian Noise for CV Model @Salzmann2020])[
+  Assume an obstacle follows the CV model. Let $#velocity-covariance-(sub: $t$)$ be the covariance matrix representing the uncertainty in the velocity estimate of the obstacle at time step $t$. Then, the covariance matrix $#position-covariance-(sub: $t + 1$)$ for the position at the next time step $t + 1$ can be computed as:
+
+  #align(
+    center,
+    $#position-covariance-(sub: $t + 1$) = #position-covariance-(sub: $t$) + #delta-t^2 #velocity-covariance-(sub: $t$)$,
+  )
+
+  Assuming #velocity-covariance-(sub: $t$) remains constant over time, we can unroll this equation to get the covariance at time step $t + k$ as:
+
+  #align(
+    center,
+    $#position-covariance-(sub: $t + k$) = #position-covariance-(sub: $t$) + k #delta-t^2 #velocity-covariance-(sub: $t$)$,
+  )
+]
+
+Although not entirely accurate, the above approach can also be applied to the CSAV model. In this case, the uncertainty in the steering angle estimate will be ignored.
 
 #pagebreak()
 

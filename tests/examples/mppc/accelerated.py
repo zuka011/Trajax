@@ -396,7 +396,7 @@ class configure:
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
     ) -> JaxMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.constant_velocity(
+            predictor.curvilinear(
                 horizon=HORIZON,
                 model=model.jax.bicycle.obstacle(
                     time_step_size=dt, wheelbase=(L := 2.5)
