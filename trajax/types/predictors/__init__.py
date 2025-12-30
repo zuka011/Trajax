@@ -13,4 +13,8 @@ from .propagators import (
     NumPyInitialVelocityCovariance as NumPyInitialVelocityCovariance,
     NumPyPositionCovariance as NumPyPositionCovariance,
     NumPyInitialCovarianceProvider as NumPyInitialCovarianceProvider,
+    JaxInitialPositionCovariance as JaxInitialPositionCovariance,
+    JaxInitialVelocityCovariance as JaxInitialVelocityCovariance,
+    JaxPositionCovariance as JaxPositionCovariance,
+    JaxInitialCovarianceProvider as JaxInitialCovarianceProvider,
 )
