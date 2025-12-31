@@ -1,4 +1,5 @@
 from typing import cast
+from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateSampler
 from trajax.obstacles.basic import NumPySampledObstacleStates, NumPyObstacleStates
@@ -9,15 +10,25 @@ from riskit import distribution
 import numpy as np
 
 
-# TODO: Handle issue with random seed.
+type Rng = np.random.Generator
 
 
+@dataclass(frozen=True)
 class NumPyGaussianObstacleStateSampler(
     NumPyObstacleStateSampler[NumPyObstacleStates, NumPySampledObstacleStates]
 ):
+    rng: Rng
+
+    @staticmethod
+    def create(*, seed: int = 42) -> "NumPyGaussianObstacleStateSampler":
+        return NumPyGaussianObstacleStateSampler(rng=np.random.default_rng(seed))
+
     def __call__[T: int, K: int, N: int](
         self, states: NumPyObstacleStates[T, K], *, count: N
     ) -> NumPySampledObstacleStates[T, K, N]:
+        if states.count == 0:
+            return cast(NumPySampledObstacleStates, states.single())
+
         if (covariance := states.covariance()) is None:
             assert count == 1, (
                 "It's pointless to take multiple samples, when covariance information is not available."
@@ -34,7 +45,7 @@ class NumPyGaussianObstacleStateSampler(
         assert shape_of(flat_mean, matches=(T * K, D_O), name="mean")
 
         samples = distribution.numpy.gaussian(
-            mean=flat_mean, covariance=flat_covariance
+            mean=flat_mean, covariance=flat_covariance, rng=self.rng
         ).sample(count=count)
 
         assert shape_of(samples, matches=(T * K, D_O, count), name="samples")

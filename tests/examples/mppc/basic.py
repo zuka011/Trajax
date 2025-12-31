@@ -170,6 +170,7 @@ class NumPySamplingOptions:
     rollout_count: int = 512
     physical_seed: int = 42
     virtual_seed: int = 43
+    obstacle_seed: int = 44
 
 
 class reference:
@@ -480,7 +481,9 @@ class configure:
                 ),
                 costs.numpy.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.sampler.numpy.gaussian(),
+                    sampler=create_obstacles.sampler.numpy.gaussian(
+                        seed=sampling.obstacle_seed
+                    ),
                     distance=(
                         circles_distance := distance.numpy.circles(
                             ego=Circles(

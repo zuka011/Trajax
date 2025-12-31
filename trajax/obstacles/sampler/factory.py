@@ -8,7 +8,7 @@ from trajax.obstacles.sampler import (
 
 class sampler:
     class numpy:
-        gaussian: Final = NumPyGaussianObstacleStateSampler
+        gaussian: Final = NumPyGaussianObstacleStateSampler.create
 
     class jax:
-        gaussian: Final = JaxGaussianObstacleStateSampler
+        gaussian: Final = JaxGaussianObstacleStateSampler.create

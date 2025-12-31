@@ -820,14 +820,14 @@ wheels = [
 
 [[package]]
 name = "pytest-watcher"
-version = "0.6.1"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "watchdog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/c6/5ca81317decf5e814b994a3f71773c1c435f1b45f52d53af68183bdfb0b8/pytest_watcher-0.6.1.tar.gz", hash = "sha256:3dd0230fea6a32c6fd566c06214188f1a2971bd81a359c1a08ce5ff44c1759f1", size = 600676, upload-time = "2025-12-25T22:25:55.311Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/e9/1d8fbe021f75b7f74a544b27bf893da44b2fe84199e2215fb648525b8f58/pytest_watcher-0.6.2.tar.gz", hash = "sha256:41f1fd244ee210d9399c57107692680ca02e519e3218be57d9b1c7a194dc87b1", size = 600866, upload-time = "2025-12-28T15:33:59.443Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/6c/c903396615807b8024949a2f8f1e573ea4ea8efeeabcb311be4695e8c9c3/pytest_watcher-0.6.1-py3-none-any.whl", hash = "sha256:e7bc839ad213bae1ac502b236c101be80848d4c01ff20c061f6ca7b51de4eb6b", size = 11477, upload-time = "2025-12-25T22:25:56.458Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/3b/fd2bedafb1f4140b00230a4f46c50cebd65661b12f31d8201d24c9487564/pytest_watcher-0.6.2-py3-none-any.whl", hash = "sha256:c8cdf38db7b61f28a6657cf84ffbe856330e6fe619055000f27e87b8dc083c30", size = 11566, upload-time = "2025-12-28T15:33:58.257Z" },
 ]
 
 [[package]]
@@ -902,14 +902,14 @@ wheels = [
 
 [[package]]
 name = "riskit"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numtypes" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/65/c6/1bd9cae4e5854d01b041d359961e7c4d46db372ecddfe75af5ff51879525/riskit-0.2.1.tar.gz", hash = "sha256:aa19631f6ba1f272e993b65453d29fcbeddabc457e9478b7856d2512f8385c53", size = 40470, upload-time = "2025-12-27T12:12:03.63Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/36/d4/5f92e076615217f800e3a6d9ab7199c36b21c85025a19ed9d84a38072569/riskit-0.2.2.tar.gz", hash = "sha256:b6bbdb3078bf01146ad92de98444f3c9ec13ddb9c9a737ee7dd92c767fdb5b59", size = 41555, upload-time = "2025-12-31T11:58:24.066Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/fc/19fc7522703a71853753660e9790bbc5e4abfe3c010ba187b34e0b128166/riskit-0.2.1-py3-none-any.whl", hash = "sha256:45b724b971a3dae2d181f3674698d9c2908a60c04bb92da1acfb44bea26cbe62", size = 15836, upload-time = "2025-12-27T12:12:02.407Z" },
+    { url = "https://files.pythonhosted.org/packages/38/41/aa8209548b8311e8595f02bfc090d9965c88f17654d06592305a74fc497b/riskit-0.2.2-py3-none-any.whl", hash = "sha256:190676eed8ce6341f4c689c6d8f552d33a7dbd0750c053305b56ef4d7651fb27", size = 15970, upload-time = "2025-12-31T11:58:22.906Z" },
 ]
 
 [[package]]
@@ -1073,7 +1073,7 @@ requires-dist = [
     { name = "jax", specifier = ">=0.8.2" },
     { name = "jaxtyping", specifier = ">=0.3.4" },
     { name = "numtypes", specifier = ">=0.5.1" },
-    { name = "riskit", specifier = ">=0.2.1" },
+    { name = "riskit", specifier = ">=0.2.2" },
 ]
 provides-extras = ["type-checking"]
 
@@ -1097,7 +1097,7 @@ test = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "pytest-watcher", specifier = ">=0.6.1" },
+    { name = "pytest-watcher", specifier = ">=0.6.2" },
 ]
 
 [[package]]

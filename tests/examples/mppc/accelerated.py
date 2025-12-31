@@ -197,6 +197,7 @@ class JaxSamplingOptions:
     rollout_count: int = 512
     physical_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(42))
     virtual_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(43))
+    obstacle_seed: int = 44
 
 
 class reference:
@@ -501,7 +502,9 @@ class configure:
                 costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
                 costs.jax.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.sampler.jax.gaussian(),
+                    sampler=create_obstacles.sampler.jax.gaussian(
+                        seed=sampling.obstacle_seed
+                    ),
                     distance=(
                         circles_distance := distance.jax.circles(
                             ego=Circles(

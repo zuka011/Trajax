@@ -3,11 +3,12 @@ from typing import Final
 from trajax import types
 
 from jaxtyping import Array as JaxArray, Float
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims
 
 import numpy as np
 import jax.numpy as jnp
 
+D_O: Final = types.obstacle.D_O
 
 type D_o = types.obstacle.D_o
 type NumPyState[D_x: int] = types.numpy.simple.State[D_x]
@@ -67,16 +68,13 @@ class numpy:
     ) -> NumPyControlInputBatch[T, D_u, M]:
         return types.numpy.simple.control_input_batch(array)
 
-    # @staticmethod
-    # def obstacle_state
-
     @staticmethod
     def obstacle_states[T: int, K: int](
         *,
         x: Array[Dims[T, K]],
         y: Array[Dims[T, K]],
         heading: Array[Dims[T, K]] | None = None,
-        covariance: Array[Dims[T, D[3], D[3], K]] | None = None,
+        covariance: Array[Dims[T, D_o, D_o, K]] | None = None,
     ) -> NumPyObstacleStates[T, K]:
         return types.numpy.obstacle_states.create(
             x=x,
@@ -135,7 +133,7 @@ class jax:
         y: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         heading: Array[Dims[T, K]] | Float[JaxArray, "T K"] | None = None,
         covariance: Array[Dims[T, D_o, D_o, K]]
-        | Float[JaxArray, f"T {D_o} {D_o} K"]
+        | Float[JaxArray, f"T {D_O} {D_O} K"]
         | None = None,
     ) -> JaxObstacleStates[T, K]:
         return types.jax.obstacle_states.create(
