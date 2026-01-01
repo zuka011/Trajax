@@ -19,3 +19,7 @@ tests/visualizations/
 
 # Chat sessions
 .chats
+
+# JS Files
+node_modules/
+*.bundle.js

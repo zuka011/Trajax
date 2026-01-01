@@ -18,7 +18,7 @@ from trajax.types import (
 )
 from trajax.mppi.common import UseOptimalControlUpdate, NoFilter
 
-from numtypes import shape_of
+from numtypes import Array, Dim2, shape_of
 
 import numpy as np
 
@@ -114,7 +114,9 @@ class NumPyMppi[
         normalizing_constant = exp_costs.sum()
         weights = exp_costs / normalizing_constant
 
-        optimal_control = np.tensordot(samples, weights, axes=([2], [0]))
+        optimal_control = cast(
+            Array[Dim2], np.tensordot(samples, weights, axes=([2], [0]))
+        )
         optimal_input = self.filter_function(
             optimal_input=nominal_input.similar(array=optimal_control)
         )

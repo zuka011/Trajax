@@ -1,6 +1,8 @@
 from typing import Protocol, AsyncGenerator, Final, NamedTuple, Self, runtime_checkable
 from dataclasses import dataclass
 
+from tests.tasks import BackgroundTasks
+
 from pytest import Parser, FixtureRequest
 from pytest_asyncio import fixture as async_fixture
 
@@ -115,6 +117,7 @@ async def visualizer_arguments_from[T](
 @async_fixture
 async def visualization[T = object](
     request: FixtureRequest,
+    background_tasks: BackgroundTasks,
 ) -> AsyncGenerator[VisualizationData[T] | None, None]:
     """Captures visualization data and triggers the visualizer after the test."""
     capture: VisualizationData[T] = VisualizationData.empty()
@@ -126,4 +129,4 @@ async def visualization[T = object](
     ):
         return
 
-    await args.visualizer(capture.data, key=args.key)
+    background_tasks.schedule(args.visualizer(capture.data, key=args.key))

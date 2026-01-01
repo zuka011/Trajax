@@ -1,0 +1,34 @@
+{
+    "name": "visualizer",
+    "version": "0.1.0",
+    "description": "A mobile robot simulation visualizer",
+    "type": "module",
+    "scripts": {
+        "build": "npm run typecheck && npm run build:browser && npm run build:cli",
+        "build:cli": "node esbuild.config.js cli",
+        "build:browser": "node esbuild.config.js browser",
+        "typecheck": "tsc --noEmit",
+        "check": "biome check --write ."
+    },
+    "keywords": [
+        "visualization",
+        "simulation",
+        "trajectory"
+    ],
+    "author": "zurab.mujirishvili@fau.de",
+    "license": "MIT",
+    "dependencies": {
+        "commander": "^14.0.2",
+        "glob": "^13.0.0",
+        "plotly.js-dist-min": "^3.3.1",
+        "preact": "^10.28.1",
+        "zod": "^4.3.4"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.10",
+        "@types/node": "^25.0.3",
+        "@types/plotly.js": "^3.0.9",
+        "esbuild": "^0.27.2",
+        "typescript": "^5.9.3"
+    }
+}

@@ -335,6 +335,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     )
 
     # TODO: Add check on lag error.
+    # TODO: Collect Risk Measurements and visualize in integration tests.
 
     assert (
         min_distance := min_distance_to_obstacles(
