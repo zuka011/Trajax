@@ -1,10 +1,12 @@
 import Plotly from "plotly.js-dist-min";
 import type {
     AdditionalPlot,
+    PlotBand,
     PlotBound,
     PlotSeries,
     ProcessedSimulationData,
 } from "../../core/types.js";
+import { applyLegendState, attachLegendHandler } from ".././legend-state.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 
@@ -18,6 +20,15 @@ const DEFAULT_COLORS = [
     "#e91e63",
     "#795548",
 ];
+
+const DEFAULT_BAND_COLOR = "#3498db";
+
+function hexToRgba(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export interface PlotGroup {
     id: string;
@@ -92,6 +103,17 @@ function computeYAxisRange(plots: AdditionalPlot[], timestepCount: number): [num
                 minValue = Math.min(minValue, value);
             }
         }
+
+        if (plot.bands) {
+            for (const band of plot.bands) {
+                for (const value of band.lower) {
+                    minValue = Math.min(minValue, value);
+                }
+                for (const value of band.upper) {
+                    maxValue = Math.max(maxValue, value);
+                }
+            }
+        }
     }
 
     const padding = (maxValue - minValue) * 0.1 || 0.1;
@@ -100,6 +122,50 @@ function computeYAxisRange(plots: AdditionalPlot[], timestepCount: number): [num
 
 function getSeriesColor(series: PlotSeries, index: number): string {
     return series.color ?? DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+}
+
+function computeBandWidth(band: PlotBand): number {
+    return Math.max(...band.upper) - Math.min(...band.lower);
+}
+
+function buildBandTraces(plot: AdditionalPlot, times: number[]): Plotly.Data[] {
+    if (!plot.bands || plot.bands.length === 0) {
+        return [];
+    }
+
+    const sortedBands = [...plot.bands].sort((a, b) => computeBandWidth(b) - computeBandWidth(a));
+    const traces: Plotly.Data[] = [];
+
+    for (const band of sortedBands) {
+        const color = band.color ?? DEFAULT_BAND_COLOR;
+        const borderColor = hexToRgba(color, 0.4);
+        const fillColor = hexToRgba(color, 0.2);
+        const legendGroup = `band-${band.label ?? "range"}`;
+
+        traces.push({
+            x: times,
+            y: band.lower,
+            mode: "lines" as const,
+            line: { color: borderColor, width: 1 },
+            legendgroup: legendGroup,
+            showlegend: false,
+            hoverinfo: "skip" as const,
+        });
+
+        traces.push({
+            x: times,
+            y: band.upper,
+            mode: "lines" as const,
+            fill: "tonexty" as const,
+            fillcolor: fillColor,
+            line: { color: borderColor, width: 1 },
+            legendgroup: legendGroup,
+            name: band.label ?? "Range",
+            showlegend: !!band.label,
+        });
+    }
+
+    return traces;
 }
 function buildTraces(
     group: PlotGroup,
@@ -111,33 +177,14 @@ function buildTraces(
     const allSeries = group.plots.flatMap((plot) => plot.series);
     const markerTime = times[currentTimestep];
 
+    for (const plot of group.plots) {
+        traces.push(...buildBandTraces(plot, times));
+    }
+
     let seriesIndex = 0;
 
     for (const plot of group.plots) {
         const firstSeriesColor = getSeriesColor(plot.series[0], seriesIndex);
-
-        for (const series of plot.series) {
-            const color = getSeriesColor(series, seriesIndex);
-
-            traces.push({
-                x: times,
-                y: series.values,
-                mode: "lines",
-                line: { color, width: 2 },
-                name: series.label,
-                showlegend: allSeries.length > 1,
-            });
-
-            traces.push({
-                x: [markerTime],
-                y: [series.values[currentTimestep]],
-                mode: "markers",
-                marker: { color, size: 10 },
-                showlegend: false,
-            });
-
-            seriesIndex++;
-        }
 
         if (plot.upperBound) {
             traces.push({
@@ -160,10 +207,45 @@ function buildTraces(
                 showlegend: !!plot.lowerBound.label,
             });
         }
+
+        for (const series of plot.series) {
+            const color = getSeriesColor(series, seriesIndex);
+
+            traces.push({
+                x: times,
+                y: series.values,
+                mode: "lines",
+                line: { color, width: 2 },
+                name: series.label,
+                showlegend: allSeries.length > 1,
+            });
+
+            seriesIndex++;
+        }
+    }
+
+    seriesIndex = 0;
+    for (const plot of group.plots) {
+        for (const series of plot.series) {
+            const color = getSeriesColor(series, seriesIndex);
+
+            traces.push({
+                x: [markerTime],
+                y: [series.values[currentTimestep]],
+                mode: "markers",
+                marker: { color, size: 10 },
+                showlegend: false,
+                legendgroup: series.label,
+                name: `Current ${series.label}`,
+            });
+
+            seriesIndex++;
+        }
     }
 
     return traces;
 }
+
 export function createAdditionalPlot(
     container: HTMLElement,
     group: PlotGroup,
@@ -173,9 +255,11 @@ export function createAdditionalPlot(
 ): void {
     const times = data.positionsX.map((_, i) => i * data.timeStep);
     const allSeries = group.plots.flatMap((plot) => plot.series);
+    const hasBands = group.plots.some((plot) => plot.bands && plot.bands.length > 0);
     const yAxisLabel = group.plots[0]?.yAxisLabel ?? "";
     const yRange = computeYAxisRange(group.plots, data.timestepCount);
-    
+    const isLogScale = group.plots[0]?.yAxisScale === "log";
+
     let initialized = false;
 
     const layout: Partial<Plotly.Layout> = {
@@ -189,16 +273,17 @@ export function createAdditionalPlot(
         },
         yaxis: {
             title: { text: yAxisLabel, font: { size: 10 } },
-            range: yRange,
+            type: isLogScale ? "log" : undefined,
+            range: isLogScale ? undefined : yRange,
             showgrid: true,
             gridcolor: "#e0e0e0",
-            zeroline: true,
+            zeroline: !isLogScale,
             zerolinecolor: "#0000006a",
             fixedrange: true,
             tickfont: { size: 9 },
         },
         margin: { t: 25, r: 10, b: 50, l: 50 },
-        showlegend: allSeries.length > 1,
+        showlegend: allSeries.length > 1 || hasBands,
         legend: {
             x: 1,
             y: 1,
@@ -212,13 +297,17 @@ export function createAdditionalPlot(
     };
 
     function render(): void {
-        const traces = buildTraces(group, times, data.timestepCount, state.currentTimestep);
+        const traces = applyLegendState(
+            buildTraces(group, times, data.timestepCount, state.currentTimestep),
+            group.id,
+        );
 
         if (!initialized) {
             Plotly.newPlot(container, traces, layout, {
                 responsive: true,
                 displayModeBar: false,
             });
+            attachLegendHandler(container, group.id, render);
             initialized = true;
         } else {
             Plotly.react(container, traces, layout);

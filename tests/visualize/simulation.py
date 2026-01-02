@@ -26,6 +26,7 @@ VISUALIZATION_DIR: Final = PROJECT_ROOT / "tests" / "visualizations"
 VISUALIZER_CLI: Final = PROJECT_ROOT / "visualizer" / "dist" / "cli" / "index.js"
 
 type VehicleType = Literal["triangle", "car"]
+type ScaleType = Literal["linear", "log"]
 type ObstacleCoordinate[T: int = int, K: int = int] = Array[Dims[T, K]]
 type ObstacleForecast[T: int = int, H: int = int, K: int = int] = Array[Dims[T, H, K]]
 type ObstacleForecastCovariance[T: int = int, H: int = int, K: int = int] = Array[
@@ -53,6 +54,22 @@ class PlotBound(msgspec.Struct, rename="camel", omit_defaults=True):
     label: str | None = None
 
 
+class PlotBand(msgspec.Struct, rename="camel", omit_defaults=True):
+    lower: Array[Dim1]
+    upper: Array[Dim1]
+    color: str | None = None
+    label: str | None = None
+
+    def __post_init__(self) -> None:
+        assert len(self.lower) == len(self.upper), (
+            "Band lower and upper bounds must have the same length."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return len(self.lower)
+
+
 class AdditionalPlot(msgspec.Struct, rename="camel", omit_defaults=True):
     id: str
     name: str
@@ -60,6 +77,8 @@ class AdditionalPlot(msgspec.Struct, rename="camel", omit_defaults=True):
     y_axis_label: str
     upper_bound: PlotBound | None = None
     lower_bound: PlotBound | None = None
+    bands: Sequence[PlotBand] | None = None
+    y_axis_scale: ScaleType | None = None
     group: str | None = None
 
     def __post_init__(self) -> None:
@@ -67,6 +86,9 @@ class AdditionalPlot(msgspec.Struct, rename="camel", omit_defaults=True):
         assert all(
             s.time_step_count == self.series[0].time_step_count for s in self.series
         ), "All series must have the same number of time steps."
+        assert self.bands is None or all(
+            b.time_step_count == self.series[0].time_step_count for b in self.bands
+        ), "All bands must have the same number of time steps as series."
 
     @property
     def time_step_count(self) -> int:

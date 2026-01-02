@@ -15,6 +15,7 @@ from tests.visualize.simulation import (
     AdditionalPlot,
     PlotSeries,
     PlotBound,
+    PlotBand,
 )
 
 
@@ -147,23 +148,35 @@ class MpccVisualizer:
         risks = np.array([np.asarray(risk).sum(axis=0) for risk in result.risks])
         weights = np.array([np.asarray(w) for w in result.weights])
 
+        # NOTE: avoid zero risks for log scale plotting
+        risks = np.maximum(risks, 1e-10)
+        selected = (risks * weights).sum(axis=1)
+
         return AdditionalPlot(
             id="risk",
-            name="Risk Statistics",
+            name="Risk",
             series=[
-                PlotSeries(label="Max", values=risks.max(axis=1), color="#e74c3c"),
-                PlotSeries(label="Mean", values=risks.mean(axis=1), color="#3498db"),
+                PlotSeries(label="Selected", values=selected, color="#e63946"),
                 PlotSeries(
-                    label="Median", values=np.median(risks, axis=1), color="#2ecc71"
+                    label="Median", values=np.median(risks, axis=1), color="#457b9d"
                 ),
-                PlotSeries(label="Min", values=risks.min(axis=1), color="#9b59b6"),
-                PlotSeries(
-                    label="Selected",
-                    values=(risks * weights).sum(axis=1),
-                    color="#f39c12",
+            ],
+            bands=[
+                PlotBand(
+                    lower=np.percentile(risks, 10, axis=1),
+                    upper=np.percentile(risks, 90, axis=1),
+                    color="#adb5bd",
+                    label="10-90%",
+                ),
+                PlotBand(
+                    lower=np.percentile(risks, 25, axis=1),
+                    upper=np.percentile(risks, 75, axis=1),
+                    color="#457b9d",
+                    label="25-75%",
                 ),
             ],
             y_axis_label="Risk",
+            y_axis_scale="log",
         )
 
     def query_ghost_positions(

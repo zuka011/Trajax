@@ -1,4 +1,5 @@
 export type VehicleType = "triangle" | "car";
+export type ScaleType = "linear" | "log";
 
 export interface ReferenceTrajectory {
     x: number[];
@@ -16,12 +17,21 @@ export interface PlotBound {
     label?: string;
 }
 
+export interface PlotBand {
+    lower: number[];
+    upper: number[];
+    color?: string;
+    label?: string;
+}
+
 export interface AdditionalPlot {
     id: string;
     name: string;
     series: PlotSeries[];
     upperBound?: PlotBound;
     lowerBound?: PlotBound;
+    bands?: PlotBand[];
+    yAxisScale?: ScaleType;
     yAxisLabel: string;
     group?: string;
 }

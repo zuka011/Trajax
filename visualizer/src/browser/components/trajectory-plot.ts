@@ -2,6 +2,7 @@ import Plotly from "plotly.js-dist-min";
 import { defaults, type Theme } from "../../core/defaults.js";
 import type { ProcessedSimulationData } from "../../core/types.js";
 import { covarianceToEllipse, radiansToDegrees } from "../../utils/math.js";
+import { applyLegendState, attachLegendHandler } from "../legend-state.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 
@@ -13,23 +14,24 @@ export function createTrajectoryPlot(
     state: VisualizationState,
     theme: Theme,
     updateManager: UpdateManager,
+    plotId = "trajectory-plot",
 ): void {
     let initialized = false;
 
     function render() {
         const t = state.currentTimestep;
-        const traces = buildTraces(data, state, theme, t);
-        const tracesWithVisibility = applyVisibilityState(container, traces);
+        const traces = applyLegendState(buildTraces(data, theme, t), plotId);
 
         if (!initialized) {
-            Plotly.newPlot(container, tracesWithVisibility, createInitialLayout(), {
+            Plotly.newPlot(container, traces, createInitialLayout(), {
                 scrollZoom: true,
                 responsive: true,
                 displayModeBar: true,
             });
+            attachLegendHandler(container, plotId, render);
             initialized = true;
         } else {
-            Plotly.react(container, tracesWithVisibility, createUpdateLayout(container));
+            Plotly.react(container, traces, createUpdateLayout(container));
         }
     }
 
@@ -37,62 +39,26 @@ export function createTrajectoryPlot(
     updateManager.subscribe(render);
 }
 
-function applyVisibilityState(container: HTMLElement, traces: Trace[]): Trace[] {
-    const plotDiv = container as Plotly.PlotlyHTMLElement;
-    if (!plotDiv.data) return traces;
-
-    const visibilityByGroup = new Map<string, boolean | "legendonly">();
-
-    for (const existingTrace of plotDiv.data) {
-        const trace = existingTrace as any;
-        const group = trace.legendgroup as string | undefined;
-        if (group && trace.visible !== undefined) {
-            visibilityByGroup.set(group, trace.visible as boolean | "legendonly");
-        }
-    }
-
-    return traces.map((trace) => {
-        const group = (trace as any).legendgroup as string | undefined;
-        if (group && visibilityByGroup.has(group)) {
-            return { ...trace, visible: visibilityByGroup.get(group) };
-        }
-        return trace;
-    });
-}
-
-function buildTraces(
-    data: ProcessedSimulationData,
-    state: VisualizationState,
-    theme: Theme,
-    t: number,
-): Trace[] {
+function buildTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
     const traces: Trace[] = [];
 
-    if (state.visibility.reference) {
-        traces.push(createReferenceTrace(data, theme));
-    }
+    traces.push(createReferenceTrace(data, theme));
+    traces.push(createActualPathTrace(data, theme, t));
+    traces.push(createVehicleTrace(data, theme, t));
 
-    if (state.visibility.actualPath) {
-        traces.push(createActualPathTrace(data, theme, t));
-    }
-
-    if (state.visibility.vehicle) {
-        traces.push(createVehicleTrace(data, theme, t));
-    }
-
-    if (state.visibility.ghost && data.ghostX?.[t]) {
+    if (data.ghostX?.[t]) {
         traces.push(createGhostTrace(data, theme, t));
     }
 
-    if (state.visibility.obstacles && data.obstaclePositionsX?.[t]) {
+    if (data.obstaclePositionsX?.[t]) {
         traces.push(...createObstacleTraces(data, theme, t));
     }
 
-    if (state.visibility.forecasts && data.obstacleForecastX?.[t]?.length) {
+    if (data.obstacleForecastX?.[t]?.length) {
         traces.push(...createForecastTraces(data, theme, t));
     }
 
-    if (state.visibility.uncertainty && data.obstacleForecastCovariance?.[t]) {
+    if (data.obstacleForecastCovariance?.[t]) {
         traces.push(...createUncertaintyTraces(data, theme, t));
     }
 

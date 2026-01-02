@@ -16,13 +16,22 @@ const PlotBoundSchema = z.object({
     label: z.string().optional(),
 });
 
+const PlotBandSchema = z.object({
+    lower: z.array(z.number()),
+    upper: z.array(z.number()),
+    color: z.string().optional(),
+    label: z.string().optional(),
+});
+
 const AdditionalPlotSchema = z.object({
     id: z.string(),
     name: z.string(),
     series: z.array(PlotSeriesSchema),
     upperBound: PlotBoundSchema.optional(),
     lowerBound: PlotBoundSchema.optional(),
+    bands: z.array(PlotBandSchema).optional(),
     yAxisLabel: z.string(),
+    yAxisScale: z.enum(["linear", "log"]).optional(),
     group: z.string().optional(),
 });
 

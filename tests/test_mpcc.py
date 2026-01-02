@@ -289,6 +289,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     lag_cost = configuration.lag_cost
     current_state = configuration.initial_state
     nominal_input = configuration.nominal_input
+    risk_collector = configuration.risk_collector
     L = configuration.wheelbase
 
     assert (obstacles := configuration.obstacles) is not None, (
@@ -296,9 +297,6 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     )
     assert (distance := configuration.distance) is not None, (
         "A distance extractor must be provided for this test."
-    )
-    assert (risk_collector := configuration.risk_collector) is not None, (
-        "A risk collector must be provided for this test."
     )
 
     states: list[StateT] = []
@@ -352,7 +350,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             max_lag_error=(max_lag_error := 7.5),
             obstacles=obstacle_history,
             weights=weights,
-            risks=risk_collector.collected,
+            risks=risk_collector.collected if risk_collector is not None else (),
         )
     ).seed_is(configuration_name)
 

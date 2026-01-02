@@ -3,7 +3,6 @@ export interface VisualizationState {
     isPlaying: boolean;
     animationInterval: number | null;
     speedIndex: number;
-    visibility: Record<string, boolean>;
 }
 
 export function createInitialState(): VisualizationState {
@@ -12,14 +11,5 @@ export function createInitialState(): VisualizationState {
         isPlaying: false,
         animationInterval: null,
         speedIndex: 2,
-        visibility: {
-            reference: true,
-            actualPath: true,
-            vehicle: true,
-            ghost: true,
-            obstacles: true,
-            forecasts: true,
-            uncertainty: true,
-        },
     };
 }
