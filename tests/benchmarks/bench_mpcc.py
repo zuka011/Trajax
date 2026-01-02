@@ -8,7 +8,7 @@ from tests.benchmarks.runner import (
     NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
-from tests.examples import mpcc, reference, obstacles
+from tests.examples import mpcc, reference, obstacles, SimulatingObstacleStateProvider
 
 from pytest import mark
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -19,6 +19,23 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
     planner: Mppi[StateT, InputT]
     initial_state: StateT
     nominal_input: InputT
+
+    obstacles: SimulatingObstacleStateProvider | None = None
+
+
+def accumulate_obstacle_states(
+    configuration: MpccConfiguration, steps: int = 5
+) -> None:
+    provider = configuration.obstacles
+
+    assert provider is not None, (
+        "A simulating obstacle state provider must be provided to accumulate obstacle states."
+    )
+
+    # NOTE: To collect sufficient obstacle state history, we simulate a few steps
+    # for the obstacles.
+    for _ in range(steps):
+        provider.step()
 
 
 @mark.parametrize(
@@ -83,6 +100,7 @@ def bench_mpcc_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -103,6 +121,7 @@ def bench_mpcc_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -128,6 +147,8 @@ def bench_mpcc_static_obstacles_single_step(
     initial_state = configuration.initial_state
     nominal_input = configuration.nominal_input
 
+    accumulate_obstacle_states(configuration)
+
     def single_step() -> ControlInputSequence:
         control = planner.step(
             temperature=0.05,
@@ -150,6 +171,7 @@ def bench_mpcc_static_obstacles_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -170,6 +192,7 @@ def bench_mpcc_static_obstacles_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -195,6 +218,8 @@ def bench_mpcc_dynamic_obstacles_single_step(
     initial_state = configuration.initial_state
     nominal_input = configuration.nominal_input
 
+    accumulate_obstacle_states(configuration)
+
     def single_step() -> ControlInputSequence:
         control = planner.step(
             temperature=0.05,
@@ -217,6 +242,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -238,6 +264,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
                     planner=configuration.planner,
                     initial_state=configuration.initial_state,
                     nominal_input=configuration.nominal_input,
+                    obstacles=configuration.obstacles,
                 ),
             )
             for id, configuration in (
@@ -263,6 +290,8 @@ def bench_mpcc_dynamic_uncertain_obstacles_single_step(
     planner = configuration.planner
     initial_state = configuration.initial_state
     nominal_input = configuration.nominal_input
+
+    accumulate_obstacle_states(configuration)
 
     def single_step() -> ControlInputSequence:
         control = planner.step(

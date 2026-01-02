@@ -12,7 +12,6 @@ from trajax import (
     DistanceExtractor,
     ObstacleStates,
     SampledObstacleStates,
-    ObstacleStateProvider,
     Mppi,
 )
 
@@ -20,7 +19,7 @@ import numpy as np
 from numtypes import Array, Dim1
 
 from tests.visualize import VisualizationData, visualizer, MpccSimulationResult
-from tests.examples import mpcc, reference, obstacles
+from tests.examples import mpcc, reference, obstacles, SimulatingObstacleStateProvider
 from pytest import mark
 
 
@@ -39,14 +38,6 @@ class ZeroControlInputProvider[ControlInputBatchT](Protocol):
 class ObstacleStacker[ObstacleStatesT](Protocol):
     def __call__(self, obstacle_states: Sequence[ObstacleStatesT]) -> ObstacleStatesT:
         """Stacks a sequence of obstacle states into a single obstacle states batch."""
-        ...
-
-
-class SimulatingObstacleStateProvider[ObstacleStatesT](
-    ObstacleStateProvider[ObstacleStatesT], Protocol
-):
-    def step(self) -> None:
-        """Advances the internal state of the obstacle state provider."""
         ...
 
 

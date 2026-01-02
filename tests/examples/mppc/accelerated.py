@@ -18,7 +18,6 @@ from trajax import (
     distance,
     trajectory,
     types,
-    classes,
     extract,
     predictor,
     propagator,
@@ -31,6 +30,8 @@ from jaxtyping import Array as JaxArray, Float
 
 import jax.numpy as jnp
 import jax.random as jrandom
+
+from tests.examples.common import SimulatingObstacleStateProvider
 
 HORIZON: Final = 30
 
@@ -76,9 +77,7 @@ type ObstacleStates = types.jax.ObstacleStates
 type ObstacleStatesHistory = types.jax.ObstacleStatesRunningHistory
 
 
-class ObstacleStateProvider(
-    classes.jax.ObstacleStateProvider[ObstacleStates], Protocol
-):
+class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):
     def with_time_step(self, time_step: float) -> Self:
         """Returns a new obstacle state provider configured with the given time step size."""
         ...
@@ -87,10 +86,6 @@ class ObstacleStateProvider(
         self, predictor: ObstacleMotionPredictor[ObstacleStatesHistory, ObstacleStates]
     ) -> Self:
         """Returns a new obstacle state provider configured with the given motion predictor."""
-        ...
-
-    def step(self) -> None:
-        """Advances the internal state of the obstacle state provider."""
         ...
 
 

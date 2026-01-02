@@ -17,7 +17,6 @@ from trajax import (
     costs,
     trajectory,
     types,
-    classes,
     extract,
     distance,
     obstacles as create_obstacles,
@@ -26,8 +25,11 @@ from trajax import (
     risk,
 )
 
-import numpy as np
 from numtypes import array, Array, Dim1, Dim2
+
+import numpy as np
+
+from tests.examples.common import SimulatingObstacleStateProvider
 
 HORIZON: Final = 30
 
@@ -54,9 +56,7 @@ type ObstacleStates = types.numpy.ObstacleStates
 type ObstacleStatesHistory = types.numpy.ObstacleStatesRunningHistory
 
 
-class ObstacleStateProvider(
-    classes.numpy.ObstacleStateProvider[ObstacleStates], Protocol
-):
+class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):
     def with_time_step(self, time_step: float) -> Self:
         """Returns a new obstacle state provider configured for the given time step size."""
         ...
@@ -65,10 +65,6 @@ class ObstacleStateProvider(
         self, predictor: ObstacleMotionPredictor[ObstacleStatesHistory, ObstacleStates]
     ) -> Self:
         """Returns a new obstacle state provider using the given motion predictor."""
-        ...
-
-    def step(self) -> None:
-        """Advances the internal state of the obstacle state provider."""
         ...
 
 
