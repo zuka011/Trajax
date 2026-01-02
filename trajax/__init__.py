@@ -11,6 +11,7 @@ from .costs import (
     risk as risk,
     CombinedCost as CombinedCost,
     Circles as Circles,
+    RiskCollector as RiskCollector,
 )
 from .samplers import sampler as sampler
 from .states import (
@@ -48,6 +49,7 @@ from .types import (
     PaddingFunction as PaddingFunction,
     FilterFunction as FilterFunction,
     Control as Control,
+    Weights as Weights,
     Mppi as Mppi,
     Trajectory as Trajectory,
     PathParameters as PathParameters,
@@ -57,6 +59,7 @@ from .types import (
     SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,
     ObstacleStateSampler as ObstacleStateSampler,
+    Risk as Risk,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     Error as Error,

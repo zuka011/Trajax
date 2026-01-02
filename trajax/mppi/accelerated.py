@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from trajax.types import (
     jaxtyped,
+    DataType,
     JaxState,
     JaxStateBatch,
     JaxControlInputSequence,
@@ -15,14 +16,34 @@ from trajax.types import (
     JaxPaddingFunction,
     JaxFilterFunction,
     Mppi,
+    DebugData,
     Control,
 )
 from trajax.mppi.common import UseOptimalControlUpdate, NoFilter
 
+from numtypes import Array, Dims
 from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
+import numpy as np
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxWeights[M: int]:
+    _array: Float[JaxArray, "M"]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
+        return np.array(self._array)
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self._array.shape[0])
+
+    @property
+    def array(self) -> Float[JaxArray, "M"]:
+        return self._array
 
 
 class JaxZeroPadding(
@@ -42,7 +63,7 @@ class JaxMppi[
     ControlInputSequenceT: JaxControlInputSequence,
     ControlInputBatchT: JaxControlInputBatch,
     ControlInputPaddingT: JaxControlInputSequence = ControlInputSequenceT,
-](Mppi[StateT, ControlInputSequenceT]):
+](Mppi[StateT, ControlInputSequenceT, JaxWeights[int]]):
     planning_interval: int
     model: JaxDynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
@@ -92,7 +113,7 @@ class JaxMppi[
         temperature: float,
         nominal_input: ControlInputSequenceT,
         initial_state: StateT,
-    ) -> Control[ControlInputSequenceT]:
+    ) -> Control[ControlInputSequenceT, JaxWeights]:
         assert temperature > 0.0, "Temperature must be positive."
 
         samples = self.sampler.sample(around=nominal_input)
@@ -100,7 +121,7 @@ class JaxMppi[
         rollouts = self.model.simulate(inputs=samples, initial_state=initial_state)
         costs = self.cost_function(inputs=samples, states=rollouts)
 
-        optimal_control = compute_weighted_control(
+        optimal_control, weights = compute_weighted_control(
             samples.array, costs.array, temperature
         )
         optimal_input = self.filter_function(
@@ -120,7 +141,9 @@ class JaxMppi[
         )
 
         return Control(
-            optimal=optimal_input, nominal=nominal_input.similar(array=shifted_control)
+            optimal=optimal_input,
+            nominal=nominal_input.similar(array=shifted_control),
+            debug=DebugData(trajectory_weights=JaxWeights(weights)),
         )
 
 
@@ -130,14 +153,14 @@ def compute_weighted_control(
     samples: Float[JaxArray, "T D_u M"],
     costs: Float[JaxArray, "T M"],
     temperature: Scalar,
-) -> Float[JaxArray, "T D_u"]:
+) -> tuple[Float[JaxArray, "T D_u"], Float[JaxArray, "M"]]:
     total_costs = jnp.sum(costs, axis=0)
     min_cost = jnp.min(total_costs)
     exp_costs = jnp.exp((total_costs - min_cost) / (-temperature))
     normalizing_constant = jnp.sum(exp_costs)
     weights = exp_costs / normalizing_constant
 
-    return jnp.tensordot(samples, weights, axes=([2], [0]))
+    return jnp.tensordot(samples, weights, axes=([2], [0])), weights
 
 
 @jax.jit(static_argnames=("planning_interval",))

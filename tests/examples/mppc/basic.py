@@ -12,6 +12,7 @@ from trajax import (
     Distance,
     DistanceExtractor,
     ObstacleMotionPredictor,
+    RiskCollector,
     mppi,
     model,
     sampler,
@@ -104,6 +105,7 @@ class NumPyMpccPlannerConfiguration:
 
     distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
     obstacles: ObstacleStateProvider | None = None
+    risk_collector: RiskCollector | None = None
 
     @staticmethod
     def stack_states(states: list[MpccState]) -> MpccStateBatch:
@@ -505,9 +507,15 @@ class configure:
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
                     weight=weights.collision,
-                    metric=risk.numpy.mean_variance(gamma=0.5, sample_count=10)
-                    if use_covariance_propagation
-                    else None,
+                    metric=(
+                        risk_collector := (
+                            risk.collector.decorating(
+                                risk.numpy.mean_variance(gamma=0.5, sample_count=10)
+                            )
+                            if use_covariance_propagation
+                            else None
+                        )
+                    ),
                 ),
             ),
             state=types.numpy.augmented.state,
@@ -524,4 +532,5 @@ class configure:
             wheelbase=L,
             distance=circles_distance,
             obstacles=obstacles,
+            risk_collector=risk_collector,
         )

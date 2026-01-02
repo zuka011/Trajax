@@ -13,7 +13,9 @@ from trajax import (
     DistanceExtractor,
     ObstacleStates,
     SampledObstacleStates,
+    Weights,
     Mppi,
+    RiskCollector,
 )
 
 import numpy as np
@@ -60,7 +62,7 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def planner(self) -> Mppi[StateT, ControlInputSequenceT]:
+    def planner(self) -> Mppi[StateT, ControlInputSequenceT, Weights]:
         """Returns the MPCC planner."""
         ...
 
@@ -86,6 +88,11 @@ class MpccPlannerConfiguration[
         self,
     ) -> DistanceExtractor[StateBatchT, ObstacleStatesT, Distance] | None:
         """Returns the distance extractor used for obstacle avoidance."""
+        ...
+
+    @property
+    def risk_collector(self) -> RiskCollector | None:
+        """Returns the risk collector used in the planner."""
         ...
 
     @property
@@ -290,9 +297,13 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     assert (distance := configuration.distance) is not None, (
         "A distance extractor must be provided for this test."
     )
+    assert (risk_collector := configuration.risk_collector) is not None, (
+        "A risk collector must be provided for this test."
+    )
 
     states: list[StateT] = []
     obstacle_history: list[ObstacleStatesT] = []
+    weights: list[Weights] = []
     min_progress = reference.path_length * 0.7
     progress = 0.0
 
@@ -305,6 +316,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
 
         nominal_input = control.nominal
 
+        weights.append(control.debug.trajectory_weights)
         states.append(
             current_state := augmented_model.step(
                 input=control.optimal, state=current_state
@@ -339,6 +351,8 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             max_contouring_error=(max_contouring_error := 5.0),
             max_lag_error=(max_lag_error := 7.5),
             obstacles=obstacle_history,
+            weights=weights,
+            risks=risk_collector.collected,
         )
     ).seed_is(configuration_name)
 
@@ -356,8 +370,6 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
         f"Vehicle had excessive lag error along the reference trajectory. "
         f"Max lag error: {max_lag:.2f} m, expected < {max_lag_error:.2f} m"
     )
-
-    # TODO: Collect Risk Measurements and visualize in integration tests.
 
     assert (
         min_distance := min_distance_to_obstacles(

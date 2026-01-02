@@ -35,7 +35,7 @@ from trajax.types import (
     AugmentedStateBatchCreator,
     AugmentedControlInputBatchCreator,
 )
-from trajax.mppi import NumPyMppi, JaxMppi
+from trajax.mppi import NumPyWeights, NumPyMppi, JaxWeights, JaxMppi
 from trajax.states.augmented.basic import (
     NumPyAugmentedState,
     NumPyAugmentedStateBatch,
@@ -51,13 +51,15 @@ from trajax.states.augmented.accelerated import (
 from trajax.states.augmented.common import AugmentedModel, AugmentedSampler
 
 
-class MppiCreator[StateT, StateBatchT, InputSequenceT, InputBatchT, CostsT](Protocol):
+class MppiCreator[StateT, StateBatchT, InputSequenceT, WeightsT, InputBatchT, CostsT](
+    Protocol
+):
     def __call__(
         self,
         model: DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT],
         sampler: Sampler[InputSequenceT, InputBatchT],
         cost: CostFunction[InputBatchT, StateBatchT, CostsT],
-    ) -> Mppi[StateT, InputSequenceT]:
+    ) -> Mppi[StateT, InputSequenceT, WeightsT]:
         """Creates an MPPI planner from the specified components."""
         ...
 
@@ -77,10 +79,11 @@ class AugmentedMppi:
         ASB: AugmentedStateBatch,
         AIS: AugmentedControlInputSequence,
         AIB: AugmentedControlInputBatch,
+        W,
         C,
     ](
         *,
-        mppi: MppiCreator[AS, ASB, AIS, AIB, C],
+        mppi: MppiCreator[AS, ASB, AIS, W, AIB, C],
         models: tuple[
             DynamicalModel[PS, PSB, PIS, PIB], DynamicalModel[VS, VSB, VIS, VIB]
         ],
@@ -90,7 +93,7 @@ class AugmentedMppi:
         state_batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
         input_batch: AugmentedControlInputBatchCreator[PIB, VIB, AIB],
     ) -> tuple[
-        Mppi[AS, AIS],
+        Mppi[AS, AIS, W],
         AugmentedModel[PS, PSB, PIS, PIB, VS, VSB, VIS, VIB, AS, ASB],
     ]:
         return (
@@ -146,7 +149,8 @@ class NumPyAugmentedMppi:
         | None = None,
         filter_function: NumPyFilterFunction[ACS] | None = None,
     ) -> tuple[
-        Mppi[AS, ACS], AugmentedModel[PS, PSB, PCS, PCB, VS, VSB, VCS, VCB, AS, ASB]
+        Mppi[AS, ACS, NumPyWeights],
+        AugmentedModel[PS, PSB, PCS, PCB, VS, VSB, VCS, VCB, AS, ASB],
     ]:
         return AugmentedMppi.create(
             mppi=lambda model, sampler, cost: NumPyMppi.create(
@@ -200,7 +204,8 @@ class JaxAugmentedMppi:
         | None = None,
         filter_function: JaxFilterFunction[ACS] | None = None,
     ) -> tuple[
-        Mppi[AS, ACS], AugmentedModel[PS, PSB, PCS, PCB, VS, VSB, VCS, VCB, AS, ASB]
+        Mppi[AS, ACS, JaxWeights],
+        AugmentedModel[PS, PSB, PCS, PCB, VS, VSB, VCS, VCB, AS, ASB],
     ]:
         return AugmentedMppi.create(
             mppi=lambda model, sampler, cost: JaxMppi.create(

@@ -14,13 +14,30 @@ from trajax.types import (
     NumPyPaddingFunction,
     NumPyFilterFunction,
     Mppi,
+    DebugData,
     Control,
 )
 from trajax.mppi.common import UseOptimalControlUpdate, NoFilter
 
-from numtypes import Array, Dim2, shape_of
+from numtypes import Array, Dim2, Dims, shape_of
 
 import numpy as np
+
+
+@dataclass(frozen=True)
+class NumPyWeights[M: int]:
+    _array: Array[Dims[M]]
+
+    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[M]]:
+        return np.array(self._array, dtype=dtype)
+
+    @property
+    def rollout_count(self) -> M:
+        return self._array.shape[0]
+
+    @property
+    def array(self) -> Array[Dims[M]]:
+        return self._array
 
 
 class NumPyZeroPadding(
@@ -43,7 +60,7 @@ class NumPyMppi[
     ControlInputSequenceT: NumPyControlInputSequence,
     ControlInputBatchT: NumPyControlInputBatch,
     ControlInputPaddingT: NumPyControlInputSequence = ControlInputSequenceT,
-](Mppi[StateT, ControlInputSequenceT]):
+](Mppi[StateT, ControlInputSequenceT, NumPyWeights[int]]):
     planning_interval: int
     model: NumPyDynamicalModel[
         StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
@@ -94,7 +111,7 @@ class NumPyMppi[
         temperature: float,
         nominal_input: ControlInputSequenceT,
         initial_state: StateT,
-    ) -> Control[ControlInputSequenceT]:
+    ) -> Control[ControlInputSequenceT, NumPyWeights]:
         assert temperature > 0.0, "Temperature must be positive."
 
         samples = self.sampler.sample(around=nominal_input)
@@ -136,5 +153,7 @@ class NumPyMppi[
         )
 
         return Control(
-            optimal=optimal_input, nominal=nominal_input.similar(array=shifted_control)
+            optimal=optimal_input,
+            nominal=nominal_input.similar(array=shifted_control),
+            debug=DebugData(trajectory_weights=NumPyWeights(weights)),
         )

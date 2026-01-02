@@ -1,7 +1,7 @@
 from typing import Sequence
 from dataclasses import dataclass
 
-from trajax import types, Trajectory, ObstacleStates
+from trajax import types, Trajectory, ObstacleStates, Weights, Risk
 
 import numpy as np
 from numtypes import Array, Dim1, Dim2
@@ -33,6 +33,8 @@ class MpccSimulationResult:
     max_contouring_error: float
     max_lag_error: float
     obstacles: Sequence[ObstacleStates] = ()
+    weights: Sequence[Weights] = ()
+    risks: Sequence[Risk] = ()
 
 
 @dataclass(frozen=True)
@@ -95,7 +97,7 @@ class MpccVisualizer:
     def build_additional_plots(
         self, result: MpccSimulationResult, path_parameters: Array[Dim1]
     ) -> list[AdditionalPlot]:
-        return [
+        plots = [
             AdditionalPlot(
                 id="progress",
                 name="Path Progress",
@@ -132,6 +134,37 @@ class MpccVisualizer:
                 group="errors",
             ),
         ]
+
+        if risk_plot := self.build_risk_plot(result):
+            plots.append(risk_plot)
+
+        return plots
+
+    def build_risk_plot(self, result: MpccSimulationResult) -> AdditionalPlot | None:
+        if len(result.risks) == 0 or len(result.weights) == 0:
+            return None
+
+        risks = np.array([np.asarray(risk).sum(axis=0) for risk in result.risks])
+        weights = np.array([np.asarray(w) for w in result.weights])
+
+        return AdditionalPlot(
+            id="risk",
+            name="Risk Statistics",
+            series=[
+                PlotSeries(label="Max", values=risks.max(axis=1), color="#e74c3c"),
+                PlotSeries(label="Mean", values=risks.mean(axis=1), color="#3498db"),
+                PlotSeries(
+                    label="Median", values=np.median(risks, axis=1), color="#2ecc71"
+                ),
+                PlotSeries(label="Min", values=risks.min(axis=1), color="#9b59b6"),
+                PlotSeries(
+                    label="Selected",
+                    values=(risks * weights).sum(axis=1),
+                    color="#f39c12",
+                ),
+            ],
+            y_axis_label="Risk",
+        )
 
     def query_ghost_positions(
         self, trajectory: Trajectory, path_parameters: Array[Dim1]

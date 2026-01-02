@@ -10,6 +10,8 @@ from .common import (
     UpdateFunction as UpdateFunction,
     PaddingFunction as PaddingFunction,
     FilterFunction as FilterFunction,
+    Weights as Weights,
+    DebugData as DebugData,
     Control as Control,
     Mppi as Mppi,
 )

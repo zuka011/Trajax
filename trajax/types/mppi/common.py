@@ -1,4 +1,4 @@
-from typing import Protocol, Self
+from typing import Protocol, Self, Any
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
@@ -124,20 +124,37 @@ class Sampler[InputSequenceT, InputBatchT](Protocol):
         ...
 
 
+class Weights[M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
+        """Returns the weights as a NumPy array."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Number of rollouts the weights correspond to."""
+        ...
+
+
+@dataclass(kw_only=True, frozen=True)
+class DebugData[WeightsT]:
+    trajectory_weights: WeightsT
+
+
 @dataclass(frozen=True)
-class Control[InputSequenceT]:
+class Control[InputSequenceT, WeightsT]:
     optimal: InputSequenceT
     nominal: InputSequenceT
+    debug: DebugData[WeightsT]
 
 
-class Mppi[StateT, InputSequenceT](Protocol):
+class Mppi[StateT, InputSequenceT, WeightsT = Any](Protocol):
     def step(
         self,
         *,
         temperature: float,
         nominal_input: InputSequenceT,
         initial_state: StateT,
-    ) -> Control[InputSequenceT]:
+    ) -> Control[InputSequenceT, WeightsT]:
         """Runs one iteration of the MPPI algorithm to compute the next optimal and nominal
         control sequences.
         """
