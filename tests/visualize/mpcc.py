@@ -12,6 +12,9 @@ from tests.visualize.simulation import (
     ReferenceTrajectory,
     ObstacleForecast,
     ObstacleForecastCovariance,
+    AdditionalPlot,
+    PlotSeries,
+    PlotBound,
 )
 
 
@@ -66,8 +69,9 @@ class MpccVisualizer:
             result.obstacles
         )
         forecast_covariance = self.obstacle_forecast_covariance_from(result.obstacles)
+        additional_plots = self.build_additional_plots(result, path_parameters)
 
-        return SimulationData(
+        return SimulationData.create(
             reference=reference,
             positions_x=np.array([state.physical.x for state in result.states]),
             positions_y=np.array([state.physical.y for state in result.states]),
@@ -76,10 +80,7 @@ class MpccVisualizer:
             path_length=result.reference.path_length,
             ghost_x=ghost_positions.x,
             ghost_y=ghost_positions.y,
-            errors=result.contouring_errors,
             wheelbase=result.wheelbase,
-            max_error=result.max_contouring_error,
-            error_label="Contouring Error",
             vehicle_type="car",
             obstacle_positions_x=obstacle_x,
             obstacle_positions_y=obstacle_y,
@@ -88,7 +89,49 @@ class MpccVisualizer:
             obstacle_forecast_y=forecast_y,
             obstacle_forecast_heading=forecast_heading,
             obstacle_forecast_covariance=forecast_covariance,
+            additional_plots=additional_plots,
         )
+
+    def build_additional_plots(
+        self, result: MpccSimulationResult, path_parameters: Array[Dim1]
+    ) -> list[AdditionalPlot]:
+        return [
+            AdditionalPlot(
+                id="progress",
+                name="Path Progress",
+                series=[PlotSeries(label="Progress", values=path_parameters)],
+                y_axis_label="Progress (m)",
+                upper_bound=PlotBound(
+                    values=result.reference.path_length, label="Path Length"
+                ),
+            ),
+            AdditionalPlot(
+                id="contouring-error",
+                name="Contouring Error",
+                series=[
+                    PlotSeries(
+                        label="Contouring Error", values=result.contouring_errors
+                    )
+                ],
+                y_axis_label="Error (m)",
+                upper_bound=PlotBound(values=result.max_contouring_error),
+                lower_bound=PlotBound(values=-result.max_contouring_error),
+                group="errors",
+            ),
+            AdditionalPlot(
+                id="lag-error",
+                name="Lag Error",
+                series=[
+                    PlotSeries(
+                        label="Lag Error", values=result.lag_errors, color="#9b59b6"
+                    )
+                ],
+                y_axis_label="Error (m)",
+                upper_bound=PlotBound(values=result.max_lag_error),
+                lower_bound=PlotBound(values=-result.max_lag_error),
+                group="errors",
+            ),
+        ]
 
     def query_ghost_positions(
         self, trajectory: Trajectory, path_parameters: Array[Dim1]

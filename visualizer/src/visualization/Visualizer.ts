@@ -17,5 +17,5 @@ export function generate(rawData: unknown, title = defaults.title): string {
 }
 
 function processData(data: SimulationData): ProcessedSimulationData {
-    return { ...data, timestep_count: data.positions_x.length };
+    return { ...data, timestepCount: data.positionsX.length };
 }

@@ -1,7 +1,7 @@
 import Plotly from "plotly.js-dist-min";
 import { defaults, type Theme } from "../../core/defaults.js";
 import type { ProcessedSimulationData } from "../../core/types.js";
-import { covarianceToEllipse } from "../../utils/math.js";
+import { covarianceToEllipse, radiansToDegrees } from "../../utils/math.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 
@@ -80,19 +80,19 @@ function buildTraces(
         traces.push(createVehicleTrace(data, theme, t));
     }
 
-    if (state.visibility.ghost && data.ghost_x?.[t]) {
+    if (state.visibility.ghost && data.ghostX?.[t]) {
         traces.push(createGhostTrace(data, theme, t));
     }
 
-    if (state.visibility.obstacles && data.obstacle_positions_x?.[t]) {
+    if (state.visibility.obstacles && data.obstaclePositionsX?.[t]) {
         traces.push(...createObstacleTraces(data, theme, t));
     }
 
-    if (state.visibility.forecasts && data.obstacle_forecast_x?.[t]?.length) {
+    if (state.visibility.forecasts && data.obstacleForecastX?.[t]?.length) {
         traces.push(...createForecastTraces(data, theme, t));
     }
 
-    if (state.visibility.uncertainty && data.obstacle_forecast_covariance?.[t]) {
+    if (state.visibility.uncertainty && data.obstacleForecastCovariance?.[t]) {
         traces.push(...createUncertaintyTraces(data, theme, t));
     }
 
@@ -112,8 +112,8 @@ function createReferenceTrace(data: ProcessedSimulationData, theme: Theme): Trac
 
 function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     return {
-        x: data.positions_x.slice(0, t + 1),
-        y: data.positions_y.slice(0, t + 1),
+        x: data.positionsX.slice(0, t + 1),
+        y: data.positionsY.slice(0, t + 1),
         mode: "lines",
         line: { color: theme.colors.primary, width: 2 },
         name: "Actual",
@@ -123,11 +123,11 @@ function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: n
 
 function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     const corners = transformCorners(
-        data.positions_x[t],
-        data.positions_y[t],
+        data.positionsX[t],
+        data.positionsY[t],
         data.headings[t],
         data.wheelbase,
-        data.vehicle_width,
+        data.vehicleWidth,
     );
     return {
         x: corners.map((c) => c[0]),
@@ -144,8 +144,8 @@ function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: numb
 
 function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     return {
-        x: [data.ghost_x![t]],
-        y: [data.ghost_y![t]],
+        x: [data.ghostX![t]],
+        y: [data.ghostY![t]],
         mode: "markers",
         marker: { color: theme.colors.secondary, size: 12, opacity: 0.5 },
         name: "Ghost",
@@ -154,13 +154,13 @@ function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number
 }
 
 function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
-    return data.obstacle_positions_x![t].map((ox, i) => {
+    return data.obstaclePositionsX![t].map((ox, i) => {
         const corners = transformCorners(
             ox,
-            data.obstacle_positions_y![t][i],
-            data.obstacle_headings?.[t]?.[i] ?? 0,
+            data.obstaclePositionsY![t][i],
+            data.obstacleHeadings?.[t]?.[i] ?? 0,
             data.wheelbase,
-            data.vehicle_width,
+            data.vehicleWidth,
         );
         return {
             x: corners.map((c) => c[0]),
@@ -178,15 +178,15 @@ function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: nu
 }
 
 function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
-    const obstacleCount = data.obstacle_forecast_x![t][0].length;
+    const obstacleCount = data.obstacleForecastX![t][0].length;
     return Array.from({ length: obstacleCount }, (_, k) => {
-        const xPoints = data.obstacle_forecast_x![t].map((h) => h[k]);
-        const yPoints = data.obstacle_forecast_y![t].map((h) => h[k]);
+        const xPoints = data.obstacleForecastX![t].map((h) => h[k]);
+        const yPoints = data.obstacleForecastY![t].map((h) => h[k]);
         const lastIdx = xPoints.length - 1;
 
         const dx = xPoints[lastIdx] - xPoints[lastIdx - 1];
         const dy = yPoints[lastIdx] - yPoints[lastIdx - 1];
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        const angle = radiansToDegrees(Math.atan2(dy, dx));
 
         return {
             x: xPoints,
@@ -209,7 +209,7 @@ function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: nu
 
 function createUncertaintyTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
     const traces: Trace[] = [];
-    const cov = data.obstacle_forecast_covariance![t];
+    const cov = data.obstacleForecastCovariance![t];
     const obstacleCount = cov[0][0][0].length;
     let isFirst = true;
 
@@ -223,8 +223,8 @@ function createUncertaintyTraces(data: ProcessedSimulationData, theme: Theme, t:
                 defaults.confidenceScale,
             );
             const points = generateEllipsePoints(
-                data.obstacle_forecast_x![t][h][k],
-                data.obstacle_forecast_y![t][h][k],
+                data.obstacleForecastX![t][h][k],
+                data.obstacleForecastY![t][h][k],
                 ellipse.width / 2,
                 ellipse.height / 2,
                 ellipse.angle,

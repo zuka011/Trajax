@@ -5,31 +5,48 @@ const ReferenceTrajectorySchema = z.object({
     y: z.array(z.number()),
 });
 
+const PlotSeriesSchema = z.object({
+    label: z.string(),
+    values: z.array(z.number()),
+    color: z.string().optional(),
+});
+
+const PlotBoundSchema = z.object({
+    values: z.union([z.array(z.number()), z.number()]),
+    label: z.string().optional(),
+});
+
+const AdditionalPlotSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    series: z.array(PlotSeriesSchema),
+    upperBound: PlotBoundSchema.optional(),
+    lowerBound: PlotBoundSchema.optional(),
+    yAxisLabel: z.string(),
+    group: z.string().optional(),
+});
+
 export const SimulationDataSchema = z.object({
     reference: ReferenceTrajectorySchema,
-    positions_x: z.array(z.number()),
-    positions_y: z.array(z.number()),
+    positionsX: z.array(z.number()),
+    positionsY: z.array(z.number()),
     headings: z.array(z.number()),
-    path_parameters: z.array(z.number()),
-    path_length: z.number(),
-    time_step: z.number().default(0.1),
-    errors: z.array(z.number()).optional(),
-    ghost_x: z.array(z.number()).optional(),
-    ghost_y: z.array(z.number()).optional(),
-    max_error: z.number().default(1.0),
-    error_label: z.string().default("Lateral Error"),
-    vehicle_type: z.enum(["triangle", "car"]).default("triangle"),
+    pathParameters: z.array(z.number()),
+    pathLength: z.number(),
+    timeStep: z.number().default(0.1),
+    ghostX: z.array(z.number()).optional(),
+    ghostY: z.array(z.number()).optional(),
+    vehicleType: z.enum(["triangle", "car"]).default("triangle"),
     wheelbase: z.number().default(2.5),
-    vehicle_width: z.number().default(1.2),
-    obstacle_positions_x: z.array(z.array(z.number())).optional(),
-    obstacle_positions_y: z.array(z.array(z.number())).optional(),
-    obstacle_headings: z.array(z.array(z.number())).optional(),
-    obstacle_forecast_x: z.array(z.array(z.array(z.number()))).optional(),
-    obstacle_forecast_y: z.array(z.array(z.array(z.number()))).optional(),
-    obstacle_forecast_heading: z.array(z.array(z.array(z.number()))).optional(),
-    obstacle_forecast_covariance: z
-        .array(z.array(z.array(z.array(z.array(z.number())))))
-        .optional(),
+    vehicleWidth: z.number().default(1.2),
+    obstaclePositionsX: z.array(z.array(z.number())).optional(),
+    obstaclePositionsY: z.array(z.array(z.number())).optional(),
+    obstacleHeadings: z.array(z.array(z.number())).optional(),
+    obstacleForecastX: z.array(z.array(z.array(z.number()))).optional(),
+    obstacleForecastY: z.array(z.array(z.array(z.number()))).optional(),
+    obstacleForecastHeading: z.array(z.array(z.array(z.number()))).optional(),
+    obstacleForecastCovariance: z.array(z.array(z.array(z.array(z.array(z.number()))))).optional(),
+    additionalPlots: z.array(AdditionalPlotSchema).optional(),
 });
 
 export type SimulationDataInput = z.input<typeof SimulationDataSchema>;

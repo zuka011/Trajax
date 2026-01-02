@@ -22,7 +22,7 @@ export const ControlsContainer: FunctionalComponent<ControlsContainerProps> = ({
     const [, forceUpdate] = useState(0);
 
     const speeds = theme.animation.speeds;
-    const timestepCount = data.timestep_count;
+    const timestepCount = data.timestepCount;
 
     const notifyUpdate = (timestep: number): void => {
         state.currentTimestep = timestep;

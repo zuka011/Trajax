@@ -5,33 +5,52 @@ export interface ReferenceTrajectory {
     y: number[];
 }
 
+export interface PlotSeries {
+    label: string;
+    values: number[];
+    color?: string;
+}
+
+export interface PlotBound {
+    values: number[] | number;
+    label?: string;
+}
+
+export interface AdditionalPlot {
+    id: string;
+    name: string;
+    series: PlotSeries[];
+    upperBound?: PlotBound;
+    lowerBound?: PlotBound;
+    yAxisLabel: string;
+    group?: string;
+}
+
 export interface SimulationData {
     reference: ReferenceTrajectory;
-    positions_x: number[];
-    positions_y: number[];
+    positionsX: number[];
+    positionsY: number[];
     headings: number[];
-    path_parameters: number[];
-    path_length: number;
-    time_step: number;
-    errors?: number[];
-    ghost_x?: number[];
-    ghost_y?: number[];
-    max_error: number;
-    error_label: string;
-    vehicle_type: VehicleType;
+    pathParameters: number[];
+    pathLength: number;
+    timeStep: number;
+    ghostX?: number[];
+    ghostY?: number[];
+    vehicleType: VehicleType;
     wheelbase: number;
-    vehicle_width: number;
-    obstacle_positions_x?: number[][];
-    obstacle_positions_y?: number[][];
-    obstacle_headings?: number[][];
-    obstacle_forecast_x?: number[][][];
-    obstacle_forecast_y?: number[][][];
-    obstacle_forecast_heading?: number[][][];
-    obstacle_forecast_covariance?: number[][][][][];
+    vehicleWidth: number;
+    obstaclePositionsX?: number[][];
+    obstaclePositionsY?: number[][];
+    obstacleHeadings?: number[][];
+    obstacleForecastX?: number[][][];
+    obstacleForecastY?: number[][][];
+    obstacleForecastHeading?: number[][][];
+    obstacleForecastCovariance?: number[][][][][];
+    additionalPlots?: AdditionalPlot[];
 }
 
 export interface ProcessedSimulationData extends SimulationData {
-    timestep_count: number;
+    timestepCount: number;
 }
 
 export interface EllipseParameters {
@@ -52,29 +71,7 @@ export interface ForecastData {
     xs: number[][];
     ys: number[][];
     headings: number[][];
-    arrow_x: number[];
-    arrow_y: number[];
-    arrow_heading: number[];
-}
-
-export interface CliOptions {
-    output: string;
-    title: string;
-    width: number;
-    height: number;
-}
-
-export interface BatchOptions {
-    pattern: string;
-    recursive: boolean;
-}
-
-export interface WatchOptions {
-    port: number;
-}
-
-export interface PlotDimensions {
-    width: number;
-    height: number;
-    margin: { top: number; right: number; bottom: number; left: number };
+    arrowX: number[];
+    arrowY: number[];
+    arrowHeading: number[];
 }

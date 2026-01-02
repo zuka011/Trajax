@@ -70,16 +70,12 @@ body {
 .plot-container {
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
     background: #fff;
     border-radius: 6px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-}
-
-#progress-plot,
-#error-plot {
-    width: 100%;
-    height: 100%;
 }
 
 .info-panel {
@@ -200,6 +196,75 @@ body {
     cursor: pointer;
 }
 
+#additional-plots-root {
+    display: contents;
+}
+
+.additional-plots-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+}
+
+.additional-plots-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+}
+
+.additional-plots-content .plot-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.additional-plot-content {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.plot-tabs-header {
+    display: flex;
+    gap: 4px;
+    background: #ecf0f1;
+    border-radius: 6px;
+    padding: 4px;
+    flex-shrink: 0;
+}
+
+.plot-tab {
+    flex: 1;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #7f8c8d;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.plot-tab:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #2c3e50;
+}
+
+.plot-tab.active {
+    background: #fff;
+    color: #2c3e50;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 @media (max-width: 1000px) {
     .main-content {
         flex-direction: column;
@@ -210,6 +275,7 @@ body {
         flex-direction: row;
         flex-wrap: wrap;
         flex: 1;
+        min-height: 0;
     }
 
     .info-panel {
@@ -218,6 +284,12 @@ body {
     }
 
     .plot-container {
+        flex: 1;
+        min-width: 280px;
+        min-height: 150px;
+    }
+
+    .additional-plots-container {
         flex: 1;
         min-width: 280px;
     }

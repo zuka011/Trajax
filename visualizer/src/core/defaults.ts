@@ -7,7 +7,7 @@ export interface ThemeColors {
     background: string;
     border: string;
     text: string;
-    infoBg: string;
+    infoBackground: string;
     infoBorder: string;
     obstacle: string;
     obstacleBorder: string;
@@ -39,13 +39,9 @@ export interface Theme {
 
 export interface Defaults {
     timeStep: number;
-    maxError: number;
-    errorLabel: string;
     vehicleType: "triangle" | "rectangle";
     wheelbase: number;
     vehicleWidth: number;
-    plotWidth: number;
-    plotHeight: number;
     title: string;
     confidenceScale: number;
 }
@@ -60,7 +56,7 @@ export const theme: Theme = {
         background: "#fafafa",
         border: "#ffffff",
         text: "#2c3e50",
-        infoBg: "#f8f9fa",
+        infoBackground: "#f8f9fa",
         infoBorder: "#dee2e6",
         obstacle: "#7f8c8d",
         obstacleBorder: "#5a6263",
@@ -85,13 +81,9 @@ export const theme: Theme = {
 
 export const defaults: Defaults = {
     timeStep: 0.1,
-    maxError: 1.0,
-    errorLabel: "Lateral Error",
     vehicleType: "triangle" as const,
     wheelbase: 2.5,
     vehicleWidth: 1.2,
-    plotWidth: 800,
-    plotHeight: 600,
     title: "Simulation Visualization",
     confidenceScale: 2.0,
 };

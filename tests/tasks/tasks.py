@@ -46,9 +46,8 @@ class BackgroundTasks:
 
         print(f"\nWaiting for {len(self._pending)} background task(s)...")
 
-        await asyncio.gather(
-            *[asyncio.wrap_future(f) for f in self._pending],
-            return_exceptions=True,
-        )
+        await asyncio.gather(*[asyncio.wrap_future(f) for f in self._pending])
+
+        print("All background tasks completed.\n")
 
         self._pending.clear()
