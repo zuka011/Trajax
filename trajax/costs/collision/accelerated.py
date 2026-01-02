@@ -7,19 +7,20 @@ from trajax.types import (
     Distance,
     ControlInputBatch,
     CostFunction,
+    ObstacleStateSampler,
+    SampleCostFunction,
     JaxCosts,
     JaxObstacleStateProvider,
     JaxObstacleStateSampler,
     JaxDistanceExtractor,
+    JaxRisk,
     JaxRiskMetric,
 )
 from trajax.states import JaxSimpleCosts
-from trajax.costs.collision.common import NoMetric
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D
 
-import riskit
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -36,6 +37,25 @@ class JaxDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
     @property
     def array(self) -> Float[JaxArray, "T V M N"]:
         return self._array
+
+
+class JaxNoMetric:
+    @staticmethod
+    def create() -> "JaxNoMetric":
+        return JaxNoMetric()
+
+    def compute[StateT, ObstacleStateT, SampledObstacleStateT](
+        self,
+        cost_function: SampleCostFunction[
+            StateT, SampledObstacleStateT, Float[JaxArray, "T M N"]
+        ],
+        *,
+        states: StateT,
+        obstacle_states: ObstacleStateT,
+        sampler: ObstacleStateSampler[ObstacleStateT, SampledObstacleStateT],
+    ) -> JaxRisk:
+        samples = sampler(obstacle_states, count=1)
+        return JaxRisk(cost_function(states=states, samples=samples).squeeze(axis=-1))
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -71,13 +91,15 @@ class JaxCollisionCost[
             weight=weight,
             metric=metric
             if metric is not None
-            else cast(JaxRiskMetric[S, OS, SOS], NoMetric()),
+            else cast(JaxRiskMetric[S, OS, SOS], JaxNoMetric()),
         )
 
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateT
     ) -> JaxCosts[T, M]:
-        def cost(*, states: StateT, samples: SampledObstacleStatesT) -> riskit.JaxCosts:
+        def cost(
+            *, states: StateT, samples: SampledObstacleStatesT
+        ) -> Float[JaxArray, "T M N"]:
             return collision_cost(
                 distance=self.distance(states=states, obstacle_states=samples).array,
                 distance_threshold=self.distance_threshold,
@@ -90,7 +112,7 @@ class JaxCollisionCost[
                 states=states,
                 obstacle_states=self.obstacle_states(),
                 sampler=self.sampler,
-            )
+            ).array
         )
 
 

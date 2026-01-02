@@ -6,15 +6,16 @@ from trajax.types import (
     Distance,
     ControlInputBatch,
     CostFunction,
+    ObstacleStateSampler,
+    SampleCostFunction,
     NumPyCosts,
     NumPyObstacleStateProvider,
     NumPyObstacleStateSampler,
     NumPyDistanceExtractor,
+    NumPyRisk,
     NumPyRiskMetric,
 )
 from trajax.states import NumPySimpleCosts
-from trajax.costs.collision.common import NoMetric
-
 
 from numtypes import Array, Dims, D
 
@@ -27,6 +28,25 @@ class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
         return self.array
+
+
+class NumPyNoMetric:
+    @staticmethod
+    def create() -> "NumPyNoMetric":
+        return NumPyNoMetric()
+
+    def compute[StateT, ObstacleStateT, SampledObstacleStateT, T: int, M: int](
+        self,
+        cost_function: SampleCostFunction[
+            StateT, SampledObstacleStateT, Array[Dims[T, M, int]]
+        ],
+        *,
+        states: StateT,
+        obstacle_states: ObstacleStateT,
+        sampler: ObstacleStateSampler[ObstacleStateT, SampledObstacleStateT],
+    ) -> NumPyRisk[T, M]:
+        samples = sampler(obstacle_states, count=1)
+        return NumPyRisk(cost_function(states=states, samples=samples).squeeze(axis=-1))
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -62,7 +82,7 @@ class NumPyCollisionCost[
             weight=weight,
             metric=metric
             if metric is not None
-            else cast(NumPyRiskMetric[S, OS, SOS], NoMetric()),
+            else cast(NumPyRiskMetric[S, OS, SOS], NumPyNoMetric()),
         )
 
     def __call__[T: int, M: int](
@@ -84,5 +104,5 @@ class NumPyCollisionCost[
                 states=states,
                 obstacle_states=self.obstacle_states(),
                 sampler=self.sampler,
-            )
+            ).array
         )

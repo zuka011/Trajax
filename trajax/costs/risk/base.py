@@ -23,24 +23,33 @@ class RiskMetricCreator[
         ...
 
 
+class RiskConverter[RkRiskT: rk.Risk, RiskT](Protocol):
+    def __call__(self, risk: RkRiskT, /) -> RiskT:
+        """Converts the given risk from the backend's risk type to the desired risk type."""
+        ...
+
+
 @dataclass(kw_only=True, frozen=True)
 class RisKitRiskMetric[
     StateT: StateBatch,
     SampleT,
-    RiskT: rk.Risk,
+    RiskT,
+    RkRiskT: rk.Risk,
     CostsT: rk.Costs,
     ArrayT: rk.ArrayLike,
 ]:
-    backend: rk.Backend[CostsT, RiskT, ArrayT]
-    creator: RiskMetricCreator[StateT, SampleT, CostsT, RiskT, ArrayT]
+    backend: rk.Backend[CostsT, RkRiskT, ArrayT]
+    creator: RiskMetricCreator[StateT, SampleT, CostsT, RkRiskT, ArrayT]
+    to_risk: RiskConverter[RkRiskT, RiskT]
 
     @staticmethod
-    def create[SB: StateBatch, SOS, R: rk.Risk, C: rk.Costs, A: rk.ArrayLike](
+    def create[SB: StateBatch, SOS, R, RKR: rk.Risk, C: rk.Costs, A: rk.ArrayLike](
         *,
-        backend: rk.Backend[C, R, A],
-        creator: RiskMetricCreator[SB, SOS, C, R, A],
-    ) -> "RisKitRiskMetric[SB, SOS, R, C, A]":
-        return RisKitRiskMetric(backend=backend, creator=creator)
+        backend: rk.Backend[C, RKR, A],
+        creator: RiskMetricCreator[SB, SOS, C, RKR, A],
+        to_risk: RiskConverter[RKR, R],
+    ) -> "RisKitRiskMetric[SB, SOS, R, RKR, C, A]":
+        return RisKitRiskMetric(backend=backend, creator=creator, to_risk=to_risk)
 
     def compute[ObstacleStateT](
         self,
@@ -53,11 +62,13 @@ class RisKitRiskMetric[
         def cost(*, trajectories: StateT, uncertainties: SampleT) -> CostsT:
             return cost_function(states=trajectories, samples=uncertainties)
 
-        return self.creator(cost=cost, backend=self.backend).compute(
-            trajectories=StateTrajectories(states),
-            uncertainties=ObstacleStateUncertainties(
-                obstacle_states=obstacle_states, sampler=sampler
-            ),
+        return self.to_risk(
+            self.creator(cost=cost, backend=self.backend).compute(
+                trajectories=StateTrajectories(states),
+                uncertainties=ObstacleStateUncertainties(
+                    obstacle_states=obstacle_states, sampler=sampler
+                ),
+            )
         )
 
 

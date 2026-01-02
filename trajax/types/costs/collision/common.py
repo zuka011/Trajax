@@ -89,3 +89,34 @@ class SampleCostFunction[StateBatchT, SampledObstacleStatesT, CostsT](Protocol):
     ) -> CostsT:
         """Computes the cost given the states and sampled obstacle states."""
         ...
+
+
+class Risk[T: int, M: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
+        """Returns the risk values as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> int:
+        """The time horizon over which the risk is computed."""
+        ...
+
+    @property
+    def rollout_count(self) -> int:
+        """The number of rollouts for which the risk is computed."""
+        ...
+
+
+class RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT](
+    Protocol
+):
+    def compute(
+        self,
+        cost_function: CostFunctionT,
+        *,
+        states: StateBatchT,
+        obstacle_states: ObstacleStatesT,
+        sampler: SamplerT,
+    ) -> RiskT:
+        """Computes the risk metric based on the provided cost function."""
+        ...

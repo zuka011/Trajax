@@ -8,16 +8,20 @@ from .common import (
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     SampleCostFunction as SampleCostFunction,
+    Risk as Risk,
+    RiskMetric as RiskMetric,
 )
 from .basic import (
     NumPyObstacleStateProvider as NumPyObstacleStateProvider,
     NumPyObstacleStateSampler as NumPyObstacleStateSampler,
     NumPyDistanceExtractor as NumPyDistanceExtractor,
+    NumPyRisk as NumPyRisk,
     NumPyRiskMetric as NumPyRiskMetric,
 )
 from .accelerated import (
     JaxObstacleStateProvider as JaxObstacleStateProvider,
     JaxObstacleStateSampler as JaxObstacleStateSampler,
     JaxDistanceExtractor as JaxDistanceExtractor,
+    JaxRisk as JaxRisk,
     JaxRiskMetric as JaxRiskMetric,
 )
