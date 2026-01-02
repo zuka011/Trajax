@@ -61,6 +61,7 @@ from .types import (
     DistanceExtractor as DistanceExtractor,
     Error as Error,
     ContouringCost as ContouringCost,
+    LagCost as LagCost,
     ObstacleModel as ObstacleModel,
     CovarianceSequences as CovarianceSequences,
     CovariancePropagator as CovariancePropagator,

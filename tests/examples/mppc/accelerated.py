@@ -7,6 +7,7 @@ from trajax import (
     AugmentedSampler,
     Circles,
     ContouringCost,
+    LagCost,
     Distance,
     DistanceExtractor,
     Trajectory,
@@ -122,6 +123,7 @@ class JaxMpccPlannerConfiguration:
     planner: Planner
     model: AugmentedModel
     contouring_cost: ContouringCost
+    lag_cost: LagCost
     wheelbase: float
 
     distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
@@ -377,7 +379,7 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                costs.jax.tracking.lag(
+                lag_cost := costs.jax.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
@@ -412,6 +414,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
             wheelbase=L,
         )
 
@@ -483,7 +486,7 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                costs.jax.tracking.lag(
+                lag_cost := costs.jax.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
@@ -537,6 +540,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
             wheelbase=L,
             distance=circles_distance,
             obstacles=obstacles,

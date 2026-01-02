@@ -101,6 +101,7 @@ from .states import (
 from .costs import (
     Error as Error,
     ContouringCost as ContouringCost,
+    LagCost as LagCost,
     CostSumFunction as CostSumFunction,
     NumPyPathParameterExtractor as NumPyPathParameterExtractor,
     NumPyPathVelocityExtractor as NumPyPathVelocityExtractor,

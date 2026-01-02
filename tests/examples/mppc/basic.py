@@ -6,6 +6,7 @@ from trajax import (
     AugmentedModel,
     AugmentedSampler,
     ContouringCost,
+    LagCost,
     Trajectory,
     Circles,
     Distance,
@@ -98,6 +99,7 @@ class NumPyMpccPlannerConfiguration:
     planner: Planner
     model: AugmentedModel
     contouring_cost: ContouringCost
+    lag_cost: LagCost
     wheelbase: float
 
     distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
@@ -353,7 +355,7 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                costs.numpy.tracking.lag(
+                lag_cost := costs.numpy.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
@@ -390,6 +392,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
             wheelbase=L,
         )
 
@@ -461,7 +464,7 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                costs.numpy.tracking.lag(
+                lag_cost := costs.numpy.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
@@ -517,6 +520,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
             wheelbase=L,
             distance=circles_distance,
             obstacles=obstacles,

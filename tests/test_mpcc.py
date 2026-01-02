@@ -8,6 +8,7 @@ from trajax import (
     DynamicalModel,
     Trajectory,
     ContouringCost,
+    LagCost,
     Distance,
     DistanceExtractor,
     ObstacleStates,
@@ -76,6 +77,11 @@ class MpccPlannerConfiguration[
         ...
 
     @property
+    def lag_cost(self) -> LagCost[ControlInputBatchT, StateBatchT]:
+        """Returns the lag cost function."""
+        ...
+
+    @property
     def distance(
         self,
     ) -> DistanceExtractor[StateBatchT, ObstacleStatesT, Distance] | None:
@@ -141,6 +147,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     planner = configuration.planner
     augmented_model = configuration.model
     contouring_cost = configuration.contouring_cost
+    lag_cost = configuration.lag_cost
     current_state = configuration.initial_state
     nominal_input = configuration.nominal_input
     L = configuration.wheelbase
@@ -172,14 +179,22 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             reference=reference,
             states=states,
             contouring_errors=(
-                errors := contouring_errors(
+                errors_c := contouring_errors(
                     contouring_cost,
-                    inputs=configuration.zero_inputs(horizon=len(states)),
-                    states=configuration.stack_states(states),
+                    inputs=(
+                        zero_inputs := configuration.zero_inputs(horizon=len(states))
+                    ),
+                    states=(stacked_states := configuration.stack_states(states)),
+                )
+            ),
+            lag_errors=(
+                errors_l := lag_errors(
+                    lag_cost, inputs=zero_inputs, states=stacked_states
                 )
             ),
             wheelbase=L,
-            max_deviation=(max_deviation := 1.5),
+            max_contouring_error=(max_contouring_error := 1.5),
+            max_lag_error=(max_lag_error := 5.0),
         )
     ).seed_is(configuration_name)
 
@@ -188,12 +203,15 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
     )
 
-    assert (deviation := np.abs(errors).max()) < max_deviation, (
+    assert (deviation := np.abs(errors_c).max()) < max_contouring_error, (
         f"Vehicle deviated too far from the reference trajectory. "
-        f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
+        f"Max lateral deviation: {deviation:.2f} m, expected < {max_contouring_error:.2f} m"
     )
 
-    # TODO: Add check on lag error.
+    assert (max_lag := np.abs(errors_l).max()) < max_lag_error, (
+        f"Vehicle had excessive lag error along the reference trajectory. "
+        f"Max lag error: {max_lag:.2f} m, expected < {max_lag_error:.2f} m"
+    )
 
 
 @mark.parametrize(
@@ -261,6 +279,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     planner = configuration.planner
     augmented_model = configuration.model
     contouring_cost = configuration.contouring_cost
+    lag_cost = configuration.lag_cost
     current_state = configuration.initial_state
     nominal_input = configuration.nominal_input
     L = configuration.wheelbase
@@ -303,14 +322,22 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             reference=reference,
             states=states,
             contouring_errors=(
-                errors := contouring_errors(
+                errors_c := contouring_errors(
                     contouring_cost,
-                    inputs=configuration.zero_inputs(horizon=len(states)),
-                    states=configuration.stack_states(states),
+                    inputs=(
+                        zero_inputs := configuration.zero_inputs(horizon=len(states))
+                    ),
+                    states=(stacked_states := configuration.stack_states(states)),
+                )
+            ),
+            lag_errors=(
+                errors_l := lag_errors(
+                    lag_cost, inputs=zero_inputs, states=stacked_states
                 )
             ),
             wheelbase=L,
-            max_deviation=(max_deviation := 5.0),
+            max_contouring_error=(max_contouring_error := 5.0),
+            max_lag_error=(max_lag_error := 7.5),
             obstacles=obstacle_history,
         )
     ).seed_is(configuration_name)
@@ -320,18 +347,22 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
         f"Final path parameter: {progress:.1f}, expected > {min_progress:.1f}"
     )
 
-    assert (deviation := np.abs(errors).max()) < max_deviation, (
+    assert (deviation := np.abs(errors_c).max()) < max_contouring_error, (
         f"Vehicle deviated too far from the reference trajectory. "
-        f"Max lateral deviation: {deviation:.2f} m, expected < {max_deviation:.2f} m"
+        f"Max lateral deviation: {deviation:.2f} m, expected < {max_contouring_error:.2f} m"
     )
 
-    # TODO: Add check on lag error.
+    assert (max_lag := np.abs(errors_l).max()) < max_lag_error, (
+        f"Vehicle had excessive lag error along the reference trajectory. "
+        f"Max lag error: {max_lag:.2f} m, expected < {max_lag_error:.2f} m"
+    )
+
     # TODO: Collect Risk Measurements and visualize in integration tests.
 
     assert (
         min_distance := min_distance_to_obstacles(
             distance,
-            states=configuration.stack_states(states),
+            states=stacked_states,
             obstacle_states=configuration.stack_obstacles(obstacle_history),
         )
     ) > (safe_distance := 0.0), (
@@ -344,6 +375,12 @@ def contouring_errors[InputT: ControlInputBatch, StateT: StateBatch](
     contouring: ContouringCost[InputT, StateT], inputs: InputT, states: StateT
 ) -> Array[Dim1]:
     return np.asarray(contouring.error(inputs=inputs, states=states))[:, 0]
+
+
+def lag_errors[InputT: ControlInputBatch, StateT: StateBatch](
+    lag: LagCost[InputT, StateT], inputs: InputT, states: StateT
+) -> Array[Dim1]:
+    return np.asarray(lag.error(inputs=inputs, states=states))[:, 0]
 
 
 def min_distance_to_obstacles[

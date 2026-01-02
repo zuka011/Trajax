@@ -15,3 +15,9 @@ class ContouringCost[InputBatchT, StateBatchT, ErrorT = Error](Protocol):
     def error(self, *, inputs: InputBatchT, states: StateBatchT) -> ErrorT:
         """Computes the contouring error for the given inputs and states."""
         ...
+
+
+class LagCost[InputBatchT, StateBatchT, ErrorT = Error](Protocol):
+    def error(self, *, inputs: InputBatchT, states: StateBatchT) -> ErrorT:
+        """Computes the lag error for the given inputs and states."""
+        ...

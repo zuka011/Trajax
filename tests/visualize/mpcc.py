@@ -20,13 +20,15 @@ type VirtualState = types.numpy.simple.State | types.jax.simple.State
 type AugmentedState = types.augmented.State[PhysicalState, VirtualState]
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class MpccSimulationResult:
     reference: Trajectory
     states: Sequence[AugmentedState]
     contouring_errors: Array[Dim1]
+    lag_errors: Array[Dim1]
     wheelbase: float
-    max_deviation: float
+    max_contouring_error: float
+    max_lag_error: float
     obstacles: Sequence[ObstacleStates] = ()
 
 
@@ -76,7 +78,7 @@ class MpccVisualizer:
             ghost_y=ghost_positions.y,
             errors=result.contouring_errors,
             wheelbase=result.wheelbase,
-            max_error=result.max_deviation,
+            max_error=result.max_contouring_error,
             error_label="Contouring Error",
             vehicle_type="car",
             obstacle_positions_x=obstacle_x,

@@ -6,6 +6,7 @@ from trajax.types import (
     ControlInputBatch,
     CostFunction,
     ContouringCost,
+    LagCost,
     Error,
     Trajectory,
     NumPyControlInputBatch,
@@ -85,7 +86,8 @@ class NumPyContouringCost[StateBatchT](
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyLagCost[StateBatchT](
-    CostFunction[ControlInputBatch, StateBatchT, NumPyCosts]
+    LagCost[ControlInputBatch, StateBatchT, NumPyError],
+    CostFunction[ControlInputBatch, StateBatchT, NumPyCosts],
 ):
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
     path_parameter_extractor: NumPyPathParameterExtractor[StateBatchT]
@@ -118,15 +120,20 @@ class NumPyLagCost[StateBatchT](
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
     ) -> NumPyCosts[T, M]:
+        error = self.error(inputs=inputs, states=states)
+        return NumPySimpleCosts(self.weight * error.array**2)
+
+    def error[T: int, M: int](
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    ) -> NumPyError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()
         positions = self.position_extractor(states)
 
-        error = np.cos(heading) * (positions.x - ref_points.x()) + np.sin(heading) * (
-            positions.y - ref_points.y()
+        return NumPyError(
+            -np.cos(heading) * (positions.x - ref_points.x())
+            - np.sin(heading) * (positions.y - ref_points.y())
         )
-
-        return NumPySimpleCosts(self.weight * error**2)
 
 
 @dataclass(kw_only=True, frozen=True)

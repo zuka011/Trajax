@@ -8,12 +8,14 @@ from trajax.types import (
     ControlInputBatch,
     CostFunction,
     ContouringCost,
+    LagCost,
     Error,
     Trajectory,
     JaxControlInputBatch,
     JaxCosts,
     JaxPathParameters,
     JaxReferencePoints,
+    JaxPositions,
     JaxPositionExtractor,
     JaxPathParameterExtractor,
     JaxPathVelocityExtractor,
@@ -95,7 +97,10 @@ class JaxContouringCost[StateBatchT](
 
 
 @dataclass(kw_only=True, frozen=True)
-class JaxLagCost[StateBatchT](CostFunction[ControlInputBatch, StateBatchT, JaxCosts]):
+class JaxLagCost[StateBatchT](
+    LagCost[ControlInputBatch, StateBatchT, JaxError],
+    CostFunction[ControlInputBatch, StateBatchT, JaxCosts],
+):
     reference: Trajectory[JaxPathParameters, JaxReferencePoints]
     path_parameter_extractor: JaxPathParameterExtractor[StateBatchT]
     position_extractor: JaxPositionExtractor[StateBatchT]
@@ -127,9 +132,8 @@ class JaxLagCost[StateBatchT](CostFunction[ControlInputBatch, StateBatchT, JaxCo
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
     ) -> JaxCosts[T, M]:
-        ref_points = self.reference.query(self.path_parameter_extractor(states))
+        ref_points, positions = self._reference_points_and_positions(states=states)
         heading = ref_points.heading_array
-        positions = self.position_extractor(states)
 
         return JaxSimpleCosts(
             lag_cost(
@@ -140,6 +144,30 @@ class JaxLagCost[StateBatchT](CostFunction[ControlInputBatch, StateBatchT, JaxCo
                 y_ref=ref_points.y_array,
                 weight=self.weight,
             )
+        )
+
+    def error[T: int, M: int](
+        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    ) -> JaxError[T, M]:
+        ref_points, positions = self._reference_points_and_positions(states=states)
+        heading = ref_points.heading_array
+
+        return JaxError(
+            lag_error(
+                heading=heading,
+                x=positions.x,
+                y=positions.y,
+                x_ref=ref_points.x_array,
+                y_ref=ref_points.y_array,
+            )
+        )
+
+    def _reference_points_and_positions[T: int, M: int](
+        self, *, states: StateBatchT
+    ) -> tuple[JaxReferencePoints[T, M], JaxPositions[T, M]]:
+        return (
+            self.reference.query(self.path_parameter_extractor(states)),
+            self.position_extractor(states),
         )
 
 
@@ -270,6 +298,19 @@ def contour_cost(
 
 @jax.jit
 @jaxtyped
+def lag_error(
+    *,
+    heading: Float[JaxArray, "T M"],
+    x: Float[JaxArray, "T M"],
+    y: Float[JaxArray, "T M"],
+    x_ref: Float[JaxArray, "T M"],
+    y_ref: Float[JaxArray, "T M"],
+) -> Float[JaxArray, "T M"]:
+    return -jnp.cos(heading) * (x - x_ref) - jnp.sin(heading) * (y - y_ref)
+
+
+@jax.jit
+@jaxtyped
 def lag_cost(
     *,
     heading: Float[JaxArray, "T M"],
@@ -279,8 +320,7 @@ def lag_cost(
     y_ref: Float[JaxArray, "T M"],
     weight: Scalar,
 ) -> Float[JaxArray, "T M"]:
-    # TODO: Add test to make sure error has correct sign.
-    error = jnp.cos(heading) * (x - x_ref) + jnp.sin(heading) * (y - y_ref)
+    error = lag_error(heading=heading, x=x, y=y, x_ref=x_ref, y_ref=y_ref)
     return weight * error**2
 
 
