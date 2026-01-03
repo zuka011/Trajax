@@ -92,7 +92,7 @@ markers = [
     "visualize: Mark the test to produce visualization data using the given visualizer.",
     "benchmark: Performance benchmarks (deselected by default, use --benchmark-enable)",
 ]
-addopts = "--benchmark-skip -m 'not integration'"
+addopts = "-m 'not integration and not benchmark'"
 
 [tool.pyright]
 include = ["trajax", "tests/tasks", "tests/visualize", "tests/benchmarks"]

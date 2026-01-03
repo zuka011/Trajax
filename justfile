@@ -1,9 +1,9 @@
 # Run benchmarks and save to JSON
 bench:
-    uv run pytest --benchmark-only --benchmark-json=benchmark.json
+    uv run pytest -m benchmark --benchmark-json=benchmark.json
 
 bench-baseline:
-    uv run pytest --benchmark-only --benchmark-autosave
+    uv run pytest -m benchmark --benchmark-autosave
 
 # Generate report for benchmark results
 bench-report *args:
@@ -12,3 +12,7 @@ bench-report *args:
 # Run benchmarks then generate report
 bench-and-report *args: bench
     uv run python tests/benchmarks/report.py show benchmark.json {{ args }}
+
+# Run benchmarks with Codspeed integration
+bench-validate:
+  uv run pytest --codspeed -m benchmark

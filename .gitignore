@@ -12,6 +12,7 @@ wheels/
 .vscode
 .pytest_cache
 .ruff_cache
+.codspeed
 benchmark.json
 
 # Test visualizations

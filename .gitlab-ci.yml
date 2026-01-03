@@ -4,11 +4,29 @@ stages:
 
 include:
   - project: 'zurabm/ci-templates'
-    ref: v1.2.3
+    ref: v1.3.0
     file:
       - '/python/verify.yml'
       - '/python/publish.yml'
 
 variables:
   RUN_INTEGRATION_TESTS: "true"
+  RUN_BENCHMARKS: "true"
   PYPI_PROJECT_NAME: "" # TODO: Fill this in later.
+
+benchmark:
+  extends: .benchmark-base
+  script:
+    - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | bash
+    - source $HOME/.cargo/env
+    - bencher --version
+    - echo "BENCHER_API_TOKEN is set? ${BENCHER_API_TOKEN:+yes}"
+    - uv run pytest -m benchmark --benchmark-json=benchmark.json
+    - >-
+      bencher run
+      --project trajax
+      --token "$BENCHER_API_TOKEN"
+      --branch "$CI_COMMIT_REF_NAME"
+      --testbed gitlab-ci
+      --adapter python_pytest
+      --file benchmark.json
