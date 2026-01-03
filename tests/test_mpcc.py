@@ -16,6 +16,7 @@ from trajax import (
     Weights,
     Mppi,
     RiskCollector,
+    ControlCollector,
 )
 
 import numpy as np
@@ -92,7 +93,12 @@ class MpccPlannerConfiguration[
 
     @property
     def risk_collector(self) -> RiskCollector | None:
-        """Returns the risk collector used in the planner."""
+        """Returns the risk collector used by the planner."""
+        ...
+
+    @property
+    def control_collector(self) -> ControlCollector | None:
+        """Returns the control collector used by the planner."""
         ...
 
     @property
@@ -290,6 +296,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     current_state = configuration.initial_state
     nominal_input = configuration.nominal_input
     risk_collector = configuration.risk_collector
+    control_collector = configuration.control_collector
     L = configuration.wheelbase
 
     assert (obstacles := configuration.obstacles) is not None, (
@@ -301,7 +308,6 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
 
     states: list[StateT] = []
     obstacle_history: list[ObstacleStatesT] = []
-    weights: list[Weights] = []
     min_progress = reference.path_length * 0.7
     progress = 0.0
 
@@ -314,7 +320,6 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
 
         nominal_input = control.nominal
 
-        weights.append(control.debug.trajectory_weights)
         states.append(
             current_state := augmented_model.step(
                 input=control.optimal, state=current_state
@@ -349,7 +354,9 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             max_contouring_error=(max_contouring_error := 5.0),
             max_lag_error=(max_lag_error := 7.5),
             obstacles=obstacle_history,
-            weights=weights,
+            controls=(
+                control_collector.collected if control_collector is not None else ()
+            ),
             risks=risk_collector.collected if risk_collector is not None else (),
         )
     ).seed_is(configuration_name)

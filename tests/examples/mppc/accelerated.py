@@ -13,6 +13,7 @@ from trajax import (
     Trajectory,
     ObstacleMotionPredictor,
     RiskCollector,
+    ControlCollector,
     mppi,
     model,
     sampler,
@@ -130,6 +131,7 @@ class JaxMpccPlannerConfiguration:
     distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
     obstacles: ObstacleStateProvider | None = None
     risk_collector: RiskCollector | None = None
+    control_collector: ControlCollector | None = None
 
     @staticmethod
     def stack_states(states: Sequence[MpccState]) -> MpccStateBatch:
@@ -543,6 +545,8 @@ class configure:
             input_batch=types.jax.augmented.control_input_batch,
         )
 
+        planner = (control_collector := mppi.collector.controls.decorating(planner))
+
         return JaxMpccPlannerConfiguration(
             reference=reference,
             planner=planner,
@@ -553,4 +557,5 @@ class configure:
             distance=circles_distance,
             obstacles=obstacles,
             risk_collector=risk_collector,
+            control_collector=control_collector,
         )

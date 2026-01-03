@@ -23,6 +23,7 @@ from .states import (
 from .mppi import (
     NumPyMppi as NumPyMppi,
     JaxMppi as JaxMppi,
+    ControlCollector as ControlCollector,
 )
 from .models import (
     model as model,

@@ -1,7 +1,15 @@
 from typing import Sequence
 from dataclasses import dataclass
 
-from trajax import types, Trajectory, ObstacleStates, Weights, Risk
+from trajax import (
+    types,
+    Trajectory,
+    ObstacleStates,
+    ControlInputSequence,
+    Weights,
+    Control,
+    Risk,
+)
 
 import numpy as np
 from numtypes import Array, Dim1, Dim2
@@ -34,7 +42,7 @@ class MpccSimulationResult:
     max_contouring_error: float
     max_lag_error: float
     obstacles: Sequence[ObstacleStates] = ()
-    weights: Sequence[Weights] = ()
+    controls: Sequence[Control[ControlInputSequence, Weights]] = ()
     risks: Sequence[Risk] = ()
 
 
@@ -142,11 +150,13 @@ class MpccVisualizer:
         return plots
 
     def build_risk_plot(self, result: MpccSimulationResult) -> AdditionalPlot | None:
-        if len(result.risks) == 0 or len(result.weights) == 0:
+        if len(result.risks) == 0 or len(result.controls) == 0:
             return None
 
         risks = np.array([np.asarray(risk).sum(axis=0) for risk in result.risks])
-        weights = np.array([np.asarray(w) for w in result.weights])
+        weights = np.array(
+            [np.asarray(c.debug.trajectory_weights) for c in result.controls]
+        )
 
         # NOTE: avoid zero risks for log scale plotting
         risks = np.maximum(risks, 1e-10)

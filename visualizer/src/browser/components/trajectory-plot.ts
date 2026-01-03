@@ -17,21 +17,31 @@ export function createTrajectoryPlot(
     plotId = "trajectory-plot",
 ): void {
     let initialized = false;
+    const layout: Partial<Plotly.Layout> = {
+        title: { text: "Vehicle Trajectory" },
+        xaxis: { ...createAxisConfig("X Position (m)"), scaleanchor: "y" },
+        yaxis: createAxisConfig("Y Position (m)"),
+        showlegend: true,
+        dragmode: "pan",
+        hovermode: "closest",
+        margin: { t: 60, r: 20, b: 60, l: 60 },
+    };
 
     function render() {
         const t = state.currentTimestep;
         const traces = applyLegendState(buildTraces(data, theme, t), plotId);
 
         if (!initialized) {
-            Plotly.newPlot(container, traces, createInitialLayout(), {
+            Plotly.newPlot(container, traces, layout, {
                 scrollZoom: true,
                 responsive: true,
-                displayModeBar: true,
+                displayModeBar: "hover",
+                displaylogo: false,
             });
             attachLegendHandler(container, plotId, render);
             initialized = true;
         } else {
-            Plotly.react(container, traces, createUpdateLayout(container));
+            Plotly.react(container, traces, layout);
         }
     }
 
@@ -261,35 +271,5 @@ function createAxisConfig(title: string): Partial<Plotly.LayoutAxis> {
         showgrid: true,
         gridcolor: "#e0e0e0",
         zeroline: false,
-    };
-}
-
-function createInitialLayout(): Partial<Plotly.Layout> {
-    return {
-        title: { text: "Vehicle Trajectory" },
-        xaxis: { ...createAxisConfig("X Position (m)"), scaleanchor: "y" },
-        yaxis: createAxisConfig("Y Position (m)"),
-        showlegend: true,
-        legend: { orientation: "h", y: -0.15 },
-        dragmode: "pan",
-        hovermode: "closest",
-        margin: { t: 40, r: 20, b: 60, l: 60 },
-    };
-}
-
-function createUpdateLayout(container: HTMLElement): Partial<Plotly.Layout> {
-    const plotDiv = container as Plotly.PlotlyHTMLElement;
-    const currentLayout = plotDiv.layout || {};
-
-    return {
-        dragmode: currentLayout.dragmode,
-        xaxis: {
-            ...currentLayout.xaxis,
-            range: currentLayout.xaxis?.range as [Plotly.Datum, Plotly.Datum] | undefined,
-        },
-        yaxis: {
-            ...currentLayout.yaxis,
-            range: currentLayout.yaxis?.range as [Plotly.Datum, Plotly.Datum] | undefined,
-        },
     };
 }

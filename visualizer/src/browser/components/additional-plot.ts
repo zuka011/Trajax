@@ -128,13 +128,12 @@ function computeBandWidth(band: PlotBand): number {
     return Math.max(...band.upper) - Math.min(...band.lower);
 }
 
-function buildBandTraces(plot: AdditionalPlot, times: number[]): Plotly.Data[] {
+function buildBandTraces(plot: AdditionalPlot, times: number[], traces: Plotly.Data[]): void {
     if (!plot.bands || plot.bands.length === 0) {
-        return [];
+        return;
     }
 
     const sortedBands = [...plot.bands].sort((a, b) => computeBandWidth(b) - computeBandWidth(a));
-    const traces: Plotly.Data[] = [];
 
     for (const band of sortedBands) {
         const color = band.color ?? DEFAULT_BAND_COLOR;
@@ -164,9 +163,80 @@ function buildBandTraces(plot: AdditionalPlot, times: number[]): Plotly.Data[] {
             showlegend: !!band.label,
         });
     }
-
-    return traces;
 }
+
+function buildBoundsTraces(
+    plot: AdditionalPlot,
+    times: number[],
+    timestepCount: number,
+    traces: Plotly.Data[],
+): void {
+    const firstSeries = plot.series[0];
+    const color = getSeriesColor(firstSeries, 0);
+    const legendGroup = firstSeries.label;
+
+    if (plot.upperBound) {
+        traces.push({
+            x: times,
+            y: getBoundValues(plot.upperBound, timestepCount),
+            mode: "lines",
+            line: { color, dash: "dash", width: 1 },
+            name: plot.upperBound.label ?? "Upper Bound",
+            showlegend: !!plot.upperBound.label,
+            legendgroup: legendGroup,
+        });
+    }
+
+    if (plot.lowerBound) {
+        traces.push({
+            x: times,
+            y: getBoundValues(plot.lowerBound, timestepCount),
+            mode: "lines",
+            line: { color, dash: "dash", width: 1 },
+            name: plot.lowerBound.label ?? "Lower Bound",
+            showlegend: !!plot.lowerBound.label,
+            legendgroup: legendGroup,
+        });
+    }
+}
+
+function buildSeriesTraces(
+    plot: AdditionalPlot,
+    times: number[],
+    {
+        seriesIndex,
+        seriesCount,
+        markerTime,
+        currentTimestep,
+    }: { seriesIndex: number; seriesCount: number; markerTime: number; currentTimestep: number },
+    traces: Plotly.Data[],
+): number {
+    plot.series.forEach((series, index) => {
+        const color = getSeriesColor(series, seriesIndex + index);
+
+        traces.push({
+            x: times,
+            y: series.values,
+            mode: "lines",
+            line: { color, width: 2 },
+            name: series.label,
+            showlegend: seriesCount > 1,
+        });
+
+        traces.push({
+            x: [markerTime],
+            y: [series.values[currentTimestep]],
+            mode: "markers",
+            marker: { color, size: 10 },
+            showlegend: false,
+            legendgroup: series.label,
+            name: `Current ${series.label}`,
+        });
+    });
+
+    return seriesIndex + plot.series.length;
+}
+
 function buildTraces(
     group: PlotGroup,
     times: number[],
@@ -177,70 +247,18 @@ function buildTraces(
     const allSeries = group.plots.flatMap((plot) => plot.series);
     const markerTime = times[currentTimestep];
 
-    for (const plot of group.plots) {
-        traces.push(...buildBandTraces(plot, times));
-    }
-
     let seriesIndex = 0;
 
     for (const plot of group.plots) {
-        const firstSeriesColor = getSeriesColor(plot.series[0], seriesIndex);
+        buildBandTraces(plot, times, traces);
+        buildBoundsTraces(plot, times, timestepCount, traces);
 
-        if (plot.upperBound) {
-            traces.push({
-                x: times,
-                y: getBoundValues(plot.upperBound, timestepCount),
-                mode: "lines",
-                line: { color: firstSeriesColor, dash: "dash", width: 1 },
-                name: plot.upperBound.label ?? "Upper Bound",
-                showlegend: !!plot.upperBound.label,
-            });
-        }
-
-        if (plot.lowerBound) {
-            traces.push({
-                x: times,
-                y: getBoundValues(plot.lowerBound, timestepCount),
-                mode: "lines",
-                line: { color: firstSeriesColor, dash: "dash", width: 1 },
-                name: plot.lowerBound.label ?? "Lower Bound",
-                showlegend: !!plot.lowerBound.label,
-            });
-        }
-
-        for (const series of plot.series) {
-            const color = getSeriesColor(series, seriesIndex);
-
-            traces.push({
-                x: times,
-                y: series.values,
-                mode: "lines",
-                line: { color, width: 2 },
-                name: series.label,
-                showlegend: allSeries.length > 1,
-            });
-
-            seriesIndex++;
-        }
-    }
-
-    seriesIndex = 0;
-    for (const plot of group.plots) {
-        for (const series of plot.series) {
-            const color = getSeriesColor(series, seriesIndex);
-
-            traces.push({
-                x: [markerTime],
-                y: [series.values[currentTimestep]],
-                mode: "markers",
-                marker: { color, size: 10 },
-                showlegend: false,
-                legendgroup: series.label,
-                name: `Current ${series.label}`,
-            });
-
-            seriesIndex++;
-        }
+        seriesIndex = buildSeriesTraces(
+            plot,
+            times,
+            { seriesIndex, seriesCount: allSeries.length, markerTime, currentTimestep },
+            traces,
+        );
     }
 
     return traces;
@@ -268,7 +286,6 @@ export function createAdditionalPlot(
             title: { text: "Time (s)", font: { size: 10 } },
             showgrid: true,
             gridcolor: "#e0e0e0",
-            fixedrange: true,
             tickfont: { size: 9 },
         },
         yaxis: {
@@ -279,10 +296,9 @@ export function createAdditionalPlot(
             gridcolor: "#e0e0e0",
             zeroline: !isLogScale,
             zerolinecolor: "#0000006a",
-            fixedrange: true,
             tickfont: { size: 9 },
         },
-        margin: { t: 25, r: 10, b: 50, l: 50 },
+        margin: { t: 75, r: 10, b: 50, l: 50 },
         showlegend: allSeries.length > 1 || hasBands,
         legend: {
             x: 1,
@@ -304,8 +320,10 @@ export function createAdditionalPlot(
 
         if (!initialized) {
             Plotly.newPlot(container, traces, layout, {
+                scrollZoom: true,
                 responsive: true,
-                displayModeBar: false,
+                displayModeBar: "hover",
+                displaylogo: false,
             });
             attachLegendHandler(container, group.id, render);
             initialized = true;
