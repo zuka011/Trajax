@@ -12,6 +12,9 @@ class JaxBenchmarkRunner:
         """Creates a benchmark runner for JAX implementations."""
         return JaxBenchmarkRunner()
 
+    def __repr__(self) -> str:
+        return "JaxBenchmarkRunner"
+
     def warm_up(self, target: BenchmarkTarget) -> None:
         result = target()
         jax.block_until_ready(result)

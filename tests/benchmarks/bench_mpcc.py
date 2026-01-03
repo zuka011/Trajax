@@ -22,6 +22,9 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
 
     obstacles: SimulatingObstacleStateProvider | None = None
 
+    def __repr__(self) -> str:
+        return f"MpccConfiguration(planner={self.planner.__class__.__name__})"
+
 
 def accumulate_obstacle_states(
     configuration: MpccConfiguration, steps: int = 5
@@ -39,38 +42,34 @@ def accumulate_obstacle_states(
 
 
 @mark.parametrize(
-    ["id", "runner", "configuration"],
+    ["runner", "configuration"],
     [
-        *[
-            (
-                id,
-                NumPyBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                ),
-            )
-            for id, configuration in (("NumPy", mpcc.numpy.planner_from_augmented()),)
-        ],
-        *[
-            (
-                id,
-                JaxBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                ),
-            )
-            for id, configuration in (("JAX", mpcc.jax.planner_from_augmented()),)
-        ],
+        (
+            NumPyBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    np_configuration := mpcc.numpy.planner_from_augmented()
+                ).planner,
+                initial_state=np_configuration.initial_state,
+                nominal_input=np_configuration.nominal_input,
+            ),
+        ),
+        (
+            JaxBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    jax_configuration := mpcc.jax.planner_from_augmented()
+                ).planner,
+                initial_state=jax_configuration.initial_state,
+                nominal_input=jax_configuration.nominal_input,
+            ),
+        ),
     ],
+    ids=["NumPy", "JAX"],
 )
 @mark.benchmark(group="mpcc-single-step")
 def bench_mpcc_single_step(
     benchmark: BenchmarkFixture,
-    id: str,
     runner: BenchmarkRunner,
     configuration: MpccConfiguration,
 ) -> None:
@@ -90,56 +89,42 @@ def bench_mpcc_single_step(
 
 
 @mark.parametrize(
-    ["id", "runner", "configuration"],
+    ["runner", "configuration"],
     [
-        *[
-            (
-                id,
-                NumPyBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "NumPy",
-                    mpcc.numpy.planner_from_augmented(
+        (
+            NumPyBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    np_configuration := mpcc.numpy.planner_from_augmented(
                         reference=reference.numpy.small_circle,
                         obstacles=obstacles.numpy.static.loop,
-                    ),
-                ),
-            )
-        ],
-        *[
-            (
-                id,
-                JaxBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "JAX",
-                    mpcc.jax.planner_from_augmented(
+                    )
+                ).planner,
+                initial_state=np_configuration.initial_state,
+                nominal_input=np_configuration.nominal_input,
+                obstacles=np_configuration.obstacles,
+            ),
+        ),
+        (
+            JaxBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    jax_configuration := mpcc.jax.planner_from_augmented(
                         reference=reference.jax.small_circle,
                         obstacles=obstacles.jax.static.loop,
-                    ),
-                ),
-            )
-        ],
+                    )
+                ).planner,
+                initial_state=jax_configuration.initial_state,
+                nominal_input=jax_configuration.nominal_input,
+                obstacles=jax_configuration.obstacles,
+            ),
+        ),
     ],
+    ids=["NumPy", "JAX"],
 )
 @mark.benchmark(group="mpcc-static-obstacles-single-step")
 def bench_mpcc_static_obstacles_single_step(
     benchmark: BenchmarkFixture,
-    id: str,
     runner: BenchmarkRunner,
     configuration: MpccConfiguration,
 ) -> None:
@@ -161,56 +146,42 @@ def bench_mpcc_static_obstacles_single_step(
 
 
 @mark.parametrize(
-    ["id", "runner", "configuration"],
+    ["runner", "configuration"],
     [
-        *[
-            (
-                id,
-                NumPyBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "NumPy",
-                    mpcc.numpy.planner_from_augmented(
+        (
+            NumPyBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    np_configuration := mpcc.numpy.planner_from_augmented(
                         reference=reference.numpy.slalom,
                         obstacles=obstacles.numpy.dynamic.slalom,
-                    ),
-                ),
-            )
-        ],
-        *[
-            (
-                id,
-                JaxBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "JAX",
-                    mpcc.jax.planner_from_augmented(
+                    )
+                ).planner,
+                initial_state=np_configuration.initial_state,
+                nominal_input=np_configuration.nominal_input,
+                obstacles=np_configuration.obstacles,
+            ),
+        ),
+        (
+            JaxBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    jax_configuration := mpcc.jax.planner_from_augmented(
                         reference=reference.jax.slalom,
                         obstacles=obstacles.jax.dynamic.slalom,
-                    ),
-                ),
-            )
-        ],
+                    )
+                ).planner,
+                initial_state=jax_configuration.initial_state,
+                nominal_input=jax_configuration.nominal_input,
+                obstacles=jax_configuration.obstacles,
+            ),
+        ),
     ],
+    ids=["NumPy", "JAX"],
 )
 @mark.benchmark(group="mpcc-dynamic-obstacles-single-step")
 def bench_mpcc_dynamic_obstacles_single_step(
     benchmark: BenchmarkFixture,
-    id: str,
     runner: BenchmarkRunner,
     configuration: MpccConfiguration,
 ) -> None:
@@ -232,58 +203,44 @@ def bench_mpcc_dynamic_obstacles_single_step(
 
 
 @mark.parametrize(
-    ["id", "runner", "configuration"],
+    ["runner", "configuration"],
     [
-        *[
-            (
-                id,
-                NumPyBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "NumPy",
-                    mpcc.numpy.planner_from_augmented(
+        (
+            NumPyBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    np_configuration := mpcc.numpy.planner_from_augmented(
                         reference=reference.numpy.slalom,
                         obstacles=obstacles.numpy.dynamic.slalom,
                         use_covariance_propagation=True,
-                    ),
-                ),
-            )
-        ],
-        *[
-            (
-                id,
-                JaxBenchmarkRunner.create(),
-                MpccConfiguration(
-                    planner=configuration.planner,
-                    initial_state=configuration.initial_state,
-                    nominal_input=configuration.nominal_input,
-                    obstacles=configuration.obstacles,
-                ),
-            )
-            for id, configuration in (
-                (
-                    "JAX",
-                    mpcc.jax.planner_from_augmented(
+                    )
+                ).planner,
+                initial_state=np_configuration.initial_state,
+                nominal_input=np_configuration.nominal_input,
+                obstacles=np_configuration.obstacles,
+            ),
+        ),
+        (
+            JaxBenchmarkRunner.create(),
+            MpccConfiguration(
+                planner=(
+                    jax_configuration := mpcc.jax.planner_from_augmented(
                         reference=reference.jax.slalom,
                         obstacles=obstacles.jax.dynamic.slalom,
                         use_covariance_propagation=True,
-                    ),
-                ),
-            )
-        ],
+                    )
+                ).planner,
+                initial_state=jax_configuration.initial_state,
+                nominal_input=jax_configuration.nominal_input,
+                obstacles=jax_configuration.obstacles,
+            ),
+        ),
     ],
+    ids=["NumPy", "JAX"],
 )
 @mark.benchmark(group="mpcc-dynamic-uncertain-obstacles-single-step")
 def bench_mpcc_dynamic_uncertain_obstacles_single_step(
     benchmark: BenchmarkFixture,
-    id: str,
     runner: BenchmarkRunner,
     configuration: MpccConfiguration,
 ) -> None:

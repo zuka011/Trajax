@@ -10,6 +10,9 @@ class NumPyBenchmarkRunner:
         """Creates a benchmark runner for NumPy implementations."""
         return NumPyBenchmarkRunner()
 
+    def __repr__(self) -> str:
+        return "NumPyBenchmarkRunner"
+
     def warm_up(self, target: BenchmarkTarget) -> None:
         target()
 
