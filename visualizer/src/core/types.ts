@@ -56,6 +56,10 @@ export interface SimulationData {
     obstacleForecastY?: number[][][];
     obstacleForecastHeading?: number[][][];
     obstacleForecastCovariance?: number[][][][][];
+    optimalTrajectoryX?: number[][];
+    optimalTrajectoryY?: number[][];
+    nominalTrajectoryX?: number[][];
+    nominalTrajectoryY?: number[][];
     additionalPlots?: AdditionalPlot[];
 }
 

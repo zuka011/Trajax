@@ -2,7 +2,7 @@ import Plotly from "plotly.js-dist-min";
 import { defaults, type Theme } from "../../core/defaults.js";
 import type { ProcessedSimulationData } from "../../core/types.js";
 import { covarianceToEllipse, radiansToDegrees } from "../../utils/math.js";
-import { applyLegendState, attachLegendHandler } from "../legend-state.js";
+import { withoutAutorange } from "../../utils/plot.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 
@@ -14,7 +14,6 @@ export function createTrajectoryPlot(
     state: VisualizationState,
     theme: Theme,
     updateManager: UpdateManager,
-    plotId = "trajectory-plot",
 ): void {
     let initialized = false;
     const layout: Partial<Plotly.Layout> = {
@@ -24,12 +23,14 @@ export function createTrajectoryPlot(
         showlegend: true,
         dragmode: "pan",
         hovermode: "closest",
+        uirevision: "constant",
         margin: { t: 60, r: 20, b: 60, l: 60 },
     };
+    const reactLayout = withoutAutorange(layout);
 
     function render() {
         const t = state.currentTimestep;
-        const traces = applyLegendState(buildTraces(data, theme, t), plotId);
+        const traces = buildTraces(data, theme, t);
 
         if (!initialized) {
             Plotly.newPlot(container, traces, layout, {
@@ -38,10 +39,9 @@ export function createTrajectoryPlot(
                 displayModeBar: "hover",
                 displaylogo: false,
             });
-            attachLegendHandler(container, plotId, render);
             initialized = true;
         } else {
-            Plotly.react(container, traces, layout);
+            Plotly.react(container, traces, reactLayout);
         }
     }
 
@@ -58,6 +58,14 @@ function buildTraces(data: ProcessedSimulationData, theme: Theme, t: number): Tr
 
     if (data.ghostX?.[t]) {
         traces.push(createGhostTrace(data, theme, t));
+    }
+
+    if (data.optimalTrajectoryX?.[t]) {
+        traces.push(createOptimalTrajectoryTrace(data, t));
+    }
+
+    if (data.nominalTrajectoryX?.[t]) {
+        traces.push(createNominalTrajectoryTrace(data, t));
     }
 
     if (data.obstaclePositionsX?.[t]) {
@@ -126,6 +134,32 @@ function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number
         marker: { color: theme.colors.secondary, size: 12, opacity: 0.5 },
         name: "Ghost",
         legendgroup: "ghost",
+    };
+}
+
+function createOptimalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
+    return {
+        x: data.optimalTrajectoryX![t],
+        y: data.optimalTrajectoryY![t],
+        mode: "lines+markers",
+        line: { color: "#e63946", width: 2 },
+        marker: { color: "#e63946", size: 5, symbol: "circle" },
+        opacity: 0.8,
+        name: "Optimal",
+        legendgroup: "optimal",
+    };
+}
+
+function createNominalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
+    return {
+        x: data.nominalTrajectoryX![t],
+        y: data.nominalTrajectoryY![t],
+        mode: "lines+markers",
+        line: { color: "#2a9d8f", width: 2 },
+        marker: { color: "#2a9d8f", size: 5, symbol: "circle" },
+        opacity: 0.8,
+        name: "Nominal",
+        legendgroup: "nominal",
     };
 }
 

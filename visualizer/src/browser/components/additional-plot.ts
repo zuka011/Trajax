@@ -6,7 +6,7 @@ import type {
     PlotSeries,
     ProcessedSimulationData,
 } from "../../core/types.js";
-import { applyLegendState, attachLegendHandler } from ".././legend-state.js";
+import { withoutAutorange } from "../../utils/plot.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 
@@ -221,6 +221,7 @@ function buildSeriesTraces(
             line: { color, width: 2 },
             name: series.label,
             showlegend: seriesCount > 1,
+            legendgroup: series.label,
         });
 
         traces.push({
@@ -309,14 +310,13 @@ export function createAdditionalPlot(
             bgcolor: "rgba(255,255,255,0.8)",
         },
         hovermode: "closest",
+        uirevision: "constant",
         autosize: true,
     };
+    const reactLayout = withoutAutorange(layout);
 
     function render(): void {
-        const traces = applyLegendState(
-            buildTraces(group, times, data.timestepCount, state.currentTimestep),
-            group.id,
-        );
+        const traces = buildTraces(group, times, data.timestepCount, state.currentTimestep);
 
         if (!initialized) {
             Plotly.newPlot(container, traces, layout, {
@@ -325,10 +325,9 @@ export function createAdditionalPlot(
                 displayModeBar: "hover",
                 displaylogo: false,
             });
-            attachLegendHandler(container, group.id, render);
             initialized = true;
         } else {
-            Plotly.react(container, traces, layout);
+            Plotly.react(container, traces, reactLayout);
         }
     }
 

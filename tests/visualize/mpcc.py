@@ -76,6 +76,12 @@ class MpccVisualizer:
         )
         path_parameters = np.array([state.virtual.array[0] for state in result.states])
         ghost_positions = self.query_ghost_positions(result.reference, path_parameters)
+        optimal_x, optimal_y = self.planned_trajectories_from(
+            result.optimal_trajectories
+        )
+        nominal_x, nominal_y = self.planned_trajectories_from(
+            result.nominal_trajectories
+        )
         obstacle_x, obstacle_y, obstacle_heading = self.obstacle_positions_from(
             result.obstacles
         )
@@ -94,6 +100,10 @@ class MpccVisualizer:
             path_length=result.reference.path_length,
             ghost_x=ghost_positions.x,
             ghost_y=ghost_positions.y,
+            optimal_trajectory_x=optimal_x,
+            optimal_trajectory_y=optimal_y,
+            nominal_trajectory_x=nominal_x,
+            nominal_trajectory_y=nominal_y,
             wheelbase=result.wheelbase,
             vehicle_type="car",
             obstacle_positions_x=obstacle_x,
@@ -261,3 +271,12 @@ class MpccVisualizer:
                 for cov in covariances
             ]
         )
+
+    def planned_trajectories_from(
+        self, trajectories: Sequence[StateSequence]
+    ) -> tuple[Array[Dim2] | None, Array[Dim2] | None]:
+        if len(trajectories) == 0:
+            return None, None
+
+        # NOTE: we assume the first two dimensions are x and y
+        return tuple(np.asarray(trajectories)[..., :2].transpose(2, 0, 1))

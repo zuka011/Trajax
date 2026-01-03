@@ -12,7 +12,3 @@ bench-report *args:
 # Run benchmarks then generate report
 bench-and-report *args: bench
     uv run python tests/benchmarks/report.py show benchmark.json {{ args }}
-
-# Run benchmarks with Codspeed integration
-bench-validate:
-  uv run pytest --codspeed -m benchmark

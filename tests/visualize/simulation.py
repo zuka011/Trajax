@@ -32,6 +32,7 @@ type ObstacleForecast[T: int = int, H: int = int, K: int = int] = Array[Dims[T, 
 type ObstacleForecastCovariance[T: int = int, H: int = int, K: int = int] = Array[
     Dims[T, H, D[2], D[2], K]
 ]
+type PlannedTrajectory[T: int = int, H: int = int] = Array[Dims[T, H]]
 
 
 class ReferenceTrajectory(msgspec.Struct):
@@ -107,6 +108,10 @@ class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
     vehicle_width: float | None = None
     ghost_x: Array[Dim1] | None = None
     ghost_y: Array[Dim1] | None = None
+    optimal_trajectory_x: PlannedTrajectory | None = None
+    optimal_trajectory_y: PlannedTrajectory | None = None
+    nominal_trajectory_x: PlannedTrajectory | None = None
+    nominal_trajectory_y: PlannedTrajectory | None = None
     vehicle_type: VehicleType | None = None
     obstacle_positions_x: ObstacleCoordinate | None = None
     obstacle_positions_y: ObstacleCoordinate | None = None
@@ -129,6 +134,10 @@ class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
         time_step: float | None = None,
         ghost_x: Array[Dim1] | None = None,
         ghost_y: Array[Dim1] | None = None,
+        optimal_trajectory_x: PlannedTrajectory | None = None,
+        optimal_trajectory_y: PlannedTrajectory | None = None,
+        nominal_trajectory_x: PlannedTrajectory | None = None,
+        nominal_trajectory_y: PlannedTrajectory | None = None,
         vehicle_type: VehicleType | None = None,
         wheelbase: float | None = None,
         vehicle_width: float | None = None,
@@ -151,6 +160,10 @@ class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
             time_step=time_step,
             ghost_x=ghost_x,
             ghost_y=ghost_y,
+            optimal_trajectory_x=optimal_trajectory_x,
+            optimal_trajectory_y=optimal_trajectory_y,
+            nominal_trajectory_x=nominal_trajectory_x,
+            nominal_trajectory_y=nominal_trajectory_y,
             vehicle_type=vehicle_type,
             wheelbase=wheelbase,
             vehicle_width=vehicle_width,
@@ -183,6 +196,10 @@ class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
             (self.path_parameters, "path_parameters"),
             (self.ghost_x, "ghost_x"),
             (self.ghost_y, "ghost_y"),
+            (self.optimal_trajectory_x, "optimal_trajectory_x"),
+            (self.optimal_trajectory_y, "optimal_trajectory_y"),
+            (self.nominal_trajectory_x, "nominal_trajectory_x"),
+            (self.nominal_trajectory_y, "nominal_trajectory_y"),
             (self.obstacle_positions_x, "obstacle_positions_x"),
             (self.obstacle_positions_y, "obstacle_positions_y"),
             (self.obstacle_headings, "obstacle_headings"),
