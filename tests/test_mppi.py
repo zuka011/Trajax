@@ -178,7 +178,7 @@ T = clear_type
         (
             mppi := create_mppi.numpy.base(
                 planning_interval=3,
-                update_function=update.numpy.no_update(),  # type: ignore
+                update_function=update.numpy.none(),  # type: ignore
                 padding_function=padding.numpy.zero(),
                 model=stubs.DynamicalModel.returns(
                     rollouts := data.numpy.state_batch(
@@ -231,7 +231,7 @@ T = clear_type
         (
             mppi := create_mppi.jax.base(
                 planning_interval=4,
-                update_function=update.jax.no_update(),  # type: ignore
+                update_function=update.jax.none(),  # type: ignore
                 padding_function=padding.jax.zero(),
                 model=stubs.DynamicalModel.returns(
                     rollouts := data.jax.state_batch(
@@ -943,7 +943,7 @@ sampled_inputs = clear_type
         (
             mppi := create_mppi.numpy.base(
                 planning_interval=(padding_size := 2),
-                update_function=update.numpy.no_update(),  # type: ignore
+                update_function=update.numpy.none(),  # type: ignore
                 padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.numpy.control_input_sequence(
                         array(
@@ -988,7 +988,7 @@ sampled_inputs = clear_type
         (
             mppi := create_mppi.jax.base(
                 planning_interval=(padding_size := 3),
-                update_function=update.jax.no_update(),  # type: ignore
+                update_function=update.jax.none(),  # type: ignore
                 padding_function=stubs.PaddingFunction.returns(  # type: ignore
                     data.jax.control_input_sequence(
                         array(

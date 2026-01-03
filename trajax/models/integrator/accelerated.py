@@ -157,12 +157,12 @@ class JaxIntegratorModel(
 
     def step[T: int, D_u: int, D_x: int](
         self,
-        input: JaxIntegratorControlInputSequence[T, D_u],
+        inputs: JaxIntegratorControlInputSequence[T, D_u],
         state: JaxIntegratorState[D_x],
     ) -> SimpleState[D_x]:
         return SimpleState(
             step(
-                control=input.array,
+                control=inputs.array,
                 state=state.array,
                 time_step=self.time_step,
                 state_limits=self.state_limits,
@@ -172,11 +172,11 @@ class JaxIntegratorModel(
 
     def forward[T: int, D_x: int](
         self,
-        input: JaxIntegratorControlInputSequence[T, D_x],
+        inputs: JaxIntegratorControlInputSequence[T, D_x],
         state: JaxIntegratorState[D_x],
     ) -> SimpleStateSequence[T, D_x]:
         return self.simulate(
-            inputs=SimpleControlInputBatch.of(input), initial_state=state
+            inputs=SimpleControlInputBatch.of(inputs), initial_state=state
         ).rollout(0)
 
 

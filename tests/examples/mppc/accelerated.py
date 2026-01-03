@@ -15,6 +15,7 @@ from trajax import (
     RiskCollector,
     ControlCollector,
     mppi,
+    filters,
     model,
     sampler,
     costs,
@@ -412,6 +413,7 @@ class configure:
                 ),
                 batch=types.jax.augmented.control_input_batch,
             ),
+            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
         )
 
         return JaxMpccPlannerConfiguration(
@@ -545,6 +547,7 @@ class configure:
             state_sequence=types.jax.augmented.state_sequence,
             state_batch=types.jax.augmented.state_batch,
             input_batch=types.jax.augmented.control_input_batch,
+            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))

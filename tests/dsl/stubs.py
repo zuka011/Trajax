@@ -182,10 +182,10 @@ class DynamicalModel[
         )
         return self.rollouts
 
-    def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
+    def step(self, inputs: ControlInputSequenceT, state: StateT) -> StateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")
 
-    def forward(self, input: ControlInputSequenceT, state: StateT) -> StateSequenceT:
+    def forward(self, inputs: ControlInputSequenceT, state: StateT) -> StateSequenceT:
         raise NotImplementedError(
             "Forward method is not implemented in the stub model."
         )

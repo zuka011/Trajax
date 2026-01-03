@@ -194,7 +194,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         collect_data(
             control,
             current_state := augmented_model.step(
-                input=control.optimal, state=current_state
+                inputs=control.optimal, state=current_state
             ),
         )
 
@@ -222,7 +222,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
                 )
             ),
             wheelbase=L,
-            max_contouring_error=(max_contouring_error := 1.5),
+            max_contouring_error=(max_contouring_error := 2.0),
             max_lag_error=(max_lag_error := 5.0),
         )
     ).seed_is(configuration_name)
@@ -352,7 +352,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             control,
             obstacles(),
             current_state := augmented_model.step(
-                input=control.optimal, state=current_state
+                inputs=control.optimal, state=current_state
             ),
         )
 

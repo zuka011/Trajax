@@ -15,6 +15,7 @@ from trajax import (
     RiskCollector,
     ControlCollector,
     mppi,
+    filters,
     model,
     sampler,
     costs,
@@ -390,6 +391,7 @@ class configure:
                 ),
                 batch=types.numpy.augmented.control_input_batch,
             ),
+            filter_function=filters.numpy.savgol(window_length=11, polynomial_order=3),
         )
 
         return NumPyMpccPlannerConfiguration(
@@ -525,6 +527,7 @@ class configure:
             state_sequence=types.numpy.augmented.state_sequence,
             state_batch=types.numpy.augmented.state_batch,
             input_batch=types.numpy.augmented.control_input_batch,
+            filter_function=filters.numpy.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))

@@ -77,7 +77,7 @@ class BenchmarkData:
     benchmarks: list[Benchmark] = field(default_factory=list)
 
 
-class format:
+class formats:
     @staticmethod
     def time(seconds: float) -> str:
         if seconds < 1e-6:
@@ -192,13 +192,13 @@ class report:
             stats = bench.stats
             table.add_row(
                 extract.implementation(bench),
-                format.time(stats.min),
-                format.time(stats.mean),
-                format.time(stats.max),
-                format.time(stats.stddev),
+                formats.time(stats.min),
+                formats.time(stats.mean),
+                formats.time(stats.max),
+                formats.time(stats.stddev),
                 str(stats.rounds),
-                format.operations(stats.ops),
-                format.comparison(stats.mean, baseline),
+                formats.operations(stats.ops),
+                formats.comparison(stats.mean, baseline),
             )
 
         console.print(table)
@@ -224,7 +224,7 @@ class report:
 
         for implementation, average in sorted_implementations:
             text.append(f"{implementation}: ", style="bold")
-            text.append(format.time(average))
+            text.append(formats.time(average))
             if implementation == fastest:
                 text.append(" (fastest)", style="green")
             else:
@@ -263,7 +263,7 @@ class report:
                     ),
                     None,
                 )
-                row.append(format.time(match.stats.mean) if match else "-")
+                row.append(formats.time(match.stats.mean) if match else "-")
             table.add_row(*row)
 
         console.print(table)

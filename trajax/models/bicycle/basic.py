@@ -439,10 +439,10 @@ class NumPyBicycleModel(
         )
 
     def step[T: int](
-        self, input: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
+        self, inputs: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
     ) -> NumPyBicycleState:
         state_as_rollouts = state.array.reshape(-1, 1)
-        first_input = input.array[0].reshape(-1, 1)
+        first_input = inputs.array[0].reshape(-1, 1)
 
         assert shape_of(
             state_as_rollouts, matches=(BICYCLE_D_X, 1), name="state reshaped for step"
@@ -466,9 +466,9 @@ class NumPyBicycleModel(
         )
 
     def forward[T: int](
-        self, input: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
+        self, inputs: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
     ) -> NumPyBicycleStateSequence[T]:
-        return self.simulate(NumPyBicycleControlInputBatch.of(input), state).rollout(0)
+        return self.simulate(NumPyBicycleControlInputBatch.of(inputs), state).rollout(0)
 
 
 @dataclass(kw_only=True, frozen=True)

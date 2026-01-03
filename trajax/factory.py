@@ -8,6 +8,9 @@ from trajax.mppi import (
     ControlCollector,
     NoUpdate,
     UseOptimalControlUpdate,
+    NoFilter,
+    NumPySavGolFilter,
+    JaxSavGolFilter,
 )
 from trajax.states import AugmentedMppi, NumPyAugmentedMppi, JaxAugmentedMppi
 
@@ -29,11 +32,11 @@ class mppi:
 
 class update:
     class numpy:
-        no_update: Final = NoUpdate
+        none: Final = NoUpdate
         use_optimal_control: Final = UseOptimalControlUpdate
 
     class jax:
-        no_update: Final = NoUpdate
+        none: Final = NoUpdate
         use_optimal_control: Final = UseOptimalControlUpdate
 
 
@@ -43,3 +46,13 @@ class padding:
 
     class jax:
         zero: Final = JaxZeroPadding
+
+
+class filters:
+    class numpy:
+        none: Final = NoFilter
+        savgol: Final = NumPySavGolFilter.create
+
+    class jax:
+        none: Final = NoFilter
+        savgol: Final = JaxSavGolFilter.create

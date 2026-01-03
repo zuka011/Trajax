@@ -16,3 +16,5 @@ from .accelerated import (
 from .collect import (
     ControlCollector as ControlCollector,
 )
+from .savgol import NumPySavGolFilter as NumPySavGolFilter
+from .savgol import JaxSavGolFilter as JaxSavGolFilter

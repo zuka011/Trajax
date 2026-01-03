@@ -1,7 +1,7 @@
 [project]
 name = "trajax"
 dynamic = ["version"]
-description = "A library providing a performant NumPy/JAX implementations of an MPPI controller."
+description = "A library providing performant NumPy & JAX implementations of an MPPI planner, along with implementation of related algorithms/tools."
 authors = [{ name = "Zurab Mujirishvili", email = "zurab.mujirishvili@fau.de" }]
 readme = "README.md"
 requires-python = ">=3.13"
@@ -28,6 +28,7 @@ dependencies = [
     "jax>=0.8.2",
     "jaxtyping>=0.3.4",
     "riskit>=0.2.2",
+    "scipy>=1.16.3",
 ]
 
 [project.optional-dependencies]

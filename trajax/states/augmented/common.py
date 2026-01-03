@@ -104,24 +104,24 @@ class AugmentedModel[
 
     def step(
         self,
-        input: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
+        inputs: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         state: AStateT,
     ) -> AStateT:
         physical, virtual = (
-            self.physical.step(input=input.physical, state=state.physical),
-            self.virtual.step(input=input.virtual, state=state.virtual),
+            self.physical.step(inputs=inputs.physical, state=state.physical),
+            self.virtual.step(inputs=inputs.virtual, state=state.virtual),
         )
 
         return self.state.of(physical=physical, virtual=virtual)
 
     def forward(
         self,
-        input: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
+        inputs: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         state: AStateT,
     ) -> AStateSequenceT:
         physical, virtual = (
-            self.physical.forward(input=input.physical, state=state.physical),
-            self.virtual.forward(input=input.virtual, state=state.virtual),
+            self.physical.forward(inputs=inputs.physical, state=state.physical),
+            self.virtual.forward(inputs=inputs.virtual, state=state.virtual),
         )
 
         return self.sequence.of(physical=physical, virtual=virtual)

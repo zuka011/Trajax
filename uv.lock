@@ -738,6 +738,7 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "numtypes" },
     { name = "riskit" },
+    { name = "scipy" },
 ]
 
 [package.optional-dependencies]
@@ -777,6 +778,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = ">=0.3.4" },
     { name = "numtypes", specifier = ">=0.5.1" },
     { name = "riskit", specifier = ">=0.2.2" },
+    { name = "scipy", specifier = ">=1.16.3" },
 ]
 provides-extras = ["type-checking"]
 

@@ -73,4 +73,9 @@ from .types import (
     ObstacleMotionPredictor as ObstacleMotionPredictor,
 )
 from .namespace import types as types, classes as classes
-from .factory import mppi as mppi, update as update, padding as padding
+from .factory import (
+    mppi as mppi,
+    update as update,
+    padding as padding,
+    filters as filters,
+)

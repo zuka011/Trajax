@@ -112,10 +112,10 @@ class NumPyIntegratorModel(
 
     def step[T: int, D_x: int](
         self,
-        input: NumPyIntegratorControlInputSequence[T, D_x],
+        inputs: NumPyIntegratorControlInputSequence[T, D_x],
         state: NumPyIntegratorState[D_x],
     ) -> SimpleState[D_x]:
-        clipped_control = np.clip(input.array[0], *self.velocity_limits)
+        clipped_control = np.clip(inputs.array[0], *self.velocity_limits)
         new_state = np.clip(
             state.array + clipped_control * self.time_step, *self.state_limits
         )
@@ -124,11 +124,11 @@ class NumPyIntegratorModel(
 
     def forward[T: int, D_x: int](
         self,
-        input: NumPyIntegratorControlInputSequence[T, D_x],
+        inputs: NumPyIntegratorControlInputSequence[T, D_x],
         state: NumPyIntegratorState[D_x],
     ) -> SimpleStateSequence[T, D_x]:
         return self.simulate(
-            inputs=SimpleControlInputBatch.of(input), initial_state=state
+            inputs=SimpleControlInputBatch.of(inputs), initial_state=state
         ).rollout(0)
 
     @property

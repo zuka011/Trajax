@@ -491,12 +491,12 @@ class JaxBicycleModel(
         )
 
     def step[T: int](
-        self, input: JaxBicycleControlInputSequence[T], state: JaxBicycleState
+        self, inputs: JaxBicycleControlInputSequence[T], state: JaxBicycleState
     ) -> JaxBicycleState:
         return JaxBicycleState(
             step(
                 state.array.reshape(-1, 1),
-                input.array[0].reshape(-1, 1),
+                inputs.array[0].reshape(-1, 1),
                 time_step_size=self.time_step_size,
                 wheelbase=self.wheelbase,
                 speed_limits=self.speed_limits,
@@ -506,9 +506,9 @@ class JaxBicycleModel(
         )
 
     def forward[T: int](
-        self, input: JaxBicycleControlInputSequence[T], state: JaxBicycleState
+        self, inputs: JaxBicycleControlInputSequence[T], state: JaxBicycleState
     ) -> JaxBicycleStateSequence[T]:
-        return self.simulate(JaxBicycleControlInputBatch.of(input), state).rollout(0)
+        return self.simulate(JaxBicycleControlInputBatch.of(inputs), state).rollout(0)
 
 
 @dataclass(kw_only=True, frozen=True)

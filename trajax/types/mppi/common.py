@@ -99,12 +99,12 @@ class DynamicalModel[StateT, StateSequenceT, StateBatchT, InputSequenceT, InputB
         provided initial state."""
         ...
 
-    def step(self, input: InputSequenceT, state: StateT) -> StateT:
+    def step(self, inputs: InputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the dynamical model given the control input and current
         state."""
         ...
 
-    def forward(self, input: InputSequenceT, state: StateT) -> StateSequenceT:
+    def forward(self, inputs: InputSequenceT, state: StateT) -> StateSequenceT:
         """Simulates the dynamical model over the given control input sequence starting from the
         provided initial state."""
         ...
