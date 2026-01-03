@@ -153,7 +153,7 @@ class MpccVisualizer:
         if len(result.risks) == 0 or len(result.controls) == 0:
             return None
 
-        risks = np.array([np.asarray(risk).sum(axis=0) for risk in result.risks])
+        risks = np.array([np.asarray(risk) for risk in result.risks]).sum(axis=1)
         weights = np.array(
             [np.asarray(c.debug.trajectory_weights) for c in result.controls]
         )

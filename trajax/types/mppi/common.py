@@ -17,6 +17,22 @@ class State[D_x: int](Protocol):
         ...
 
 
+class StateSequence[T: int, D_x: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
+        """Returns the state sequence as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the state sequence."""
+        ...
+
+    @property
+    def dimension(self) -> D_x:
+        """State dimension."""
+        ...
+
+
 class StateBatch[T: int, D_x: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         """Returns the states as a NumPy array."""
@@ -75,7 +91,9 @@ class ControlInputBatch[T: int, D_u: int, M: int](Protocol):
         ...
 
 
-class DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT](Protocol):
+class DynamicalModel[StateT, StateSequenceT, StateBatchT, InputSequenceT, InputBatchT](
+    Protocol
+):
     def simulate(self, inputs: InputBatchT, initial_state: StateT) -> StateBatchT:
         """Simulates the dynamical model over the given control inputs starting from the
         provided initial state."""
@@ -84,6 +102,11 @@ class DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT](Protocol)
     def step(self, input: InputSequenceT, state: StateT) -> StateT:
         """Simulates a single time step of the dynamical model given the control input and current
         state."""
+        ...
+
+    def forward(self, input: InputSequenceT, state: StateT) -> StateSequenceT:
+        """Simulates the dynamical model over the given control input sequence starting from the
+        provided initial state."""
         ...
 
 

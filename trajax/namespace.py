@@ -2,18 +2,21 @@ from typing import Final, Any
 
 from trajax.types import (
     NumPyState,
+    NumPyStateSequence,
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
     NumPyCosts,
     NumPyCostFunction,
     JaxState,
+    JaxStateSequence,
     JaxStateBatch,
     JaxControlInputSequence,
     JaxControlInputBatch,
     JaxCosts,
     JaxCostFunction,
     State as State,
+    StateSequence as StateSequence,
     StateBatch as StateBatch,
     ControlInputSequence as ControlInputSequence,
     ControlInputBatch as ControlInputBatch,
@@ -24,6 +27,7 @@ from trajax.types import (
     BicycleD_x,
     BicycleD_u,
     BicycleState,
+    BicycleStateSequence,
     BicycleStateBatch,
     BicyclePositions,
     BicycleControlInputSequence,
@@ -63,6 +67,7 @@ from trajax.types import (
 )
 from trajax.models import (
     NumPyBicycleState,
+    NumPyBicycleStateSequence,
     NumPyBicycleStateBatch,
     NumPyBicyclePositions,
     NumPyBicycleControlInputSequence,
@@ -70,6 +75,7 @@ from trajax.models import (
     NumPyBicycleObstacleStateSequences,
     NumPyIntegratorObstacleStateSequences,
     JaxBicycleState,
+    JaxBicycleStateSequence,
     JaxBicycleStateBatch,
     JaxBicyclePositions,
     JaxBicycleControlInputSequence,
@@ -95,11 +101,13 @@ from trajax.obstacles import (
 )
 from trajax.states import (
     NumPySimpleState,
+    NumPySimpleStateSequence,
     NumPySimpleStateBatch,
     NumPySimpleControlInputSequence,
     NumPySimpleControlInputBatch,
     NumPySimpleCosts,
     JaxSimpleState,
+    JaxSimpleStateSequence,
     JaxSimpleStateBatch,
     JaxSimpleControlInputSequence,
     JaxSimpleControlInputBatch,
@@ -138,6 +146,7 @@ class types:
         type D_x = BicycleD_x
         type D_u = BicycleD_u
         type State = BicycleState
+        type StateSequence = BicycleStateSequence
         type StateBatch[T: int = Any, M: int = Any] = BicycleStateBatch[T, M]
         type Positions[T: int = Any, M: int = Any] = BicyclePositions[T, M]
         type ControlInputSequence[T: int = Any] = BicycleControlInputSequence[T]
@@ -161,6 +170,7 @@ class types:
 
     class numpy:
         type State[D_x: int = Any] = NumPyState[D_x]
+        type StateSequence[T: int = Any, D_x: int = Any] = NumPyStateSequence[T, D_x]
         type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = NumPyStateBatch[
             T, D_x, M
         ]
@@ -218,6 +228,9 @@ class types:
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
+            type StateSequence[T: int = Any, D_x: int = Any] = NumPySimpleStateSequence[
+                T, D_x
+            ]
             type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = (
                 NumPySimpleStateBatch[T, D_x, M]
             )
@@ -242,6 +255,7 @@ class types:
 
         class bicycle:
             type State = NumPyBicycleState
+            type StateSequence[T: int = Any] = NumPyBicycleStateSequence[T]
             type StateBatch[T: int = Any, M: int = Any] = NumPyBicycleStateBatch[T, M]
             type Positions[T: int = Any, M: int = Any] = NumPyBicyclePositions[T, M]
             type ControlInputSequence[T: int = Any] = NumPyBicycleControlInputSequence[
@@ -281,6 +295,7 @@ class types:
 
     class jax:
         type State[D_x: int = Any] = JaxState[D_x]
+        type StateSequence[T: int = Any, D_x: int = Any] = JaxStateSequence[T, D_x]
         type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = JaxStateBatch[
             T, D_x, M
         ]
@@ -336,6 +351,9 @@ class types:
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]
+            type StateSequence[T: int = Any, D_x: int = Any] = JaxSimpleStateSequence[
+                T, D_x
+            ]
             type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = (
                 JaxSimpleStateBatch[T, D_x, M]
             )
@@ -360,6 +378,7 @@ class types:
 
         class bicycle:
             type State = JaxBicycleState
+            type StateSequence[T: int = Any] = JaxBicycleStateSequence[T]
             type StateBatch[T: int = Any, M: int = Any] = JaxBicycleStateBatch[T, M]
             type Positions[T: int = Any, M: int = Any] = JaxBicyclePositions[T, M]
             type ControlInputSequence[T: int = Any] = JaxBicycleControlInputSequence[T]
@@ -397,6 +416,7 @@ class types:
 
 class classes:
     State: Final = State
+    StateSequence: Final = StateSequence
     StateBatch: Final = StateBatch
     ControlInputSequence: Final = ControlInputSequence
     ControlInputBatch: Final = ControlInputBatch
@@ -407,6 +427,7 @@ class classes:
 
     class bicycle:
         State: Final = BicycleState
+        StateSequence: Final = BicycleStateSequence
         StateBatch: Final = BicycleStateBatch
         Positions: Final = BicyclePositions
         ControlInputSequence: Final = BicycleControlInputSequence
@@ -420,6 +441,7 @@ class classes:
 
     class numpy:
         State: Final = NumPyState
+        StateSequence: Final = NumPyStateSequence
         StateBatch: Final = NumPyStateBatch
         ControlInputSequence: Final = NumPyControlInputSequence
         ControlInputBatch: Final = NumPyControlInputBatch
@@ -440,6 +462,7 @@ class classes:
 
         class simple:
             State: Final = NumPySimpleState
+            StateSequence: Final = NumPySimpleStateSequence
             StateBatch: Final = NumPySimpleStateBatch
             ControlInputSequence: Final = NumPySimpleControlInputSequence
             ControlInputBatch: Final = NumPySimpleControlInputBatch
@@ -450,6 +473,7 @@ class classes:
 
         class bicycle:
             State: Final = NumPyBicycleState
+            StateSequence: Final = NumPyBicycleStateSequence
             StateBatch: Final = NumPyBicycleStateBatch
             Positions: Final = NumPyBicyclePositions
             ControlInputSequence: Final = NumPyBicycleControlInputSequence
@@ -464,6 +488,7 @@ class classes:
 
     class jax:
         State: Final = JaxState
+        StateSequence: Final = JaxStateSequence
         StateBatch: Final = JaxStateBatch
         ControlInputSequence: Final = JaxControlInputSequence
         ControlInputBatch: Final = JaxControlInputBatch
@@ -484,6 +509,7 @@ class classes:
 
         class simple:
             State: Final = JaxSimpleState
+            StateSequence: Final = JaxSimpleStateSequence
             StateBatch: Final = JaxSimpleStateBatch
             ControlInputSequence: Final = JaxSimpleControlInputSequence
             ControlInputBatch: Final = JaxSimpleControlInputBatch
@@ -494,6 +520,7 @@ class classes:
 
         class bicycle:
             State: Final = JaxBicycleState
+            StateSequence: Final = JaxBicycleStateSequence
             StateBatch: Final = JaxBicycleStateBatch
             Positions: Final = JaxBicyclePositions
             ControlInputSequence: Final = JaxBicycleControlInputSequence

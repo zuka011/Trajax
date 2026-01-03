@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, Any
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -66,7 +66,7 @@ class JaxMppi[
 ](Mppi[StateT, ControlInputSequenceT, JaxWeights[int]]):
     planning_interval: int
     model: JaxDynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, Any, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ]
     cost_function: JaxCostFunction[ControlInputBatchT, StateBatchT, JaxCosts]
     sampler: JaxSampler[ControlInputSequenceT, ControlInputBatchT]
@@ -84,7 +84,7 @@ class JaxMppi[
     ](
         *,
         planning_interval: int = 1,
-        model: JaxDynamicalModel[S, SB, CIS, CIB],
+        model: JaxDynamicalModel[S, Any, SB, CIS, CIB],
         cost_function: JaxCostFunction[CIB, SB, JaxCosts],
         sampler: JaxSampler[CIS, CIB],
         update_function: JaxUpdateFunction[CIS] | None = None,

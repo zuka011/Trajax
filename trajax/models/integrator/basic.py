@@ -5,6 +5,7 @@ from trajax.types import (
     DynamicalModel,
     ObstacleModel,
     NumPyIntegratorState,
+    NumPyIntegratorStateSequence,
     NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch,
@@ -13,7 +14,9 @@ from trajax.types import (
 )
 from trajax.states import (
     NumPySimpleState as SimpleState,
+    NumPySimpleStateSequence as SimpleStateSequence,
     NumPySimpleStateBatch as SimpleStateBatch,
+    NumPySimpleControlInputBatch as SimpleControlInputBatch,
 )
 
 from numtypes import Array, Dims, shape_of
@@ -48,6 +51,7 @@ class NumPyIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
 class NumPyIntegratorModel(
     DynamicalModel[
         NumPyIntegratorState,
+        NumPyIntegratorStateSequence,
         NumPyIntegratorStateBatch,
         NumPyIntegratorControlInputSequence,
         NumPyIntegratorControlInputBatch,
@@ -118,25 +122,18 @@ class NumPyIntegratorModel(
 
         return SimpleState(new_state)
 
+    def forward[T: int, D_x: int](
+        self,
+        input: NumPyIntegratorControlInputSequence[T, D_x],
+        state: NumPyIntegratorState[D_x],
+    ) -> SimpleStateSequence[T, D_x]:
+        return self.simulate(
+            inputs=SimpleControlInputBatch.of(input), initial_state=state
+        ).rollout(0)
+
     @property
     def has_state_limits(self) -> bool:
         return self.state_limits != NO_LIMITS
-
-    @property
-    def min_state(self) -> float:
-        return self.state_limits[0]
-
-    @property
-    def max_state(self) -> float:
-        return self.state_limits[1]
-
-    @property
-    def min_velocity(self) -> float:
-        return self.velocity_limits[0]
-
-    @property
-    def max_velocity(self) -> float:
-        return self.velocity_limits[1]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -204,18 +201,17 @@ class NumPyIntegratorObstacleModel(
         return NumPyIntegratorObstacleStateSequences(result)
 
 
-def simulate_with_state_limits[T: int, D_u: int, D_x: int, M: int](
+def simulate_with_state_limits[T: int, D_x: int, M: int](
     *,
-    inputs: Array[Dims[T, D_u, M]],
+    inputs: Array[Dims[T, D_x, M]],
     initial_state: Array[Dims[D_x]],
     time_step: float,
     state_limits: tuple[float, float],
-) -> Array[Dims[T, D_u, M]]:
+) -> Array[Dims[T, D_x, M]]:
     deltas = inputs * time_step
-    initial_broadcasted = initial_state[:, np.newaxis, np.newaxis]
 
     states = np.empty_like(deltas)
-    states[0] = np.clip(initial_broadcasted + deltas[0], *state_limits)
+    states[0] = np.clip(initial_state[:, np.newaxis] + deltas[0], *state_limits)
 
     for t in range(1, deltas.shape[0]):
         states[t] = np.clip(states[t - 1] + deltas[t], *state_limits)

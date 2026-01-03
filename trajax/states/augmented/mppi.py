@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Any
 
 from trajax.types import (
     Mppi,
@@ -51,12 +51,20 @@ from trajax.states.augmented.accelerated import (
 from trajax.states.augmented.common import AugmentedModel, AugmentedSampler
 
 
-class MppiCreator[StateT, StateBatchT, InputSequenceT, WeightsT, InputBatchT, CostsT](
-    Protocol
-):
+class MppiCreator[
+    StateT,
+    StateSequenceT,
+    StateBatchT,
+    InputSequenceT,
+    WeightsT,
+    InputBatchT,
+    CostsT,
+](Protocol):
     def __call__(
         self,
-        model: DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT],
+        model: DynamicalModel[
+            StateT, StateSequenceT, StateBatchT, InputSequenceT, InputBatchT
+        ],
         sampler: Sampler[InputSequenceT, InputBatchT],
         cost: CostFunction[InputBatchT, StateBatchT, CostsT],
     ) -> Mppi[StateT, InputSequenceT, WeightsT]:
@@ -83,9 +91,10 @@ class AugmentedMppi:
         C,
     ](
         *,
-        mppi: MppiCreator[AS, ASB, AIS, W, AIB, C],
+        mppi: MppiCreator[AS, Any, ASB, AIS, W, AIB, C],
         models: tuple[
-            DynamicalModel[PS, PSB, PIS, PIB], DynamicalModel[VS, VSB, VIS, VIB]
+            DynamicalModel[PS, Any, PSB, PIS, PIB],
+            DynamicalModel[VS, Any, VSB, VIS, VIB],
         ],
         samplers: tuple[Sampler[PIS, PIB], Sampler[VIS, VIB]],
         cost: CostFunction[AIB, ASB, C],
@@ -134,8 +143,8 @@ class NumPyAugmentedMppi:
         *,
         planning_interval: int = 1,
         models: tuple[
-            NumPyDynamicalModel[PS, PSB, PCS, PCB],
-            NumPyDynamicalModel[VS, VSB, VCS, VCB],
+            NumPyDynamicalModel[PS, Any, PSB, PCS, PCB],
+            NumPyDynamicalModel[VS, Any, VSB, VCS, VCB],
         ],
         samplers: tuple[NumPySampler[PCS, PCB], NumPySampler[VCS, VCB]],
         cost: NumPyCostFunction[NumPyAugmentedControlInputBatch[PCB, VCB], ASB, C],
@@ -190,7 +199,8 @@ class JaxAugmentedMppi:
         *,
         planning_interval: int = 1,
         models: tuple[
-            JaxDynamicalModel[PS, PSB, PCS, PCB], JaxDynamicalModel[VS, VSB, VCS, VCB]
+            JaxDynamicalModel[PS, Any, PSB, PCS, PCB],
+            JaxDynamicalModel[VS, Any, VSB, VCS, VCB],
         ],
         samplers: tuple[JaxSampler[PCS, PCB], JaxSampler[VCS, VCB]],
         cost: JaxCostFunction[JaxAugmentedControlInputBatch[PCB, VCB], ASB, C],

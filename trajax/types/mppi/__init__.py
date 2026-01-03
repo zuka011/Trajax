@@ -1,5 +1,6 @@
 from .common import (
     State as State,
+    StateSequence as StateSequence,
     StateBatch as StateBatch,
     ControlInputSequence as ControlInputSequence,
     ControlInputBatch as ControlInputBatch,
@@ -17,6 +18,7 @@ from .common import (
 )
 from .basic import (
     NumPyState as NumPyState,
+    NumPyStateSequence as NumPyStateSequence,
     NumPyStateBatch as NumPyStateBatch,
     NumPyControlInputSequence as NumPyControlInputSequence,
     NumPyControlInputBatch as NumPyControlInputBatch,
@@ -30,6 +32,7 @@ from .basic import (
 )
 from .accelerated import (
     JaxState as JaxState,
+    JaxStateSequence as JaxStateSequence,
     JaxStateBatch as JaxStateBatch,
     JaxControlInputSequence as JaxControlInputSequence,
     JaxControlInputBatch as JaxControlInputBatch,

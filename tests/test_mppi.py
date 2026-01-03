@@ -1,5 +1,6 @@
 from trajax import (
     State,
+    StateSequence,
     StateBatch,
     ControlInputBatch,
     Mppi,
@@ -587,7 +588,9 @@ def test_that_mppi_converges_to_target_state[
     ControlInputSequenceT: ControlInputSequence,
 ](
     mppi: Mppi[StateT, ControlInputSequenceT],
-    model: DynamicalModel[StateT, StateBatch, ControlInputSequenceT, ControlInputBatch],
+    model: DynamicalModel[
+        StateT, StateSequence, StateBatch, ControlInputSequenceT, ControlInputBatch
+    ],
     current_state: StateT,
     nominal_input: ControlInputSequenceT,
     temperature: float,

@@ -1,9 +1,10 @@
-from typing import Self, overload, cast, Sequence, Final
+from typing import Self, overload, cast, Sequence, Final, Any
 from dataclasses import dataclass
 
 from trajax.types import (
     DataType,
     NumPyState,
+    NumPyStateSequence,
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
@@ -82,12 +83,29 @@ class NumPyBicycleState(BicycleState, NumPyState[BicycleD_x]):
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyBicycleStateSequence[T: int, M: int](BicycleStateSequence):
+class NumPyBicycleStateSequence[T: int, M: int = Any](
+    BicycleStateSequence, NumPyStateSequence[T, BicycleD_x]
+):
     batch: "NumPyBicycleStateBatch[T, M]"
     rollout: int
 
     def step(self, index: int) -> NumPyBicycleState:
-        return NumPyBicycleState(self.batch.array[index, :, self.rollout])
+        return NumPyBicycleState(self.array[index])
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> BicycleD_x:
+        return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[T, BicycleD_x]]:
+        return self.batch.array[:, :, self.rollout]
 
 
 @dataclass(frozen=True)
@@ -232,6 +250,17 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
 
         return NumPyBicycleControlInputBatch(array)
 
+    @staticmethod
+    def of[T_: int](
+        sequence: NumPyBicycleControlInputSequence[T_],
+    ) -> "NumPyBicycleControlInputBatch[T_, D[1]]":
+        """Creates a NumPy bicycle control input batch from a single control input sequence."""
+        array = sequence.array[..., np.newaxis]
+
+        assert shape_of(array, matches=(sequence.horizon, BICYCLE_D_U, 1))
+
+        return NumPyBicycleControlInputBatch(array)
+
     def __array__(self, dtype: DataType | None = None) -> ControlInputBatchArray[T, M]:
         return self.array
 
@@ -346,6 +375,7 @@ class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
 class NumPyBicycleModel(
     DynamicalModel[
         NumPyBicycleState,
+        NumPyBicycleStateSequence,
         NumPyBicycleStateBatch,
         NumPyBicycleControlInputSequence,
         NumPyBicycleControlInputBatch,
@@ -435,29 +465,10 @@ class NumPyBicycleModel(
             )[:, 0]
         )
 
-    @property
-    def min_speed(self) -> float:
-        return self.speed_limits[0]
-
-    @property
-    def max_speed(self) -> float:
-        return self.speed_limits[1]
-
-    @property
-    def min_steering(self) -> float:
-        return self.steering_limits[0]
-
-    @property
-    def max_steering(self) -> float:
-        return self.steering_limits[1]
-
-    @property
-    def min_acceleration(self) -> float:
-        return self.acceleration_limits[0]
-
-    @property
-    def max_acceleration(self) -> float:
-        return self.acceleration_limits[1]
+    def forward[T: int](
+        self, input: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
+    ) -> NumPyBicycleStateSequence[T]:
+        return self.simulate(NumPyBicycleControlInputBatch.of(input), state).rollout(0)
 
 
 @dataclass(kw_only=True, frozen=True)

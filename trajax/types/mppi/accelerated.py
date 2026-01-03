@@ -2,6 +2,7 @@ from typing import Protocol, Self, overload
 
 from trajax.types.mppi.common import (
     State,
+    StateSequence,
     StateBatch,
     ControlInputSequence,
     ControlInputBatch,
@@ -21,6 +22,13 @@ class JaxState[D_x: int](State[D_x], Protocol):
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
         """Returns the underlying JAX array representing the state."""
+        ...
+
+
+class JaxStateSequence[T: int, D_x: int](StateSequence[T, D_x], Protocol):
+    @property
+    def array(self) -> Float[JaxArray, "T D_x"]:
+        """Returns the underlying JAX array representing the state sequence."""
         ...
 
 
@@ -73,8 +81,15 @@ class JaxCosts[T: int, M: int](Costs[T, M], Protocol):
         ...
 
 
-class JaxDynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT](
-    DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT], Protocol
+class JaxDynamicalModel[
+    StateT,
+    StateSequenceT,
+    StateBatchT,
+    InputSequenceT,
+    InputBatchT,
+](
+    DynamicalModel[StateT, StateSequenceT, StateBatchT, InputSequenceT, InputBatchT],
+    Protocol,
 ): ...
 
 

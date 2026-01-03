@@ -16,6 +16,22 @@ class IntegratorState[D_x: int](Protocol):
         ...
 
 
+class IntegratorStateSequence[T: int, D_x: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
+        """Returns the state sequence as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Time horizon of the state sequence."""
+        ...
+
+    @property
+    def dimension(self) -> D_x:
+        """State dimension."""
+        ...
+
+
 class IntegratorStateBatch[T: int, D_x: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         """Returns the states as a NumPy array."""

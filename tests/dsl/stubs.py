@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from trajax import (
     State,
+    StateSequence,
     StateBatch,
     ControlInputBatch,
     ControlInputSequence,
@@ -141,10 +142,15 @@ class FilterFunction[SequenceT: ControlInputSequence](FilterFunctionLike[Sequenc
 @dataclass(frozen=True)
 class DynamicalModel[
     StateT: State,
+    StateSequenceT: StateSequence,
     StateBatchT: StateBatch,
     ControlInputSequenceT: ControlInputSequence,
     ControlInputBatchT: ControlInputBatch,
-](DynamicalModelLike[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT]):
+](
+    DynamicalModelLike[
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ]
+):
     rollouts: StateBatchT
     expected_control_inputs: ControlInputBatchT
     expected_initial_state: StateT
@@ -178,6 +184,11 @@ class DynamicalModel[
 
     def step(self, input: ControlInputSequenceT, state: StateT) -> StateT:
         raise NotImplementedError("Step method is not implemented in the stub model.")
+
+    def forward(self, input: ControlInputSequenceT, state: StateT) -> StateSequenceT:
+        raise NotImplementedError(
+            "Forward method is not implemented in the stub model."
+        )
 
 
 @dataclass(frozen=True)

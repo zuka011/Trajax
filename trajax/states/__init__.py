@@ -1,10 +1,12 @@
 from .simple import (
     NumPySimpleState as NumPySimpleState,
+    NumPySimpleStateSequence as NumPySimpleStateSequence,
     NumPySimpleStateBatch as NumPySimpleStateBatch,
     NumPySimpleControlInputSequence as NumPySimpleControlInputSequence,
     NumPySimpleControlInputBatch as NumPySimpleControlInputBatch,
     NumPySimpleCosts as NumPySimpleCosts,
     JaxSimpleState as JaxSimpleState,
+    JaxSimpleStateSequence as JaxSimpleStateSequence,
     JaxSimpleStateBatch as JaxSimpleStateBatch,
     JaxSimpleControlInputSequence as JaxSimpleControlInputSequence,
     JaxSimpleControlInputBatch as JaxSimpleControlInputBatch,

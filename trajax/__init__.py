@@ -39,6 +39,7 @@ from .types import (
     DataType as DataType,
     jaxtyped as jaxtyped,
     State as State,
+    StateSequence as StateSequence,
     StateBatch as StateBatch,
     ControlInputSequence as ControlInputSequence,
     ControlInputBatch as ControlInputBatch,

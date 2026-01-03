@@ -6,6 +6,7 @@ from trajax.types import (
     DynamicalModel,
     ObstacleModel,
     JaxIntegratorState,
+    JaxIntegratorStateSequence,
     JaxIntegratorStateBatch,
     JaxIntegratorControlInputSequence,
     JaxIntegratorControlInputBatch,
@@ -14,7 +15,9 @@ from trajax.types import (
 )
 from trajax.states import (
     JaxSimpleState as SimpleState,
+    JaxSimpleStateSequence as SimpleStateSequence,
     JaxSimpleStateBatch as SimpleStateBatch,
+    JaxSimpleControlInputBatch as SimpleControlInputBatch,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -94,6 +97,7 @@ class JaxIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
 class JaxIntegratorModel(
     DynamicalModel[
         JaxIntegratorState,
+        JaxIntegratorStateSequence,
         JaxIntegratorStateBatch,
         JaxIntegratorControlInputSequence,
         JaxIntegratorControlInputBatch,
@@ -165,6 +169,15 @@ class JaxIntegratorModel(
                 velocity_limits=self.velocity_limits,
             )
         )
+
+    def forward[T: int, D_x: int](
+        self,
+        input: JaxIntegratorControlInputSequence[T, D_x],
+        state: JaxIntegratorState[D_x],
+    ) -> SimpleStateSequence[T, D_x]:
+        return self.simulate(
+            inputs=SimpleControlInputBatch.of(input), initial_state=state
+        ).rollout(0)
 
 
 @dataclass(kw_only=True, frozen=True)

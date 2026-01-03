@@ -11,6 +11,7 @@ from pytest import mark
 
 
 type State = types.bicycle.State
+type StateSequence = types.bicycle.StateSequence
 type StateBatch = types.bicycle.StateBatch
 type ControlInputSequence = types.bicycle.ControlInputSequence
 type ControlInputBatch = types.bicycle.ControlInputBatch
@@ -59,12 +60,13 @@ type ControlInputBatch = types.bicycle.ControlInputBatch
 )
 def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -176,12 +178,13 @@ def test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zero[
 )
 def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -290,12 +293,13 @@ def test_that_vehicle_follows_straight_line_when_velocity_is_constant[
 )
 def test_that_vehicle_follows_straight_line_when_acceleration_is_constant[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT: ControlInputBatch,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -350,12 +354,13 @@ T = clear_type
 )
 def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -394,12 +399,13 @@ def test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed[
 )
 def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -459,12 +465,13 @@ def test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed[
 )
 def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -505,13 +512,14 @@ def test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and
     ],
 )
 def test_that_displacement_is_consistent_with_velocity_state[
-    StateT: State,
+    StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -598,12 +606,13 @@ def test_that_displacement_is_consistent_with_velocity_state[
 )
 def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_steering[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -657,13 +666,14 @@ def test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_st
     ],
 )
 def test_that_angular_velocity_depends_on_wheelbase[
-    StateT: State,
+    StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -720,12 +730,13 @@ def test_that_angular_velocity_depends_on_wheelbase[
 )
 def test_that_velocity_is_clamped_to_speed_limits[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -802,12 +813,13 @@ def test_that_velocity_is_clamped_to_speed_limits[
 )
 def test_that_steering_input_is_clipped_to_max_steering[
     StateT: State,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -874,12 +886,13 @@ def test_that_steering_input_is_clipped_to_max_steering[
 )
 def test_that_acceleration_input_is_clipped_to_max_acceleration[
     StateT,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     inputs: ControlInputBatchT,
     initial_state: StateT,
@@ -893,7 +906,7 @@ def test_that_acceleration_input_is_clipped_to_max_acceleration[
 
 
 @mark.parametrize(
-    ["model", "input_batch", "initial_state", "horizon", "input_at"],
+    ["model", "input_batch", "initial_state", "horizon", "input_of"],
     [
         (
             model := create_model.numpy.bicycle.dynamical(
@@ -903,15 +916,17 @@ def test_that_acceleration_input_is_clipped_to_max_acceleration[
                 steering_limits=(-0.4, 0.4),
                 acceleration_limits=(-5.0, 5.0),
             ),
-            numpy_input_batch := data.numpy.control_input_batch(
+            input_batch := data.numpy.control_input_batch(
                 rollout_count=1,
                 acceleration=array([2.0, 1.5, -0.5, 0.0, 1.0], shape=(T := 5,)),
                 steering=array([0.1, -0.1, 0.2, 0.0, -0.2], shape=(T,)),
             ),
             initial_state := data.numpy.state(x=0.0, y=0.0, theta=0.0, v=5.0),
             horizon := T,
-            input_at := lambda t: types.numpy.bicycle.control_input_sequence(
-                numpy_input_batch.array[t:, :, 0]
+            input_of := (
+                lambda input_batch, t: types.numpy.bicycle.control_input_sequence(
+                    input_batch.array[t:, :, 0]
+                )
             ),
         ),
         (
@@ -922,39 +937,107 @@ def test_that_acceleration_input_is_clipped_to_max_acceleration[
                 steering_limits=(-0.5, 0.5),
                 acceleration_limits=(-3.0, 3.0),
             ),
-            jax_input_batch := data.jax.control_input_batch(
+            input_batch := data.jax.control_input_batch(
                 rollout_count=1,
                 acceleration=array([1.0, 2.0, -1.0, 0.5], shape=(T := 4,)),
                 steering=array([0.2, -0.15, 0.1, 0.0], shape=(T,)),
             ),
             initial_state := data.jax.state(x=1.0, y=2.0, theta=0.5, v=3.0),
             horizon := T,
-            input_at := lambda t: types.jax.bicycle.control_input_sequence(
-                jax_input_batch.array[t:, :, 0]
+            input_of := (
+                lambda input_batch, t: types.jax.bicycle.control_input_sequence(
+                    input_batch.array[t:, :, 0]
+                )
             ),
         ),
     ],
 )
 def test_that_simulating_individual_steps_matches_horizon_simulation[
     StateT: State,
+    StateSequenceT,
     StateBatchT: StateBatch,
     ControlInputSequenceT,
     ControlInputBatchT,
 ](
     model: DynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ],
     input_batch: ControlInputBatchT,
     initial_state: StateT,
     horizon: int,
-    input_at: Callable[[int], ControlInputSequenceT],
+    input_of: Callable[[ControlInputBatchT, int], ControlInputSequenceT],
 ) -> None:
     rollout = (model.simulate(input_batch, initial_state)).rollout(0)
     current_state = initial_state
 
     for t in range(horizon):
-        current_state = model.step(input_at(t), current_state)
+        current_state = model.step(input_of(input_batch, t), current_state)
 
         assert np.allclose(current_state, rollout.step(t), atol=1e-6), (
             f"Mismatch at time step {t}: expected {rollout.step(t)}, got {current_state}"
         )
+
+
+@mark.parametrize(
+    ["model", "input_batch", "initial_state", "input_of"],
+    [
+        (
+            model := create_model.numpy.bicycle.dynamical(
+                time_step_size=(dt := 0.1),
+                wheelbase=1.5,
+                speed_limits=(0.0, 20.0),
+                steering_limits=(-0.4, 0.4),
+                acceleration_limits=(-5.0, 5.0),
+            ),
+            input_batch := data.numpy.control_input_batch(
+                rollout_count=1,
+                acceleration=array([1.0, 0.5, -0.5, 0.0], shape=(T := 4,)),
+                steering=array([0.1, -0.1, 0.2, 0.0], shape=(T,)),
+            ),
+            initial_state := data.numpy.state(x=0.0, y=0.0, theta=0.0, v=2.0),
+            input_of := (
+                lambda input_batch, t: types.numpy.bicycle.control_input_sequence(
+                    input_batch.array[..., t]
+                )
+            ),
+        ),
+        (
+            model := create_model.jax.bicycle.dynamical(
+                time_step_size=(dt := 0.2),
+                wheelbase=2.0,
+                speed_limits=(0.0, 15.0),
+                steering_limits=(-0.5, 0.5),
+                acceleration_limits=(-3.0, 3.0),
+            ),
+            input_batch := data.jax.control_input_batch(
+                rollout_count=1,
+                acceleration=array([2.0, 1.0, -1.0], shape=(T := 3,)),
+                steering=array([0.2, -0.15, 0.1], shape=(T,)),
+            ),
+            initial_state := data.jax.state(x=1.0, y=2.0, theta=0.5, v=4.0),
+            input_of := (
+                lambda input_batch, t: types.jax.bicycle.control_input_sequence(
+                    input_batch.array[..., t]
+                )
+            ),
+        ),
+    ],
+)
+def test_that_simulating_individual_input_sequence_matches_horizon_simulation[
+    StateT,
+    StateSequenceT: StateSequence,
+    StateBatchT: StateBatch,
+    ControlInputSequenceT,
+    ControlInputBatchT,
+](
+    model: DynamicalModel[
+        StateT, StateSequenceT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ],
+    input_batch: ControlInputBatchT,
+    initial_state: StateT,
+    input_of: Callable[[ControlInputBatchT, int], ControlInputSequenceT],
+) -> None:
+    rollout = (model.simulate(input_batch, initial_state)).rollout(m := 0)
+    sequence = model.forward(input_of(input_batch, m), initial_state)
+
+    assert np.allclose(sequence, rollout, atol=1e-6)

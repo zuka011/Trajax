@@ -3,6 +3,7 @@ from typing import Protocol
 from trajax.types.predictors import ObstacleStatesHistory
 from trajax.types.models.integrator.common import (
     IntegratorState,
+    IntegratorStateSequence,
     IntegratorStateBatch,
     IntegratorControlInputSequence,
     IntegratorControlInputBatch,
@@ -15,6 +16,15 @@ class NumPyIntegratorState[D_x: int](IntegratorState[D_x], Protocol):
     @property
     def array(self) -> Array[Dims[D_x]]:
         """Returns the underlying NumPy array representing the integrator state."""
+        ...
+
+
+class NumPyIntegratorStateSequence[T: int, D_x: int](
+    IntegratorStateSequence[T, D_x], Protocol
+):
+    @property
+    def array(self) -> Array[Dims[T, D_x]]:
+        """Returns the underlying NumPy array representing the integrator state sequence."""
         ...
 
 

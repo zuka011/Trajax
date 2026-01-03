@@ -2,6 +2,7 @@ from typing import Protocol, Sequence
 
 from trajax import (
     AugmentedState,
+    StateSequence,
     StateBatch,
     ControlInputSequence,
     ControlInputBatch,
@@ -70,7 +71,9 @@ class MpccPlannerConfiguration[
     @property
     def model(
         self,
-    ) -> DynamicalModel[StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT]:
+    ) -> DynamicalModel[
+        StateT, StateSequence, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+    ]:
         """Returns the augmented dynamical model."""
         ...
 

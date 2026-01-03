@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any, Never
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -31,13 +31,14 @@ class AugmentedModel[
 ](
     DynamicalModel[
         AStateT,
+        Never,
         AStateBatchT,
         AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
     ]
 ):
-    physical: DynamicalModel[PStateT, PStateBatchT, PInputSequenceT, PInputBatchT]
-    virtual: DynamicalModel[VStateT, VStateBatchT, VInputSequenceT, VInputBatchT]
+    physical: DynamicalModel[PStateT, Any, PStateBatchT, PInputSequenceT, PInputBatchT]
+    virtual: DynamicalModel[VStateT, Any, VStateBatchT, VInputSequenceT, VInputBatchT]
 
     state: AugmentedStateCreator[PStateT, VStateT, AStateT]
     batch: AugmentedStateBatchCreator[PStateBatchT, VStateBatchT, AStateBatchT]
@@ -56,8 +57,8 @@ class AugmentedModel[
         ASB: AugmentedStateBatch,
     ](
         *,
-        physical: DynamicalModel[PS, PSB, PIS, PIB],
-        virtual: DynamicalModel[VS, VSB, VIS, VIB],
+        physical: DynamicalModel[PS, Any, PSB, PIS, PIB],
+        virtual: DynamicalModel[VS, Any, VSB, VIS, VIB],
         state: AugmentedStateCreator[PS, VS, AS],
         batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
     ) -> "AugmentedModel[PS, PSB, PIS, PIB, VS, VSB, VIS, VIB, AS, ASB]":
@@ -92,6 +93,15 @@ class AugmentedModel[
         )
 
         return self.state.of(physical=physical, virtual=virtual)
+
+    def forward(
+        self,
+        input: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
+        state: AStateT,
+    ) -> Never:
+        raise NotImplementedError(
+            "forward method is not implemented for the augmented model."
+        )
 
 
 @dataclass(kw_only=True, frozen=True)

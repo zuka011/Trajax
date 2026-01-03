@@ -2,6 +2,7 @@ from typing import Protocol, Self, overload
 
 from trajax.types.mppi.common import (
     State,
+    StateSequence,
     StateBatch,
     ControlInputSequence,
     ControlInputBatch,
@@ -21,6 +22,13 @@ class NumPyState[D_x: int](State[D_x], Protocol):
     @property
     def array(self) -> Array[Dims[D_x]]:
         """Returns the underlying NumPy array representing the state."""
+        ...
+
+
+class NumPyStateSequence[T: int, D_x: int](StateSequence[T, D_x], Protocol):
+    @property
+    def array(self) -> Array[Dims[T, D_x]]:
+        """Returns the underlying NumPy array representing the state sequence."""
         ...
 
 
@@ -76,8 +84,15 @@ class NumPyCosts[T: int, M: int](Costs[T, M], Protocol):
         ...
 
 
-class NumPyDynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT](
-    DynamicalModel[StateT, StateBatchT, InputSequenceT, InputBatchT], Protocol
+class NumPyDynamicalModel[
+    StateT,
+    StateSequenceT,
+    StateBatchT,
+    InputSequenceT,
+    InputBatchT,
+](
+    DynamicalModel[StateT, StateSequenceT, StateBatchT, InputSequenceT, InputBatchT],
+    Protocol,
 ): ...
 
 

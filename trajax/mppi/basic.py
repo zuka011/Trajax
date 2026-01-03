@@ -1,7 +1,8 @@
-from typing import cast
+from typing import cast, Any
 from dataclasses import dataclass
 
 from trajax.types import (
+    DataType,
     NumPyState,
     NumPyStateBatch,
     NumPyControlInputSequence,
@@ -28,7 +29,7 @@ import numpy as np
 class NumPyWeights[M: int]:
     _array: Array[Dims[M]]
 
-    def __array__(self, dtype: np.dtype | None = None) -> Array[Dims[M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
         return np.array(self._array, dtype=dtype)
 
     @property
@@ -63,7 +64,7 @@ class NumPyMppi[
 ](Mppi[StateT, ControlInputSequenceT, NumPyWeights[int]]):
     planning_interval: int
     model: NumPyDynamicalModel[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, Any, StateBatchT, ControlInputSequenceT, ControlInputBatchT
     ]
     cost_function: NumPyCostFunction[ControlInputBatchT, StateBatchT, NumPyCosts]
     sampler: NumPySampler[ControlInputSequenceT, ControlInputBatchT]
@@ -81,7 +82,7 @@ class NumPyMppi[
     ](
         *,
         planning_interval: int = 1,
-        model: NumPyDynamicalModel[S, SB, CIS, CIB],
+        model: NumPyDynamicalModel[S, Any, SB, CIS, CIB],
         cost_function: NumPyCostFunction[CIB, SB, NumPyCosts],
         sampler: NumPySampler[CIS, CIB],
         update_function: NumPyUpdateFunction[CIS] | None = None,

@@ -1,11 +1,13 @@
 from .common import (
     IntegratorState as IntegratorState,
+    IntegratorStateSequence as IntegratorStateSequence,
     IntegratorStateBatch as IntegratorStateBatch,
     IntegratorControlInputSequence as IntegratorControlInputSequence,
     IntegratorControlInputBatch as IntegratorControlInputBatch,
 )
 from .basic import (
     NumPyIntegratorState as NumPyIntegratorState,
+    NumPyIntegratorStateSequence as NumPyIntegratorStateSequence,
     NumPyIntegratorStateBatch as NumPyIntegratorStateBatch,
     NumPyIntegratorControlInputSequence as NumPyIntegratorControlInputSequence,
     NumPyIntegratorControlInputBatch as NumPyIntegratorControlInputBatch,
@@ -13,6 +15,7 @@ from .basic import (
 )
 from .accelerated import (
     JaxIntegratorState as JaxIntegratorState,
+    JaxIntegratorStateSequence as JaxIntegratorStateSequence,
     JaxIntegratorStateBatch as JaxIntegratorStateBatch,
     JaxIntegratorControlInputSequence as JaxIntegratorControlInputSequence,
     JaxIntegratorControlInputBatch as JaxIntegratorControlInputBatch,

@@ -1,9 +1,11 @@
-from typing import Self, overload, cast, Sequence
+from typing import Self, overload, cast, Sequence, Protocol
 from dataclasses import dataclass
 
 from trajax.types import (
     DataType,
+    ControlInputSequence,
     NumPyState,
+    NumPyStateSequence,
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
@@ -12,6 +14,15 @@ from trajax.types import (
 
 import numpy as np
 from numtypes import Array, Dims, D, shape_of
+
+
+class NumPyControlInputSequenceLike[T: int, D_u: int](
+    ControlInputSequence[T, D_u], Protocol
+):
+    @property
+    def array(self) -> Array[Dims[T, D_u]]:
+        """Returns the underlying NumPy array representing the control input sequence."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -27,6 +38,26 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
 
     @property
     def array(self) -> Array[Dims[D_x]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleStateSequence[T: int, D_x: int](NumPyStateSequence[T, D_x]):
+    _array: Array[Dims[T, D_x]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_x:
+        return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[T, D_x]]:
         return self._array
 
 
@@ -52,6 +83,9 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         return self.array
+
+    def rollout(self, index: int) -> NumPySimpleStateSequence[T, D_x]:
+        return NumPySimpleStateSequence(self.array[..., index])
 
     @property
     def horizon(self) -> T:
@@ -143,6 +177,17 @@ class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
         *, array: Array[Dims[T_, D_u_, M_]]
     ) -> "NumPySimpleControlInputBatch[T_, D_u_, M_]":
         """Creates a NumPy simple control input batch from the given array."""
+        return NumPySimpleControlInputBatch(array)
+
+    @staticmethod
+    def of[T_: int, D_u_: int](
+        sequence: NumPyControlInputSequenceLike[T_, D_u_],
+    ) -> "NumPySimpleControlInputBatch[T_, D_u_, D[1]]":
+        """Creates a simple control input batch from a single control input sequence."""
+        array = sequence.array[..., np.newaxis]
+
+        assert shape_of(array, matches=(sequence.horizon, sequence.dimension, 1))
+
         return NumPySimpleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:

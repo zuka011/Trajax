@@ -1,10 +1,12 @@
-from typing import cast, Self, overload, Sequence
+from typing import cast, Self, overload, Sequence, Protocol
 from dataclasses import dataclass
 
 from trajax.types import (
     DataType,
     jaxtyped,
+    ControlInputSequence,
     JaxState,
+    JaxStateSequence,
     JaxStateBatch,
     JaxControlInputSequence,
     JaxControlInputBatch,
@@ -12,10 +14,19 @@ from trajax.types import (
 )
 
 from jaxtyping import Array as JaxArray, Float
-from numtypes import Array, Dims
+from numtypes import Array, Dims, D
 
 import numpy as np
 import jax.numpy as jnp
+
+
+class JaxControlInputSequenceLike[T: int, D_u: int](
+    ControlInputSequence[T, D_u], Protocol
+):
+    @property
+    def array(self) -> Float[JaxArray, "T D_u"]:
+        """Returns the underlying JAX array representing the control input sequence."""
+        ...
 
 
 @jaxtyped
@@ -32,6 +43,27 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
 
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
+        return self._array
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
+    _array: Float[JaxArray, "T D_x"]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
+        return np.asarray(self.array)
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> D_x:
+        return cast(D_x, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_x"]:
         return self._array
 
 
@@ -55,6 +87,9 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
         return np.asarray(self.array)
+
+    def rollout(self, index: int) -> JaxSimpleStateSequence[T, D_x]:
+        return JaxSimpleStateSequence(self.array[..., index])
 
     @property
     def horizon(self) -> T:
@@ -142,6 +177,20 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
         return JaxSimpleControlInputBatch(
             jnp.zeros((horizon, dimension, rollout_count))
         )
+
+    @staticmethod
+    def of[T_: int, D_u_: int](
+        sequence: JaxControlInputSequenceLike[T_, D_u_],
+    ) -> "JaxSimpleControlInputBatch[T_, D_u_, D[1]]":
+        """Creates a JAX simple control input batch from a single control input sequence."""
+        array = sequence.array[..., jnp.newaxis]
+
+        assert array.shape == (sequence.horizon, sequence.dimension, 1), (
+            f"Expected array shape {(sequence.horizon, sequence.dimension, 1)}, "
+            f"but got {array.shape}"
+        )
+
+        return JaxSimpleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
         return np.asarray(self.array)
