@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from trajax.types import (
     DataType,
     JaxState,
+    JaxStateSequence,
     JaxStateBatch,
     JaxControlInputSequence,
     JaxControlInputBatch,
     AugmentedState,
+    AugmentedStateSequence,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
@@ -16,6 +18,7 @@ from trajax.types import (
 )
 from trajax.states.augmented.base import (
     BaseAugmentedState,
+    BaseAugmentedStateSequence,
     BaseAugmentedStateBatch,
     BaseAugmentedControlInputSequence,
     BaseAugmentedControlInputBatch,
@@ -63,6 +66,49 @@ class JaxAugmentedState[P: JaxState, V: JaxState](
     def array(self) -> Float[JaxArray, "D_x"]:
         return jnp.concatenate(
             [self.inner.physical.array, self.inner.virtual.array], axis=0
+        )
+
+
+@dataclass(frozen=True)
+class JaxAugmentedStateSequence[P: JaxStateSequence, V: JaxStateSequence](
+    AugmentedStateSequence[P, V], HasPhysical[P], HasVirtual[V], JaxStateSequence
+):
+    inner: BaseAugmentedStateSequence[P, V]
+
+    @staticmethod
+    def of[P_: JaxStateSequence, V_: JaxStateSequence](
+        *, physical: P_, virtual: V_
+    ) -> "JaxAugmentedStateSequence[P_, V_]":
+        return JaxAugmentedStateSequence(
+            cast(
+                BaseAugmentedStateSequence[P_, V_],
+                BaseAugmentedStateSequence.of(physical=physical, virtual=virtual),
+            )
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
+        return self.inner.__array__(dtype=dtype)
+
+    @property
+    def physical(self) -> P:
+        return self.inner.physical
+
+    @property
+    def virtual(self) -> V:
+        return self.inner.virtual
+
+    @property
+    def horizon(self) -> int:
+        return self.inner.horizon
+
+    @property
+    def dimension(self) -> int:
+        return self.inner.dimension
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_x"]:
+        return jnp.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=1
         )
 
 

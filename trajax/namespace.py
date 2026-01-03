@@ -53,6 +53,7 @@ from trajax.types import (
     NumPyObstacleStateProvider,
     JaxObstacleStateProvider,
     AugmentedState,
+    AugmentedStateSequence,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
@@ -113,10 +114,12 @@ from trajax.states import (
     JaxSimpleControlInputBatch,
     JaxSimpleCosts,
     NumPyAugmentedState,
+    NumPyAugmentedStateSequence,
     NumPyAugmentedStateBatch,
     NumPyAugmentedControlInputSequence,
     NumPyAugmentedControlInputBatch,
     JaxAugmentedState,
+    JaxAugmentedStateSequence,
     JaxAugmentedStateBatch,
     JaxAugmentedControlInputSequence,
     JaxAugmentedControlInputBatch,
@@ -159,11 +162,13 @@ class types:
 
     class augmented:
         type State[P, V] = AugmentedState[P, V]
+        type StateSequence[P, V] = AugmentedStateSequence[P, V]
         type StateBatch[P, V] = AugmentedStateBatch[P, V]
         type ControlInputSequence[P, V] = AugmentedControlInputSequence[P, V]
         type ControlInputBatch[P, V] = AugmentedControlInputBatch[P, V]
 
         state: Final = AugmentedState
+        state_sequence: Final = AugmentedStateSequence
         state_batch: Final = AugmentedStateBatch
         control_input_sequence: Final = AugmentedControlInputSequence
         control_input_batch: Final = AugmentedControlInputBatch
@@ -276,6 +281,9 @@ class types:
 
         class augmented:
             type State[P: NumPyState, V: NumPyState] = NumPyAugmentedState[P, V]
+            type StateSequence[P: NumPyStateSequence, V: NumPyStateSequence] = (
+                NumPyAugmentedStateSequence[P, V]
+            )
             type StateBatch[P: NumPyStateBatch, V: NumPyStateBatch] = (
                 NumPyAugmentedStateBatch[P, V]
             )
@@ -289,6 +297,7 @@ class types:
             ] = NumPyAugmentedControlInputBatch[P, V]
 
             state: Final = NumPyAugmentedState
+            state_sequence: Final = NumPyAugmentedStateSequence
             state_batch: Final = NumPyAugmentedStateBatch
             control_input_sequence: Final = NumPyAugmentedControlInputSequence
             control_input_batch: Final = NumPyAugmentedControlInputBatch
@@ -397,6 +406,9 @@ class types:
 
         class augmented:
             type State[P: JaxState, V: JaxState] = JaxAugmentedState[P, V]
+            type StateSequence[P: JaxStateSequence, V: JaxStateSequence] = (
+                JaxAugmentedStateSequence[P, V]
+            )
             type StateBatch[P: JaxStateBatch, V: JaxStateBatch] = (
                 JaxAugmentedStateBatch[P, V]
             )
@@ -409,6 +421,7 @@ class types:
             )
 
             state: Final = JaxAugmentedState
+            state_sequence: Final = JaxAugmentedStateSequence
             state_batch: Final = JaxAugmentedStateBatch
             control_input_sequence: Final = JaxAugmentedControlInputSequence
             control_input_batch: Final = JaxAugmentedControlInputBatch
@@ -435,6 +448,7 @@ class classes:
 
     class augmented:
         State: Final = AugmentedState
+        StateSequence: Final = AugmentedStateSequence
         StateBatch: Final = AugmentedStateBatch
         ControlInputSequence: Final = AugmentedControlInputSequence
         ControlInputBatch: Final = AugmentedControlInputBatch
@@ -482,6 +496,7 @@ class classes:
 
         class augmented:
             State: Final = NumPyAugmentedState
+            StateSequence: Final = NumPyAugmentedStateSequence
             StateBatch: Final = NumPyAugmentedStateBatch
             ControlInputSequence: Final = NumPyAugmentedControlInputSequence
             ControlInputBatch: Final = NumPyAugmentedControlInputBatch
@@ -529,6 +544,7 @@ class classes:
 
         class augmented:
             State: Final = JaxAugmentedState
+            StateSequence: Final = JaxAugmentedStateSequence
             StateBatch: Final = JaxAugmentedStateBatch
             ControlInputSequence: Final = JaxAugmentedControlInputSequence
             ControlInputBatch: Final = JaxAugmentedControlInputBatch

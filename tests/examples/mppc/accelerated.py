@@ -369,6 +369,7 @@ class configure:
                         velocity_limits=(0, 15),
                     ),
                     state=types.jax.augmented.state,
+                    sequence=types.jax.augmented.state_sequence,
                     batch=types.jax.augmented.state_batch,
                 )
             ),
@@ -541,6 +542,7 @@ class configure:
                 ),
             ),
             state=types.jax.augmented.state,
+            state_sequence=types.jax.augmented.state_sequence,
             state_batch=types.jax.augmented.state_batch,
             input_batch=types.jax.augmented.control_input_batch,
         )

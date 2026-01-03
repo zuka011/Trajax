@@ -15,6 +15,7 @@ from trajax import (
     ObstacleStates,
     SampledObstacleStates,
     Weights,
+    Control,
     Mppi,
     RiskCollector,
     ControlCollector,
@@ -34,8 +35,8 @@ class StateStacker[StateT, StateBatchT](Protocol):
         ...
 
 
-class ZeroControlInputProvider[ControlInputBatchT](Protocol):
-    def __call__(self, horizon: int) -> ControlInputBatchT:
+class ZeroControlInputProvider[InputBatchT](Protocol):
+    def __call__(self, horizon: int) -> InputBatchT:
         """Returns a control input batch of zeroes with the specified horizon."""
         ...
 
@@ -49,8 +50,8 @@ class ObstacleStacker[ObstacleStatesT](Protocol):
 class MpccPlannerConfiguration[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    InputSequenceT: ControlInputSequence,
+    InputBatchT: ControlInputBatch,
     ObstacleStatesT: ObstacleStates,
 ](Protocol):
     @property
@@ -64,7 +65,7 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def planner(self) -> Mppi[StateT, ControlInputSequenceT, Weights]:
+    def planner(self) -> Mppi[StateT, InputSequenceT, Weights]:
         """Returns the MPCC planner."""
         ...
 
@@ -72,18 +73,18 @@ class MpccPlannerConfiguration[
     def model(
         self,
     ) -> DynamicalModel[
-        StateT, StateSequence, StateBatchT, ControlInputSequenceT, ControlInputBatchT
+        StateT, StateSequence, StateBatchT, InputSequenceT, InputBatchT
     ]:
         """Returns the augmented dynamical model."""
         ...
 
     @property
-    def contouring_cost(self) -> ContouringCost[ControlInputBatchT, StateBatchT]:
+    def contouring_cost(self) -> ContouringCost[InputBatchT, StateBatchT]:
         """Returns the contouring cost function."""
         ...
 
     @property
-    def lag_cost(self) -> LagCost[ControlInputBatchT, StateBatchT]:
+    def lag_cost(self) -> LagCost[InputBatchT, StateBatchT]:
         """Returns the lag cost function."""
         ...
 
@@ -100,7 +101,9 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def control_collector(self) -> ControlCollector | None:
+    def control_collector(
+        self,
+    ) -> ControlCollector[StateT, InputSequenceT] | None:
         """Returns the control collector used by the planner."""
         ...
 
@@ -110,7 +113,7 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def nominal_input(self) -> ControlInputSequenceT:
+    def nominal_input(self) -> InputSequenceT:
         """Returns the nominal control input sequence."""
         ...
 
@@ -130,7 +133,7 @@ class MpccPlannerConfiguration[
         ...
 
     @property
-    def zero_inputs(self) -> ZeroControlInputProvider[ControlInputBatchT]:
+    def zero_inputs(self) -> ZeroControlInputProvider[InputBatchT]:
         """Returns the control input provider."""
         ...
 
@@ -149,13 +152,13 @@ class MpccPlannerConfiguration[
 def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    InputSequenceT: ControlInputSequence,
+    InputBatchT: ControlInputBatch,
     ObstacleStatesT: ObstacleStates,
 ](
     visualization: VisualizationData[MpccSimulationResult],
     configuration: MpccPlannerConfiguration[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, ObstacleStatesT
+        StateT, StateBatchT, InputSequenceT, InputBatchT, ObstacleStatesT
     ],
     configuration_name: str,
 ) -> None:
@@ -169,8 +172,15 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     L = configuration.wheelbase
 
     states: list[StateT] = []
+    optimal_trajectories: list[StateSequence] = []
+    nominal_trajectories: list[StateSequence] = []
     min_progress = reference.path_length * 0.9
     progress = 0.0
+
+    def collect_data(control: Control[InputSequenceT, Weights], state: StateT) -> None:
+        states.append(state)
+        optimal_trajectories.append(augmented_model.forward(control.optimal, state))
+        nominal_trajectories.append(augmented_model.forward(control.nominal, state))
 
     for _ in range(max_steps := 150):
         control = planner.step(
@@ -181,10 +191,11 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
 
         nominal_input = control.nominal
 
-        states.append(
+        collect_data(
+            control,
             current_state := augmented_model.step(
                 input=control.optimal, state=current_state
-            )
+            ),
         )
 
         if (progress := current_state.virtual.array[0]) >= min_progress:
@@ -194,6 +205,8 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         MpccSimulationResult(
             reference=reference,
             states=states,
+            optimal_trajectories=optimal_trajectories,
+            nominal_trajectories=nominal_trajectories,
             contouring_errors=(
                 errors_c := contouring_errors(
                     contouring_cost,
@@ -281,13 +294,13 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
 def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_are_present[
     StateT: AugmentedState,
     StateBatchT: StateBatch,
-    ControlInputSequenceT: ControlInputSequence,
-    ControlInputBatchT: ControlInputBatch,
+    InputSequenceT: ControlInputSequence,
+    InputBatchT: ControlInputBatch,
     ObstacleStatesT: ObstacleStates,
 ](
     visualization: VisualizationData[MpccSimulationResult],
     configuration: MpccPlannerConfiguration[
-        StateT, StateBatchT, ControlInputSequenceT, ControlInputBatchT, ObstacleStatesT
+        StateT, StateBatchT, InputSequenceT, InputBatchT, ObstacleStatesT
     ],
     configuration_name: str,
 ) -> None:
@@ -310,9 +323,21 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     )
 
     states: list[StateT] = []
+    optimal_trajectories: list[StateSequence] = []
+    nominal_trajectories: list[StateSequence] = []
     obstacle_history: list[ObstacleStatesT] = []
     min_progress = reference.path_length * 0.7
     progress = 0.0
+
+    def collect_data(
+        control: Control[InputSequenceT, Weights],
+        obstacle_states: ObstacleStatesT,
+        state: StateT,
+    ) -> None:
+        states.append(state)
+        obstacle_history.append(obstacle_states)
+        optimal_trajectories.append(augmented_model.forward(control.optimal, state))
+        nominal_trajectories.append(augmented_model.forward(control.nominal, state))
 
     for _ in range(max_steps := 350):
         control = planner.step(
@@ -323,13 +348,14 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
 
         nominal_input = control.nominal
 
-        states.append(
+        collect_data(
+            control,
+            obstacles(),
             current_state := augmented_model.step(
                 input=control.optimal, state=current_state
-            )
+            ),
         )
 
-        obstacle_history.append(obstacles())
         obstacles.step()
 
         if (progress := current_state.virtual.array[0]) >= min_progress:
@@ -339,6 +365,8 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
         MpccSimulationResult(
             reference=reference,
             states=states,
+            optimal_trajectories=optimal_trajectories,
+            nominal_trajectories=nominal_trajectories,
             contouring_errors=(
                 errors_c := contouring_errors(
                     contouring_cost,

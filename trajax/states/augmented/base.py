@@ -3,10 +3,12 @@ from dataclasses import dataclass
 from trajax.types import (
     DataType,
     State,
+    StateSequence,
     StateBatch,
     ControlInputSequence,
     ControlInputBatch,
     AugmentedState,
+    AugmentedStateSequence,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
@@ -49,6 +51,47 @@ class BaseAugmentedState[P: State, V: State](
 
 
 @dataclass(kw_only=True, frozen=True)
+class BaseAugmentedStateSequence[P: StateSequence, V: StateSequence](
+    AugmentedStateSequence[P, V], HasPhysical[P], HasVirtual[V], StateSequence
+):
+    _physical: P
+    _virtual: V
+
+    @staticmethod
+    def of[P_: StateSequence, V_: StateSequence](
+        *, physical: P_, virtual: V_
+    ) -> "AugmentedStateSequence[P_, V_]":
+        return BaseAugmentedStateSequence(_physical=physical, _virtual=virtual)
+
+    def __post_init__(self) -> None:
+        assert self.physical.horizon == self.virtual.horizon, (
+            f"Horizon mismatch in {self.__class__.__name__}: "
+            f"Got {self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
+        return np.concatenate(
+            [np.asarray(self.physical), np.asarray(self.virtual)], axis=1
+        )
+
+    @property
+    def physical(self) -> P:
+        return self._physical
+
+    @property
+    def virtual(self) -> V:
+        return self._virtual
+
+    @property
+    def horizon(self) -> int:
+        return self.physical.horizon
+
+    @property
+    def dimension(self) -> int:
+        return self.physical.dimension + self.virtual.dimension
+
+
+@dataclass(kw_only=True, frozen=True)
 class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
     AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], StateBatch
 ):
@@ -59,10 +102,7 @@ class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
     def of[P_: StateBatch, V_: StateBatch](
         *, physical: P_, virtual: V_
     ) -> "AugmentedStateBatch[P_, V_]":
-        return BaseAugmentedStateBatch(
-            _physical=physical,
-            _virtual=virtual,
-        )
+        return BaseAugmentedStateBatch(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
         assert self.physical.horizon == self.virtual.horizon, (
@@ -76,8 +116,7 @@ class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
-            [np.asarray(self.physical), np.asarray(self.virtual)],
-            axis=1,
+            [np.asarray(self.physical), np.asarray(self.virtual)], axis=1
         )
 
     @property
@@ -128,8 +167,7 @@ class BaseAugmentedControlInputSequence[
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return np.concatenate(
-            [np.asarray(self.physical), np.asarray(self.virtual)],
-            axis=1,
+            [np.asarray(self.physical), np.asarray(self.virtual)], axis=1
         )
 
     @property
@@ -174,8 +212,7 @@ class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
         return np.concatenate(
-            [np.asarray(self.physical), np.asarray(self.virtual)],
-            axis=1,
+            [np.asarray(self.physical), np.asarray(self.virtual)], axis=1
         )
 
     @property

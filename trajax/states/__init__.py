@@ -14,10 +14,12 @@ from .simple import (
 )
 from .augmented import (
     NumPyAugmentedState as NumPyAugmentedState,
+    NumPyAugmentedStateSequence as NumPyAugmentedStateSequence,
     NumPyAugmentedStateBatch as NumPyAugmentedStateBatch,
     NumPyAugmentedControlInputSequence as NumPyAugmentedControlInputSequence,
     NumPyAugmentedControlInputBatch as NumPyAugmentedControlInputBatch,
     JaxAugmentedState as JaxAugmentedState,
+    JaxAugmentedStateSequence as JaxAugmentedStateSequence,
     JaxAugmentedStateBatch as JaxAugmentedStateBatch,
     JaxAugmentedControlInputSequence as JaxAugmentedControlInputSequence,
     JaxAugmentedControlInputBatch as JaxAugmentedControlInputBatch,

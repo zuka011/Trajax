@@ -13,6 +13,18 @@ class AugmentedState[P, V](Protocol):
         ...
 
 
+class AugmentedStateSequence[P, V](Protocol):
+    @property
+    def physical(self) -> P:
+        """Returns the physical part of the augmented state sequence."""
+        ...
+
+    @property
+    def virtual(self) -> V:
+        """Returns the virtual part of the augmented state sequence."""
+        ...
+
+
 class AugmentedStateBatch[P, V](Protocol):
     @property
     def physical(self) -> P:
@@ -52,6 +64,12 @@ class AugmentedControlInputBatch[P, V](Protocol):
 class AugmentedStateCreator[P, V, A](Protocol):
     def of(self, *, physical: P, virtual: V) -> A:
         """Creates an augmented state from physical and virtual parts."""
+        ...
+
+
+class AugmentedStateSequenceCreator[P, V, A](Protocol):
+    def of(self, *, physical: P, virtual: V) -> A:
+        """Creates an augmented state sequence from physical and virtual parts."""
         ...
 
 

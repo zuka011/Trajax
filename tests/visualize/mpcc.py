@@ -5,6 +5,7 @@ from trajax import (
     types,
     Trajectory,
     ObstacleStates,
+    StateSequence,
     ControlInputSequence,
     Weights,
     Control,
@@ -36,6 +37,8 @@ type AugmentedState = types.augmented.State[PhysicalState, VirtualState]
 class MpccSimulationResult:
     reference: Trajectory
     states: Sequence[AugmentedState]
+    optimal_trajectories: Sequence[StateSequence]
+    nominal_trajectories: Sequence[StateSequence]
     contouring_errors: Array[Dim1]
     lag_errors: Array[Dim1]
     wheelbase: float

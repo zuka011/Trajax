@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from trajax.types import (
     DataType,
     NumPyState,
+    NumPyStateSequence,
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
     AugmentedState,
+    AugmentedStateSequence,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
@@ -16,6 +18,7 @@ from trajax.types import (
 )
 from trajax.states.augmented.base import (
     BaseAugmentedState,
+    BaseAugmentedStateSequence,
     BaseAugmentedStateBatch,
     BaseAugmentedControlInputSequence,
     BaseAugmentedControlInputBatch,
@@ -62,6 +65,52 @@ class NumPyAugmentedState[P: NumPyState, V: NumPyState](
     def array(self) -> Array[Dim1]:
         return np.concatenate(
             [self.inner.physical.array, self.inner.virtual.array], axis=0
+        )
+
+
+@dataclass(frozen=True)
+class NumPyAugmentedStateSequence[P: NumPyStateSequence, V: NumPyStateSequence](
+    AugmentedStateSequence[P, V],
+    HasPhysical[P],
+    HasVirtual[V],
+    NumPyStateSequence,
+):
+    inner: BaseAugmentedStateSequence[P, V]
+
+    @staticmethod
+    def of[P_: NumPyStateSequence, V_: NumPyStateSequence](
+        *, physical: P_, virtual: V_
+    ) -> "NumPyAugmentedStateSequence[P_, V_]":
+        return NumPyAugmentedStateSequence(
+            cast(
+                BaseAugmentedStateSequence[P_, V_],
+                BaseAugmentedStateSequence.of(physical=physical, virtual=virtual),
+            )
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
+        return self.inner.__array__(dtype=dtype)
+
+    @property
+    def physical(self) -> P:
+        return self.inner.physical
+
+    @property
+    def virtual(self) -> V:
+        return self.inner.virtual
+
+    @property
+    def horizon(self) -> int:
+        return self.inner.horizon
+
+    @property
+    def dimension(self) -> int:
+        return self.inner.dimension
+
+    @property
+    def array(self) -> Array[Dim2]:
+        return np.concatenate(
+            [self.inner.physical.array, self.inner.virtual.array], axis=1
         )
 
 

@@ -345,6 +345,7 @@ class configure:
                         velocity_limits=(0, 15),
                     ),
                     state=types.numpy.augmented.state,
+                    sequence=types.numpy.augmented.state_sequence,
                     batch=types.numpy.augmented.state_batch,
                 )
             ),
@@ -521,6 +522,7 @@ class configure:
                 ),
             ),
             state=types.numpy.augmented.state,
+            state_sequence=types.numpy.augmented.state_sequence,
             state_batch=types.numpy.augmented.state_batch,
             input_batch=types.numpy.augmented.control_input_batch,
         )

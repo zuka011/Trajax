@@ -1,14 +1,16 @@
-from typing import Callable, Any, Never
+from typing import Callable
 from dataclasses import dataclass
 
 from trajax.types import (
     DynamicalModel,
     Sampler,
     AugmentedState,
+    AugmentedStateSequence,
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
     AugmentedStateCreator,
+    AugmentedStateSequenceCreator,
     AugmentedStateBatchCreator,
     AugmentedControlInputBatchCreator,
     HasPhysical,
@@ -19,51 +21,69 @@ from trajax.types import (
 @dataclass(kw_only=True, frozen=True)
 class AugmentedModel[
     PStateT,
+    PStateSequenceT,
     PStateBatchT,
     PInputSequenceT,
     PInputBatchT,
     VStateT,
+    VStateSequenceT,
     VStateBatchT,
     VInputSequenceT,
     VInputBatchT,
     AStateT: AugmentedState,
+    AStateSequenceT: AugmentedStateSequence,
     AStateBatchT: AugmentedStateBatch,
 ](
     DynamicalModel[
         AStateT,
-        Never,
+        AStateSequenceT,
         AStateBatchT,
         AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
     ]
 ):
-    physical: DynamicalModel[PStateT, Any, PStateBatchT, PInputSequenceT, PInputBatchT]
-    virtual: DynamicalModel[VStateT, Any, VStateBatchT, VInputSequenceT, VInputBatchT]
+    physical: DynamicalModel[
+        PStateT, PStateSequenceT, PStateBatchT, PInputSequenceT, PInputBatchT
+    ]
+    virtual: DynamicalModel[
+        VStateT, VStateSequenceT, VStateBatchT, VInputSequenceT, VInputBatchT
+    ]
 
     state: AugmentedStateCreator[PStateT, VStateT, AStateT]
+    sequence: AugmentedStateSequenceCreator[
+        PStateSequenceT, VStateSequenceT, AStateSequenceT
+    ]
     batch: AugmentedStateBatchCreator[PStateBatchT, VStateBatchT, AStateBatchT]
 
     @staticmethod
     def of[
         PS,
+        PSS,
         PSB,
         PIS,
         PIB,
         VS,
+        VSS,
         VSB,
         VIS,
         VIB,
         AS: AugmentedState,
+        ASS: AugmentedStateSequence,
         ASB: AugmentedStateBatch,
     ](
         *,
-        physical: DynamicalModel[PS, Any, PSB, PIS, PIB],
-        virtual: DynamicalModel[VS, Any, VSB, VIS, VIB],
+        physical: DynamicalModel[PS, PSS, PSB, PIS, PIB],
+        virtual: DynamicalModel[VS, VSS, VSB, VIS, VIB],
         state: AugmentedStateCreator[PS, VS, AS],
+        sequence: AugmentedStateSequenceCreator[PSS, VSS, ASS],
         batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
-    ) -> "AugmentedModel[PS, PSB, PIS, PIB, VS, VSB, VIS, VIB, AS, ASB]":
+    ) -> "AugmentedModel[PS, PSS, PSB, PIS, PIB, VS, VSS, VSB, VIS, VIB, AS, ASS, ASB]":
         return AugmentedModel(
-            physical=physical, virtual=virtual, state=state, batch=batch
+            physical=physical,
+            virtual=virtual,
+            state=state,
+            sequence=sequence,
+            batch=batch,
         )
 
     def simulate(
@@ -98,10 +118,13 @@ class AugmentedModel[
         self,
         input: AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT],
         state: AStateT,
-    ) -> Never:
-        raise NotImplementedError(
-            "forward method is not implemented for the augmented model."
+    ) -> AStateSequenceT:
+        physical, virtual = (
+            self.physical.forward(input=input.physical, state=state.physical),
+            self.virtual.forward(input=input.virtual, state=state.virtual),
         )
+
+        return self.sequence.of(physical=physical, virtual=virtual)
 
 
 @dataclass(kw_only=True, frozen=True)
