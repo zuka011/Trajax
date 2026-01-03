@@ -12,7 +12,7 @@ include:
 variables:
   RUN_INTEGRATION_TESTS: "true"
   RUN_BENCHMARKS: "true"
-  PYPI_PROJECT_NAME: "" # TODO: Fill this in later.
+  PYPI_PROJECT_NAME: "trajax"
 
 benchmark:
   extends: .benchmark-base
