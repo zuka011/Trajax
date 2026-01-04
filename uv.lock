@@ -734,16 +734,12 @@ wheels = [
 name = "trajax"
 source = { editable = "." }
 dependencies = [
+    { name = "beartype" },
     { name = "jax" },
     { name = "jaxtyping" },
     { name = "numtypes" },
     { name = "riskit" },
     { name = "scipy" },
-]
-
-[package.optional-dependencies]
-type-checking = [
-    { name = "beartype" },
 ]
 
 [package.dev-dependencies]
@@ -753,7 +749,6 @@ benchmark = [
     { name = "rich" },
 ]
 dev = [
-    { name = "beartype" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "ruff" },
@@ -773,14 +768,13 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beartype", marker = "extra == 'type-checking'", specifier = ">=0.22.9" },
+    { name = "beartype", specifier = ">=0.22.9" },
     { name = "jax", specifier = ">=0.8.2" },
     { name = "jaxtyping", specifier = ">=0.3.4" },
     { name = "numtypes", specifier = ">=0.5.1" },
     { name = "riskit", specifier = ">=0.2.2" },
     { name = "scipy", specifier = ">=1.16.3" },
 ]
-provides-extras = ["type-checking"]
 
 [package.metadata.requires-dev]
 benchmark = [
@@ -789,7 +783,6 @@ benchmark = [
     { name = "rich", specifier = ">=14.2.0" },
 ]
 dev = [
-    { name = "beartype", specifier = ">=0.22.9" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pyright", specifier = ">=1.1.407" },
     { name = "ruff", specifier = ">=0.14.10" },
