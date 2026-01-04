@@ -193,9 +193,7 @@ class JaxSamplingOptions:
     physical_standard_deviation: Float[JaxArray, "D_u"] = field(
         default_factory=lambda: jnp.array([1.0, 2.0])
     )
-    virtual_standard_deviation: Float[JaxArray, "D_v"] = field(
-        default_factory=lambda: jnp.array([1.0])
-    )
+    virtual_standard_deviation: float = 1.0
     rollout_count: int = 512
     physical_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(42))
     virtual_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(43))
@@ -406,7 +404,7 @@ class configure:
                     key=sampling.physical_key,
                 ),
                 virtual=sampler.jax.gaussian(
-                    standard_deviation=sampling.virtual_standard_deviation,
+                    standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.jax.simple.control_input_batch.create,
                     key=sampling.virtual_key,
@@ -476,7 +474,7 @@ class configure:
                     key=sampling.physical_key,
                 ),
                 sampler.jax.gaussian(
-                    standard_deviation=sampling.virtual_standard_deviation,
+                    standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.jax.simple.control_input_batch.create,
                     key=sampling.virtual_key,
@@ -547,6 +545,122 @@ class configure:
             state_sequence=types.jax.augmented.state_sequence,
             state_batch=types.jax.augmented.state_batch,
             input_batch=types.jax.augmented.control_input_batch,
+            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
+        )
+
+        planner = (control_collector := mppi.collector.controls.decorating(planner))
+
+        return JaxMpccPlannerConfiguration(
+            reference=reference,
+            planner=planner,
+            model=augmented_model,
+            contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
+            wheelbase=L,
+            distance=circles_distance,
+            obstacles=obstacles,
+            risk_collector=risk_collector,
+            control_collector=control_collector,
+        )
+
+    @staticmethod
+    def planner_from_mpcc(
+        *,
+        reference: Trajectory = reference.small_circle,
+        obstacles: ObstacleStateProvider = obstacles.none,
+        weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
+        sampling: JaxSamplingOptions = JaxSamplingOptions(),
+        use_covariance_propagation: bool = False,
+    ) -> JaxMpccPlannerConfiguration:
+        obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
+            predictor.curvilinear(
+                horizon=HORIZON,
+                model=model.jax.bicycle.obstacle(
+                    time_step_size=dt, wheelbase=(L := 2.5)
+                ),
+                prediction=bicycle_to_obstacle_states,
+                propagator=propagator.jax.linear(
+                    time_step_size=dt,
+                    initial_covariance=propagator.jax.covariance.constant_variance(
+                        position_variance=0.01, velocity_variance=1.0
+                    ),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                )
+                if use_covariance_propagation
+                else None,
+            )
+        )
+
+        planner, augmented_model, contouring_cost, lag_cost = mppi.jax.mpcc(
+            model=model.jax.bicycle.dynamical(
+                time_step_size=dt,
+                wheelbase=L,
+                speed_limits=(0.0, 15.0),
+                steering_limits=(-0.5, 0.5),
+                acceleration_limits=(-3.0, 3.0),
+            ),
+            sampler=sampler.jax.gaussian(
+                standard_deviation=sampling.physical_standard_deviation,
+                rollout_count=sampling.rollout_count,
+                to_batch=types.jax.bicycle.control_input_batch.create,
+                key=sampling.physical_key,
+            ),
+            costs=(
+                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.jax.safety.collision(
+                    obstacle_states=obstacles,
+                    sampler=create_obstacles.sampler.jax.gaussian(
+                        seed=sampling.obstacle_seed
+                    ),
+                    distance=(
+                        circles_distance := distance.jax.circles(
+                            ego=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(V := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(V,)),
+                            ),
+                            obstacle=Circles(
+                                origins=array(
+                                    [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
+                                    shape=(C := 3, 2),
+                                ),
+                                radii=array([0.8, 0.8, 0.8], shape=(C,)),
+                            ),
+                            position_extractor=(
+                                position_extractor := extract.from_physical(position)
+                            ),
+                            heading_extractor=extract.from_physical(heading),
+                        )
+                    ),
+                    distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
+                    weight=weights.collision,
+                    metric=(
+                        risk_collector := (
+                            risk.collector.decorating(
+                                risk.jax.mean_variance(gamma=0.5, sample_count=10)
+                            )
+                            if use_covariance_propagation
+                            else None
+                        )
+                    ),
+                ),
+            ),
+            reference=reference,
+            position_extractor=position_extractor,
+            config={
+                "weights": {
+                    "contouring": weights.contouring,
+                    "lag": weights.lag,
+                    "progress": weights.progress,
+                },
+                "virtual": {
+                    "velocity_limits": (0.0, 15.0),
+                    "sampling_standard_deviation": sampling.virtual_standard_deviation,
+                    "sampling_key": sampling.virtual_key,
+                },
+            },
             filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
         )
 

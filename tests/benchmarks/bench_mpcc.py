@@ -55,9 +55,7 @@ def accumulate_obstacle_states(
         (
             JaxBenchmarkRunner.create(),
             MpccConfiguration(
-                planner=(
-                    jax_configuration := mpcc.jax.planner_from_augmented()
-                ).planner,
+                planner=(jax_configuration := mpcc.jax.planner_from_mpcc()).planner,
                 initial_state=jax_configuration.initial_state,
                 nominal_input=jax_configuration.nominal_input,
             ),
@@ -107,7 +105,7 @@ def bench_mpcc_single_step(
             JaxBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    jax_configuration := mpcc.jax.planner_from_augmented(
+                    jax_configuration := mpcc.jax.planner_from_mpcc(
                         reference=reference.jax.small_circle,
                         obstacles=obstacles.jax.static.loop,
                     )
@@ -164,7 +162,7 @@ def bench_mpcc_static_obstacles_single_step(
             JaxBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    jax_configuration := mpcc.jax.planner_from_augmented(
+                    jax_configuration := mpcc.jax.planner_from_mpcc(
                         reference=reference.jax.slalom,
                         obstacles=obstacles.jax.dynamic.slalom,
                     )
@@ -222,7 +220,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
             JaxBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    jax_configuration := mpcc.jax.planner_from_augmented(
+                    jax_configuration := mpcc.jax.planner_from_mpcc(
                         reference=reference.jax.slalom,
                         obstacles=obstacles.jax.dynamic.slalom,
                         use_covariance_propagation=True,

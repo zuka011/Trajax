@@ -1,4 +1,4 @@
-from typing import TypedDict, NotRequired
+from typing import TypedDict
 
 from trajax.types import (
     NumPyState,
@@ -36,6 +36,7 @@ from trajax.costs import costs as create_costs, NumPyContouringCost, NumPyLagCos
 from trajax.mppi import NumPyWeights
 
 from numtypes import Array, Dim2, D, array_1d
+from deepmerge import always_merger
 
 type NumPyMpccVirtualState = NumPyState[D[1]]
 type NumPyMpccAugmentedState[S: NumPyState] = NumPyAugmentedState[
@@ -71,23 +72,65 @@ type NumPyMpccCostFunction[
 ]
 
 
-class NumPyMpccWeightConfig(TypedDict):
-    contouring: float
-    lag: float
-    progress: float
+class NumPyMpccWeightConfig:
+    class Full(TypedDict):
+        contouring: float
+        lag: float
+        progress: float
+
+    class Partial(TypedDict, total=False):
+        contouring: float
+        lag: float
+        progress: float
 
 
-class NumPyMpccVirtualStateConfig(TypedDict):
-    velocity_limits: tuple[float, float]
-    sampling_standard_deviation: float
+class NumPyMpccVirtualStateConfig:
+    class Full(TypedDict):
+        state_limits: tuple[float, float]
+        velocity_limits: tuple[float, float]
+        sampling_standard_deviation: float
+        sampling_seed: int
 
-    state_limits: NotRequired[tuple[float, float]]
-    sampling_seed: NotRequired[int]
+    class Partial(TypedDict, total=False):
+        state_limits: tuple[float, float]
+        velocity_limits: tuple[float, float]
+        sampling_standard_deviation: float
+        sampling_seed: int
 
 
-class NumPyMpccConfig(TypedDict):
-    weights: NumPyMpccWeightConfig
-    virtual: NumPyMpccVirtualStateConfig
+class NumPyMpccConfig:
+    class Full(TypedDict):
+        weights: NumPyMpccWeightConfig.Full
+        virtual: NumPyMpccVirtualStateConfig.Full
+
+    class Partial(TypedDict, total=False):
+        weights: NumPyMpccWeightConfig.Partial
+        virtual: NumPyMpccVirtualStateConfig.Partial
+
+
+def fill_defaults(
+    config: NumPyMpccConfig.Partial | None,
+    *,
+    reference: Trajectory[NumPyPathParameters, NumPyReferencePoints],
+) -> NumPyMpccConfig.Full:
+    return always_merger.merge(  # type: ignore
+        NumPyMpccConfig.Full(
+            {
+                "weights": {
+                    "contouring": 20.0,
+                    "lag": 10.0,
+                    "progress": 500.0,
+                },
+                "virtual": {
+                    "state_limits": (0.0, reference.path_length),
+                    "velocity_limits": (0.0, 15.0),
+                    "sampling_standard_deviation": 1.0,
+                    "sampling_seed": 0,
+                },
+            }
+        ),
+        config if config is not None else NumPyMpccConfig.Partial({}),
+    )
 
 
 class NumPyMpccMppi:
@@ -107,7 +150,7 @@ class NumPyMpccMppi:
         costs: tuple[NumPyMpccCostFunction[CB, SB, C], ...],
         reference: Trajectory[NumPyPathParameters, NumPyReferencePoints],
         position_extractor: NumPyPositionExtractor[NumPyMpccAugmentedStateBatch[SB]],
-        config: NumPyMpccConfig,
+        config: NumPyMpccConfig.Partial | None = None,
         update_function: NumPyUpdateFunction[NumPyMpccAugmentedControlInputSequence[CS]]
         | None = None,
         padding_function: NumPyPaddingFunction[
@@ -141,27 +184,27 @@ class NumPyMpccMppi:
         NumPyContouringCost[NumPyMpccAugmentedStateBatch[SB]],
         NumPyLagCost[NumPyMpccAugmentedStateBatch[SB]],
     ]:
+        full_config = fill_defaults(config, reference=reference)
+
         planner, augmented_model = NumPyAugmentedMppi.create(
             planning_interval=planning_interval,
             models=(
                 model,
                 create_model.numpy.integrator.dynamical(
                     time_step_size=model.time_step_size,
-                    state_limits=config["virtual"].get(
-                        "state_limits", (0, reference.path_length)
-                    ),
-                    velocity_limits=config["virtual"]["velocity_limits"],
+                    state_limits=full_config["virtual"]["state_limits"],
+                    velocity_limits=full_config["virtual"]["velocity_limits"],
                 ),
             ),
             samplers=(
                 sampler,
                 create_sampler.numpy.gaussian(
                     standard_deviation=array_1d(
-                        (config["virtual"]["sampling_standard_deviation"],)
+                        (full_config["virtual"]["sampling_standard_deviation"],)
                     ),
                     rollout_count=sampler.rollout_count,
                     to_batch=NumPySimpleControlInputBatch.create,
-                    seed=config["virtual"].get("sampling_seed", 0),
+                    seed=full_config["virtual"]["sampling_seed"],
                 ),
             ),
             cost=create_costs.numpy.combined(  # type: ignore
@@ -173,18 +216,18 @@ class NumPyMpccMppi:
                         )
                     ),
                     position_extractor=position_extractor,
-                    weight=config["weights"]["contouring"],
+                    weight=full_config["weights"]["contouring"],
                 ),
                 lag_cost := create_costs.numpy.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_parameter_extractor,
                     position_extractor=position_extractor,
-                    weight=config["weights"]["lag"],
+                    weight=full_config["weights"]["lag"],
                 ),
                 create_costs.numpy.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(extract_path_velocity),
                     time_step_size=model.time_step_size,
-                    weight=config["weights"]["progress"],
+                    weight=full_config["weights"]["progress"],
                 ),
                 *costs,
             ),
