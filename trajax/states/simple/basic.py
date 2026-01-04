@@ -29,6 +29,15 @@ class NumPyControlInputSequenceLike[T: int, D_u: int](
 class NumPySimpleState[D_x: int](NumPyState[D_x]):
     _array: Array[Dims[D_x]]
 
+    @staticmethod
+    def zeroes[D_x_: int](*, dimension: D_x_) -> "NumPySimpleState[D_x_]":
+        """Creates a zeroed simple state for the given dimension."""
+        array = np.zeros((dimension,))
+
+        assert shape_of(array, matches=(dimension,))
+
+        return NumPySimpleState(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         return self.array
 

@@ -34,6 +34,11 @@ class JaxControlInputSequenceLike[T: int, D_u: int](
 class JaxSimpleState[D_x: int](JaxState[D_x]):
     _array: Float[JaxArray, "D_x"]
 
+    @staticmethod
+    def zeroes[D_x_: int](*, dimension: D_x_) -> "JaxSimpleState[D_x_]":
+        """Creates a zeroed simple state for the given dimension."""
+        return JaxSimpleState(jnp.zeros((dimension,)))
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
         return np.asarray(self.array)
 

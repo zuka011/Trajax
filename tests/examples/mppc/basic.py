@@ -138,7 +138,7 @@ class NumPyMpccPlannerConfiguration:
     def initial_state(self) -> MpccState:
         return types.numpy.augmented.state.of(
             physical=types.numpy.bicycle.state(x=0.0, y=0.0, heading=0.0, speed=0.0),
-            virtual=types.numpy.simple.state(np.array([0.0])),
+            virtual=types.numpy.simple.state.zeroes(dimension=1),
         )
 
     @property

@@ -121,6 +121,18 @@ class JaxObstacleStates[T: int, K: int](
 
         return JaxObstacleStates.create(x=x, y=y, heading=heading, horizon=horizon)
 
+    @staticmethod
+    def for_time_step[K_: int](
+        *,
+        x: Float[JaxArray, "K"],
+        y: Float[JaxArray, "K"],
+        heading: Float[JaxArray, "K"],
+        obstacle_count: K_ | None = None,
+    ) -> "JaxObstacleStatesForTimeStep[K_]":
+        return JaxObstacleStatesForTimeStep.create(
+            x=x, y=y, heading=heading, obstacle_count=obstacle_count
+        )
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
 

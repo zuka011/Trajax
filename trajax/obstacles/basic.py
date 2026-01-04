@@ -92,6 +92,12 @@ class NumPyObstacleStates[T: int, K: int](
 
         return NumPyObstacleStates.create(x=x, y=y, heading=heading)
 
+    @staticmethod
+    def for_time_step[K_: int](
+        *, x: Array[Dims[K_]], y: Array[Dims[K_]], heading: Array[Dims[K_]]
+    ) -> "NumPyObstacleStatesForTimeStep[K_]":
+        return NumPyObstacleStatesForTimeStep.create(x=x, y=y, heading=heading)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
 
