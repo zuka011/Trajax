@@ -143,6 +143,7 @@ class MpccPlannerConfiguration[
     [
         (mpcc.numpy.planner_from_base(), "numpy-from-base"),
         (mpcc.numpy.planner_from_augmented(), "numpy-from-augmented"),
+        (mpcc.numpy.planner_from_mpcc(), "numpy-from-mpcc"),
         (mpcc.jax.planner_from_base(), "jax-from-base"),
         (mpcc.jax.planner_from_augmented(), "jax-from-augmented"),
     ],
@@ -247,25 +248,25 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     ["configuration", "configuration_name"],
     [
         (
-            mpcc.numpy.planner_from_augmented(
+            mpcc.numpy.planner_from_mpcc(
                 reference=reference.numpy.loop, obstacles=obstacles.numpy.static.loop
             ),
-            "numpy-from-augmented-static",
+            "numpy-from-mpcc-static",
         ),
         (
-            mpcc.numpy.planner_from_augmented(
+            mpcc.numpy.planner_from_mpcc(
                 reference=reference.numpy.slalom,
                 obstacles=obstacles.numpy.dynamic.slalom,
             ),
-            "numpy-from-augmented-dynamic",
+            "numpy-from-mpcc-dynamic",
         ),
         (
-            mpcc.numpy.planner_from_augmented(
+            mpcc.numpy.planner_from_mpcc(
                 reference=reference.numpy.short,
                 obstacles=obstacles.numpy.dynamic.short,
                 use_covariance_propagation=True,
             ),
-            "numpy-from-augmented-dynamic-uncertain",
+            "numpy-from-mpcc-dynamic-uncertain",
         ),
         (
             mpcc.jax.planner_from_augmented(

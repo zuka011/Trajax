@@ -381,7 +381,7 @@ class NumPyBicycleModel(
         NumPyBicycleControlInputBatch,
     ],
 ):
-    time_step_size: float
+    _time_step_size: float
     wheelbase: float
     speed_limits: tuple[float, float]
     steering_limits: tuple[float, float]
@@ -399,7 +399,7 @@ class NumPyBicycleModel(
         """Creates a kinematic bicycle model that uses NumPy for computations."""
 
         return NumPyBicycleModel(
-            time_step_size=time_step_size,
+            _time_step_size=time_step_size,
             wheelbase=wheelbase,
             speed_limits=speed_limits if speed_limits is not None else NO_LIMITS,
             steering_limits=steering_limits
@@ -469,6 +469,10 @@ class NumPyBicycleModel(
         self, inputs: NumPyBicycleControlInputSequence[T], state: NumPyBicycleState
     ) -> NumPyBicycleStateSequence[T]:
         return self.simulate(NumPyBicycleControlInputBatch.of(inputs), state).rollout(0)
+
+    @property
+    def time_step_size(self) -> float:
+        return self._time_step_size
 
 
 @dataclass(kw_only=True, frozen=True)

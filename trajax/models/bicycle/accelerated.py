@@ -435,7 +435,8 @@ class JaxBicycleModel(
         JaxBicycleControlInputBatch,
     ],
 ):
-    time_step_size: Scalar
+    _time_step_size: float
+    time_step_size_scalar: Scalar
     wheelbase: Scalar
     speed_limits: tuple[Scalar, Scalar]
     steering_limits: tuple[Scalar, Scalar]
@@ -453,7 +454,8 @@ class JaxBicycleModel(
         """Creates a kinematic bicycle model that uses JAX for computations."""
 
         return JaxBicycleModel(
-            time_step_size=jnp.asarray(time_step_size),
+            _time_step_size=time_step_size,
+            time_step_size_scalar=jnp.asarray(time_step_size),
             wheelbase=jnp.asarray(wheelbase),
             speed_limits=wrap(speed_limits) if speed_limits is not None else NO_LIMITS,
             steering_limits=wrap(steering_limits)
@@ -482,7 +484,7 @@ class JaxBicycleModel(
             simulate(
                 inputs.array,
                 initial,
-                time_step_size=self.time_step_size,
+                time_step_size=self.time_step_size_scalar,
                 wheelbase=self.wheelbase,
                 speed_limits=self.speed_limits,
                 steering_limits=self.steering_limits,
@@ -497,7 +499,7 @@ class JaxBicycleModel(
             step(
                 state.array.reshape(-1, 1),
                 inputs.array[0].reshape(-1, 1),
-                time_step_size=self.time_step_size,
+                time_step_size=self.time_step_size_scalar,
                 wheelbase=self.wheelbase,
                 speed_limits=self.speed_limits,
                 steering_limits=self.steering_limits,
@@ -509,6 +511,10 @@ class JaxBicycleModel(
         self, inputs: JaxBicycleControlInputSequence[T], state: JaxBicycleState
     ) -> JaxBicycleStateSequence[T]:
         return self.simulate(JaxBicycleControlInputBatch.of(inputs), state).rollout(0)
+
+    @property
+    def time_step_size(self) -> float:
+        return self._time_step_size
 
 
 @dataclass(kw_only=True, frozen=True)

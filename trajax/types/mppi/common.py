@@ -109,6 +109,11 @@ class DynamicalModel[StateT, StateSequenceT, StateBatchT, InputSequenceT, InputB
         provided initial state."""
         ...
 
+    @property
+    def time_step_size(self) -> float:
+        """Time step size of the dynamical model."""
+        ...
+
 
 class Costs[T: int, M: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:

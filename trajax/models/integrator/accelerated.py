@@ -103,7 +103,8 @@ class JaxIntegratorModel(
         JaxIntegratorControlInputBatch,
     ]
 ):
-    time_step: Scalar
+    _time_step_size: float
+    time_step_size_scalar: Scalar
     state_limits: tuple[Scalar, Scalar]
     velocity_limits: tuple[Scalar, Scalar]
 
@@ -128,7 +129,8 @@ class JaxIntegratorModel(
         """
 
         return JaxIntegratorModel(
-            time_step=jnp.asarray(time_step_size),
+            _time_step_size=time_step_size,
+            time_step_size_scalar=jnp.asarray(time_step_size),
             state_limits=wrap(state_limits) if state_limits is not None else NO_LIMITS,
             velocity_limits=wrap(velocity_limits)
             if velocity_limits is not None
@@ -149,7 +151,7 @@ class JaxIntegratorModel(
             simulate(
                 controls=inputs.array,
                 initial_state=initial,
-                time_step=self.time_step,
+                time_step=self.time_step_size_scalar,
                 state_limits=self.state_limits,
                 velocity_limits=self.velocity_limits,
             )
@@ -164,7 +166,7 @@ class JaxIntegratorModel(
             step(
                 control=inputs.array,
                 state=state.array,
-                time_step=self.time_step,
+                time_step=self.time_step_size_scalar,
                 state_limits=self.state_limits,
                 velocity_limits=self.velocity_limits,
             )
@@ -178,6 +180,10 @@ class JaxIntegratorModel(
         return self.simulate(
             inputs=SimpleControlInputBatch.of(inputs), initial_state=state
         ).rollout(0)
+
+    @property
+    def time_step_size(self) -> float:
+        return self._time_step_size
 
 
 @dataclass(kw_only=True, frozen=True)

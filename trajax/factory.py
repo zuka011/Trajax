@@ -13,6 +13,7 @@ from trajax.mppi import (
     JaxSavGolFilter,
 )
 from trajax.states import AugmentedMppi, NumPyAugmentedMppi, JaxAugmentedMppi
+from trajax.mpcc import NumPyMpccMppi
 
 
 class mppi:
@@ -24,6 +25,7 @@ class mppi:
     class numpy:
         base: Final = NumPyMppi.create
         augmented: Final = NumPyAugmentedMppi.create
+        mpcc: Final = NumPyMpccMppi.create
 
     class jax:
         base: Final = JaxMppi.create

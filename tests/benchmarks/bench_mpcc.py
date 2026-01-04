@@ -47,9 +47,7 @@ def accumulate_obstacle_states(
         (
             NumPyBenchmarkRunner.create(),
             MpccConfiguration(
-                planner=(
-                    np_configuration := mpcc.numpy.planner_from_augmented()
-                ).planner,
+                planner=(np_configuration := mpcc.numpy.planner_from_mpcc()).planner,
                 initial_state=np_configuration.initial_state,
                 nominal_input=np_configuration.nominal_input,
             ),
@@ -95,7 +93,7 @@ def bench_mpcc_single_step(
             NumPyBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    np_configuration := mpcc.numpy.planner_from_augmented(
+                    np_configuration := mpcc.numpy.planner_from_mpcc(
                         reference=reference.numpy.small_circle,
                         obstacles=obstacles.numpy.static.loop,
                     )
@@ -152,7 +150,7 @@ def bench_mpcc_static_obstacles_single_step(
             NumPyBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    np_configuration := mpcc.numpy.planner_from_augmented(
+                    np_configuration := mpcc.numpy.planner_from_mpcc(
                         reference=reference.numpy.slalom,
                         obstacles=obstacles.numpy.dynamic.slalom,
                     )
@@ -209,7 +207,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
             NumPyBenchmarkRunner.create(),
             MpccConfiguration(
                 planner=(
-                    np_configuration := mpcc.numpy.planner_from_augmented(
+                    np_configuration := mpcc.numpy.planner_from_mpcc(
                         reference=reference.numpy.slalom,
                         obstacles=obstacles.numpy.dynamic.slalom,
                         use_covariance_propagation=True,

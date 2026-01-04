@@ -86,6 +86,12 @@ class AugmentedModel[
             batch=batch,
         )
 
+    def __post_init__(self) -> None:
+        assert self.physical.time_step_size == self.virtual.time_step_size, (
+            f"Physical and virtual models have different time step sizes: "
+            f"{self.physical.time_step_size} (physical) vs {self.virtual.time_step_size} (virtual)"
+        )
+
     def simulate(
         self,
         inputs: AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
@@ -125,6 +131,10 @@ class AugmentedModel[
         )
 
         return self.sequence.of(physical=physical, virtual=virtual)
+
+    @property
+    def time_step_size(self) -> float:
+        return self.physical.time_step_size
 
 
 @dataclass(kw_only=True, frozen=True)

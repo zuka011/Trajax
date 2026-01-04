@@ -57,7 +57,7 @@ class NumPyIntegratorModel(
         NumPyIntegratorControlInputBatch,
     ]
 ):
-    time_step: float
+    _time_step_size: float
     state_limits: tuple[float, float]
     velocity_limits: tuple[float, float]
 
@@ -81,7 +81,7 @@ class NumPyIntegratorModel(
             velocity_limits: Optional tuple of (min, max) limits for the velocity inputs.
         """
         return NumPyIntegratorModel(
-            time_step=time_step_size,
+            _time_step_size=time_step_size,
             state_limits=state_limits if state_limits is not None else NO_LIMITS,
             velocity_limits=velocity_limits
             if velocity_limits is not None
@@ -99,14 +99,14 @@ class NumPyIntegratorModel(
             simulate_with_state_limits(
                 inputs=clipped_inputs,
                 initial_state=initial_state.array,
-                time_step=self.time_step,
+                time_step=self.time_step_size,
                 state_limits=self.state_limits,
             )
             if self.has_state_limits
             else simulate(
                 inputs=clipped_inputs,
                 initial_states=initial_state.array[:, np.newaxis],
-                time_step=self.time_step,
+                time_step=self.time_step_size,
             )
         )
 
@@ -117,7 +117,7 @@ class NumPyIntegratorModel(
     ) -> SimpleState[D_x]:
         clipped_control = np.clip(inputs.array[0], *self.velocity_limits)
         new_state = np.clip(
-            state.array + clipped_control * self.time_step, *self.state_limits
+            state.array + clipped_control * self.time_step_size, *self.state_limits
         )
 
         return SimpleState(new_state)
@@ -130,6 +130,10 @@ class NumPyIntegratorModel(
         return self.simulate(
             inputs=SimpleControlInputBatch.of(inputs), initial_state=state
         ).rollout(0)
+
+    @property
+    def time_step_size(self) -> float:
+        return self._time_step_size
 
     @property
     def has_state_limits(self) -> bool:
