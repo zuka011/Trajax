@@ -73,15 +73,4 @@ def query(
     y = start[1] + normalized * delta_y
     heading = jnp.full_like(x, heading)
 
-    return stack(x=x, y=y, heading=heading)
-
-
-@jax.jit
-@jaxtyped
-def stack(
-    *,
-    x: Float[JaxArray, "T M"],
-    y: Float[JaxArray, "T M"],
-    heading: Float[JaxArray, "T M"],
-) -> Float[JaxArray, f"T {D_R} M"]:
-    return jnp.stack([x, y, heading], axis=-1).transpose(0, 2, 1)
+    return jnp.stack([x, y, heading], axis=1)

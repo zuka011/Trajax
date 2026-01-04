@@ -12,7 +12,6 @@ from trajax.types.trajectories.common import (
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims, D
 
-import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -89,7 +88,7 @@ class JaxPositions[T: int, M: int]:
         return JaxPositions(x=x, y=y)
 
     def __array__(self) -> Array[Dims[T, D[2], M]]:
-        return np.asarray(jnp.stack([self.x, self.y], axis=-1).transpose(0, 2, 1))
+        return np.asarray(jnp.stack([self.x, self.y], axis=1))
 
 
 @jaxtyped
@@ -155,11 +154,7 @@ class JaxReferencePoints[T: int, M: int](ReferencePoints[T, M]):
             f"but got {x.shape}, {y.shape}, and {heading.shape}."
         )
 
-        return JaxReferencePoints(
-            array=stack(
-                x=jnp.asarray(x), y=jnp.asarray(y), heading=jnp.asarray(heading)
-            )
-        )
+        return JaxReferencePoints(array=jnp.stack([x, y, heading], axis=1))
 
     def __array__(self) -> Array[Dims[T, D_r, M]]:
         return np.asarray(self.array)
@@ -184,14 +179,3 @@ class JaxReferencePoints[T: int, M: int](ReferencePoints[T, M]):
     @property
     def heading_array(self) -> Float[JaxArray, "T M"]:
         return self.array[:, 2]
-
-
-@jax.jit
-@jaxtyped
-def stack(
-    *,
-    x: Float[JaxArray, "T M"],
-    y: Float[JaxArray, "T M"],
-    heading: Float[JaxArray, "T M"],
-) -> Float[JaxArray, f"T {D_R} M"]:
-    return jnp.stack([x, y, heading], axis=-1).transpose(0, 2, 1)

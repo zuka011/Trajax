@@ -1,4 +1,4 @@
-from typing import Sequence, cast, Self, Any
+from typing import Sequence, cast, Self
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -9,15 +9,12 @@ from trajax.types import (
     D_O,
     SampledObstacleStates,
     ObstacleStates,
-    JaxObstacleStateProvider,
-    ObstacleMotionPredictor,
 )
 
 from numtypes import Array, Dims, D
-from jaxtyping import Array as JaxArray, Float, Scalar
+from jaxtyping import Array as JaxArray, Float
 
 import numpy as np
-import jax
 import jax.numpy as jnp
 
 
@@ -125,7 +122,7 @@ class JaxObstacleStates[T: int, K: int](
         return JaxObstacleStates.create(x=x, y=y, heading=heading, horizon=horizon)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=-1)
+        return np.stack([self._x, self._y, self._heading], axis=1)
 
     def x(self) -> Array[Dims[T, K]]:
         return np.asarray(self._x)
@@ -144,6 +141,13 @@ class JaxObstacleStates[T: int, K: int](
             x=self._x[..., jnp.newaxis],
             y=self._y[..., jnp.newaxis],
             heading=self._heading[..., jnp.newaxis],
+        )
+
+    def at(self, time_step: int) -> "JaxObstacleStatesForTimeStep[K]":
+        return JaxObstacleStatesForTimeStep.create(
+            x=self._x[time_step],
+            y=self._y[time_step],
+            heading=self._heading[time_step],
         )
 
     @property
@@ -213,6 +217,10 @@ class JaxObstacleStatesRunningHistory[K: int]:
     history: list[JaxObstacleStatesForTimeStep[K]]
 
     @staticmethod
+    def empty() -> "JaxObstacleStatesRunningHistory[int]":
+        return JaxObstacleStatesRunningHistory(history=[])
+
+    @staticmethod
     def single[K_: int](
         step: JaxObstacleStatesForTimeStep[K_],
     ) -> "JaxObstacleStatesRunningHistory[K_]":
@@ -226,6 +234,9 @@ class JaxObstacleStatesRunningHistory[K: int]:
 
     def append(self, step: JaxObstacleStatesForTimeStep[K]) -> Self:
         return self.__class__(history=self.history + [step])
+
+    def get(self) -> Self:
+        return self
 
     def x(self) -> Array[Dims[int, K]]:
         return self._x
@@ -251,8 +262,12 @@ class JaxObstacleStatesRunningHistory[K: int]:
 
         return cast(K, self.history[0]._x.shape[0])
 
-    @cached_property
+    @property
     def array(self) -> Float[JaxArray, "T D_o K"]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Float[JaxArray, "T D_o K"]:
         return jnp.stack([self.x_array, self.y_array, self.heading_array], axis=1)
 
     @cached_property
@@ -282,153 +297,3 @@ class JaxObstacleStatesRunningHistory[K: int]:
     @cached_property
     def _heading(self) -> Array[Dims[int, K]]:
         return np.stack([step._heading for step in self.history], axis=0)
-
-
-@dataclass(frozen=True)
-class JaxStaticObstacleStateProvider[T: int, K: int](
-    JaxObstacleStateProvider[JaxObstacleStates[T, K]]
-):
-    states: JaxObstacleStates[T, K]
-
-    @staticmethod
-    def empty[T_: int](*, horizon: T_) -> "JaxStaticObstacleStateProvider[T_, D[0]]":
-        positions = jnp.empty((0, 2))
-
-        return JaxStaticObstacleStateProvider.create(
-            positions=positions, horizon=horizon
-        )
-
-    @staticmethod
-    def create[T_: int, K_: int](
-        *,
-        positions: Float[JaxArray, "K 2"],
-        headings: Float[JaxArray, "K"] | None = None,
-        horizon: T_,
-        obstacle_count: K_ | None = None,
-    ) -> "JaxStaticObstacleStateProvider[T_, K_]":
-        K = obstacle_count if obstacle_count is not None else positions.shape[0]
-        x = jnp.tile(positions[:, 0], (horizon, 1))
-        y = jnp.tile(positions[:, 1], (horizon, 1))
-
-        if headings is not None:
-            heading = jnp.tile(headings, (horizon, 1))
-        else:
-            heading = jnp.zeros((horizon, K))
-
-        assert x.shape == y.shape == heading.shape == (horizon, K), (
-            f"Expected shapes {(horizon, K)}, but got x with shape {x.shape}, y with shape {y.shape}, heading with shape {heading.shape}."
-        )
-
-        return JaxStaticObstacleStateProvider(
-            JaxObstacleStates.create(x=x, y=y, heading=heading)
-        )
-
-    def with_time_step(self, time_step: float) -> Self:
-        return self
-
-    def with_predictor(self, predictor: Any) -> Self:
-        return self
-
-    def __call__(self) -> JaxObstacleStates[T, K]:
-        return self.states
-
-    def step(self) -> None:
-        pass
-
-
-@dataclass(kw_only=True)
-class JaxDynamicObstacleStateProvider[T: int, K: int](
-    JaxObstacleStateProvider[JaxObstacleStates[T, K]]
-):
-    type MotionPredictor[T_: int, K_: int] = ObstacleMotionPredictor[
-        JaxObstacleStatesRunningHistory[K_], JaxObstacleStates[T_, K_]
-    ]
-
-    history: JaxObstacleStatesRunningHistory[K]
-    velocities: Float[JaxArray, "K 2"]
-
-    horizon: T
-    time_step: Scalar | None = None
-    predictor: MotionPredictor[T, K] | None = None
-
-    @staticmethod
-    def create[T_: int, K_: int](
-        *,
-        positions: Float[JaxArray, "K 2"],
-        velocities: Float[JaxArray, "K 2"],
-        horizon: T_,
-        obstacle_count: K_ | None = None,
-    ) -> "JaxDynamicObstacleStateProvider[T_, K_]":
-        headings = headings_from(velocities)
-
-        return JaxDynamicObstacleStateProvider(
-            history=JaxObstacleStatesRunningHistory.single(
-                JaxObstacleStatesForTimeStep.create(
-                    x=positions[:, 0], y=positions[:, 1], heading=headings
-                )
-            ),
-            velocities=velocities,
-            horizon=horizon,
-        )
-
-    def with_time_step(self, time_step: float) -> Self:
-        return self.__class__(
-            history=self.history,
-            velocities=self.velocities,
-            predictor=self.predictor,
-            horizon=self.horizon,
-            time_step=jnp.asarray(time_step),
-        )
-
-    def with_predictor(self, predictor: MotionPredictor) -> Self:
-        return self.__class__(
-            history=self.history,
-            velocities=self.velocities,
-            predictor=predictor,
-            horizon=self.horizon,
-            time_step=self.time_step,
-        )
-
-    def __call__(self) -> JaxObstacleStates[T, K]:
-        assert self.predictor is not None, (
-            "Motion predictor must be set to provide obstacle states."
-        )
-
-        return self.predictor.predict(history=self.history)
-
-    def step(self) -> None:
-        assert self.time_step is not None, (
-            "Time step must be set to advance obstacle states."
-        )
-
-        last = self.history.last()
-        x, y = step_obstacles(
-            x=last.x_array,
-            y=last.y_array,
-            velocities=self.velocities,
-            time_step=self.time_step,
-        )
-        self.history = self.history.append(
-            JaxObstacleStatesForTimeStep.create(x=x, y=y, heading=last.heading_array)
-        )
-
-
-@jax.jit
-@jaxtyped
-def step_obstacles(
-    *,
-    x: Float[JaxArray, "K"],
-    y: Float[JaxArray, "K"],
-    velocities: Float[JaxArray, "K 2"],
-    time_step: Scalar,
-) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
-    new_x = x + velocities[:, 0] * time_step
-    new_y = y + velocities[:, 1] * time_step
-    return new_x, new_y
-
-
-@jax.jit
-@jaxtyped
-def headings_from(velocities: Float[JaxArray, "K 2"]) -> Float[JaxArray, "K"]:
-    speed = jnp.linalg.norm(velocities, axis=1)
-    return jnp.where(speed > 1e-6, jnp.arctan2(velocities[:, 1], velocities[:, 0]), 0.0)

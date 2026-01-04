@@ -132,7 +132,7 @@ def query(
     dy_ds = evaluate_derivative(parameters, reference_points, coefficients_y)
     heading = jnp.arctan2(dy_ds, dx_ds)
 
-    return stack(x=x, y=y, heading=heading)
+    return jnp.stack([x, y, heading], axis=1)
 
 
 @jax.jit
@@ -186,14 +186,3 @@ def evaluate_derivative(
     )
 
     return b + 2 * c * t + 3 * d * t**2
-
-
-@jax.jit
-@jaxtyped
-def stack(
-    *,
-    x: Float[JaxArray, "T M"],
-    y: Float[JaxArray, "T M"],
-    heading: Float[JaxArray, "T M"],
-) -> Float[JaxArray, f"T {D_R} M"]:
-    return jnp.stack([x, y, heading], axis=-1).transpose(0, 2, 1)

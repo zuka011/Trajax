@@ -1,12 +1,19 @@
 from .common import (
     EstimatedObstacleStates as EstimatedObstacleStates,
     ObstacleStatesHistory as ObstacleStatesHistory,
+    ObstacleStatesRunningHistory as ObstacleStatesRunningHistory,
     ObstacleStateSequences as ObstacleStateSequences,
     CovarianceSequences as CovarianceSequences,
     ObstacleModel as ObstacleModel,
     PredictionCreator as PredictionCreator,
     CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
+)
+from .basic import (
+    NumPyObstacleStatesHistory as NumPyObstacleStatesHistory,
+)
+from .accelerated import (
+    JaxObstacleStatesHistory as JaxObstacleStatesHistory,
 )
 from .propagators import (
     NumPyInitialPositionCovariance as NumPyInitialPositionCovariance,

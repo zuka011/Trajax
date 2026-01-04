@@ -7,9 +7,11 @@ from trajax import (
     ControlInputBatch,
     ControlInputSequence,
     Distance,
+    ObstacleStatesHistory,
     ObstacleStates,
     SampledObstacleStates,
     Sampler as SamplerLike,
+    ObstacleMotionPredictor as ObstacleMotionPredictorLike,
     ObstacleStateProvider as ObstacleStateProviderLike,
     ObstacleStateSampler as ObstacleStateSamplerLike,
     UpdateFunction as UpdateFunctionLike,
@@ -219,6 +221,31 @@ class DistanceExtractor[
         assert np.array_equal(self.expected_obstacle_states, obstacle_states), (
             f"DistanceExtractor received unexpected obstacle states. "
             f"Expected: {self.expected_obstacle_states}, Got: {obstacle_states}"
+        )
+        return self.result
+
+
+@dataclass(frozen=True)
+class ObstacleMotionPredictor[
+    HistoryT: ObstacleStatesHistory,
+    PredictionT: ObstacleStates,
+](ObstacleMotionPredictorLike[HistoryT, PredictionT]):
+    expected_history: HistoryT
+    result: PredictionT
+
+    @staticmethod
+    def returns[H: ObstacleStatesHistory, P: ObstacleStates](
+        result: P, *, when_history_is: H
+    ) -> "ObstacleMotionPredictor[H, P]":
+        return ObstacleMotionPredictor(
+            expected_history=when_history_is,
+            result=result,
+        )
+
+    def predict(self, *, history: HistoryT) -> PredictionT:
+        assert np.array_equal(self.expected_history, history), (
+            f"ObstacleMotionPredictor received unexpected history. "
+            f"Expected: {self.expected_history}, Got: {history}"
         )
         return self.result
 

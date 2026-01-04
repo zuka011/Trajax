@@ -65,10 +65,7 @@ class NumPyReferencePoints[T: int, M: int](ReferencePoints[T, M]):
         """Creates a NumPy reference points instance from x, y, and heading arrays."""
         T, M = x.shape
         return NumPyReferencePoints(
-            array=array(
-                np.stack([x, y, heading], axis=-1).transpose(0, 2, 1).tolist(),
-                shape=(T, D_R, M),
-            )
+            array=array(np.stack([x, y, heading], axis=1).tolist(), shape=(T, D_R, M))
         )
 
     def __array__(self) -> Array[Dims[T, D_r, M]]:

@@ -1,3 +1,4 @@
+from .common import PredictingObstacleStateProvider as PredictingObstacleStateProvider
 from .basic import (
     NumPySampledObstacleStates as NumPySampledObstacleStates,
     NumPyObstacleStates as NumPyObstacleStates,

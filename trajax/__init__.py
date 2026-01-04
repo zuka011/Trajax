@@ -30,6 +30,7 @@ from .models import (
 )
 from .obstacles import (
     obstacles as obstacles,
+    PredictingObstacleStateProvider as PredictingObstacleStateProvider,
 )
 from .predictors import (
     predictor as predictor,
@@ -57,6 +58,7 @@ from .types import (
     PathParameters as PathParameters,
     ReferencePoints as ReferencePoints,
     AugmentedState as AugmentedState,
+    ObstacleStatesHistory as ObstacleStatesHistory,
     ObstacleStates as ObstacleStates,
     SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,

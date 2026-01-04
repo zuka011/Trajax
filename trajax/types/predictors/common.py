@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Self
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
@@ -30,6 +30,16 @@ class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
     @property
     def count(self) -> K:
         """The number of obstacles."""
+        ...
+
+
+class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, HistoryT](Protocol):
+    def get(self) -> HistoryT:
+        """Returns the current full running history of obstacle states."""
+        ...
+
+    def append(self, states: ObstacleStatesForTimeStepT, /) -> Self:
+        """Appends new obstacle states at a time step to the running history."""
         ...
 
 
