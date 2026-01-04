@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, NamedTuple
 
 from trajax.types import (
     Mppi,
@@ -78,6 +78,11 @@ class MppiCreator[
         ...
 
 
+class AugmentedMppiSetup[MppiT, ModelT](NamedTuple):
+    mppi: MppiT
+    model: ModelT
+
+
 class AugmentedMppi:
     @staticmethod
     def create[
@@ -111,12 +116,12 @@ class AugmentedMppi:
         state_sequence: AugmentedStateSequenceCreator[PSS, VSS, ASS],
         state_batch: AugmentedStateBatchCreator[PSB, VSB, ASB],
         input_batch: AugmentedControlInputBatchCreator[PIB, VIB, AIB],
-    ) -> tuple[
+    ) -> AugmentedMppiSetup[
         Mppi[AS, AIS, W],
         AugmentedModel[PS, PSS, PSB, PIS, PIB, VS, VSS, VSB, VIS, VIB, AS, ASS, ASB],
     ]:
-        return (
-            mppi(
+        return AugmentedMppiSetup(
+            mppi=mppi(
                 model=(
                     model := AugmentedModel.of(
                         physical=models[0],
@@ -131,7 +136,7 @@ class AugmentedMppi:
                 ),
                 cost=cost,
             ),
-            model,
+            model=model,
         )
 
 
@@ -172,7 +177,7 @@ class NumPyAugmentedMppi:
         padding_function: NumPyPaddingFunction[ACS, NumPyAugmentedControlInputSequence]
         | None = None,
         filter_function: NumPyFilterFunction[ACS] | None = None,
-    ) -> tuple[
+    ) -> AugmentedMppiSetup[
         Mppi[AS, ACS, NumPyWeights],
         AugmentedModel[PS, PSS, PSB, PCS, PCB, VS, VSS, VSB, VCS, VCB, AS, ASS, ASB],
     ]:
@@ -233,7 +238,7 @@ class JaxAugmentedMppi:
         padding_function: JaxPaddingFunction[ACS, JaxAugmentedControlInputSequence]
         | None = None,
         filter_function: JaxFilterFunction[ACS] | None = None,
-    ) -> tuple[
+    ) -> AugmentedMppiSetup[
         Mppi[AS, ACS, JaxWeights],
         AugmentedModel[PS, PSS, PSB, PCS, PCB, VS, VSS, VSB, VCS, VCB, AS, ASS, ASB],
     ]:

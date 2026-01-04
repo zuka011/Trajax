@@ -39,6 +39,7 @@ from trajax.costs import (
     JaxLagCost,
 )
 from trajax.mppi import JaxWeights
+from trajax.mpcc.common import MpccMppiSetup
 
 from numtypes import D
 from jaxtyping import Float, Array as JaxArray, PRNGKeyArray
@@ -168,7 +169,7 @@ class JaxMpccMppi:
         | None = None,
         filter_function: JaxFilterFunction[JaxMpccAugmentedControlInputSequence[CS]]
         | None = None,
-    ) -> tuple[
+    ) -> MpccMppiSetup[
         Mppi[
             JaxMpccAugmentedState[S],
             JaxMpccAugmentedControlInputSequence[CS],
@@ -248,11 +249,11 @@ class JaxMpccMppi:
             filter_function=filter_function,
         )
 
-        return (
-            planner,  # type: ignore
-            augmented_model,
-            contouring_cost,
-            lag_cost,
+        return MpccMppiSetup(
+            mppi=planner,  # type: ignore
+            model=augmented_model,
+            contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
         )
 
 

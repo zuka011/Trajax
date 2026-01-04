@@ -34,6 +34,7 @@ from trajax.models import model as create_model
 from trajax.samplers import sampler as create_sampler
 from trajax.costs import costs as create_costs, NumPyContouringCost, NumPyLagCost
 from trajax.mppi import NumPyWeights
+from trajax.mpcc.common import MpccMppiSetup
 
 from numtypes import Array, Dim2, D, array_1d
 from deepmerge import always_merger
@@ -160,7 +161,7 @@ class NumPyMpccMppi:
         | None = None,
         filter_function: NumPyFilterFunction[NumPyMpccAugmentedControlInputSequence[CS]]
         | None = None,
-    ) -> tuple[
+    ) -> MpccMppiSetup[
         Mppi[
             NumPyMpccAugmentedState[S],
             NumPyMpccAugmentedControlInputSequence[CS],
@@ -240,11 +241,11 @@ class NumPyMpccMppi:
             filter_function=filter_function,
         )
 
-        return (
-            planner,  # type: ignore
-            augmented_model,
-            contouring_cost,
-            lag_cost,
+        return MpccMppiSetup(
+            mppi=planner,  # type: ignore
+            model=augmented_model,
+            contouring_cost=contouring_cost,
+            lag_cost=lag_cost,
         )
 
 
