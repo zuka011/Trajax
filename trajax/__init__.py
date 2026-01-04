@@ -1,9 +1,5 @@
 from .trajectories import (
     trajectory as trajectory,
-    NumPyLineTrajectory as NumPyLineTrajectory,
-    NumPyWaypointsTrajectory as NumPyWaypointsTrajectory,
-    JaxLineTrajectory as JaxLineTrajectory,
-    JaxWaypointsTrajectory as JaxWaypointsTrajectory,
 )
 from .costs import (
     costs as costs,
@@ -64,6 +60,7 @@ from .types import (
     ObstacleStateProvider as ObstacleStateProvider,
     ObstacleStateSampler as ObstacleStateSampler,
     Risk as Risk,
+    RiskMetric as RiskMetric,
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     Error as Error,

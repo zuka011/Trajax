@@ -36,19 +36,27 @@ from trajax.types import (
     NumPyReferencePoints,
     NumPyPositions,
     NumPyHeadings,
+    NumPyRisk,
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
     JaxHeadings,
+    JaxRisk,
     D_o as D_o_,
     D_O as D_O_,
     NumPyPathParameterExtractor,
     NumPyPathVelocityExtractor,
     NumPyPositionExtractor,
+    NumPyDistanceExtractor,
+    NumPyRiskMetric,
     JaxPathParameterExtractor,
     JaxPathVelocityExtractor,
     JaxPositionExtractor,
+    JaxDistanceExtractor,
+    JaxRiskMetric,
     Error as Error,  # NOTE: Aliased to workaround ruff bug.
+    Risk as Risk,
+    RiskMetric as RiskMetric,
     ContouringCost as ContouringCost,
     NumPyObstacleStateProvider,
     JaxObstacleStateProvider,
@@ -138,7 +146,10 @@ class types:
     type Costs[T: int = Any, M: int = Any] = Costs[T, M]
     type CostFunction[I, S, C] = CostFunction[I, S, C]
     type Error[T: int = Any, M: int = Any] = Error[T, M]
+    type Risk[T: int = Any, M: int = Any] = Risk[T, M]
+
     type ContouringCost[I, S, E] = ContouringCost[I, S, E]
+    type RiskMetric[CF, SB, OS, S, R] = RiskMetric[CF, SB, OS, S, R]
 
     class obstacle:
         type D_o = D_o_
@@ -201,6 +212,7 @@ class types:
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
         )
+        type Risk[T: int = Any, M: int = Any] = NumPyRisk[T, M]
         type InitialPositionCovariance[K: int = Any] = NumPyInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = NumPyInitialVelocityCovariance[K]
         type PositionCovariance[T: int = Any, K: int = Any] = NumPyPositionCovariance[
@@ -220,6 +232,8 @@ class types:
         type PathParameterExtractor[S] = NumPyPathParameterExtractor[S]
         type PathVelocityExtractor[I] = NumPyPathVelocityExtractor[I]
         type PositionExtractor[S] = NumPyPositionExtractor[S]
+        type DistanceExtractor[SB, SOS, D] = NumPyDistanceExtractor[SB, SOS, D]
+        type RiskMetric[SB, OS, SOS] = NumPyRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = NumPyContouringCost[S]
         type ObstacleStateProvider[O] = NumPyObstacleStateProvider[O]
         type InitialCovarianceProvider[S] = NumPyInitialCovarianceProvider[S]
@@ -330,6 +344,7 @@ class types:
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]
         )
+        type Risk[T: int = Any, M: int = Any] = JaxRisk[T, M]
         type InitialPositionCovariance[K: int = Any] = JaxInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = JaxInitialVelocityCovariance[K]
         type PositionCovariance[T: int = Any, K: int = Any] = JaxPositionCovariance[
@@ -347,6 +362,8 @@ class types:
         type PathParameterExtractor[S] = JaxPathParameterExtractor[S]
         type PathVelocityExtractor[I] = JaxPathVelocityExtractor[I]
         type PositionExtractor[S] = JaxPositionExtractor[S]
+        type DistanceExtractor[SB, SOS, D] = JaxDistanceExtractor[SB, SOS, D]
+        type RiskMetric[SB, OS, SOS] = JaxRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = JaxContouringCost[S]
         type ObstacleStateProvider[O] = JaxObstacleStateProvider[O]
         type InitialCovarianceProvider[S] = JaxInitialCovarianceProvider[S]
