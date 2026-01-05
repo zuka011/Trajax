@@ -55,6 +55,7 @@ from .types import (
     ReferencePoints as ReferencePoints,
     AugmentedState as AugmentedState,
     ObstacleStatesHistory as ObstacleStatesHistory,
+    ObstacleStatesForTimeStep as ObstacleStatesForTimeStep,
     ObstacleStates as ObstacleStates,
     SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,

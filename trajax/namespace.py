@@ -245,6 +245,7 @@ class types:
         distance: Final = NumPyDistance
         obstacle_states: Final = NumPyObstacleStates
         obstacle_states_for_time_step: Final = NumPyObstacleStatesForTimeStep
+        obstacle_states_running_history: Final = NumPyObstacleStatesRunningHistory
 
         class simple:
             type State[D_x: int = Any] = NumPySimpleState[D_x]
@@ -376,6 +377,7 @@ class types:
         distance: Final = JaxDistance
         obstacle_states: Final = JaxObstacleStates
         obstacle_states_for_time_step: Final = JaxObstacleStatesForTimeStep
+        obstacle_states_running_history: Final = JaxObstacleStatesRunningHistory
 
         class simple:
             type State[D_x: int = Any] = JaxSimpleState[D_x]

@@ -82,14 +82,16 @@ class JaxObstacleStates[T: int, K: int](
     _covariance: ObstacleCovarianceArray[T, K] | None = None
 
     @staticmethod
-    def empty[T_: int](*, horizon: T_) -> "JaxObstacleStates[T_, D[0]]":
+    def empty[T_: int, K_: int = D[0]](
+        *, horizon: T_, obstacle_count: K_ = 0
+    ) -> "JaxObstacleStates[T_, K_]":
         """Creates obstacle states for zero obstacles over the given time horizon."""
         return JaxObstacleStates.create(
-            x=jnp.empty((horizon, 0)),
-            y=jnp.empty((horizon, 0)),
-            heading=jnp.empty((horizon, 0)),
+            x=jnp.empty((horizon, obstacle_count)),
+            y=jnp.empty((horizon, obstacle_count)),
+            heading=jnp.empty((horizon, obstacle_count)),
             horizon=horizon,
-            obstacle_count=0,
+            obstacle_count=obstacle_count,
         )
 
     @staticmethod
@@ -258,8 +260,14 @@ class JaxObstacleStatesRunningHistory[K: int]:
     def append(self, step: JaxObstacleStatesForTimeStep[K]) -> Self:
         return self.__class__(history=self.history + [step])
 
-    def get(self) -> Self:
-        return self
+    def get(self) -> JaxObstacleStates[int, K]:
+        return (
+            JaxObstacleStates.create(
+                x=self.x_array, y=self.y_array, heading=self.heading_array
+            )
+            if self.horizon > 0
+            else JaxObstacleStates.empty(horizon=0, obstacle_count=self.count)
+        )
 
     def x(self) -> Array[Dims[int, K]]:
         return self._x

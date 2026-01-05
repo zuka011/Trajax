@@ -6,9 +6,7 @@ from jaxtyping import Array as JaxArray, Float
 
 
 type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
-type NumPyInitialPositionCovariance[T: int, K: int] = (
-    types.numpy.InitialPositionCovariance[K]
-)
+type NumPyInitialPositionCovariance[K: int] = types.numpy.InitialPositionCovariance[K]
 type NumPyInitialVelocityCovariance[K: int] = types.numpy.InitialVelocityCovariance[K]
 type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
 type JaxInitialPositionCovariance[K: int] = types.jax.InitialPositionCovariance[K]

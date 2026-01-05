@@ -1,10 +1,11 @@
+from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
+    ObstacleStateSequences,
     JaxInitialPositionCovariance,
     JaxInitialVelocityCovariance,
 )
-from trajax.obstacles import JaxObstacleStates
 
 import jax.numpy as jnp
 
@@ -15,7 +16,7 @@ class JaxConstantVarianceProvider:
     velocity_variance: float
 
     def position[K: int](
-        self, states: JaxObstacleStates[int, K]
+        self, states: ObstacleStateSequences[int, K, Any]
     ) -> JaxInitialPositionCovariance[K]:
         return jnp.tile(
             (jnp.eye(2) * self.position_variance)[..., jnp.newaxis],
@@ -23,7 +24,7 @@ class JaxConstantVarianceProvider:
         )
 
     def velocity[K: int](
-        self, states: JaxObstacleStates[int, K]
+        self, states: ObstacleStateSequences[int, K, Any]
     ) -> JaxInitialVelocityCovariance[K]:
         return jnp.tile(
             (jnp.eye(2) * self.velocity_variance)[..., jnp.newaxis],

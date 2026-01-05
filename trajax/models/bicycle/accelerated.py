@@ -261,6 +261,14 @@ class JaxBicycleControlInputSequence[T: int](
     def array(self) -> ControlInputSequenceArray[T]:
         return self._array
 
+    @property
+    def accelerations_array(self) -> Float[JaxArray, "T"]:
+        return self.array[:, 0]
+
+    @property
+    def steering_angles_array(self) -> Float[JaxArray, "T"]:
+        return self.array[:, 1]
+
 
 @jaxtyped
 @dataclass(frozen=True)
@@ -364,6 +372,9 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         """Creates a JAX bicycle obstacle state sequences from individual state components."""
         array = jnp.stack([x, y, theta, v], axis=1)
         return JaxBicycleObstacleStateSequences(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
+        return np.asarray(self.array)
 
     def x(self) -> Array[Dims[T, K]]:
         return np.asarray(self.array[:, 0, :])

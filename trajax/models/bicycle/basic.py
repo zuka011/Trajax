@@ -212,6 +212,12 @@ class NumPyBicycleControlInputSequence[T: int](
 
         return self.__class__(array)
 
+    def accelerations(self) -> Array[Dims[T]]:
+        return self.array[:, 0]
+
+    def steering_angles(self) -> Array[Dims[T]]:
+        return self.array[:, 1]
+
     @property
     def horizon(self) -> T:
         return self.array.shape[0]
@@ -320,6 +326,9 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
         assert shape_of(array, matches=(T, BICYCLE_D_X, K))
 
         return NumPyBicycleObstacleStateSequences(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
+        return self.array
 
     def x(self) -> Array[Dims[T, K]]:
         return self.array[:, 0, :]

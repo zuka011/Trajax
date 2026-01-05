@@ -58,11 +58,13 @@ class NumPyObstacleStates[T: int, K: int](
     _covariance: ObstacleCovarianceArray[T, K] | None
 
     @staticmethod
-    def empty[T_: int](*, horizon: T_) -> "NumPyObstacleStates[T_, D[0]]":
+    def empty[T_: int, K_: int = D[0]](
+        *, horizon: T_, obstacle_count: K_ = 0
+    ) -> "NumPyObstacleStates[T_, K_]":
         """Creates obstacle states for zero obstacles over the given time horizon."""
-        empty = np.empty((horizon, 0))
+        empty = np.empty((horizon, obstacle_count))
 
-        assert shape_of(empty, matches=(horizon, 0))
+        assert shape_of(empty, matches=(horizon, obstacle_count))
 
         return NumPyObstacleStates.create(x=empty, y=empty, heading=empty)
 
@@ -206,8 +208,12 @@ class NumPyObstacleStatesRunningHistory[K: int]:
     def append(self, step: NumPyObstacleStatesForTimeStep[K]) -> Self:
         return self.__class__(history=self.history + [step])
 
-    def get(self) -> Self:
-        return self
+    def get(self) -> NumPyObstacleStates[int, K]:
+        return (
+            NumPyObstacleStates.create(x=self.x(), y=self.y(), heading=self.heading())
+            if self.horizon > 0
+            else NumPyObstacleStates.empty(horizon=0, obstacle_count=self.count)
+        )
 
     def x(self) -> Array[Dims[int, K]]:
         return self._x
