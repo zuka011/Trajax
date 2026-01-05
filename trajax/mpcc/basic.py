@@ -20,6 +20,8 @@ from trajax.types import (
     NumPyPositionExtractor,
 )
 from trajax.states import (
+    NumPySimpleState,
+    NumPySimpleControlInputSequence,
     NumPyAugmentedState,
     NumPyAugmentedStateSequence,
     NumPyAugmentedStateBatch,
@@ -39,7 +41,7 @@ from trajax.mpcc.common import MpccMppiSetup
 from numtypes import Array, Dim2, D, array_1d
 from deepmerge import always_merger
 
-type NumPyMpccVirtualState = NumPyState[D[1]]
+type NumPyMpccVirtualState = NumPySimpleState[D[1]]
 type NumPyMpccAugmentedState[S: NumPyState] = NumPyAugmentedState[
     S, NumPyMpccVirtualState
 ]
@@ -54,7 +56,7 @@ type NumPyMpccAugmentedStateBatch[SB: NumPyStateBatch] = NumPyAugmentedStateBatc
     SB, NumPyMpccVirtualStateBatch
 ]
 
-type NumPyMpccVirtualControlInputSequence = NumPyControlInputSequence[int, D[1]]
+type NumPyMpccVirtualControlInputSequence = NumPySimpleControlInputSequence[int, D[1]]
 type NumPyMpccAugmentedControlInputSequence[CS: NumPyControlInputSequence] = (
     NumPyAugmentedControlInputSequence[CS, NumPyMpccVirtualControlInputSequence]
 )

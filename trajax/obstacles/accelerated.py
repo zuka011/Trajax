@@ -82,6 +82,17 @@ class JaxObstacleStates[T: int, K: int](
     _covariance: ObstacleCovarianceArray[T, K] | None = None
 
     @staticmethod
+    def empty[T_: int](*, horizon: T_) -> "JaxObstacleStates[T_, D[0]]":
+        """Creates obstacle states for zero obstacles over the given time horizon."""
+        return JaxObstacleStates.create(
+            x=jnp.empty((horizon, 0)),
+            y=jnp.empty((horizon, 0)),
+            heading=jnp.empty((horizon, 0)),
+            horizon=horizon,
+            obstacle_count=0,
+        )
+
+    @staticmethod
     def sampled[N: int](  # type: ignore
         *,
         x: Float[JaxArray, "T K N"],

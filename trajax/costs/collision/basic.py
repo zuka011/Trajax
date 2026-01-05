@@ -6,6 +6,7 @@ from trajax.types import (
     Distance,
     ControlInputBatch,
     CostFunction,
+    ObstacleStates,
     ObstacleStateSampler,
     SampleCostFunction,
     NumPyCosts,
@@ -17,7 +18,7 @@ from trajax.types import (
 )
 from trajax.states import NumPySimpleCosts
 
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims, D, shape_of
 
 import numpy as np
 
@@ -52,7 +53,7 @@ class NumPyNoMetric:
 @dataclass(kw_only=True, frozen=True)
 class NumPyCollisionCost[
     StateT,
-    ObstacleStatesT,
+    ObstacleStatesT: ObstacleStates,
     SampledObstacleStatesT,
     DistanceT: NumPyDistance,
     V: int,
@@ -65,7 +66,7 @@ class NumPyCollisionCost[
     metric: NumPyRiskMetric[StateT, ObstacleStatesT, SampledObstacleStatesT]
 
     @staticmethod
-    def create[S, OS, SOS, D: NumPyDistance, V_: int](
+    def create[S, OS: ObstacleStates, SOS, D: NumPyDistance, V_: int](
         *,
         obstacle_states: NumPyObstacleStateProvider[OS],
         sampler: NumPyObstacleStateSampler[OS, SOS],
@@ -98,11 +99,19 @@ class NumPyCollisionCost[
 
             return self.weight * np.clip(cost, 0, None).sum(axis=1)
 
-        return NumPySimpleCosts(
-            self.metric.compute(
+        horizon, rollouts = inputs.horizon, inputs.rollout_count
+
+        costs = (
+            np.zeros((horizon, rollouts))
+            if (obstacle_states := self.obstacle_states()).count == 0
+            else self.metric.compute(
                 cost,
                 states=states,
-                obstacle_states=self.obstacle_states(),
+                obstacle_states=obstacle_states,
                 sampler=self.sampler,
             ).array
         )
+
+        assert shape_of(costs, matches=(horizon, rollouts), name="collision costs")
+
+        return NumPySimpleCosts(costs)

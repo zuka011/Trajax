@@ -70,6 +70,7 @@ from .types import (
     CovarianceSequences as CovarianceSequences,
     CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
+    PredictionCreator as PredictionCreator,
 )
 from .namespace import types as types, classes as classes
 from .factory import (

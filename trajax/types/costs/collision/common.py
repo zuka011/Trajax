@@ -53,6 +53,21 @@ class ObstacleStates[T: int, K: int, SingleSampleT](Protocol):
         """Returns the single (mean) sample of the obstacle states."""
         ...
 
+    @property
+    def horizon(self) -> int:
+        """The time horizon over which the obstacle states are defined."""
+        ...
+
+    @property
+    def dimension(self) -> int:
+        """The dimension of a single obstacle state."""
+        ...
+
+    @property
+    def count(self) -> int:
+        """The number of obstacles."""
+        ...
+
 
 class ObstacleStateProvider[ObstacleStatesT](Protocol):
     def __call__(self) -> ObstacleStatesT:

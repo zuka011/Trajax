@@ -1446,6 +1446,41 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
             states,
         ),
         (
+            cost := costs.numpy.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    obstacle_states := data.numpy.obstacle_states(
+                        x=np.random.uniform(size=(T := 2, K := 0)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
+                    )
+                ),
+                sampler=stubs.ObstacleStateSampler.returns(
+                    obstacle_state_samples := data.numpy.obstacle_state_samples(
+                        x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K, N)),  # type: ignore
+                    ),
+                    when_obstacle_states_are=obstacle_states,
+                    and_sample_count_is=N,
+                ),
+                distance=stubs.DistanceExtractor.returns(
+                    data.numpy.distance(
+                        np.full((T, V := 2, M := 3, N), np.inf)  # type: ignore
+                    ),
+                    when_states_are=(
+                        states := data.numpy.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                    and_obstacle_states_are=obstacle_state_samples,
+                ),
+                distance_threshold=array([0.5, 0.5], shape=(V,)),
+                weight=10.0,
+                # Even if a risk metric is specified, cost should be zero as there are no obstacles.
+                metric=risk.numpy.mean_variance(gamma=2.0, sample_count=100),
+            ),
+            inputs := data.numpy.control_input_batch(np.zeros((T, D_u := 2, M))),
+            states,
+        ),
+        (
             cost := costs.jax.safety.collision(
                 obstacle_states=stubs.ObstacleStateProvider.returns(
                     jax_obstacle_states := data.jax.obstacle_states(
@@ -1474,6 +1509,40 @@ def test_that_collision_cost_uses_different_thresholds_for_different_parts[
                 ),
                 distance_threshold=array([0.5, 0.5], shape=(V,)),
                 weight=10.0,
+            ),
+            inputs := data.jax.control_input_batch(np.zeros((T, D_u := 2, M))),
+            states,
+        ),
+        (
+            cost := costs.jax.safety.collision(
+                obstacle_states=stubs.ObstacleStateProvider.returns(
+                    jax_obstacle_states := data.jax.obstacle_states(
+                        x=np.random.uniform(size=(T := 2, K := 0)),  # type: ignore
+                        y=np.random.uniform(size=(T, K)),  # type: ignore
+                    )
+                ),
+                sampler=stubs.ObstacleStateSampler.returns(
+                    jax_obstacle_state_samples := data.jax.obstacle_state_samples(
+                        x=np.random.uniform(size=(T, K, N := 1)),  # type: ignore
+                        y=np.random.uniform(size=(T, K, N)),  # type: ignore
+                    ),
+                    when_obstacle_states_are=jax_obstacle_states,
+                    and_sample_count_is=N,
+                ),
+                distance=stubs.DistanceExtractor.returns(
+                    data.jax.distance(
+                        np.full((T, V := 2, M := 3, N), np.inf)  # type: ignore
+                    ),
+                    when_states_are=(
+                        states := data.jax.state_batch(
+                            np.random.uniform(size=(T, D_x := 1, M)),  # type: ignore
+                        )
+                    ),
+                    and_obstacle_states_are=jax_obstacle_state_samples,
+                ),
+                distance_threshold=array([0.5, 0.5], shape=(V,)),
+                weight=10.0,
+                metric=risk.jax.mean_variance(gamma=2.0, sample_count=100),
             ),
             inputs := data.jax.control_input_batch(np.zeros((T, D_u := 2, M))),
             states,

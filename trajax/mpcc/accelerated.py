@@ -21,6 +21,8 @@ from trajax.types import (
     JaxPositionExtractor,
 )
 from trajax.states import (
+    JaxSimpleState,
+    JaxSimpleControlInputSequence,
     JaxAugmentedState,
     JaxAugmentedStateSequence,
     JaxAugmentedStateBatch,
@@ -49,7 +51,7 @@ import jax.numpy as jnp
 import jax.random as jrandom
 
 
-type JaxMpccVirtualState = JaxState[D[1]]
+type JaxMpccVirtualState = JaxSimpleState[D[1]]
 type JaxMpccAugmentedState[S: JaxState] = JaxAugmentedState[S, JaxMpccVirtualState]
 
 type JaxMpccVirtualStateSequence = JaxStateSequence[int, D[1]]
@@ -62,7 +64,7 @@ type JaxMpccAugmentedStateBatch[SB: JaxStateBatch] = JaxAugmentedStateBatch[
     SB, JaxMpccVirtualStateBatch
 ]
 
-type JaxMpccVirtualControlInputSequence = JaxControlInputSequence[int, D[1]]
+type JaxMpccVirtualControlInputSequence = JaxSimpleControlInputSequence[int, D[1]]
 type JaxMpccAugmentedControlInputSequence[CS: JaxControlInputSequence] = (
     JaxAugmentedControlInputSequence[CS, JaxMpccVirtualControlInputSequence]
 )

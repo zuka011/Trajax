@@ -10,7 +10,7 @@ from trajax.types import (
     ObstacleStates,
 )
 
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims, D, shape_of
 
 import numpy as np
 
@@ -56,6 +56,15 @@ class NumPyObstacleStates[T: int, K: int](
     _y: Array[Dims[T, K]]
     _heading: Array[Dims[T, K]]
     _covariance: ObstacleCovarianceArray[T, K] | None
+
+    @staticmethod
+    def empty[T_: int](*, horizon: T_) -> "NumPyObstacleStates[T_, D[0]]":
+        """Creates obstacle states for zero obstacles over the given time horizon."""
+        empty = np.empty((horizon, 0))
+
+        assert shape_of(empty, matches=(horizon, 0))
+
+        return NumPyObstacleStates.create(x=empty, y=empty, heading=empty)
 
     @staticmethod
     def sampled[T_: int, K_: int, N_: int](  # type: ignore
