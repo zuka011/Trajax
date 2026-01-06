@@ -1,3 +1,4 @@
+from typing import Protocol, NamedTuple, Sequence
 from dataclasses import dataclass
 
 from trajax import (
@@ -158,13 +159,9 @@ class DynamicalModel[
     expected_initial_state: StateT
 
     @staticmethod
-    def returns[
-        S: State,
-        SB: StateBatch,
-        CIB: ControlInputBatch,
-    ](
+    def returns[S: State, SB: StateBatch, CIB: ControlInputBatch](
         rollouts: SB, *, when_control_inputs_are: CIB, and_initial_state_is: S
-    ) -> "DynamicalModel[S,   SB, ControlInputSequence, CIB]":
+    ) -> "DynamicalModel[S, StateSequence, SB, ControlInputSequence, CIB]":
         return DynamicalModel(
             rollouts=rollouts,
             expected_control_inputs=when_control_inputs_are,
@@ -190,6 +187,12 @@ class DynamicalModel[
     def forward(self, inputs: ControlInputSequenceT, state: StateT) -> StateSequenceT:
         raise NotImplementedError(
             "Forward method is not implemented in the stub model."
+        )
+
+    @property
+    def time_step_size(self) -> float:
+        raise NotImplementedError(
+            "Time step size property is not implemented in the stub model."
         )
 
 
@@ -248,6 +251,35 @@ class ObstacleMotionPredictor[
             f"Expected: {self.expected_history}, Got: {history}"
         )
         return self.result
+
+
+@dataclass(frozen=True)
+class ObstacleIdAssignment[IdT, ObservationT]:
+    class Entry[IdT, ObservationT](NamedTuple):
+        ids: IdT
+        when_observing: ObservationT
+
+    class Provider[IdT, ObservationT](Protocol):
+        def __call__(
+            self, ids: type["ObstacleIdAssignment.Entry[IdT, ObservationT]"], /
+        ) -> Sequence["ObstacleIdAssignment.Entry[IdT, ObservationT]"]:
+            """Describes how obstacle IDs are assigned based on observations."""
+            ...
+
+    assignments: Sequence[Entry[IdT, ObservationT]]
+
+    @staticmethod
+    def returns[I, O](
+        provider: "ObstacleIdAssignment.Provider[I, O]",
+    ) -> "ObstacleIdAssignment[I, O]":
+        return ObstacleIdAssignment(assignments=provider(ObstacleIdAssignment.Entry))
+
+    def __call__(self, states: ObservationT, /) -> IdT | None:
+        for entry in self.assignments:
+            if np.array_equal(entry.when_observing, states):
+                return entry.ids
+
+        assert False, f"Could not find ID assignment for the observation: {states}"
 
 
 @dataclass(frozen=True)

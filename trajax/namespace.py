@@ -100,6 +100,7 @@ from trajax.costs import (
 )
 from trajax.obstacles import (
     NumPySampledObstacleStates,
+    NumPyObstacleIds,
     NumPyObstacleStates,
     NumPyObstacleStatesForTimeStep,
     NumPyObstacleStatesRunningHistory,
@@ -201,6 +202,7 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = NumPyHeadings[T, M]
+        type ObstacleIds[K: int = Any] = NumPyObstacleIds[K]
         type ObstacleStates[T: int = Any, K: int = Any] = NumPyObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
             NumPySampledObstacleStates[T, K, N]
@@ -243,6 +245,7 @@ class types:
         positions: Final = NumPyPositions.create
         headings: Final = NumPyHeadings.create
         distance: Final = NumPyDistance
+        obstacle_ids: Final = NumPyObstacleIds
         obstacle_states: Final = NumPyObstacleStates
         obstacle_states_for_time_step: Final = NumPyObstacleStatesForTimeStep
         obstacle_states_running_history: Final = NumPyObstacleStatesRunningHistory

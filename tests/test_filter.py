@@ -4,7 +4,7 @@ from numtypes import array, Array
 
 import numpy as np
 
-from tests.dsl import mppi as data
+from tests.dsl import mppi as data, clear_type
 from pytest import mark
 
 
@@ -29,7 +29,7 @@ from pytest import mark
                             # Constant polynomial: f(t) = 4
                             4 * np.ones_like(t),
                         ][1:]
-                    ).T,
+                    ).T.tolist(),
                     shape=(T, 4),
                 )
             ),
@@ -50,7 +50,7 @@ from pytest import mark
                             1.5 * t + 2,
                             4 * np.ones_like(t),
                         ][1:]
-                    ).T,
+                    ).T.tolist(),
                     shape=(T, 4),
                 )
             ),
@@ -73,6 +73,9 @@ def test_that_polynomials_are_preserved_by_savgol_filter_when_order_is_less_than
     )
 
 
+T = clear_type
+
+
 @mark.parametrize(
     ["savgol", "clean", "noisy"],
     [
@@ -86,13 +89,15 @@ def test_that_polynomials_are_preserved_by_savgol_filter_when_order_is_less_than
                             np.cos(t),
                             np.sin(2 * t),
                         ]
-                    ),
+                    ).tolist(),
                     shape=(T, D_u := 3),
                 )
             ),
             noisy := data.numpy.control_input_sequence(
                 array(
-                    signal + np.random.default_rng(0).normal(0, 0.1, (T, D_u)),
+                    (
+                        signal + np.random.default_rng(0).normal(0, 0.1, (T, D_u))  # type: ignore
+                    ).tolist(),
                     shape=(T, D_u),
                 )
             ),
@@ -107,13 +112,15 @@ def test_that_polynomials_are_preserved_by_savgol_filter_when_order_is_less_than
                             np.cos(t),
                             np.sin(2 * t),
                         ]
-                    ),
+                    ).tolist(),
                     shape=(T, D_u := 3),
                 )
             ),
             noisy := data.jax.control_input_sequence(
                 array(
-                    signal + np.random.default_rng(0).normal(0, 0.1, (T, D_u)),
+                    (
+                        signal + np.random.default_rng(0).normal(0, 0.1, (T, D_u))  # type: ignore
+                    ).tolist(),
                     shape=(T, D_u),
                 )
             ),

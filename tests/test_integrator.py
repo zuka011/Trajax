@@ -430,7 +430,7 @@ def test_that_velocity_limits_are_respected_during_integration[
                 np.random.uniform(-3.0, 3.0, size=(T := 4, D_x := 3, M := 1))
             ),
             initial_state := data.numpy.state(
-                np.random.uniform(-2.0, 2.0, size=(D_x,))
+                np.random.uniform(-2.0, 2.0, size=(D_x,))  # type: ignore
             ),
             horizon := T,
             input_of := (
@@ -448,7 +448,9 @@ def test_that_velocity_limits_are_respected_during_integration[
             input_batch := data.jax.control_input_batch(
                 np.random.uniform(-5.0, 5.0, size=(T := 3, D_x := 2, M := 1))
             ),
-            initial_state := data.jax.state(np.random.uniform(-3.0, 3.0, size=(D_x,))),
+            initial_state := data.jax.state(
+                np.random.uniform(-3.0, 3.0, size=(D_x,))  # type: ignore
+            ),
             horizon := T,
             input_of := (
                 lambda input_batch, t: data.jax.control_input_sequence(
@@ -497,7 +499,7 @@ def test_that_simulating_individual_steps_matches_horizon_simulation[
                 np.random.uniform(-10.0, 10.0, size=(T := 6, D_x := 4, M := 1))
             ),
             initial_state := data.numpy.state(
-                np.random.uniform(-10.0, 10.0, size=(D_x,))
+                np.random.uniform(-10.0, 10.0, size=(D_x,))  # type: ignore
             ),
             input_at := (
                 lambda input_batch, m: data.numpy.control_input_sequence(
@@ -515,7 +517,7 @@ def test_that_simulating_individual_steps_matches_horizon_simulation[
                 np.random.uniform(-15.0, 15.0, size=(T := 5, D_x := 2, M := 1))
             ),
             initial_state := data.jax.state(
-                np.random.uniform(-15.0, 15.0, size=(D_x,))
+                np.random.uniform(-15.0, 15.0, size=(D_x,))  # type: ignore
             ),
             input_at := (
                 lambda input_batch, m: data.jax.control_input_sequence(

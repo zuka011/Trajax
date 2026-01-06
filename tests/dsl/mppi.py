@@ -1,9 +1,9 @@
-from typing import Final
+from typing import Final, Sequence
 
 from trajax import types
 
 from jaxtyping import Array as JaxArray, Float
-from numtypes import Array, Dims
+from numtypes import Array, NumberArray, Dims
 
 import numpy as np
 import jax.numpy as jnp
@@ -21,10 +21,11 @@ type NumPyControlInputSequence[T: int, D_u: int] = (
 type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
     types.numpy.simple.ControlInputBatch[T, D_u, M]
 )
-type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
 type NumPySampledObstacleStates[T: int, K: int, N: int] = (
     types.numpy.SampledObstacleStates[T, K, N]
 )
+type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.ObstacleStatesForTimeStep[K]
+type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
 type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
 
 type JaxState[D_x: int] = types.jax.simple.State[D_x]
@@ -35,14 +36,12 @@ type JaxControlInputSequence[T: int, D_u: int] = types.jax.simple.ControlInputSe
 type JaxControlInputBatch[T: int, D_u: int, M: int] = (
     types.jax.simple.ControlInputBatch[T, D_u, M]
 )
-type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
 type JaxSampledObstacleStates[T: int, K: int, N: int] = types.jax.SampledObstacleStates[
     T, K, N
 ]
+type JaxObstacleStatesForTimeStep[K: int] = types.jax.ObstacleStatesForTimeStep[K]
+type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
-
-
-D_O: Final = types.obstacle.D_O
 
 
 class numpy:
@@ -69,6 +68,12 @@ class numpy:
         return types.numpy.simple.control_input_batch(array)
 
     @staticmethod
+    def obstacle_ids[K: int](
+        array: NumberArray[Dims[K]] | Sequence[int],
+    ) -> types.numpy.ObstacleIds[K]:
+        return types.numpy.obstacle_ids.create(ids=np.asarray(array))
+
+    @staticmethod
     def obstacle_states[T: int, K: int](
         *,
         x: Array[Dims[T, K]],
@@ -81,6 +86,19 @@ class numpy:
             y=y,
             heading=heading if heading is not None else np.zeros_like(x),
             covariance=covariance,
+        )
+
+    @staticmethod
+    def obstacle_states_for_time_step[K: int](
+        *,
+        x: Array[Dims[K]],
+        y: Array[Dims[K]],
+        heading: Array[Dims[K]] | None = None,
+    ) -> NumPyObstacleStatesForTimeStep[K]:
+        return types.numpy.obstacle_states_for_time_step.create(
+            x=x,
+            y=y,
+            heading=heading if heading is not None else np.zeros_like(x),
         )
 
     @staticmethod
@@ -141,6 +159,19 @@ class jax:
             y=jnp.asarray(y),
             heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
             covariance=jnp.asarray(covariance) if covariance is not None else None,
+        )
+
+    @staticmethod
+    def obstacle_states_for_time_step[K: int](
+        *,
+        x: Array[Dims[K]] | Float[JaxArray, "K"],
+        y: Array[Dims[K]] | Float[JaxArray, "K"],
+        heading: Array[Dims[K]] | Float[JaxArray, "K"] | None = None,
+    ) -> JaxObstacleStatesForTimeStep[K]:
+        return types.jax.obstacle_states_for_time_step.create(
+            x=jnp.asarray(x),
+            y=jnp.asarray(y),
+            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
         )
 
     @staticmethod

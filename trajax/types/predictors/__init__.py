@@ -1,6 +1,8 @@
 from .common import (
     EstimatedObstacleStates as EstimatedObstacleStates,
     ObstacleStatesHistory as ObstacleStatesHistory,
+    ObstacleIds as ObstacleIds,
+    ObstacleIdAssignment as ObstacleIdAssignment,
     ObstacleStatesRunningHistory as ObstacleStatesRunningHistory,
     ObstacleStateSequences as ObstacleStateSequences,
     CovarianceSequences as CovarianceSequences,

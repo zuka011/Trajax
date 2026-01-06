@@ -57,6 +57,7 @@ from .types import (
     ObstacleStatesHistory as ObstacleStatesHistory,
     ObstacleStatesForTimeStep as ObstacleStatesForTimeStep,
     ObstacleStates as ObstacleStates,
+    ObstacleIds as ObstacleIds,
     SampledObstacleStates as SampledObstacleStates,
     ObstacleStateProvider as ObstacleStateProvider,
     ObstacleStateSampler as ObstacleStateSampler,
@@ -72,6 +73,7 @@ from .types import (
     CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
     PredictionCreator as PredictionCreator,
+    ObstacleIdAssignment as ObstacleIdAssignment,
 )
 from .namespace import types as types, classes as classes
 from .factory import (

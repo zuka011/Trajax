@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from trajax.types.array import DataType
 
-from numtypes import Array, Dims
+from numtypes import Array, IndexArray, Dims
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -33,13 +33,34 @@ class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
         ...
 
 
-class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, HistoryT](Protocol):
+class ObstacleIds[K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> IndexArray[Dims[K]]:
+        """Returns the obstacle IDs as a NumPy array."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+
+class ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT](Protocol):
+    def __call__(self, states: ObstacleStatesForTimeStepT, /) -> IdT | None:
+        """Returns the IDs assigned to the given obstacle states. If no IDs are returned,
+        the obstacle states are assumed to be already ordered by their IDs.
+        """
+        ...
+
+
+class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT](Protocol):
     def get(self) -> HistoryT:
         """Returns the current full running history of obstacle states."""
         ...
 
-    def append(self, states: ObstacleStatesForTimeStepT, /) -> Self:
-        """Appends new obstacle states at a time step to the running history."""
+    def append(self, states: ObstacleStatesForTimeStepT, /, *, ids: IdT | None) -> Self:
+        """Appends new obstacle states at a time step to the running history. If the IDs are
+        provided, the states must be reordered to match the IDs before appending.
+        """
         ...
 
 

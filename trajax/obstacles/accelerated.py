@@ -224,6 +224,9 @@ class JaxObstacleStatesForTimeStep[K: int]:
     ) -> "JaxObstacleStatesForTimeStep[K_]":
         return JaxObstacleStatesForTimeStep(_x=x, _y=y, _heading=heading)
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
+        return np.stack([self._x, self._y, self._heading], axis=0)
+
     @property
     def x_array(self) -> Float[JaxArray, "K"]:
         return self._x
@@ -235,6 +238,26 @@ class JaxObstacleStatesForTimeStep[K: int]:
     @property
     def heading_array(self) -> Float[JaxArray, "K"]:
         return self._heading
+
+
+@dataclass(kw_only=True, frozen=True)
+class JaxObstacleIds[K: int]:
+    _ids: Float[JaxArray, "K"]
+
+    @staticmethod
+    def create[K_: int](
+        *,
+        ids: Float[JaxArray, "K"],
+        obstacle_count: K_ | None = None,
+    ) -> "JaxObstacleIds[K_]":
+        return JaxObstacleIds(_ids=ids)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[K]]:
+        return np.asarray(self._ids)
+
+    @property
+    def count(self) -> K:
+        return cast(K, self._ids.shape[0])
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -257,7 +280,12 @@ class JaxObstacleStatesRunningHistory[K: int]:
     def last(self) -> JaxObstacleStatesForTimeStep[K]:
         return self.history[-1]
 
-    def append(self, step: JaxObstacleStatesForTimeStep[K]) -> Self:
+    def append(
+        self,
+        step: JaxObstacleStatesForTimeStep[K],
+        *,
+        ids: JaxObstacleIds[K] | None = None,
+    ) -> Self:
         return self.__class__(history=self.history + [step])
 
     def get(self) -> JaxObstacleStates[int, K]:
