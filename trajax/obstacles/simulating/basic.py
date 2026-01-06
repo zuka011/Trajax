@@ -2,12 +2,8 @@ from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider, ObstacleMotionPredictor
-from trajax.obstacles.basic import (
-    NumPyObstacleStates,
-    NumPyObstacleStatesForTimeStep,
-    NumPyObstacleStatesRunningHistory,
-)
-
+from trajax.obstacles.basic import NumPyObstacleStates, NumPyObstacleStatesForTimeStep
+from trajax.obstacles.history import NumPyObstacleStatesRunningHistory
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -19,10 +15,10 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
     NumPyObstacleStateProvider[NumPyObstacleStates[T, K]]
 ):
     type MotionPredictor[T_: int, K_: int] = ObstacleMotionPredictor[
-        NumPyObstacleStatesRunningHistory[K_], NumPyObstacleStates[T_, K_]
+        NumPyObstacleStates[int, K_], NumPyObstacleStates[T_, K_]
     ]
 
-    history: NumPyObstacleStatesRunningHistory[K]
+    history: NumPyObstacleStatesRunningHistory[int, K]
     velocities: Array[Dims[K, D[2]]]
 
     horizon: T
@@ -71,7 +67,7 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
             "Motion predictor must be set to provide obstacle states."
         )
 
-        return self.predictor.predict(history=self.history)
+        return self.predictor.predict(history=self.history.get())
 
     def step(self) -> None:
         assert self.time_step is not None, (

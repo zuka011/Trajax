@@ -105,6 +105,7 @@ from trajax.obstacles import (
     NumPyObstacleStatesForTimeStep,
     NumPyObstacleStatesRunningHistory,
     JaxSampledObstacleStates,
+    JaxObstacleIds,
     JaxObstacleStates,
     JaxObstacleStatesForTimeStep,
     JaxObstacleStatesRunningHistory,
@@ -208,8 +209,8 @@ class types:
             NumPySampledObstacleStates[T, K, N]
         )
         type ObstacleStatesForTimeStep[K: int = Any] = NumPyObstacleStatesForTimeStep[K]
-        type ObstacleStatesRunningHistory[K: int = Any] = (
-            NumPyObstacleStatesRunningHistory[K]
+        type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
+            NumPyObstacleStatesRunningHistory[T, K]
         )
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
@@ -338,13 +339,14 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = JaxHeadings[T, M]
+        type ObstacleIds[K: int = Any] = JaxObstacleIds[K]
         type ObstacleStates[T: int = Any, K: int = Any] = JaxObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
             JaxSampledObstacleStates[T, K, N]
         )
         type ObstacleStatesForTimeStep[K: int = Any] = JaxObstacleStatesForTimeStep[K]
-        type ObstacleStatesRunningHistory[K: int = Any] = (
-            JaxObstacleStatesRunningHistory[K]
+        type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
+            JaxObstacleStatesRunningHistory[T, K]
         )
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]
@@ -378,6 +380,7 @@ class types:
         positions: Final = JaxPositions.create
         headings: Final = JaxHeadings.create
         distance: Final = JaxDistance
+        obstacle_ids: Final = JaxObstacleIds
         obstacle_states: Final = JaxObstacleStates
         obstacle_states_for_time_step: Final = JaxObstacleStatesForTimeStep
         obstacle_states_running_history: Final = JaxObstacleStatesRunningHistory

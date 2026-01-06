@@ -78,7 +78,7 @@ type Sampler = AugmentedSampler[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.jax.ObstacleStates
-type ObstacleStatesHistory = types.jax.ObstacleStatesRunningHistory
+type ObstacleStatesHistory = types.jax.ObstacleStates
 
 
 class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):

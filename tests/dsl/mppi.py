@@ -24,6 +24,7 @@ type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
 type NumPySampledObstacleStates[T: int, K: int, N: int] = (
     types.numpy.SampledObstacleStates[T, K, N]
 )
+type NumPyObstacleIds[K: int] = types.numpy.ObstacleIds[K]
 type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.ObstacleStatesForTimeStep[K]
 type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
 type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
@@ -39,6 +40,7 @@ type JaxControlInputBatch[T: int, D_u: int, M: int] = (
 type JaxSampledObstacleStates[T: int, K: int, N: int] = types.jax.SampledObstacleStates[
     T, K, N
 ]
+type JaxObstacleIds[K: int] = types.jax.ObstacleIds[K]
 type JaxObstacleStatesForTimeStep[K: int] = types.jax.ObstacleStatesForTimeStep[K]
 type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
@@ -70,7 +72,7 @@ class numpy:
     @staticmethod
     def obstacle_ids[K: int](
         array: NumberArray[Dims[K]] | Sequence[int],
-    ) -> types.numpy.ObstacleIds[K]:
+    ) -> NumPyObstacleIds[K]:
         return types.numpy.obstacle_ids.create(ids=np.asarray(array))
 
     @staticmethod
@@ -125,6 +127,12 @@ class jax:
     @staticmethod
     def state[D_x: int](array: Array[Dims[D_x]]) -> JaxState[D_x]:
         return types.jax.simple.state(jnp.asarray(array))
+
+    @staticmethod
+    def obstacle_ids[K: int](
+        array: NumberArray[Dims[K]] | Sequence[int],
+    ) -> JaxObstacleIds[K]:
+        return types.jax.obstacle_ids.create(ids=jnp.asarray(array))
 
     @staticmethod
     def state_batch[T: int, D_x: int, M: int](

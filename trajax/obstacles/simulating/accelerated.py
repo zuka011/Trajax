@@ -2,11 +2,8 @@ from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import jaxtyped, JaxObstacleStateProvider, ObstacleMotionPredictor
-from trajax.obstacles.accelerated import (
-    JaxObstacleStates,
-    JaxObstacleStatesForTimeStep,
-    JaxObstacleStatesRunningHistory,
-)
+from trajax.obstacles.accelerated import JaxObstacleStates, JaxObstacleStatesForTimeStep
+from trajax.obstacles.history import JaxObstacleStatesRunningHistory
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 
@@ -19,10 +16,10 @@ class JaxDynamicObstacleStateProvider[T: int, K: int](
     JaxObstacleStateProvider[JaxObstacleStates[T, K]]
 ):
     type MotionPredictor[T_: int, K_: int] = ObstacleMotionPredictor[
-        JaxObstacleStatesRunningHistory[K_], JaxObstacleStates[T_, K_]
+        JaxObstacleStates[int, K_], JaxObstacleStates[T_, K_]
     ]
 
-    history: JaxObstacleStatesRunningHistory[K]
+    history: JaxObstacleStatesRunningHistory[int, K]
     velocities: Float[JaxArray, "K 2"]
 
     horizon: T
@@ -72,7 +69,7 @@ class JaxDynamicObstacleStateProvider[T: int, K: int](
             "Motion predictor must be set to provide obstacle states."
         )
 
-        return self.predictor.predict(history=self.history)
+        return self.predictor.predict(history=self.history.get())
 
     def step(self) -> None:
         assert self.time_step is not None, (

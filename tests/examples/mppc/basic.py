@@ -57,7 +57,7 @@ type MpccInputBatch = types.numpy.augmented.ControlInputBatch[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.numpy.ObstacleStates
-type ObstacleStatesHistory = types.numpy.ObstacleStatesRunningHistory
+type ObstacleStatesHistory = types.numpy.ObstacleStates
 
 
 class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):

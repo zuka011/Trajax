@@ -1,15 +1,17 @@
-from typing import Sequence, cast, Self
+from typing import Sequence, cast
 from dataclasses import dataclass
-from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
     DataType,
+    Device,
+    place,
     D_o,
     D_O,
     SampledObstacleStates,
     ObstacleStates,
 )
+from trajax.obstacles.basic import NumPyObstacleStatesForTimeStep
 
 from numtypes import Array, Dims, D
 from jaxtyping import Array as JaxArray, Float
@@ -86,10 +88,12 @@ class JaxObstacleStates[T: int, K: int](
         *, horizon: T_, obstacle_count: K_ = 0
     ) -> "JaxObstacleStates[T_, K_]":
         """Creates obstacle states for zero obstacles over the given time horizon."""
+        empty = jnp.full((horizon, obstacle_count), fill_value=jnp.nan)
+
         return JaxObstacleStates.create(
-            x=jnp.empty((horizon, obstacle_count)),
-            y=jnp.empty((horizon, obstacle_count)),
-            heading=jnp.empty((horizon, obstacle_count)),
+            x=empty,
+            y=empty,
+            heading=empty,
             horizon=horizon,
             obstacle_count=obstacle_count,
         )
@@ -104,6 +108,17 @@ class JaxObstacleStates[T: int, K: int](
     ) -> JaxSampledObstacleStates[T, K, N]:
         return JaxSampledObstacleStates.create(
             x=x, y=y, heading=heading, sample_count=sample_count
+        )
+
+    @staticmethod
+    def wrap[T_: int, K_: int](
+        array: Float[JaxArray, f"T {D_O} K"],
+        *,
+        horizon: T_ | None = None,
+        obstacle_count: K_ | None = None,
+    ) -> "JaxObstacleStates[T_, K_]":
+        return JaxObstacleStates.create(
+            x=array[:, 0, :], y=array[:, 1, :], heading=array[:, 2, :]
         )
 
     @staticmethod
@@ -137,13 +152,23 @@ class JaxObstacleStates[T: int, K: int](
     @staticmethod
     def for_time_step[K_: int](
         *,
-        x: Float[JaxArray, "K"],
-        y: Float[JaxArray, "K"],
-        heading: Float[JaxArray, "K"],
+        x: Array[Dims[K_]] | Float[JaxArray, "K"],
+        y: Array[Dims[K_]] | Float[JaxArray, "K"],
+        heading: Array[Dims[K_]] | Float[JaxArray, "K"],
         obstacle_count: K_ | None = None,
+        device: Device = "cpu",
     ) -> "JaxObstacleStatesForTimeStep[K_]":
+        """Creates obstacle states for a single time step.
+
+        Note:
+            Since the common case is to further process this data on the CPU first,
+            the default device is set to "cpu".
+        """
         return JaxObstacleStatesForTimeStep.create(
-            x=x, y=y, heading=heading, obstacle_count=obstacle_count
+            x=place(x, device=device),
+            y=place(y, device=device),
+            heading=place(heading, device=device),
+            obstacle_count=obstacle_count,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
@@ -227,6 +252,21 @@ class JaxObstacleStatesForTimeStep[K: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=0)
 
+    def numpy(self) -> NumPyObstacleStatesForTimeStep[K]:
+        return NumPyObstacleStatesForTimeStep.create(
+            x=np.asarray(self._x),
+            y=np.asarray(self._y),
+            heading=np.asarray(self._heading),
+        )
+
+    @property
+    def dimension(self) -> D_o:
+        return D_O
+
+    @property
+    def count(self) -> K:
+        return cast(K, self._x.shape[0])
+
     @property
     def x_array(self) -> Float[JaxArray, "K"]:
         return self._x
@@ -239,120 +279,6 @@ class JaxObstacleStatesForTimeStep[K: int]:
     def heading_array(self) -> Float[JaxArray, "K"]:
         return self._heading
 
-
-@dataclass(kw_only=True, frozen=True)
-class JaxObstacleIds[K: int]:
-    _ids: Float[JaxArray, "K"]
-
-    @staticmethod
-    def create[K_: int](
-        *,
-        ids: Float[JaxArray, "K"],
-        obstacle_count: K_ | None = None,
-    ) -> "JaxObstacleIds[K_]":
-        return JaxObstacleIds(_ids=ids)
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[K]]:
-        return np.asarray(self._ids)
-
     @property
-    def count(self) -> K:
-        return cast(K, self._ids.shape[0])
-
-
-@dataclass(kw_only=True, frozen=True)
-class JaxObstacleStatesRunningHistory[K: int]:
-    history: list[JaxObstacleStatesForTimeStep[K]]
-
-    @staticmethod
-    def empty() -> "JaxObstacleStatesRunningHistory[int]":
-        return JaxObstacleStatesRunningHistory(history=[])
-
-    @staticmethod
-    def single[K_: int](
-        step: JaxObstacleStatesForTimeStep[K_],
-    ) -> "JaxObstacleStatesRunningHistory[K_]":
-        return JaxObstacleStatesRunningHistory(history=[step])
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[int, D_o, K]]:
-        return self._numpy_array
-
-    def last(self) -> JaxObstacleStatesForTimeStep[K]:
-        return self.history[-1]
-
-    def append(
-        self,
-        step: JaxObstacleStatesForTimeStep[K],
-        *,
-        ids: JaxObstacleIds[K] | None = None,
-    ) -> Self:
-        return self.__class__(history=self.history + [step])
-
-    def get(self) -> JaxObstacleStates[int, K]:
-        return (
-            JaxObstacleStates.create(
-                x=self.x_array, y=self.y_array, heading=self.heading_array
-            )
-            if self.horizon > 0
-            else JaxObstacleStates.empty(horizon=0, obstacle_count=self.count)
-        )
-
-    def x(self) -> Array[Dims[int, K]]:
-        return self._x
-
-    def y(self) -> Array[Dims[int, K]]:
-        return self._y
-
-    def heading(self) -> Array[Dims[int, K]]:
-        return self._heading
-
-    @property
-    def horizon(self) -> int:
-        return len(self.history)
-
-    @property
-    def dimension(self) -> D_o:
-        return D_O
-
-    @property
-    def count(self) -> K:
-        if self.horizon == 0:
-            return cast(K, 0)
-
-        return cast(K, self.history[0]._x.shape[0])
-
-    @property
-    def array(self) -> Float[JaxArray, "T D_o K"]:
-        return self._array
-
-    @cached_property
-    def _array(self) -> Float[JaxArray, "T D_o K"]:
-        return jnp.stack([self.x_array, self.y_array, self.heading_array], axis=1)
-
-    @cached_property
-    def x_array(self) -> Float[JaxArray, "T K"]:
-        return jnp.stack([step._x for step in self.history], axis=0)
-
-    @cached_property
-    def y_array(self) -> Float[JaxArray, "T K"]:
-        return jnp.stack([step._y for step in self.history], axis=0)
-
-    @cached_property
-    def heading_array(self) -> Float[JaxArray, "T K"]:
-        return jnp.stack([step._heading for step in self.history], axis=0)
-
-    @cached_property
-    def _numpy_array(self) -> Array[Dims[int, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
-
-    @cached_property
-    def _x(self) -> Array[Dims[int, K]]:
-        return np.stack([step._x for step in self.history], axis=0)
-
-    @cached_property
-    def _y(self) -> Array[Dims[int, K]]:
-        return np.stack([step._y for step in self.history], axis=0)
-
-    @cached_property
-    def _heading(self) -> Array[Dims[int, K]]:
-        return np.stack([step._heading for step in self.history], axis=0)
+    def array(self) -> Float[JaxArray, f"{D_O} K"]:
+        return jnp.stack([self._x, self._y, self._heading], axis=0)

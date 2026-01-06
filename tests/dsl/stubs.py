@@ -246,7 +246,7 @@ class ObstacleMotionPredictor[
         )
 
     def predict(self, *, history: HistoryT) -> PredictionT:
-        assert np.array_equal(self.expected_history, history), (
+        assert np.array_equal(self.expected_history, history, equal_nan=True), (
             f"ObstacleMotionPredictor received unexpected history. "
             f"Expected: {self.expected_history}, Got: {history}"
         )

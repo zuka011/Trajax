@@ -1,4 +1,9 @@
-from .array import DataType as DataType, jaxtyped as jaxtyped
+from .array import (
+    DataType as DataType,
+    Device as Device,
+    jaxtyped as jaxtyped,
+    place as place,
+)
 from .mppi import (
     State as State,
     StateSequence as StateSequence,
