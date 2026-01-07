@@ -8,6 +8,7 @@ from trajax import (
     ControlInputBatch,
     ControlInputSequence,
     Distance,
+    ObstacleIds,
     ObstacleStatesHistory,
     ObstacleStates,
     ObstacleStatesForTimeStep,
@@ -256,14 +257,15 @@ class ObstacleMotionPredictor[
 
 @dataclass(frozen=True)
 class ObstacleIdAssignment[
-    IdT,
+    IdT: ObstacleIds,
     ObservationT: ObstacleStatesForTimeStep,
     HistoryT: ObstacleStatesHistory,
 ]:
     class Entry[IdT, ObservationT, HistoryT](NamedTuple):
         ids: IdT
         when_observing: ObservationT
-        with_history: HistoryT | None = None
+        and_history: HistoryT | None = None
+        and_ids: IdT | None = None
 
     class Provider[IdT, ObservationT, HistoryT](Protocol):
         def __call__(
@@ -277,19 +279,25 @@ class ObstacleIdAssignment[
     assignments: Sequence[Entry[IdT, ObservationT, HistoryT]]
 
     @staticmethod
-    def returns[I, O: ObstacleStatesForTimeStep, H: ObstacleStatesHistory](
+    def returns[I: ObstacleIds, O: ObstacleStatesForTimeStep, H: ObstacleStatesHistory](
         provider: "ObstacleIdAssignment.Provider[I, O, H]",
     ) -> "ObstacleIdAssignment[I, O, H]":
         return ObstacleIdAssignment(assignments=provider(ObstacleIdAssignment.Entry))
 
-    def __call__(self, states: ObservationT, /, *, history: HistoryT) -> IdT | None:
+    def __call__(
+        self, states: ObservationT, /, *, history: HistoryT, ids: IdT
+    ) -> IdT | None:
         for entry in self.assignments:
             if np.array_equal(entry.when_observing, states):
-                assert entry.with_history is None or np.array_equal(
-                    entry.with_history, history
+                assert entry.and_history is None or np.array_equal(
+                    entry.and_history, history, equal_nan=True
                 ), (
                     f"Received unexpected history for ID assignment. "
-                    f"Expected: {entry.with_history}, Got: {history}"
+                    f"Expected: {entry.and_history}, Got: {history}"
+                )
+                assert entry.and_ids is None or np.array_equal(entry.and_ids, ids), (
+                    f"Received unexpected IDs for ID assignment. "
+                    f"Expected: {entry.and_ids}, Got: {ids}"
                 )
 
                 return entry.ids

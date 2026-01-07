@@ -5,7 +5,7 @@ from functools import cached_property
 from trajax.types import DataType
 from trajax.obstacles.basic import NumPyObstacleStatesForTimeStep, NumPyObstacleStates
 
-from numtypes import NumberArray, IndexArray, Dims, shape_of
+from numtypes import NumberArray, IndexArray, Dims, D, shape_of
 
 import numpy as np
 
@@ -13,6 +13,10 @@ import numpy as np
 @dataclass(frozen=True)
 class NumPyObstacleIds[K: int]:
     _array: IndexArray[Dims[K]]
+
+    @staticmethod
+    def empty() -> "NumPyObstacleIds[D[0]]":
+        return NumPyObstacleIds(np.array([], dtype=np.intp))
 
     @staticmethod
     def create[K_: int](*, ids: NumberArray[Dims[K_]]) -> "NumPyObstacleIds[K_]":
@@ -36,9 +40,9 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         states: NumPyObstacleStatesForTimeStep
         ids: NumPyObstacleIds | None
 
-    class MergedIds(NamedTuple):
+    class MergedIds[K_: int](NamedTuple):
         all: NumPyObstacleIds
-        recent: NumPyObstacleIds
+        recent: NumPyObstacleIds[K_]
 
     history: list[Entry]
     fixed_horizon: H | None
@@ -70,6 +74,23 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
 
         return self.history[-1].states
 
+    def get(self) -> NumPyObstacleStates[int, K]:
+        return (
+            self._combined_history
+            if self.horizon > 0
+            else NumPyObstacleStates.empty(
+                horizon=self.fixed_horizon or 0,
+                obstacle_count=self.fixed_obstacle_count or 0,
+            )
+        )
+
+    def ids(self) -> NumPyObstacleIds[K]:
+        return (
+            ids.recent
+            if (ids := self._merged_ids) is not None
+            else NumPyObstacleIds.create(ids=np.array([]))
+        )
+
     def append[N: int](
         self,
         observation: NumPyObstacleStatesForTimeStep,
@@ -99,16 +120,6 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
             fixed_obstacle_count=self.fixed_obstacle_count,
         )
 
-    def get(self) -> NumPyObstacleStates[int, K]:
-        return (
-            self._combined_history
-            if self.horizon > 0
-            else NumPyObstacleStates.empty(
-                horizon=self.fixed_horizon or 0,
-                obstacle_count=self.fixed_obstacle_count or 0,
-            )
-        )
-
     @property
     def horizon(self) -> int:
         return len(self.history)
@@ -125,6 +136,13 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         return ids.all.count if (ids := self._merged_ids) is not None else cast(K, 0)
 
     @cached_property
+    def _full_horizon(self) -> int:
+        if self.fixed_horizon is not None:
+            return self.fixed_horizon
+
+        return len(self.history)
+
+    @cached_property
     def _combined_history(self) -> NumPyObstacleStates[int, K]:
         if (ids := self._merged_ids) is None:
             return NumPyObstacleStates.wrap(
@@ -134,13 +152,13 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         return combine_history(
             recent_ids=ids.recent,
             history=self.history,
-            horizon=self.horizon,
+            horizon=self._full_horizon,
             dimension=self.history[0].states.dimension,
             obstacle_count=self.count,
         )
 
     @cached_property
-    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds  | None":
+    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds[K]  | None":
         if all(entry.ids is None for entry in self.history):
             return
 
@@ -171,13 +189,14 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
 
 def combine_history[H: int, K: int](
     *,
-    recent_ids: NumPyObstacleIds,
+    recent_ids: NumPyObstacleIds[K],
     history: Sequence[NumPyObstacleStatesRunningHistory.Entry],
     horizon: H,
     dimension: int,
     obstacle_count: K,
 ) -> NumPyObstacleStates[H, K]:
     recent_id_count = recent_ids.count
+    time_padding = horizon - len(history)
     output = np.full((output_shape := (horizon, dimension, obstacle_count)), np.nan)
 
     for t, entry in enumerate(history):
@@ -194,7 +213,9 @@ def combine_history[H: int, K: int](
         )
 
         valid_positions = positions[valid_mask]
-        output[t, :, valid_positions] = entry.states.array[:, valid_mask].T
+        output[time_padding + t, :, valid_positions] = entry.states.array[
+            :, valid_mask
+        ].T
 
     assert shape_of(output, matches=output_shape)
 

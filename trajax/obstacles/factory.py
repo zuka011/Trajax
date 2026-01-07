@@ -11,10 +11,12 @@ from trajax.obstacles.simulating import (
     JaxDynamicObstacleStateProvider,
 )
 from trajax.obstacles.sampler import sampler
+from trajax.obstacles.assignment import id_assignment
 
 
 class obstacles:
     sampler: Final = sampler
+    id_assignment: Final = id_assignment
     predicting: Final = PredictingObstacleStateProvider.create
 
     class numpy:

@@ -11,7 +11,7 @@ from trajax.types import (
 
 
 class DefaultIdAssignment(ObstacleIdAssignment[Any, Any, Any]):
-    def __call__(self, states: Any, /, *, history: Any) -> None:
+    def __call__(self, states: Any, /, *, history: Any, ids: Any) -> None:
         return None
 
 
@@ -46,5 +46,8 @@ class PredictingObstacleStateProvider[
 
     def observe(self, states: ObstacleStatesForTimeStepT) -> None:
         self.history = self.history.append(
-            states, ids=self.id_assignment(states, history=self.history.get())
+            states,
+            ids=self.id_assignment(
+                states, history=self.history.get(), ids=self.history.ids()
+            ),
         )

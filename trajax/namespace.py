@@ -103,6 +103,8 @@ from trajax.obstacles import (
     NumPyObstacleIds,
     NumPyObstacleStates,
     NumPyObstacleStatesForTimeStep,
+    NumPyObstacle2dPositions,
+    NumPyObstacle2dPositionsForTimeStep,
     NumPyObstacleStatesRunningHistory,
     JaxSampledObstacleStates,
     JaxObstacleIds,
@@ -209,6 +211,12 @@ class types:
             NumPySampledObstacleStates[T, K, N]
         )
         type ObstacleStatesForTimeStep[K: int = Any] = NumPyObstacleStatesForTimeStep[K]
+        type Obstacle2dPositions[T: int = Any, K: int = Any] = NumPyObstacle2dPositions[
+            T, K
+        ]
+        type Obstacle2dPositionsForTimeStep[K: int = Any] = (
+            NumPyObstacle2dPositionsForTimeStep[K]
+        )
         type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
             NumPyObstacleStatesRunningHistory[T, K]
         )

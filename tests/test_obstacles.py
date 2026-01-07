@@ -283,10 +283,10 @@ K = clear_type
                 history=types.numpy.obstacle_states_running_history.empty(),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0,
-                        history_1,
-                        history_2,
-                        history_3,
+                        lambda observation_0,
+                        observation_1,
+                        observation_2,
+                        observation_3,
                         x,
                         y,
                         heading,
@@ -294,51 +294,55 @@ K = clear_type
                             # IDs don't start from 0 intentionally.
                             ids(
                                 data.numpy.obstacle_ids([6, 2, 3]),
-                                when_observing=history_0,
-                                with_history=data.numpy.obstacle_states(
+                                when_observing=observation_0,
+                                and_history=data.numpy.obstacle_states(
                                     x=np.empty((0, 0)),
                                     y=np.empty((0, 0)),
                                     heading=np.empty((0, 0)),
                                 ),
+                                and_ids=data.numpy.obstacle_ids([]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([3, 6, 2]),
-                                when_observing=history_1,
-                                with_history=data.numpy.obstacle_states(
+                                when_observing=observation_1,
+                                and_history=data.numpy.obstacle_states(
                                     x=x[:1], y=y[:1], heading=heading[:1]
                                 ),
+                                and_ids=data.numpy.obstacle_ids([2, 3, 6]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([2, 3, 6]),
-                                when_observing=history_2,
-                                with_history=data.numpy.obstacle_states(
+                                when_observing=observation_2,
+                                and_history=data.numpy.obstacle_states(
                                     x=x[:2], y=y[:2], heading=heading[:2]
                                 ),
+                                and_ids=data.numpy.obstacle_ids([2, 3, 6]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([3, 2, 6]),
-                                when_observing=history_3,
-                                with_history=data.numpy.obstacle_states(
+                                when_observing=observation_3,
+                                and_history=data.numpy.obstacle_states(
                                     x=x[:3], y=y[:3], heading=heading[:3]
                                 ),
+                                and_ids=data.numpy.obstacle_ids([2, 3, 6]),
                             ),
                         ),
-                        history_0 := data.numpy.obstacle_states_for_time_step(
+                        observation_0 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_06, x_02, x_03], shape=(K,)),
                             y=array([y_06, y_02, y_03], shape=(K,)),
                             heading=array([h_06, h_02, h_03], shape=(K,)),
                         ),
-                        history_1 := data.numpy.obstacle_states_for_time_step(
+                        observation_1 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_13, x_16, x_12], shape=(K,)),
                             y=array([y_13, y_16, y_12], shape=(K,)),
                             heading=array([h_13, h_16, h_12], shape=(K,)),
                         ),
-                        history_2 := data.numpy.obstacle_states_for_time_step(
+                        observation_2 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_22, x_23, x_26], shape=(K,)),
                             y=array([y_22, y_23, y_26], shape=(K,)),
                             heading=array([h_22, h_23, h_26], shape=(K,)),
                         ),
-                        history_3 := data.numpy.obstacle_states_for_time_step(
+                        observation_3 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_33, x_32, x_36], shape=(K,)),
                             y=array([y_33, y_32, y_36], shape=(K,)),
                             heading=array([h_33, h_32, h_36], shape=(K,)),
@@ -349,7 +353,12 @@ K = clear_type
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (  # Obstacle disappears then reappears
@@ -369,28 +378,28 @@ K = clear_type
                                     # ID = 3 Disappears
                                     # ID = 5 Appears later
                                     # ID = 6 Disappears then reappears
-                                    [x_02 := 0.2, x_03 := 0.3, np.nan, x_06 := 0.6],
+                                    [x_02 := 0.4, x_03 := 0.3, np.nan, x_06 := 0.6],
                                     [x_12 := 0.2, np.nan, np.nan, np.nan],
                                     [x_22 := 0.3, np.nan, x_25 := 0.6, np.nan],
-                                    [x_32 := 0.3, np.nan, x_35 := 0.4, x_36 := 0.2],
+                                    [x_32 := 0.7, np.nan, x_35 := 0.4, x_36 := 0.2],
                                 ],
                                 shape=(H := 4, K := 4),
                             ),
                             y=array(
                                 [
                                     [y_02 := 1.2, y_03 := 1.3, np.nan, y_06 := 1.6],
-                                    [y_12 := 1.2, np.nan, np.nan, np.nan],
+                                    [y_12 := 1.1, np.nan, np.nan, np.nan],
                                     [y_22 := 1.3, np.nan, y_25 := 1.6, np.nan],
-                                    [y_32 := 1.3, np.nan, y_35 := 1.4, y_36 := 1.2],
+                                    [y_32 := 1.5, np.nan, y_35 := 1.4, y_36 := 1.2],
                                 ],
                                 shape=(H, K),
                             ),
                             heading=array(
                                 [
                                     [h_02 := 0.1, h_03 := 0.2, np.nan, h_06 := 0.4],
-                                    [h_12 := 0.1, np.nan, np.nan, np.nan],
+                                    [h_12 := 0.6, np.nan, np.nan, np.nan],
                                     [h_22 := 0.2, np.nan, h_25 := 0.4, np.nan],
-                                    [h_32 := 0.2, np.nan, h_35 := 0.3, h_36 := 0.1],
+                                    [h_32 := 0.3, np.nan, h_35 := 0.3, h_36 := 0.1],
                                 ],
                                 shape=(H, K),
                             ),
@@ -402,48 +411,138 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        observation_2,
+                        history_2,
+                        ids_2,
+                        observation_3,
+                        history_3,
+                        ids_3,
+                        ids: (
                             ids(
                                 data.numpy.obstacle_ids([6, 3, 2]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_history=history_0,
+                                and_ids=ids_0,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([2]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_history=history_1,
+                                and_ids=ids_1,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([5, 2]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_history=history_2,
+                                and_ids=ids_2,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([2, 5, 6]),
-                                when_observing=history_3,
+                                when_observing=observation_3,
+                                and_history=history_3,
+                                and_ids=ids_3,
                             ),
                         ),
-                        history_0 := data.numpy.obstacle_states_for_time_step(
+                        observation_0 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_06, x_03, x_02], shape=(K_0 := 3,)),
                             y=array([y_06, y_03, y_02], shape=(K_0,)),
                             heading=array([h_06, h_03, h_02], shape=(K_0,)),
                         ),
-                        history_1 := data.numpy.obstacle_states_for_time_step(
-                            x=array([x_02], shape=(K_1 := 1,)),
+                        history_0 := data.numpy.obstacle_states(
+                            x=np.empty((0, K)),
+                            y=np.empty((0, K)),
+                            heading=np.empty((0, K)),
+                        ),
+                        ids_0 := data.numpy.obstacle_ids([]),
+                        observation_1 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_12], shape=(K_1 := 1,)),
                             y=array([y_12], shape=(K_1,)),
                             heading=array([h_12], shape=(K_1,)),
                         ),
-                        history_2 := data.numpy.obstacle_states_for_time_step(
+                        # Obstacle indices always match ID indices.
+                        history_1 := data.numpy.obstacle_states(
+                            x=array([[x_02, x_03, x_06, np.nan]], shape=(1, K)),
+                            y=array([[y_02, y_03, y_06, np.nan]], shape=(1, K)),
+                            heading=array([[h_02, h_03, h_06, np.nan]], shape=(1, K)),
+                        ),
+                        ids_1 := data.numpy.obstacle_ids([2, 3, 6]),
+                        observation_2 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_25, x_22], shape=(K_2 := 2,)),
                             y=array([y_25, y_22], shape=(K_2,)),
                             heading=array([h_25, h_22], shape=(K_2,)),
                         ),
-                        history_3 := data.numpy.obstacle_states_for_time_step(
+                        history_2 := data.numpy.obstacle_states(
+                            x=array(
+                                [
+                                    [x_02, x_03, x_06, np.nan],
+                                    [x_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                            y=array(
+                                [
+                                    [y_02, y_03, y_06, np.nan],
+                                    [y_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                            heading=array(
+                                [
+                                    [h_02, h_03, h_06, np.nan],
+                                    [h_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                        ),
+                        ids_2 := data.numpy.obstacle_ids([2, 3, 6]),
+                        observation_3 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_32, x_35, x_36], shape=(K_3 := 3,)),
                             y=array([y_32, y_35, y_36], shape=(K_3,)),
                             heading=array([h_32, h_35, h_36], shape=(K_3,)),
                         ),
+                        # Some historical data will be shifted to match ID indices.
+                        history_3 := data.numpy.obstacle_states(
+                            x=array(
+                                [
+                                    [x_02, x_03, np.nan, x_06],
+                                    [x_12, np.nan, np.nan, np.nan],
+                                    [x_22, np.nan, x_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            y=array(
+                                [
+                                    [y_02, y_03, np.nan, y_06],
+                                    [y_12, np.nan, np.nan, np.nan],
+                                    [y_22, np.nan, y_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            heading=array(
+                                [
+                                    [h_02, h_03, np.nan, h_06],
+                                    [h_12, np.nan, np.nan, np.nan],
+                                    [h_22, np.nan, h_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                        ),
+                        ids_3 := data.numpy.obstacle_ids([2, 3, 5, 6]),
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (  # Total number of IDs is less than expected.
@@ -490,31 +589,34 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, ids: (
+                        lambda observation_0, observation_1, observation_2, ids: (
                             ids(
                                 data.numpy.obstacle_ids([3, 2]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_ids=data.numpy.obstacle_ids([]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([2]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_ids=data.numpy.obstacle_ids([2, 3]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([3]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_ids=data.numpy.obstacle_ids([2, 3]),
                             ),
                         ),
-                        history_0 := data.numpy.obstacle_states_for_time_step(
+                        observation_0 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_03, x_02], shape=(K_0 := 2,)),
                             y=array([y_03, y_02], shape=(K_0,)),
                             heading=array([h_03, h_02], shape=(K_0,)),
                         ),
-                        history_1 := data.numpy.obstacle_states_for_time_step(
+                        observation_1 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_12], shape=(K_1 := 1,)),
                             y=array([y_12], shape=(K_1,)),
                             heading=array([h_12], shape=(K_1,)),
                         ),
-                        history_2 := data.numpy.obstacle_states_for_time_step(
+                        observation_2 := data.numpy.obstacle_states_for_time_step(
                             x=array([x_23], shape=(K_2 := 1,)),
                             y=array([y_23], shape=(K_2,)),
                             heading=array([h_23], shape=(K_2,)),
@@ -522,7 +624,7 @@ K = clear_type
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2],
+            states_sequence := [observation_0, observation_1, observation_2],
             prediction,
         ),
         (  # Total number of IDs exceeds expected. Older IDs are dropped.
@@ -540,27 +642,27 @@ K = clear_type
                                 [
                                     # Final tracked IDs: [2, 4, 5] (IDs 3 & 6 dropped)
                                     [np.nan, np.nan, np.nan],
-                                    [x_02 := 0.2, np.nan, np.nan],
-                                    [x_12 := 0.25, x_14 := 0.4, np.nan],
-                                    [np.nan, x_24 := 0.45, x_25 := 0.5],
+                                    [x_12 := 0.2, np.nan, np.nan],
+                                    [x_22 := 0.25, x_24 := 0.4, np.nan],
+                                    [np.nan, x_34 := 0.45, x_35 := 0.5],
                                 ],
                                 shape=(H := 4, K := 3),
                             ),
                             y=array(
                                 [
                                     [np.nan, np.nan, np.nan],
-                                    [y_02 := 1.2, np.nan, np.nan],
-                                    [y_12 := 1.25, y_14 := 1.4, np.nan],
-                                    [np.nan, y_24 := 1.45, y_25 := 1.5],
+                                    [y_12 := 1.2, np.nan, np.nan],
+                                    [y_22 := 1.25, y_24 := 1.4, np.nan],
+                                    [np.nan, y_34 := 1.45, y_35 := 1.5],
                                 ],
                                 shape=(H, K),
                             ),
                             heading=array(
                                 [
                                     [np.nan, np.nan, np.nan],
-                                    [h_02 := 0.1, np.nan, np.nan],
-                                    [h_12 := 0.15, h_14 := 0.3, np.nan],
-                                    [np.nan, h_24 := 0.35, h_25 := 0.4],
+                                    [h_12 := 0.1, np.nan, np.nan],
+                                    [h_22 := 0.15, h_24 := 0.3, np.nan],
+                                    [np.nan, h_34 := 0.35, h_35 := 0.4],
                                 ],
                                 shape=(H, K),
                             ),
@@ -572,48 +674,128 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        observation_2,
+                        history_2,
+                        ids_2,
+                        observation_3,
+                        history_3,
+                        ids_3,
+                        ids: (
                             ids(
                                 data.numpy.obstacle_ids([3, 6]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_history=history_0,
+                                and_ids=ids_0,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([6, 2, 3]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_history=history_1,
+                                and_ids=ids_1,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([4, 2]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_history=history_2,
+                                and_ids=ids_2,
                             ),
                             ids(
                                 data.numpy.obstacle_ids([5, 4]),
-                                when_observing=history_3,
+                                when_observing=observation_3,
+                                and_history=history_3,
+                                and_ids=ids_3,
                             ),
                         ),
-                        history_0 := data.numpy.obstacle_states_for_time_step(
-                            x=array([0.2, 0.1], shape=(2,)),
-                            y=array([0.4, 0.5], shape=(2,)),
-                            heading=array([0.6, 0.7], shape=(2,)),
+                        observation_0 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_03 := 0.2, x_06 := 0.1], shape=(K_0 := 2,)),
+                            y=array([y_03 := 0.4, y_06 := 0.5], shape=(K_0,)),
+                            heading=array([h_03 := 0.6, h_06 := 0.7], shape=(K_0,)),
                         ),
-                        history_1 := data.numpy.obstacle_states_for_time_step(
-                            x=array([0.1, x_02, 0.3], shape=(3,)),
-                            y=array([1.1, y_02, 1.3], shape=(3,)),
-                            heading=array([2.1, h_02, 0.2], shape=(3,)),
+                        history_0 := data.numpy.obstacle_states(
+                            x=np.empty((0, K)),
+                            y=np.empty((0, K)),
+                            heading=np.empty((0, K)),
                         ),
-                        history_2 := data.numpy.obstacle_states_for_time_step(
-                            x=array([x_14, x_12], shape=(2,)),
-                            y=array([y_14, y_12], shape=(2,)),
-                            heading=array([h_14, h_12], shape=(2,)),
+                        ids_0 := data.numpy.obstacle_ids([]),
+                        observation_1 := data.numpy.obstacle_states_for_time_step(
+                            x=array(
+                                [x_16 := 0.1, x_12, x_13 := 0.3], shape=(K_1 := 3,)
+                            ),
+                            y=array([y_16 := 1.1, y_12, y_13 := 1.3], shape=(K_1,)),
+                            heading=array(
+                                [h_16 := 2.1, h_12, h_13 := 0.2], shape=(K_1,)
+                            ),
                         ),
-                        history_3 := data.numpy.obstacle_states_for_time_step(
-                            x=array([x_25, x_24], shape=(2,)),
-                            y=array([y_25, y_24], shape=(2,)),
-                            heading=array([h_25, h_24], shape=(2,)),
+                        history_1 := data.numpy.obstacle_states(
+                            x=array([[x_03, x_06, np.nan]], shape=(1, K)),
+                            y=array([[y_03, y_06, np.nan]], shape=(1, K)),
+                            heading=array([[h_03, h_06, np.nan]], shape=(1, K)),
                         ),
+                        ids_1 := data.numpy.obstacle_ids([3, 6]),
+                        observation_2 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_24, x_22], shape=(K_2 := 2,)),
+                            y=array([y_24, y_22], shape=(K_2,)),
+                            heading=array([h_24, h_22], shape=(K_2,)),
+                        ),
+                        history_2 := data.numpy.obstacle_states(
+                            x=array(
+                                [[np.nan, x_03, x_06], [x_12, x_13, x_16]], shape=(2, K)
+                            ),
+                            y=array(
+                                [[np.nan, y_03, y_06], [y_12, y_13, y_16]], shape=(2, K)
+                            ),
+                            heading=array(
+                                [[np.nan, h_03, h_06], [h_12, h_13, h_16]], shape=(2, K)
+                            ),
+                        ),
+                        ids_2 := data.numpy.obstacle_ids([2, 3, 6]),
+                        observation_3 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_35, x_34], shape=(K_3 := 2,)),
+                            y=array([y_35, y_34], shape=(K_3,)),
+                            heading=array([h_35, h_34], shape=(K_3,)),
+                        ),
+                        history_3 := data.numpy.obstacle_states(
+                            x=array(
+                                [
+                                    [np.nan, np.nan, x_06],
+                                    [x_12, np.nan, x_16],
+                                    [x_22, x_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan, y_06],
+                                    [y_12, np.nan, y_16],
+                                    [y_22, y_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan, h_06],
+                                    [h_12, np.nan, h_16],
+                                    [h_22, h_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                        ),
+                        ids_3 := data.numpy.obstacle_ids([2, 4, 6]),
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (  # No limit on total number of IDs.
@@ -660,10 +842,12 @@ K = clear_type
                             ids(
                                 data.numpy.obstacle_ids([2, 3]),
                                 when_observing=history_0,
+                                and_ids=data.numpy.obstacle_ids([]),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([4, 5]),
                                 when_observing=history_1,
+                                and_ids=data.numpy.obstacle_ids([2, 3]),
                             ),
                         ),
                         history_0 := data.numpy.obstacle_states_for_time_step(
@@ -680,6 +864,126 @@ K = clear_type
                 ),
             ),
             states_sequence := [history_0, history_1],
+            prediction,
+        ),
+        (  # Not enough history to fill horizon.
+            provider := obstacles.predicting(
+                predictor=stubs.ObstacleMotionPredictor.returns(
+                    prediction := data.numpy.obstacle_states(
+                        x=np.random.rand(T := 15, K := 2),
+                        y=np.random.rand(T, K),
+                        heading=np.random.rand(T, K),
+                        covariance=np.random.rand(T, 3, 3, K),
+                    ),
+                    when_history_is=(
+                        history := data.numpy.obstacle_states(
+                            x=array(
+                                [
+                                    # Fixed horizon is 4, but only 2 observations made.
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    # Data will be shifted towards higher horizon indices.
+                                    [x_02 := 0.2, x_03 := 0.3],
+                                    [x_12 := 0.25, x_13 := 0.35],
+                                ],
+                                shape=(H := 4, K := 2),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [y_02 := 1.2, y_03 := 1.3],
+                                    [y_12 := 1.25, y_13 := 1.35],
+                                ],
+                                shape=(H, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [h_02 := 0.1, h_03 := 0.2],
+                                    [h_12 := 0.15, h_13 := 0.25],
+                                ],
+                                shape=(H, K),
+                            ),
+                        )
+                    ),
+                ),
+                history=types.numpy.obstacle_states_running_history.empty(
+                    horizon=H, obstacle_count=K
+                ),
+                id_assignment=stubs.ObstacleIdAssignment.returns(
+                    partial(
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        ids: (
+                            ids(
+                                data.numpy.obstacle_ids([2, 3]),
+                                when_observing=observation_0,
+                                and_history=history_0,
+                                and_ids=ids_0,
+                            ),
+                            ids(
+                                data.numpy.obstacle_ids([2, 3]),
+                                when_observing=observation_1,
+                                and_history=history_1,
+                                and_ids=ids_1,
+                            ),
+                        ),
+                        observation_0 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_02, x_03], shape=(K,)),
+                            y=array([y_02, y_03], shape=(K,)),
+                            heading=array([h_02, h_03], shape=(K,)),
+                        ),
+                        history_0 := data.numpy.obstacle_states(
+                            x=array(np.full((H, K), np.nan), shape=(H, K)),
+                            y=array(np.full((H, K), np.nan), shape=(H, K)),
+                            heading=array(np.full((H, K), np.nan), shape=(H, K)),
+                        ),
+                        ids_0 := data.numpy.obstacle_ids([]),
+                        observation_1 := data.numpy.obstacle_states_for_time_step(
+                            x=array([x_12, x_13], shape=(K,)),
+                            y=array([y_12, y_13], shape=(K,)),
+                            heading=array([h_12, h_13], shape=(K,)),
+                        ),
+                        history_1 := data.numpy.obstacle_states(
+                            x=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [x_02, x_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [y_02, y_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [h_02, h_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                        ),
+                        ids_1 := data.numpy.obstacle_ids([2, 3]),
+                    )
+                ),
+            ),
+            states_sequence := [observation_0, observation_1],
             prediction,
         ),
         (  # Analogous cases for JAX.
@@ -732,61 +1036,65 @@ K = clear_type
                 history=types.jax.obstacle_states_running_history.empty(),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0,
-                        history_1,
-                        history_2,
-                        history_3,
+                        lambda observation_0,
+                        observation_1,
+                        observation_2,
+                        observation_3,
                         x,
                         y,
                         heading,
                         ids: (
                             ids(
                                 data.jax.obstacle_ids([6, 2, 3]),
-                                when_observing=history_0,
-                                with_history=data.jax.obstacle_states(
+                                when_observing=observation_0,
+                                and_history=data.jax.obstacle_states(
                                     x=np.empty((0, 0)),
                                     y=np.empty((0, 0)),
                                     heading=np.empty((0, 0)),
                                 ),
+                                and_ids=data.jax.obstacle_ids([]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([3, 6, 2]),
-                                when_observing=history_1,
-                                with_history=data.jax.obstacle_states(
+                                when_observing=observation_1,
+                                and_history=data.jax.obstacle_states(
                                     x=x[:1], y=y[:1], heading=heading[:1]
                                 ),
+                                and_ids=data.jax.obstacle_ids([2, 3, 6]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([2, 3, 6]),
-                                when_observing=history_2,
-                                with_history=data.jax.obstacle_states(
+                                when_observing=observation_2,
+                                and_history=data.jax.obstacle_states(
                                     x=x[:2], y=y[:2], heading=heading[:2]
                                 ),
+                                and_ids=data.jax.obstacle_ids([2, 3, 6]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([3, 2, 6]),
-                                when_observing=history_3,
-                                with_history=data.jax.obstacle_states(
+                                when_observing=observation_3,
+                                and_history=data.jax.obstacle_states(
                                     x=x[:3], y=y[:3], heading=heading[:3]
                                 ),
+                                and_ids=data.jax.obstacle_ids([2, 3, 6]),
                             ),
                         ),
-                        history_0 := data.jax.obstacle_states_for_time_step(
+                        observation_0 := data.jax.obstacle_states_for_time_step(
                             x=array([x_06, x_02, x_03], shape=(K,)),
                             y=array([y_06, y_02, y_03], shape=(K,)),
                             heading=array([h_06, h_02, h_03], shape=(K,)),
                         ),
-                        history_1 := data.jax.obstacle_states_for_time_step(
+                        observation_1 := data.jax.obstacle_states_for_time_step(
                             x=array([x_13, x_16, x_12], shape=(K,)),
                             y=array([y_13, y_16, y_12], shape=(K,)),
                             heading=array([h_13, h_16, h_12], shape=(K,)),
                         ),
-                        history_2 := data.jax.obstacle_states_for_time_step(
+                        observation_2 := data.jax.obstacle_states_for_time_step(
                             x=array([x_22, x_23, x_26], shape=(K,)),
                             y=array([y_22, y_23, y_26], shape=(K,)),
                             heading=array([h_22, h_23, h_26], shape=(K,)),
                         ),
-                        history_3 := data.jax.obstacle_states_for_time_step(
+                        observation_3 := data.jax.obstacle_states_for_time_step(
                             x=array([x_33, x_32, x_36], shape=(K,)),
                             y=array([y_33, y_32, y_36], shape=(K,)),
                             heading=array([h_33, h_32, h_36], shape=(K,)),
@@ -797,7 +1105,12 @@ K = clear_type
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (
@@ -813,28 +1126,28 @@ K = clear_type
                         history := data.jax.obstacle_states(
                             x=array(
                                 [
-                                    [x_02 := 0.2, x_03 := 0.3, np.nan, x_06 := 0.6],
+                                    [x_02 := 0.4, x_03 := 0.3, np.nan, x_06 := 0.6],
                                     [x_12 := 0.2, np.nan, np.nan, np.nan],
                                     [x_22 := 0.3, np.nan, x_25 := 0.6, np.nan],
-                                    [x_32 := 0.3, np.nan, x_35 := 0.4, x_36 := 0.2],
+                                    [x_32 := 0.7, np.nan, x_35 := 0.4, x_36 := 0.2],
                                 ],
                                 shape=(H := 4, K),
                             ),
                             y=array(
                                 [
                                     [y_02 := 1.2, y_03 := 1.3, np.nan, y_06 := 1.6],
-                                    [y_12 := 1.2, np.nan, np.nan, np.nan],
+                                    [y_12 := 1.1, np.nan, np.nan, np.nan],
                                     [y_22 := 1.3, np.nan, y_25 := 1.6, np.nan],
-                                    [y_32 := 1.3, np.nan, y_35 := 1.4, y_36 := 1.2],
+                                    [y_32 := 1.5, np.nan, y_35 := 1.4, y_36 := 1.2],
                                 ],
                                 shape=(H, K),
                             ),
                             heading=array(
                                 [
                                     [h_02 := 0.1, h_03 := 0.2, np.nan, h_06 := 0.4],
-                                    [h_12 := 0.1, np.nan, np.nan, np.nan],
+                                    [h_12 := 0.6, np.nan, np.nan, np.nan],
                                     [h_22 := 0.2, np.nan, h_25 := 0.4, np.nan],
-                                    [h_32 := 0.2, np.nan, h_35 := 0.3, h_36 := 0.1],
+                                    [h_32 := 0.3, np.nan, h_35 := 0.3, h_36 := 0.1],
                                 ],
                                 shape=(H, K),
                             ),
@@ -846,48 +1159,132 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        observation_2,
+                        history_2,
+                        ids_2,
+                        observation_3,
+                        history_3,
+                        ids_3,
+                        ids: (
                             ids(
                                 data.jax.obstacle_ids([6, 3, 2]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_ids=ids_0,
                             ),
                             ids(
                                 data.jax.obstacle_ids([2]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_ids=ids_1,
                             ),
                             ids(
                                 data.jax.obstacle_ids([5, 2]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_ids=ids_2,
                             ),
                             ids(
                                 data.jax.obstacle_ids([2, 5, 6]),
-                                when_observing=history_3,
+                                when_observing=observation_3,
+                                and_ids=ids_3,
                             ),
                         ),
-                        history_0 := data.jax.obstacle_states_for_time_step(
+                        observation_0 := data.jax.obstacle_states_for_time_step(
                             x=array([x_06, x_03, x_02], shape=(K_0 := 3,)),
                             y=array([y_06, y_03, y_02], shape=(K_0,)),
                             heading=array([h_06, h_03, h_02], shape=(K_0,)),
                         ),
-                        history_1 := data.jax.obstacle_states_for_time_step(
-                            x=array([x_02], shape=(K_1 := 1,)),
+                        history_0 := data.jax.obstacle_states(
+                            x=np.empty((0, K)),
+                            y=np.empty((0, K)),
+                            heading=np.empty((0, K)),
+                        ),
+                        ids_0 := data.jax.obstacle_ids([]),
+                        observation_1 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_12], shape=(K_1 := 1,)),
                             y=array([y_12], shape=(K_1,)),
                             heading=array([h_12], shape=(K_1,)),
                         ),
-                        history_2 := data.jax.obstacle_states_for_time_step(
+                        history_1 := data.jax.obstacle_states(
+                            x=array([[x_02, x_03, x_06, np.nan]], shape=(1, K)),
+                            y=array([[y_02, y_03, y_06, np.nan]], shape=(1, K)),
+                            heading=array([[h_02, h_03, h_06, np.nan]], shape=(1, K)),
+                        ),
+                        ids_1 := data.jax.obstacle_ids([2, 3, 6]),
+                        observation_2 := data.jax.obstacle_states_for_time_step(
                             x=array([x_25, x_22], shape=(K_2 := 2,)),
                             y=array([y_25, y_22], shape=(K_2,)),
                             heading=array([h_25, h_22], shape=(K_2,)),
                         ),
-                        history_3 := data.jax.obstacle_states_for_time_step(
+                        history_2 := data.jax.obstacle_states(
+                            x=array(
+                                [
+                                    [x_02, x_03, x_06, np.nan],
+                                    [x_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                            y=array(
+                                [
+                                    [y_02, y_03, y_06, np.nan],
+                                    [y_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                            heading=array(
+                                [
+                                    [h_02, h_03, h_06, np.nan],
+                                    [h_12, np.nan, np.nan, np.nan],
+                                ],
+                                shape=(2, K),
+                            ),
+                        ),
+                        ids_2 := data.jax.obstacle_ids([2, 3, 6]),
+                        observation_3 := data.jax.obstacle_states_for_time_step(
                             x=array([x_32, x_35, x_36], shape=(K_3 := 3,)),
                             y=array([y_32, y_35, y_36], shape=(K_3,)),
                             heading=array([h_32, h_35, h_36], shape=(K_3,)),
                         ),
+                        history_3 := data.jax.obstacle_states(
+                            x=array(
+                                [
+                                    [x_02, x_03, np.nan, x_06],
+                                    [x_12, np.nan, np.nan, np.nan],
+                                    [x_22, np.nan, x_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            y=array(
+                                [
+                                    [y_02, y_03, np.nan, y_06],
+                                    [y_12, np.nan, np.nan, np.nan],
+                                    [y_22, np.nan, y_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            heading=array(
+                                [
+                                    [h_02, h_03, np.nan, h_06],
+                                    [h_12, np.nan, np.nan, np.nan],
+                                    [h_22, np.nan, h_25, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                        ),
+                        ids_3 := data.jax.obstacle_ids([2, 3, 5, 6]),
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (
@@ -933,31 +1330,34 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, ids: (
+                        lambda observation_0, observation_1, observation_2, ids: (
                             ids(
                                 data.jax.obstacle_ids([3, 2]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_ids=data.jax.obstacle_ids([]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([2]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_ids=data.jax.obstacle_ids([2, 3]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([3]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_ids=data.jax.obstacle_ids([2, 3]),
                             ),
                         ),
-                        history_0 := data.jax.obstacle_states_for_time_step(
+                        observation_0 := data.jax.obstacle_states_for_time_step(
                             x=array([x_03, x_02], shape=(K_0 := 2,)),
                             y=array([y_03, y_02], shape=(K_0,)),
                             heading=array([h_03, h_02], shape=(K_0,)),
                         ),
-                        history_1 := data.jax.obstacle_states_for_time_step(
+                        observation_1 := data.jax.obstacle_states_for_time_step(
                             x=array([x_12], shape=(K_1 := 1,)),
                             y=array([y_12], shape=(K_1,)),
                             heading=array([h_12], shape=(K_1,)),
                         ),
-                        history_2 := data.jax.obstacle_states_for_time_step(
+                        observation_2 := data.jax.obstacle_states_for_time_step(
                             x=array([x_23], shape=(K_2 := 1,)),
                             y=array([y_23], shape=(K_2,)),
                             heading=array([h_23], shape=(K_2,)),
@@ -965,7 +1365,7 @@ K = clear_type
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2],
+            states_sequence := [observation_0, observation_1, observation_2],
             prediction,
         ),
         (
@@ -982,27 +1382,27 @@ K = clear_type
                             x=array(
                                 [
                                     [np.nan, np.nan, np.nan],
-                                    [x_02 := 0.2, np.nan, np.nan],
-                                    [x_12 := 0.25, x_14 := 0.4, np.nan],
-                                    [np.nan, x_24 := 0.45, x_25 := 0.5],
+                                    [x_12 := 0.2, np.nan, np.nan],
+                                    [x_22 := 0.25, x_24 := 0.4, np.nan],
+                                    [np.nan, x_34 := 0.45, x_35 := 0.5],
                                 ],
                                 shape=(H := 4, K),
                             ),
                             y=array(
                                 [
                                     [np.nan, np.nan, np.nan],
-                                    [y_02 := 1.2, np.nan, np.nan],
-                                    [y_12 := 1.25, y_14 := 1.4, np.nan],
-                                    [np.nan, y_24 := 1.45, y_25 := 1.5],
+                                    [y_12 := 1.2, np.nan, np.nan],
+                                    [y_22 := 1.25, y_24 := 1.4, np.nan],
+                                    [np.nan, y_34 := 1.45, y_35 := 1.5],
                                 ],
                                 shape=(H, K),
                             ),
                             heading=array(
                                 [
                                     [np.nan, np.nan, np.nan],
-                                    [h_02 := 0.1, np.nan, np.nan],
-                                    [h_12 := 0.15, h_14 := 0.3, np.nan],
-                                    [np.nan, h_24 := 0.35, h_25 := 0.4],
+                                    [h_12 := 0.1, np.nan, np.nan],
+                                    [h_22 := 0.15, h_24 := 0.3, np.nan],
+                                    [np.nan, h_34 := 0.35, h_35 := 0.4],
                                 ],
                                 shape=(H, K),
                             ),
@@ -1014,48 +1414,128 @@ K = clear_type
                 ),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        observation_2,
+                        history_2,
+                        ids_2,
+                        observation_3,
+                        history_3,
+                        ids_3,
+                        ids: (
                             ids(
                                 data.jax.obstacle_ids([3, 6]),
-                                when_observing=history_0,
+                                when_observing=observation_0,
+                                and_history=history_0,
+                                and_ids=ids_0,
                             ),
                             ids(
                                 data.jax.obstacle_ids([6, 2, 3]),
-                                when_observing=history_1,
+                                when_observing=observation_1,
+                                and_history=history_1,
+                                and_ids=ids_1,
                             ),
                             ids(
                                 data.jax.obstacle_ids([4, 2]),
-                                when_observing=history_2,
+                                when_observing=observation_2,
+                                and_history=history_2,
+                                and_ids=ids_2,
                             ),
                             ids(
                                 data.jax.obstacle_ids([5, 4]),
-                                when_observing=history_3,
+                                when_observing=observation_3,
+                                and_history=history_3,
+                                and_ids=ids_3,
                             ),
                         ),
-                        history_0 := data.jax.obstacle_states_for_time_step(
-                            x=array([0.2, 0.1], shape=(2,)),
-                            y=array([0.4, 0.5], shape=(2,)),
-                            heading=array([0.6, 0.7], shape=(2,)),
+                        observation_0 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_03 := 0.2, x_06 := 0.1], shape=(K_0 := 2,)),
+                            y=array([y_03 := 0.4, y_06 := 0.5], shape=(K_0,)),
+                            heading=array([h_03 := 0.6, h_06 := 0.7], shape=(K_0,)),
                         ),
-                        history_1 := data.jax.obstacle_states_for_time_step(
-                            x=array([0.1, x_02, 0.3], shape=(3,)),
-                            y=array([1.1, y_02, 1.3], shape=(3,)),
-                            heading=array([2.1, h_02, 0.2], shape=(3,)),
+                        history_0 := data.jax.obstacle_states(
+                            x=np.empty((0, K)),
+                            y=np.empty((0, K)),
+                            heading=np.empty((0, K)),
                         ),
-                        history_2 := data.jax.obstacle_states_for_time_step(
-                            x=array([x_14, x_12], shape=(2,)),
-                            y=array([y_14, y_12], shape=(2,)),
-                            heading=array([h_14, h_12], shape=(2,)),
+                        ids_0 := data.jax.obstacle_ids([]),
+                        observation_1 := data.jax.obstacle_states_for_time_step(
+                            x=array(
+                                [x_16 := 0.1, x_12, x_13 := 0.3], shape=(K_1 := 3,)
+                            ),
+                            y=array([y_16 := 1.1, y_12, y_13 := 1.3], shape=(K_1,)),
+                            heading=array(
+                                [h_16 := 2.1, h_12, h_13 := 0.2], shape=(K_1,)
+                            ),
                         ),
-                        history_3 := data.jax.obstacle_states_for_time_step(
-                            x=array([x_25, x_24], shape=(2,)),
-                            y=array([y_25, y_24], shape=(2,)),
-                            heading=array([h_25, h_24], shape=(2,)),
+                        history_1 := data.jax.obstacle_states(
+                            x=array([[x_03, x_06, np.nan]], shape=(1, K)),
+                            y=array([[y_03, y_06, np.nan]], shape=(1, K)),
+                            heading=array([[h_03, h_06, np.nan]], shape=(1, K)),
                         ),
+                        ids_1 := data.jax.obstacle_ids([3, 6]),
+                        observation_2 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_24, x_22], shape=(K_2 := 2,)),
+                            y=array([y_24, y_22], shape=(K_2,)),
+                            heading=array([h_24, h_22], shape=(K_2,)),
+                        ),
+                        history_2 := data.jax.obstacle_states(
+                            x=array(
+                                [[np.nan, x_03, x_06], [x_12, x_13, x_16]], shape=(2, K)
+                            ),
+                            y=array(
+                                [[np.nan, y_03, y_06], [y_12, y_13, y_16]], shape=(2, K)
+                            ),
+                            heading=array(
+                                [[np.nan, h_03, h_06], [h_12, h_13, h_16]], shape=(2, K)
+                            ),
+                        ),
+                        ids_2 := data.jax.obstacle_ids([2, 3, 6]),
+                        observation_3 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_35, x_34], shape=(K_3 := 2,)),
+                            y=array([y_35, y_34], shape=(K_3,)),
+                            heading=array([h_35, h_34], shape=(K_3,)),
+                        ),
+                        history_3 := data.jax.obstacle_states(
+                            x=array(
+                                [
+                                    [np.nan, np.nan, x_06],
+                                    [x_12, np.nan, x_16],
+                                    [x_22, x_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan, y_06],
+                                    [y_12, np.nan, y_16],
+                                    [y_22, y_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan, h_06],
+                                    [h_12, np.nan, h_16],
+                                    [h_22, h_24, np.nan],
+                                ],
+                                shape=(3, K),
+                            ),
+                        ),
+                        ids_3 := data.jax.obstacle_ids([2, 4, 6]),
                     )
                 ),
             ),
-            states_sequence := [history_0, history_1, history_2, history_3],
+            states_sequence := [
+                observation_0,
+                observation_1,
+                observation_2,
+                observation_3,
+            ],
             prediction,
         ),
         (
@@ -1100,10 +1580,12 @@ K = clear_type
                             ids(
                                 data.jax.obstacle_ids([2, 3]),
                                 when_observing=history_0,
+                                and_ids=data.jax.obstacle_ids([]),
                             ),
                             ids(
                                 data.jax.obstacle_ids([4, 5]),
                                 when_observing=history_1,
+                                and_ids=data.jax.obstacle_ids([2, 3]),
                             ),
                         ),
                         history_0 := data.jax.obstacle_states_for_time_step(
@@ -1120,6 +1602,124 @@ K = clear_type
                 ),
             ),
             states_sequence := [history_0, history_1],
+            prediction,
+        ),
+        (
+            provider := obstacles.predicting(
+                predictor=stubs.ObstacleMotionPredictor.returns(
+                    prediction := data.jax.obstacle_states(
+                        x=np.random.rand(T := 15, K := 2),
+                        y=np.random.rand(T, K),
+                        heading=np.random.rand(T, K),
+                        covariance=np.random.rand(T, 3, 3, K),
+                    ),
+                    when_history_is=(
+                        history := data.jax.obstacle_states(
+                            x=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [x_02 := 0.2, x_03 := 0.3],
+                                    [x_12 := 0.25, x_13 := 0.35],
+                                ],
+                                shape=(H := 4, K := 2),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [y_02 := 1.2, y_03 := 1.3],
+                                    [y_12 := 1.25, y_13 := 1.35],
+                                ],
+                                shape=(H, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [h_02 := 0.1, h_03 := 0.2],
+                                    [h_12 := 0.15, h_13 := 0.25],
+                                ],
+                                shape=(H, K),
+                            ),
+                        )
+                    ),
+                ),
+                history=types.jax.obstacle_states_running_history.empty(
+                    horizon=H, obstacle_count=K
+                ),
+                id_assignment=stubs.ObstacleIdAssignment.returns(
+                    partial(
+                        lambda observation_0,
+                        history_0,
+                        ids_0,
+                        observation_1,
+                        history_1,
+                        ids_1,
+                        ids: (
+                            ids(
+                                data.jax.obstacle_ids([2, 3]),
+                                when_observing=observation_0,
+                                and_history=history_0,
+                                and_ids=ids_0,
+                            ),
+                            ids(
+                                data.jax.obstacle_ids([2, 3]),
+                                when_observing=observation_1,
+                                and_history=history_1,
+                                and_ids=ids_1,
+                            ),
+                        ),
+                        observation_0 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_02, x_03], shape=(K,)),
+                            y=array([y_02, y_03], shape=(K,)),
+                            heading=array([h_02, h_03], shape=(K,)),
+                        ),
+                        history_0 := data.jax.obstacle_states(
+                            x=array(np.full((H, K), np.nan), shape=(H, K)),
+                            y=array(np.full((H, K), np.nan), shape=(H, K)),
+                            heading=array(np.full((H, K), np.nan), shape=(H, K)),
+                        ),
+                        ids_0 := data.jax.obstacle_ids([]),
+                        observation_1 := data.jax.obstacle_states_for_time_step(
+                            x=array([x_12, x_13], shape=(K,)),
+                            y=array([y_12, y_13], shape=(K,)),
+                            heading=array([h_12, h_13], shape=(K,)),
+                        ),
+                        history_1 := data.jax.obstacle_states(
+                            x=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [x_02, x_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                            y=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [y_02, y_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                            heading=array(
+                                [
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [np.nan, np.nan],
+                                    [h_02, h_03],
+                                ],
+                                shape=(H, K),
+                            ),
+                        ),
+                        ids_1 := data.jax.obstacle_ids([2, 3]),
+                    )
+                ),
+            ),
+            states_sequence := [observation_0, observation_1],
             prediction,
         ),
     ],

@@ -172,3 +172,11 @@ from .predictors import (
     JaxPositionCovariance as JaxPositionCovariance,
     JaxInitialCovarianceProvider as JaxInitialCovarianceProvider,
 )
+from .obstacles import (
+    ObstaclePositionsForTimeStep as ObstaclePositionsForTimeStep,
+    ObstaclePositions as ObstaclePositions,
+    ObstaclePositionExtractor as ObstaclePositionExtractor,
+    NumPyObstaclePositionsForTimeStep as NumPyObstaclePositionsForTimeStep,
+    NumPyObstaclePositions as NumPyObstaclePositions,
+    NumPyObstaclePositionExtractor as NumPyObstaclePositionExtractor,
+)

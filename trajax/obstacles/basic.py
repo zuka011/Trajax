@@ -1,13 +1,8 @@
 from typing import Sequence
 from dataclasses import dataclass
+from functools import cached_property
 
-from trajax.types import (
-    DataType,
-    D_o,
-    D_O,
-    SampledObstacleStates,
-    ObstacleStates,
-)
+from trajax.types import DataType, D_o, D_O, SampledObstacleStates, ObstacleStates
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -35,7 +30,7 @@ class NumPySampledObstacleStates[T: int, K: int, N: int](
         return NumPySampledObstacleStates(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
+        return self.array
 
     def x(self) -> Array[Dims[T, K, N]]:
         return self._x
@@ -45,6 +40,65 @@ class NumPySampledObstacleStates[T: int, K: int, N: int](
 
     def heading(self) -> Array[Dims[T, K, N]]:
         return self._heading
+
+    @property
+    def horizon(self) -> T:
+        return self._x.shape[0]
+
+    @property
+    def dimension(self) -> D_o:
+        return D_O
+
+    @property
+    def count(self) -> K:
+        return self._x.shape[1]
+
+    @property
+    def sample_count(self) -> N:
+        return self._x.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D_o, K, N]]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Array[Dims[T, D_o, K, N]]:
+        return np.stack([self._x, self._y, self._heading], axis=1)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyObstacle2dPositions[T: int, K: int]:
+    _x: Array[Dims[T, K]]
+    _y: Array[Dims[T, K]]
+
+    @staticmethod
+    def create[T_: int, K_: int](
+        *, x: Array[Dims[T_, K_]], y: Array[Dims[T_, K_]]
+    ) -> "NumPyObstacle2dPositions[T_, K_]":
+        return NumPyObstacle2dPositions(_x=x, _y=y)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self._x.shape[0]
+
+    @property
+    def dimension(self) -> D[2]:
+        return 2
+
+    @property
+    def count(self) -> K:
+        return self._x.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[T, D[2], K]]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Array[Dims[T, D[2], K]]:
+        return np.stack([self._x, self._y], axis=1)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -117,7 +171,7 @@ class NumPyObstacleStates[T: int, K: int](
         return NumPyObstacleStatesForTimeStep.create(x=x, y=y, heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
+        return self.array
 
     def x(self) -> Array[Dims[T, K]]:
         return self._x
@@ -127,6 +181,9 @@ class NumPyObstacleStates[T: int, K: int](
 
     def heading(self) -> Array[Dims[T, K]]:
         return self._heading
+
+    def positions(self) -> NumPyObstacle2dPositions[T, K]:
+        return NumPyObstacle2dPositions.create(x=self._x, y=self._y)
 
     def covariance(self) -> ObstacleCovarianceArray[T, K] | None:
         return self._covariance
@@ -162,7 +219,42 @@ class NumPyObstacleStates[T: int, K: int](
 
     @property
     def array(self) -> Array[Dims[T, D_o, K]]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Array[Dims[T, D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=1)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyObstacle2dPositionsForTimeStep[K: int]:
+    _x: Array[Dims[K]]
+    _y: Array[Dims[K]]
+
+    @staticmethod
+    def create[K_: int](
+        *, x: Array[Dims[K_]], y: Array[Dims[K_]]
+    ) -> "NumPyObstacle2dPositionsForTimeStep[K_]":
+        return NumPyObstacle2dPositionsForTimeStep(_x=x, _y=y)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D[2], K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> D[2]:
+        return 2
+
+    @property
+    def count(self) -> K:
+        return self._x.shape[0]
+
+    @property
+    def array(self) -> Array[Dims[D[2], K]]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Array[Dims[D[2], K]]:
+        return np.stack([self._x, self._y], axis=0)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -192,6 +284,9 @@ class NumPyObstacleStatesForTimeStep[K: int]:
     def heading(self) -> Array[Dims[K]]:
         return self._heading
 
+    def positions(self) -> NumPyObstacle2dPositionsForTimeStep[K]:
+        return NumPyObstacle2dPositionsForTimeStep.create(x=self._x, y=self._y)
+
     def replicate[T: int](self, *, horizon: T) -> NumPyObstacleStates[T, K]:
         return NumPyObstacleStates.create(
             x=np.tile(self._x[np.newaxis, :], (horizon, 1)),
@@ -209,4 +304,8 @@ class NumPyObstacleStatesForTimeStep[K: int]:
 
     @property
     def array(self) -> Array[Dims[D_o, K]]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Array[Dims[D_o, K]]:
         return np.stack([self._x, self._y, self._heading], axis=0)

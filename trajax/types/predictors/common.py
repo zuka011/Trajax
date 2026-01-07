@@ -52,10 +52,15 @@ class ObstacleIds[K: int](Protocol):
 
 class ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT](Protocol):
     def __call__(
-        self, states: ObstacleStatesForTimeStepT, /, *, history: HistoryT
+        self, states: ObstacleStatesForTimeStepT, /, *, history: HistoryT, ids: IdT
     ) -> IdT | None:
-        """Returns the IDs assigned to the given obstacle states. If no IDs are returned,
+        """Returns the IDs to be assigned to the given obstacle states. If no IDs are returned,
         the obstacle states are assumed to be already ordered by their IDs.
+
+        Args:
+            states: The obstacle states at the current time step.
+            history: The full history of obstacle states.
+            ids: The obstacle IDs corresponding to the historical states.
         """
         ...
 
@@ -63,6 +68,10 @@ class ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT](Protocol):
 class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT](Protocol):
     def get(self) -> HistoryT:
         """Returns the current full running history of obstacle states."""
+        ...
+
+    def ids(self) -> IdT:
+        """Returns the current obstacle IDs corresponding to the running history."""
         ...
 
     def append(self, states: ObstacleStatesForTimeStepT, /, *, ids: IdT | None) -> Self:

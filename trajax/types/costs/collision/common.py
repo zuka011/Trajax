@@ -26,6 +26,26 @@ class SampledObstacleStates[T: int, K: int, N: int](Protocol):
         """Returns the headings of obstacles over time and samples."""
         ...
 
+    @property
+    def horizon(self) -> int:
+        """The time horizon over which the obstacle states are defined."""
+        ...
+
+    @property
+    def dimension(self) -> int:
+        """The dimension of a single obstacle state."""
+        ...
+
+    @property
+    def count(self) -> int:
+        """The number of obstacles."""
+        ...
+
+    @property
+    def sample_count(self) -> int:
+        """The number of samples per obstacle."""
+        ...
+
 
 class ObstacleStatesForTimeStep[K: int, ObstacleStatesT](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
@@ -46,6 +66,16 @@ class ObstacleStatesForTimeStep[K: int, ObstacleStatesT](Protocol):
 
     def replicate(self, *, horizon: int) -> ObstacleStatesT:
         """Replicates the obstacle states over the given time horizon."""
+        ...
+
+    @property
+    def dimension(self) -> D_o:
+        """The dimension of a single obstacle state."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
         ...
 
 

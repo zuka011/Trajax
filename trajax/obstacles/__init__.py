@@ -3,6 +3,8 @@ from .basic import (
     NumPySampledObstacleStates as NumPySampledObstacleStates,
     NumPyObstacleStates as NumPyObstacleStates,
     NumPyObstacleStatesForTimeStep as NumPyObstacleStatesForTimeStep,
+    NumPyObstacle2dPositions as NumPyObstacle2dPositions,
+    NumPyObstacle2dPositionsForTimeStep as NumPyObstacle2dPositionsForTimeStep,
 )
 from .accelerated import (
     JaxSampledObstacleStates as JaxSampledObstacleStates,

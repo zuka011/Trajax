@@ -81,6 +81,12 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
     def last(self) -> JaxObstacleStatesForTimeStep[K]:
         return self._get.last()
 
+    def get(self) -> JaxObstacleStates[int, K]:
+        return self._get
+
+    def ids(self) -> JaxObstacleIds[K]:
+        return self._ids
+
     def append[N: int](
         self,
         observation: JaxObstacleStatesForTimeStep[N],
@@ -94,9 +100,6 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
             )
         )
 
-    def get(self) -> JaxObstacleStates[int, K]:
-        return self._get
-
     @property
     def horizon(self) -> int:
         return self.history.horizon
@@ -108,3 +111,9 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
     @cached_property
     def _get(self) -> JaxObstacleStates[int, K]:
         return JaxObstacleStates.wrap(jnp.asarray(self.history.get().array))
+
+    @cached_property
+    def _ids(self) -> JaxObstacleIds[K]:
+        return JaxObstacleIds.create(
+            ids=jnp.asarray(self.history.ids().array), obstacle_count=self.count
+        )

@@ -1,5 +1,6 @@
 from typing import Sequence, cast
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -45,7 +46,7 @@ class JaxSampledObstacleStates[T: int, K: int, N: int](SampledObstacleStates[T, 
         return JaxSampledObstacleStates(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
+        return self._numpy_array
 
     def x(self) -> Array[Dims[T, K, N]]:
         return np.asarray(self._x)
@@ -55,6 +56,22 @@ class JaxSampledObstacleStates[T: int, K: int, N: int](SampledObstacleStates[T, 
 
     def heading(self) -> Array[Dims[T, K, N]]:
         return np.asarray(self._heading)
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._x.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return D_O
+
+    @property
+    def count(self) -> K:
+        return cast(K, self._x.shape[1])
+
+    @property
+    def sample_count(self) -> N:
+        return cast(N, self._x.shape[2])
 
     @property
     def x_array(self) -> Float[JaxArray, "T K N"]:
@@ -68,9 +85,9 @@ class JaxSampledObstacleStates[T: int, K: int, N: int](SampledObstacleStates[T, 
     def heading_array(self) -> Float[JaxArray, "T K N"]:
         return self._heading
 
-    @property
-    def sample_count(self) -> N:
-        return cast(N, self._x.shape[2])
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K, N]]:
+        return np.stack([self._x, self._y, self._heading], axis=1)
 
 
 @jaxtyped
