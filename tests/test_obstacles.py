@@ -244,32 +244,38 @@ K = clear_type
                     ),
                     when_history_is=(
                         history := data.numpy.obstacle_states(
-                            x=array(
-                                [
-                                    x_0 := [x_02 := 0.2, x_03 := 0.3, x_06 := 0.5],
-                                    x_1 := [x_12 := 0.25, x_13 := 0.35, x_16 := 0.55],
-                                    x_2 := [x_22 := 0.3, x_23 := 0.4, x_26 := 0.6],
-                                    x_3 := [x_32 := 0.35, x_33 := 0.45, x_36 := 0.65],
-                                ],
-                                shape=(H := 4, K := 3),
+                            x=(
+                                x := array(
+                                    [
+                                        x_0 := [x_02 := 0.1, x_03 := 0.3, x_06 := 0.5],
+                                        x_1 := [x_12 := 0.9, x_13 := 0.2, x_16 := 0.7],
+                                        x_2 := [x_22 := 0.8, x_23 := 0.4, x_26 := 0.6],
+                                        x_3 := [x_32 := 0.6, x_33 := 0.2, x_36 := 0.1],
+                                    ],
+                                    shape=(H := 4, K := 3),
+                                )
                             ),
-                            y=array(
-                                [
-                                    y_0 := [y_02 := 1.2, y_03 := 1.3, y_06 := 1.5],
-                                    y_1 := [y_12 := 1.25, y_13 := 1.35, y_16 := 1.55],
-                                    y_2 := [y_22 := 1.3, y_23 := 1.4, y_26 := 1.6],
-                                    y_3 := [y_32 := 1.35, y_33 := 1.45, y_36 := 1.65],
-                                ],
-                                shape=(H, K),
+                            y=(
+                                y := array(
+                                    [
+                                        y_0 := [y_02 := 1.2, y_03 := 4.3, y_06 := 1.2],
+                                        y_1 := [y_12 := 1.5, y_13 := 0.8, y_16 := 1.9],
+                                        y_2 := [y_22 := 1.3, y_23 := 2.4, y_26 := 1.4],
+                                        y_3 := [y_32 := 1.7, y_33 := 1.2, y_36 := 1.6],
+                                    ],
+                                    shape=(H, K),
+                                )
                             ),
-                            heading=array(
-                                [
-                                    h_0 := [h_02 := 0.1, h_03 := 0.2, h_06 := 0.3],
-                                    h_1 := [h_12 := 0.15, h_13 := 0.25, h_16 := 0.35],
-                                    h_2 := [h_22 := 0.2, h_23 := 0.3, h_26 := 0.4],
-                                    h_3 := [h_32 := 0.25, h_33 := 0.35, h_36 := 0.45],
-                                ],
-                                shape=(H, K),
+                            heading=(
+                                heading := array(
+                                    [
+                                        h_0 := [h_02 := 2.1, h_03 := 0.8, h_06 := 0.3],
+                                        h_1 := [h_12 := 0.4, h_13 := 4.2, h_16 := 4.3],
+                                        h_2 := [h_22 := 1.2, h_23 := 0.3, h_26 := 0.5],
+                                        h_3 := [h_32 := 5.2, h_33 := 0.4, h_36 := 1.4],
+                                    ],
+                                    shape=(H, K),
+                                )
                             ),
                         )
                     ),
@@ -277,23 +283,44 @@ K = clear_type
                 history=types.numpy.obstacle_states_running_history.empty(),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda history_0,
+                        history_1,
+                        history_2,
+                        history_3,
+                        x,
+                        y,
+                        heading,
+                        ids: (
                             # IDs don't start from 0 intentionally.
                             ids(
                                 data.numpy.obstacle_ids([6, 2, 3]),
                                 when_observing=history_0,
+                                with_history=data.numpy.obstacle_states(
+                                    x=np.empty((0, 0)),
+                                    y=np.empty((0, 0)),
+                                    heading=np.empty((0, 0)),
+                                ),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([3, 6, 2]),
                                 when_observing=history_1,
+                                with_history=data.numpy.obstacle_states(
+                                    x=x[:1], y=y[:1], heading=heading[:1]
+                                ),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([2, 3, 6]),
                                 when_observing=history_2,
+                                with_history=data.numpy.obstacle_states(
+                                    x=x[:2], y=y[:2], heading=heading[:2]
+                                ),
                             ),
                             ids(
                                 data.numpy.obstacle_ids([3, 2, 6]),
                                 when_observing=history_3,
+                                with_history=data.numpy.obstacle_states(
+                                    x=x[:3], y=y[:3], heading=heading[:3]
+                                ),
                             ),
                         ),
                         history_0 := data.numpy.obstacle_states_for_time_step(
@@ -316,6 +343,9 @@ K = clear_type
                             y=array([y_33, y_32, y_36], shape=(K,)),
                             heading=array([h_33, h_32, h_36], shape=(K,)),
                         ),
+                        x,
+                        y,
+                        heading,
                     )
                 ),
             ),
@@ -663,32 +693,38 @@ K = clear_type
                     ),
                     when_history_is=(
                         history := data.jax.obstacle_states(
-                            x=array(
-                                [
-                                    x_0 := [x_02 := 0.2, x_03 := 0.3, x_06 := 0.5],
-                                    x_1 := [x_12 := 0.25, x_13 := 0.35, x_16 := 0.55],
-                                    x_2 := [x_22 := 0.3, x_23 := 0.4, x_26 := 0.6],
-                                    x_3 := [x_32 := 0.35, x_33 := 0.45, x_36 := 0.65],
-                                ],
-                                shape=(H := 4, K),
+                            x=(
+                                x := array(
+                                    [
+                                        x_0 := [x_02 := 0.1, x_03 := 0.3, x_06 := 0.5],
+                                        x_1 := [x_12 := 0.9, x_13 := 0.2, x_16 := 0.7],
+                                        x_2 := [x_22 := 0.8, x_23 := 0.4, x_26 := 0.6],
+                                        x_3 := [x_32 := 0.6, x_33 := 0.2, x_36 := 0.1],
+                                    ],
+                                    shape=(H := 4, K := 3),
+                                )
                             ),
-                            y=array(
-                                [
-                                    y_0 := [y_02 := 1.2, y_03 := 1.3, y_06 := 1.5],
-                                    y_1 := [y_12 := 1.25, y_13 := 1.35, y_16 := 1.55],
-                                    y_2 := [y_22 := 1.3, y_23 := 1.4, y_26 := 1.6],
-                                    y_3 := [y_32 := 1.35, y_33 := 1.45, y_36 := 1.65],
-                                ],
-                                shape=(H, K),
+                            y=(
+                                y := array(
+                                    [
+                                        y_0 := [y_02 := 1.2, y_03 := 4.3, y_06 := 1.2],
+                                        y_1 := [y_12 := 1.5, y_13 := 0.8, y_16 := 1.9],
+                                        y_2 := [y_22 := 1.3, y_23 := 2.4, y_26 := 1.4],
+                                        y_3 := [y_32 := 1.7, y_33 := 1.2, y_36 := 1.6],
+                                    ],
+                                    shape=(H, K),
+                                )
                             ),
-                            heading=array(
-                                [
-                                    h_0 := [h_02 := 0.1, h_03 := 0.2, h_06 := 0.3],
-                                    h_1 := [h_12 := 0.15, h_13 := 0.25, h_16 := 0.35],
-                                    h_2 := [h_22 := 0.2, h_23 := 0.3, h_26 := 0.4],
-                                    h_3 := [h_32 := 0.25, h_33 := 0.35, h_36 := 0.45],
-                                ],
-                                shape=(H, K),
+                            heading=(
+                                heading := array(
+                                    [
+                                        h_0 := [h_02 := 2.1, h_03 := 0.8, h_06 := 0.3],
+                                        h_1 := [h_12 := 0.4, h_13 := 4.2, h_16 := 4.3],
+                                        h_2 := [h_22 := 1.2, h_23 := 0.3, h_26 := 0.5],
+                                        h_3 := [h_32 := 5.2, h_33 := 0.4, h_36 := 1.4],
+                                    ],
+                                    shape=(H, K),
+                                )
                             ),
                         )
                     ),
@@ -696,22 +732,43 @@ K = clear_type
                 history=types.jax.obstacle_states_running_history.empty(),
                 id_assignment=stubs.ObstacleIdAssignment.returns(
                     partial(
-                        lambda history_0, history_1, history_2, history_3, ids: (
+                        lambda history_0,
+                        history_1,
+                        history_2,
+                        history_3,
+                        x,
+                        y,
+                        heading,
+                        ids: (
                             ids(
                                 data.jax.obstacle_ids([6, 2, 3]),
                                 when_observing=history_0,
+                                with_history=data.jax.obstacle_states(
+                                    x=np.empty((0, 0)),
+                                    y=np.empty((0, 0)),
+                                    heading=np.empty((0, 0)),
+                                ),
                             ),
                             ids(
                                 data.jax.obstacle_ids([3, 6, 2]),
                                 when_observing=history_1,
+                                with_history=data.jax.obstacle_states(
+                                    x=x[:1], y=y[:1], heading=heading[:1]
+                                ),
                             ),
                             ids(
                                 data.jax.obstacle_ids([2, 3, 6]),
                                 when_observing=history_2,
+                                with_history=data.jax.obstacle_states(
+                                    x=x[:2], y=y[:2], heading=heading[:2]
+                                ),
                             ),
                             ids(
                                 data.jax.obstacle_ids([3, 2, 6]),
                                 when_observing=history_3,
+                                with_history=data.jax.obstacle_states(
+                                    x=x[:3], y=y[:3], heading=heading[:3]
+                                ),
                             ),
                         ),
                         history_0 := data.jax.obstacle_states_for_time_step(
@@ -734,6 +791,9 @@ K = clear_type
                             y=array([y_33, y_32, y_36], shape=(K,)),
                             heading=array([h_33, h_32, h_36], shape=(K,)),
                         ),
+                        x,
+                        y,
+                        heading,
                     )
                 ),
             ),

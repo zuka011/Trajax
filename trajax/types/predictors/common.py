@@ -1,4 +1,4 @@
-from typing import Protocol, Self
+from typing import Protocol, Self, Any
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
@@ -12,9 +12,15 @@ class EstimatedObstacleStates[StatesT, VelocitiesT]:
     velocities: VelocitiesT
 
 
-class ObstacleStatesHistory[T: int, D_o: int, K: int](Protocol):
+class ObstacleStatesHistory[T: int, D_o: int, K: int, ObstacleStatesForTimeStepT = Any](
+    Protocol
+):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the obstacle history as a NumPy array."""
+        ...
+
+    def last(self) -> ObstacleStatesForTimeStepT:
+        """Returns the obstacle states at the last time step."""
         ...
 
     @property
@@ -44,8 +50,10 @@ class ObstacleIds[K: int](Protocol):
         ...
 
 
-class ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT](Protocol):
-    def __call__(self, states: ObstacleStatesForTimeStepT, /) -> IdT | None:
+class ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT](Protocol):
+    def __call__(
+        self, states: ObstacleStatesForTimeStepT, /, *, history: HistoryT
+    ) -> IdT | None:
         """Returns the IDs assigned to the given obstacle states. If no IDs are returned,
         the obstacle states are assumed to be already ordered by their IDs.
         """

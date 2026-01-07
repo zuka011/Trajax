@@ -138,6 +138,9 @@ class NumPyObstacleStates[T: int, K: int](
             heading=self._heading[..., np.newaxis],
         )
 
+    def last(self) -> "NumPyObstacleStatesForTimeStep[K]":
+        return self.at(time_step=self.horizon - 1)
+
     def at(self, *, time_step: int) -> "NumPyObstacleStatesForTimeStep[K]":
         return NumPyObstacleStatesForTimeStep.create(
             x=self._x[time_step],
@@ -180,17 +183,21 @@ class NumPyObstacleStatesForTimeStep[K: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
         return self.array
 
-    @property
     def x(self) -> Array[Dims[K]]:
         return self._x
 
-    @property
     def y(self) -> Array[Dims[K]]:
         return self._y
 
-    @property
     def heading(self) -> Array[Dims[K]]:
         return self._heading
+
+    def replicate[T: int](self, *, horizon: T) -> NumPyObstacleStates[T, K]:
+        return NumPyObstacleStates.create(
+            x=np.tile(self._x[np.newaxis, :], (horizon, 1)),
+            y=np.tile(self._y[np.newaxis, :], (horizon, 1)),
+            heading=np.tile(self._heading[np.newaxis, :], (horizon, 1)),
+        )
 
     @property
     def dimension(self) -> D_o:

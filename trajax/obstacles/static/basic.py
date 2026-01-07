@@ -1,8 +1,11 @@
-from typing import Self, Any
+from typing import Self, Any, cast
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider
-from trajax.obstacles.basic import NumPyObstacleStates
+from trajax.predictors import StaticPredictor
+from trajax.obstacles.history import NumPyObstacleIds, NumPyObstacleStatesRunningHistory
+from trajax.obstacles.basic import NumPyObstacleStates, NumPyObstacleStatesForTimeStep
+from trajax.obstacles.common import PredictingObstacleStateProvider
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -13,7 +16,12 @@ import numpy as np
 class NumPyStaticObstacleStateProvider[T: int, K: int](
     NumPyObstacleStateProvider[NumPyObstacleStates[T, K]]
 ):
-    states: NumPyObstacleStates[T, K]
+    inner: PredictingObstacleStateProvider[
+        NumPyObstacleStatesForTimeStep[K],
+        NumPyObstacleIds[K],
+        NumPyObstacleStates[int, K],
+        NumPyObstacleStates[T, K],
+    ]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "NumPyStaticObstacleStateProvider[T_, D[0]]":
@@ -32,21 +40,22 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         headings: Array[Dims[K_]] | None = None,
         horizon: T_,
     ) -> "NumPyStaticObstacleStateProvider[T_, K_]":
-        K = positions.shape[0]
-        x = np.tile(positions[:, 0], (horizon, 1))
-        y = np.tile(positions[:, 1], (horizon, 1))
+        count = positions.shape[0]
+        headings = (
+            headings
+            if headings is not None
+            else cast(Array[Dims[K_]], np.zeros(shape=(count,)))
+        )
 
-        if headings is not None:
-            heading = np.tile(headings, (horizon, 1))
-        else:
-            heading = np.zeros((horizon, K))
-
-        assert shape_of(x, matches=(horizon, K))
-        assert shape_of(y, matches=(horizon, K))
-        assert shape_of(heading, matches=(horizon, K))
-
-        return NumPyStaticObstacleStateProvider(
-            NumPyObstacleStates.create(x=x, y=y, heading=heading)
+        return NumPyStaticObstacleStateProvider(  # type: ignore
+            inner=PredictingObstacleStateProvider.create(
+                predictor=StaticPredictor.create(horizon=horizon),
+                history=NumPyObstacleStatesRunningHistory.single(
+                    NumPyObstacleStatesForTimeStep.create(
+                        x=positions[:, 0], y=positions[:, 1], heading=headings
+                    ),
+                ),
+            ),
         )
 
     def with_time_step(self, time_step: float) -> Self:
@@ -58,7 +67,7 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         return self
 
     def __call__(self) -> NumPyObstacleStates[T, K]:
-        return self.states
+        return self.inner()
 
     def step(self) -> None:
         # Nothing to do, since the obstacles are static.

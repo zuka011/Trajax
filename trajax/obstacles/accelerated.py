@@ -193,6 +193,9 @@ class JaxObstacleStates[T: int, K: int](
             heading=self._heading[..., jnp.newaxis],
         )
 
+    def last(self) -> "JaxObstacleStatesForTimeStep[K]":
+        return self.at(time_step=self.horizon - 1)
+
     def at(self, time_step: int) -> "JaxObstacleStatesForTimeStep[K]":
         return JaxObstacleStatesForTimeStep.create(
             x=self._x[time_step],
@@ -257,6 +260,22 @@ class JaxObstacleStatesForTimeStep[K: int]:
             x=np.asarray(self._x),
             y=np.asarray(self._y),
             heading=np.asarray(self._heading),
+        )
+
+    def x(self) -> Array[Dims[K]]:
+        return np.asarray(self._x)
+
+    def y(self) -> Array[Dims[K]]:
+        return np.asarray(self._y)
+
+    def heading(self) -> Array[Dims[K]]:
+        return np.asarray(self._heading)
+
+    def replicate[T: int](self, *, horizon: T) -> JaxObstacleStates[T, K]:
+        return JaxObstacleStates.create(
+            x=jnp.tile(self._x[jnp.newaxis, :], (horizon, 1)),
+            y=jnp.tile(self._y[jnp.newaxis, :], (horizon, 1)),
+            heading=jnp.tile(self._heading[jnp.newaxis, :], (horizon, 1)),
         )
 
     @property

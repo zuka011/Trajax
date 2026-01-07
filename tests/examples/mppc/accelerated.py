@@ -325,7 +325,6 @@ class obstacles:
                     [0.0, 0.0],
                 ]
             ),
-            horizon=HORIZON,
         )
 
         short: Final = create_obstacles.jax.dynamic(
@@ -339,7 +338,6 @@ class obstacles:
                     [0.0, -1.5],
                 ]
             ),
-            horizon=HORIZON,
         )
 
 

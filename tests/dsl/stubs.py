@@ -10,6 +10,7 @@ from trajax import (
     Distance,
     ObstacleStatesHistory,
     ObstacleStates,
+    ObstacleStatesForTimeStep,
     SampledObstacleStates,
     Sampler as SamplerLike,
     ObstacleMotionPredictor as ObstacleMotionPredictorLike,
@@ -254,29 +255,43 @@ class ObstacleMotionPredictor[
 
 
 @dataclass(frozen=True)
-class ObstacleIdAssignment[IdT, ObservationT]:
-    class Entry[IdT, ObservationT](NamedTuple):
+class ObstacleIdAssignment[
+    IdT,
+    ObservationT: ObstacleStatesForTimeStep,
+    HistoryT: ObstacleStatesHistory,
+]:
+    class Entry[IdT, ObservationT, HistoryT](NamedTuple):
         ids: IdT
         when_observing: ObservationT
+        with_history: HistoryT | None = None
 
-    class Provider[IdT, ObservationT](Protocol):
+    class Provider[IdT, ObservationT, HistoryT](Protocol):
         def __call__(
-            self, ids: type["ObstacleIdAssignment.Entry[IdT, ObservationT]"], /
-        ) -> Sequence["ObstacleIdAssignment.Entry[IdT, ObservationT]"]:
+            self,
+            ids: type["ObstacleIdAssignment.Entry[IdT, ObservationT, HistoryT]"],
+            /,
+        ) -> Sequence["ObstacleIdAssignment.Entry[IdT, ObservationT, HistoryT]"]:
             """Describes how obstacle IDs are assigned based on observations."""
             ...
 
-    assignments: Sequence[Entry[IdT, ObservationT]]
+    assignments: Sequence[Entry[IdT, ObservationT, HistoryT]]
 
     @staticmethod
-    def returns[I, O](
-        provider: "ObstacleIdAssignment.Provider[I, O]",
-    ) -> "ObstacleIdAssignment[I, O]":
+    def returns[I, O: ObstacleStatesForTimeStep, H: ObstacleStatesHistory](
+        provider: "ObstacleIdAssignment.Provider[I, O, H]",
+    ) -> "ObstacleIdAssignment[I, O, H]":
         return ObstacleIdAssignment(assignments=provider(ObstacleIdAssignment.Entry))
 
-    def __call__(self, states: ObservationT, /) -> IdT | None:
+    def __call__(self, states: ObservationT, /, *, history: HistoryT) -> IdT | None:
         for entry in self.assignments:
             if np.array_equal(entry.when_observing, states):
+                assert entry.with_history is None or np.array_equal(
+                    entry.with_history, history
+                ), (
+                    f"Received unexpected history for ID assignment. "
+                    f"Expected: {entry.with_history}, Got: {history}"
+                )
+
                 return entry.ids
 
         assert False, f"Could not find ID assignment for the observation: {states}"

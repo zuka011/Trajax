@@ -2,7 +2,10 @@ from typing import Self, Any
 from dataclasses import dataclass
 
 from trajax.types import JaxObstacleStateProvider
-from trajax.obstacles.accelerated import JaxObstacleStates
+from trajax.predictors import StaticPredictor
+from trajax.obstacles.history import JaxObstacleIds, JaxObstacleStatesRunningHistory
+from trajax.obstacles.accelerated import JaxObstacleStates, JaxObstacleStatesForTimeStep
+from trajax.obstacles.common import PredictingObstacleStateProvider
 
 from numtypes import D
 from jaxtyping import Array as JaxArray, Float
@@ -14,7 +17,12 @@ import jax.numpy as jnp
 class JaxStaticObstacleStateProvider[T: int, K: int](
     JaxObstacleStateProvider[JaxObstacleStates[T, K]]
 ):
-    states: JaxObstacleStates[T, K]
+    inner: PredictingObstacleStateProvider[
+        JaxObstacleStatesForTimeStep[K],
+        JaxObstacleIds[K],
+        JaxObstacleStates[int, K],
+        JaxObstacleStates[T, K],
+    ]
 
     @staticmethod
     def empty[T_: int](*, horizon: T_) -> "JaxStaticObstacleStateProvider[T_, D[0]]":
@@ -32,31 +40,31 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
         horizon: T_,
         obstacle_count: K_ | None = None,
     ) -> "JaxStaticObstacleStateProvider[T_, K_]":
-        K = obstacle_count if obstacle_count is not None else positions.shape[0]
-        x = jnp.tile(positions[:, 0], (horizon, 1))
-        y = jnp.tile(positions[:, 1], (horizon, 1))
+        count = positions.shape[0]
+        headings = headings if headings is not None else jnp.zeros(shape=(count,))
 
-        if headings is not None:
-            heading = jnp.tile(headings, (horizon, 1))
-        else:
-            heading = jnp.zeros((horizon, K))
-
-        assert x.shape == y.shape == heading.shape == (horizon, K), (
-            f"Expected shapes {(horizon, K)}, but got x with shape {x.shape}, y with shape {y.shape}, heading with shape {heading.shape}."
-        )
-
-        return JaxStaticObstacleStateProvider(
-            JaxObstacleStates.create(x=x, y=y, heading=heading)
+        return JaxStaticObstacleStateProvider(  # type: ignore
+            inner=PredictingObstacleStateProvider.create(
+                predictor=StaticPredictor.create(horizon=horizon),
+                history=JaxObstacleStatesRunningHistory.single(
+                    JaxObstacleStatesForTimeStep.create(
+                        x=positions[:, 0], y=positions[:, 1], heading=headings
+                    ),
+                ),
+            ),
         )
 
     def with_time_step(self, time_step: float) -> Self:
+        # Time step does not matter.
         return self
 
     def with_predictor(self, predictor: Any) -> Self:
+        # Predictor does not matter.
         return self
 
     def __call__(self) -> JaxObstacleStates[T, K]:
-        return self.states
+        return self.inner()
 
     def step(self) -> None:
+        # Nothing to do, since the obstacles are static.
         pass

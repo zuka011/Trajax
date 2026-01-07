@@ -303,7 +303,6 @@ class obstacles:
                 ],
                 shape=(4, 2),
             ),
-            horizon=HORIZON,
         )
 
         short: Final = create_obstacles.numpy.dynamic(
@@ -315,7 +314,6 @@ class obstacles:
                 [[0.0, -1.5]],
                 shape=(1, 2),
             ),
-            horizon=HORIZON,
         )
 
 

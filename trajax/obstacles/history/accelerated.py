@@ -1,5 +1,6 @@
 from typing import cast, Self
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import DataType, jaxtyped
 from trajax.obstacles.accelerated import JaxObstacleStatesForTimeStep, JaxObstacleStates
@@ -78,13 +79,7 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
         )
 
     def last(self) -> JaxObstacleStatesForTimeStep[K]:
-        last = self.history.last()
-        return JaxObstacleStatesForTimeStep.create(
-            x=jnp.asarray(last.x),
-            y=jnp.asarray(last.y),
-            heading=jnp.asarray(last.heading),
-            obstacle_count=last.count,
-        )
+        return self._get.last()
 
     def append[N: int](
         self,
@@ -100,7 +95,7 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
         )
 
     def get(self) -> JaxObstacleStates[int, K]:
-        return JaxObstacleStates.wrap(jnp.asarray(self.history.get().array))
+        return self._get
 
     @property
     def horizon(self) -> int:
@@ -109,3 +104,7 @@ class JaxObstacleStatesRunningHistory[H: int, K: int]:
     @property
     def count(self) -> K:
         return self.history.count
+
+    @cached_property
+    def _get(self) -> JaxObstacleStates[int, K]:
+        return JaxObstacleStates.wrap(jnp.asarray(self.history.get().array))

@@ -72,10 +72,15 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
 
     def append[N: int](
         self,
-        observation: NumPyObstacleStatesForTimeStep[N],
+        observation: NumPyObstacleStatesForTimeStep,
         *,
-        ids: NumPyObstacleIds[N] | None = None,
+        ids: NumPyObstacleIds | None = None,
     ) -> Self:
+        assert ids is None or ids.count == observation.count, (
+            f"The number of IDs ({ids.count}) does not match "
+            f"the number of obstacles in the observation ({observation.count})."
+        )
+
         assert (
             self.fixed_obstacle_count is None
             or observation.count <= self.fixed_obstacle_count

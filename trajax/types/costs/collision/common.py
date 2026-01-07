@@ -27,7 +27,7 @@ class SampledObstacleStates[T: int, K: int, N: int](Protocol):
         ...
 
 
-class ObstacleStatesForTimeStep[K: int](Protocol):
+class ObstacleStatesForTimeStep[K: int, ObstacleStatesT](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
         """Returns the mean states of obstacles at a single time step as a NumPy array."""
         ...
@@ -42,6 +42,10 @@ class ObstacleStatesForTimeStep[K: int](Protocol):
 
     def heading(self) -> Array[Dims[K]]:
         """Returns the headings of obstacles at a single time step."""
+        ...
+
+    def replicate(self, *, horizon: int) -> ObstacleStatesT:
+        """Replicates the obstacle states over the given time horizon."""
         ...
 
 

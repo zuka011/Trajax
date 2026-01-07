@@ -1,73 +1,86 @@
-from typing import Self
+from typing import Self, Any, Final
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider, ObstacleMotionPredictor
+from trajax.obstacles.history import NumPyObstacleIds, NumPyObstacleStatesRunningHistory
 from trajax.obstacles.basic import NumPyObstacleStates, NumPyObstacleStatesForTimeStep
-from trajax.obstacles.history import NumPyObstacleStatesRunningHistory
+from trajax.obstacles.common import PredictingObstacleStateProvider
 
 from numtypes import Array, Dims, D, shape_of
 
 import numpy as np
 
 
+HISTORY_HORIZON: Final = 3
+
+
 @dataclass(kw_only=True)
-class NumPyDynamicObstacleStateProvider[T: int, K: int](
-    NumPyObstacleStateProvider[NumPyObstacleStates[T, K]]
+class NumPyDynamicObstacleStateProvider[PredictionT, K: int](
+    NumPyObstacleStateProvider[PredictionT]
 ):
-    type MotionPredictor[T_: int, K_: int] = ObstacleMotionPredictor[
-        NumPyObstacleStates[int, K_], NumPyObstacleStates[T_, K_]
+    type MotionPredictor[P, K_: int] = ObstacleMotionPredictor[
+        NumPyObstacleStates[int, K_], P
     ]
 
     history: NumPyObstacleStatesRunningHistory[int, K]
     velocities: Array[Dims[K, D[2]]]
 
-    horizon: T
     time_step: float | None = None
-    predictor: MotionPredictor[T, K] | None = None
+    inner: (
+        PredictingObstacleStateProvider[
+            NumPyObstacleStatesForTimeStep[K],
+            NumPyObstacleIds[K],
+            NumPyObstacleStates[int, K],
+            PredictionT,
+        ]
+        | None
+    ) = None
 
     @staticmethod
-    def create[T_: int, K_: int](
+    def create[K_: int = int](
         *,
         positions: Array[Dims[K_, D[2]]],
         velocities: Array[Dims[K_, D[2]]],
-        horizon: T_,
-    ) -> "NumPyDynamicObstacleStateProvider[T_, K_]":
+    ) -> "NumPyDynamicObstacleStateProvider[Any, K_]":
         headings = headings_from(velocities)
 
         return NumPyDynamicObstacleStateProvider(
             history=NumPyObstacleStatesRunningHistory.single(
                 NumPyObstacleStatesForTimeStep.create(
                     x=positions[:, 0], y=positions[:, 1], heading=headings
-                )
+                ),
+                horizon=HISTORY_HORIZON,
+                obstacle_count=positions.shape[0],
             ),
             velocities=velocities,
-            horizon=horizon,
         )
 
     def with_time_step(self, time_step: float) -> Self:
         return self.__class__(
             history=self.history,
             velocities=self.velocities,
-            predictor=self.predictor,
-            horizon=self.horizon,
             time_step=time_step,
+            inner=self.inner,
         )
 
-    def with_predictor(self, predictor: MotionPredictor) -> Self:
-        return self.__class__(
+    def with_predictor[P](
+        self, predictor: MotionPredictor[P, K]
+    ) -> "NumPyDynamicObstacleStateProvider[P, K]":
+        return NumPyDynamicObstacleStateProvider(
             history=self.history,
             velocities=self.velocities,
-            predictor=predictor,
-            horizon=self.horizon,
             time_step=self.time_step,
+            inner=PredictingObstacleStateProvider.create(
+                predictor=predictor, history=self.history
+            ),
         )
 
-    def __call__(self) -> NumPyObstacleStates[T, K]:
-        assert self.predictor is not None, (
+    def __call__(self) -> PredictionT:
+        assert self.inner is not None, (
             "Motion predictor must be set to provide obstacle states."
         )
 
-        return self.predictor.predict(history=self.history.get())
+        return self.inner()
 
     def step(self) -> None:
         assert self.time_step is not None, (
@@ -76,11 +89,11 @@ class NumPyDynamicObstacleStateProvider[T: int, K: int](
 
         last = self.history.last()
         x, y = step_obstacles(
-            x=last.x, y=last.y, velocities=self.velocities, time_step=self.time_step
+            x=last.x(), y=last.y(), velocities=self.velocities, time_step=self.time_step
         )
 
         self.history = self.history.append(
-            NumPyObstacleStatesForTimeStep.create(x=x, y=y, heading=last.heading)
+            NumPyObstacleStatesForTimeStep.create(x=x, y=y, heading=last.heading())
         )
 
 
