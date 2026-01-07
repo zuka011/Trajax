@@ -13,10 +13,10 @@ type NumPyObstacleStatesForTimeStep = types.numpy.ObstacleStatesForTimeStep
 type NumPyObstacleStates = types.numpy.ObstacleStates
 type NumPyObstacle2dPositionsForTimeStep = types.numpy.Obstacle2dPositionsForTimeStep
 type NumPyObstacle2dPositions = types.numpy.Obstacle2dPositions
-# type JaxObstacleStatesForTimeStep = types.jax.ObstacleStatesForTimeStep
-# type JaxObstacleStates = types.jax.ObstacleStates
-# type JaxObstacle2dPositionsForTimeStep = types.jax.Obstacle2dPositionsForTimeStep
-# type JaxObstacle2dPositions = types.jax.Obstacle2dPositions
+type JaxObstacleStatesForTimeStep = types.jax.ObstacleStatesForTimeStep
+type JaxObstacleStates = types.jax.ObstacleStates
+type JaxObstacle2dPositionsForTimeStep = types.jax.Obstacle2dPositionsForTimeStep
+type JaxObstacle2dPositions = types.jax.Obstacle2dPositions
 
 
 class NumPyObstaclePositionExtractor:
@@ -26,6 +26,16 @@ class NumPyObstaclePositionExtractor:
         return states.positions()
 
     def of_states(self, states: NumPyObstacleStates, /) -> NumPyObstacle2dPositions:
+        return states.positions()
+
+
+class JaxObstaclePositionExtractor:
+    def of_states_for_time_step(
+        self, states: JaxObstacleStatesForTimeStep, /
+    ) -> JaxObstacle2dPositionsForTimeStep:
+        return states.positions()
+
+    def of_states(self, states: JaxObstacleStates, /) -> JaxObstacle2dPositions:
         return states.positions()
 
 
@@ -209,7 +219,7 @@ def cases(id_assignment, position_extractor, data_backend) -> None:
         case
         for (id_assignment, position_extractor, data_backend) in [
             (obstacles.id_assignment.numpy, NumPyObstaclePositionExtractor, data.numpy),
-            # (obstacles.id_assignment.jax, JaxObstaclePositionExtractor, data.jax),
+            (obstacles.id_assignment.jax, JaxObstaclePositionExtractor, data.jax),
         ]
         for case in cases(id_assignment, position_extractor, data_backend)
     ],

@@ -2,8 +2,14 @@ from typing import Self, Any, Final, cast
 from dataclasses import dataclass
 
 from trajax.types import jaxtyped, JaxObstacleStateProvider, ObstacleMotionPredictor
+from trajax.obstacles.assignment import JaxHungarianObstacleIdAssignment
 from trajax.obstacles.history import JaxObstacleIds, JaxObstacleStatesRunningHistory
-from trajax.obstacles.accelerated import JaxObstacleStates, JaxObstacleStatesForTimeStep
+from trajax.obstacles.accelerated import (
+    JaxObstacleStates,
+    JaxObstacleStatesForTimeStep,
+    JaxObstacle2dPositions,
+    JaxObstacle2dPositionsForTimeStep,
+)
 from trajax.obstacles.common import PredictingObstacleStateProvider
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -13,6 +19,18 @@ import jax.numpy as jnp
 
 
 HISTORY_HORIZON: Final = 3
+
+
+class ObstaclePositionExtractor:
+    def of_states_for_time_step[K: int](
+        self, states: JaxObstacleStatesForTimeStep[K], /
+    ) -> JaxObstacle2dPositionsForTimeStep[K]:
+        return states.positions()
+
+    def of_states[K: int](
+        self, states: JaxObstacleStates[int, K], /
+    ) -> JaxObstacle2dPositions[int, K]:
+        return states.positions()
 
 
 @dataclass(kw_only=True)
@@ -87,7 +105,11 @@ class JaxDynamicObstacleStateProvider[PredictionT, K: int](
             velocities=self.velocities,
             time_step=self.time_step,
             inner=PredictingObstacleStateProvider.create(
-                predictor=predictor, history=self.history
+                predictor=predictor,
+                history=self.history,
+                id_assignment=JaxHungarianObstacleIdAssignment.create(
+                    position_extractor=ObstaclePositionExtractor(), cutoff=1.0
+                ),
             ),
         )
 

@@ -59,7 +59,9 @@ from trajax.types import (
     RiskMetric as RiskMetric,
     ContouringCost as ContouringCost,
     NumPyObstacleStateProvider,
+    NumPyObstaclePositionExtractor,
     JaxObstacleStateProvider,
+    JaxObstaclePositionExtractor,
     AugmentedState,
     AugmentedStateSequence,
     AugmentedStateBatch,
@@ -110,6 +112,8 @@ from trajax.obstacles import (
     JaxObstacleIds,
     JaxObstacleStates,
     JaxObstacleStatesForTimeStep,
+    JaxObstacle2dPositions,
+    JaxObstacle2dPositionsForTimeStep,
     JaxObstacleStatesRunningHistory,
 )
 from trajax.states import (
@@ -247,6 +251,9 @@ class types:
         type RiskMetric[SB, OS, SOS] = NumPyRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = NumPyContouringCost[S]
         type ObstacleStateProvider[O] = NumPyObstacleStateProvider[O]
+        type ObstaclePositionExtractor[OTS, O, PTS, P] = NumPyObstaclePositionExtractor[
+            OTS, O, PTS, P
+        ]
         type InitialCovarianceProvider[S] = NumPyInitialCovarianceProvider[S]
 
         path_parameters: Final = NumPyPathParameters
@@ -353,6 +360,12 @@ class types:
             JaxSampledObstacleStates[T, K, N]
         )
         type ObstacleStatesForTimeStep[K: int = Any] = JaxObstacleStatesForTimeStep[K]
+        type Obstacle2dPositions[T: int = Any, K: int = Any] = JaxObstacle2dPositions[
+            T, K
+        ]
+        type Obstacle2dPositionsForTimeStep[K: int = Any] = (
+            JaxObstacle2dPositionsForTimeStep[K]
+        )
         type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
             JaxObstacleStatesRunningHistory[T, K]
         )
@@ -381,6 +394,9 @@ class types:
         type RiskMetric[SB, OS, SOS] = JaxRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = JaxContouringCost[S]
         type ObstacleStateProvider[O] = JaxObstacleStateProvider[O]
+        type ObstaclePositionExtractor[OTS, O, PTS, P] = JaxObstaclePositionExtractor[
+            OTS, O, PTS, P
+        ]
         type InitialCovarianceProvider[S] = JaxInitialCovarianceProvider[S]
 
         path_parameters: Final = JaxPathParameters.create

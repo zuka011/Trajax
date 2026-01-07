@@ -10,6 +10,8 @@ from .accelerated import (
     JaxSampledObstacleStates as JaxSampledObstacleStates,
     JaxObstacleStates as JaxObstacleStates,
     JaxObstacleStatesForTimeStep as JaxObstacleStatesForTimeStep,
+    JaxObstacle2dPositions as JaxObstacle2dPositions,
+    JaxObstacle2dPositionsForTimeStep as JaxObstacle2dPositionsForTimeStep,
 )
 from .history import (
     NumPyObstacleIds as NumPyObstacleIds,

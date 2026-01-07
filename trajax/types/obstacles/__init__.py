@@ -5,4 +5,7 @@ from .history import (
     NumPyObstaclePositionsForTimeStep as NumPyObstaclePositionsForTimeStep,
     NumPyObstaclePositions as NumPyObstaclePositions,
     NumPyObstaclePositionExtractor as NumPyObstaclePositionExtractor,
+    JaxObstaclePositionsForTimeStep as JaxObstaclePositionsForTimeStep,
+    JaxObstaclePositions as JaxObstaclePositions,
+    JaxObstaclePositionExtractor as JaxObstaclePositionExtractor,
 )

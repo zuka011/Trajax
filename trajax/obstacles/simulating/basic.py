@@ -2,8 +2,14 @@ from typing import Self, Any, Final
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider, ObstacleMotionPredictor
+from trajax.obstacles.assignment import NumPyHungarianObstacleIdAssignment
 from trajax.obstacles.history import NumPyObstacleIds, NumPyObstacleStatesRunningHistory
-from trajax.obstacles.basic import NumPyObstacleStates, NumPyObstacleStatesForTimeStep
+from trajax.obstacles.basic import (
+    NumPyObstacleStates,
+    NumPyObstacleStatesForTimeStep,
+    NumPyObstacle2dPositions,
+    NumPyObstacle2dPositionsForTimeStep,
+)
 from trajax.obstacles.common import PredictingObstacleStateProvider
 
 from numtypes import Array, Dims, D, shape_of
@@ -12,6 +18,18 @@ import numpy as np
 
 
 HISTORY_HORIZON: Final = 3
+
+
+class ObstaclePositionExtractor:
+    def of_states_for_time_step[K: int](
+        self, states: NumPyObstacleStatesForTimeStep[K], /
+    ) -> NumPyObstacle2dPositionsForTimeStep[K]:
+        return states.positions()
+
+    def of_states[K: int](
+        self, states: NumPyObstacleStates[int, K], /
+    ) -> NumPyObstacle2dPositions[int, K]:
+        return states.positions()
 
 
 @dataclass(kw_only=True)
@@ -71,7 +89,11 @@ class NumPyDynamicObstacleStateProvider[PredictionT, K: int](
             velocities=self.velocities,
             time_step=self.time_step,
             inner=PredictingObstacleStateProvider.create(
-                predictor=predictor, history=self.history
+                predictor=predictor,
+                history=self.history,
+                id_assignment=NumPyHungarianObstacleIdAssignment.create(
+                    position_extractor=ObstaclePositionExtractor(), cutoff=1.0
+                ),
             ),
         )
 

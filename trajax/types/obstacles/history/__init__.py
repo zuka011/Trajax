@@ -8,3 +8,8 @@ from .basic import (
     NumPyObstaclePositions as NumPyObstaclePositions,
     NumPyObstaclePositionExtractor as NumPyObstaclePositionExtractor,
 )
+from .accelerated import (
+    JaxObstaclePositionsForTimeStep as JaxObstaclePositionsForTimeStep,
+    JaxObstaclePositions as JaxObstaclePositions,
+    JaxObstaclePositionExtractor as JaxObstaclePositionExtractor,
+)

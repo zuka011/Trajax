@@ -73,6 +73,7 @@ from .types import (
     CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
     PredictionCreator as PredictionCreator,
+    ObstaclePositionExtractor as ObstaclePositionExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,
 )
 from .namespace import types as types, classes as classes
