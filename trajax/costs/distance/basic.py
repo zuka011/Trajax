@@ -61,10 +61,20 @@ class NumPyCircleDistanceExtractor[StateT, V: int, C: int](
                 ego_positions=self.positions_from(states),
                 ego_headings=self.headings_from(states),
                 ego=self.ego,
-                obstacle_states=obstacle_states,
+                obstacle_states=replace_missing(obstacle_states),
                 obstacle=self.obstacle,
             )
         )
+
+
+def replace_missing[T: int, K: int, N: int](
+    obstacle_states: NumPySampledObstacleStates[T, K, N],
+) -> NumPySampledObstacleStates[T, K, N]:
+    return NumPySampledObstacleStates.create(
+        x=np.nan_to_num(obstacle_states.x(), nan=np.inf),
+        y=np.nan_to_num(obstacle_states.y(), nan=np.inf),
+        heading=np.nan_to_num(obstacle_states.heading(), nan=0.0),
+    )
 
 
 def compute_circle_distances[T: int, M: int, V: int, C: int, K: int, N: int](

@@ -75,8 +75,12 @@ class NumPyHungarianObstacleIdAssignment[
     def _valid_history_from[D_p: int = int, K: int = int](
         self, history: HistoryT, ids: NumPyObstacleIds
     ) -> tuple[Array[Dims[D_p, K]], IndexArray[Dims[K]]]:
+        id_count = ids.count
         positions = self.positions.of_states(history).array
-        last_positions = positions[-1]
+
+        # NOTE: The history may be padded with states for more obstacles
+        # than there are IDs.
+        last_positions = positions[-1, :, :id_count]
 
         # NOTE: Checking just the first dimension for nan is sufficient
         valid = ~np.isnan(last_positions[0])

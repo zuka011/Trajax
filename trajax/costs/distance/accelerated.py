@@ -132,11 +132,14 @@ def compute_circle_distances(
 @jax.jit
 @jaxtyped
 def to_global_positions(
+    *,
     x: Float[JaxArray, "T *S"],
     y: Float[JaxArray, "T *S"],
     heading: Float[JaxArray, "T *S"],
     local_origins: Float[JaxArray, "L 2"],
 ) -> tuple[Float[JaxArray, "L T *S"], Float[JaxArray, "L T *S"]]:
+    x, y, heading = replace_missing(x=x, y=y, heading=heading)
+
     shape = (-1,) + (1,) * x.ndim
     local_x = local_origins[:, 0].reshape(shape)
     local_y = local_origins[:, 1].reshape(shape)
@@ -146,6 +149,21 @@ def to_global_positions(
     return (
         x + local_x * cos_h - local_y * sin_h,
         y + local_x * sin_h + local_y * cos_h,
+    )
+
+
+@jax.jit
+@jaxtyped
+def replace_missing(
+    *,
+    x: Float[JaxArray, "*S"],
+    y: Float[JaxArray, "*S"],
+    heading: Float[JaxArray, "*S"],
+) -> tuple[Float[JaxArray, "*S"], Float[JaxArray, "*S"], Float[JaxArray, "*S"]]:
+    return (
+        jnp.nan_to_num(x, nan=jnp.inf),
+        jnp.nan_to_num(y, nan=jnp.inf),
+        jnp.nan_to_num(heading, nan=0.0),
     )
 
 

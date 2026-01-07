@@ -210,6 +210,28 @@ def cases(id_assignment, position_extractor, data_backend) -> None:
             ids=data_backend.obstacle_ids([3, 7]),
             expected=data_backend.obstacle_ids([]),
         ),
+        AssignmentTestCase(
+            name="History padded with NaN columns (K_history > K_ids)",
+            assignment=id_assignment.hungarian(
+                position_extractor=NumPyObstaclePositionExtractor(),
+                cutoff=0.5,
+                start_id=1,
+            ),
+            states=data_backend.obstacle_states_for_time_step(
+                x=array([0.3, 10.1], shape=(K := 2,)),
+                y=array([0.1, 10.2], shape=(K,)),
+                heading=array([0.0, 0.0], shape=(K,)),
+            ),
+            history=data_backend.obstacle_states(
+                # 4 columns, but only 2 are valid (rest are NaN padding)
+                x=array([[0.2, 10.0, np.nan, np.nan]], shape=(1, 4)),
+                y=array([[0.0, 10.0, np.nan, np.nan]], shape=(1, 4)),
+                heading=array([[0.0, 0.0, np.nan, np.nan]], shape=(1, 4)),
+            ),
+            # Only 2 IDs (matching the valid columns)
+            ids=data_backend.obstacle_ids([3, 7]),
+            expected=data_backend.obstacle_ids([3, 7]),
+        ),
     ]
 
 

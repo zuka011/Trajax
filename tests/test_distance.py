@@ -1686,3 +1686,161 @@ def test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle_s
         f"Distance should be computed correctly for multiple obstacle samples. "
         f"Expected: {expected_distances}, Got: {computed}"
     )
+
+
+@mark.parametrize(
+    [
+        "extractor",
+        "states",
+        "obstacle_states",
+        "infinite_distance_indices",
+        "finite_distance_indices",
+    ],
+    [
+        (
+            extractor := distance.numpy.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.numpy.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.numpy.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.numpy.state_batch(
+                array(
+                    [
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                    ],
+                    shape=(T := 3, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.numpy.obstacle_states.sampled(
+                # T=0: All obstacle states missing.
+                # T=1: Some states of one sample are not missing.
+                # T=2: All states are present for one sample.
+                x=array(
+                    [
+                        [[np.nan, np.nan], [np.nan, np.nan]],
+                        [[np.nan, 0.5], [np.nan, np.nan]],
+                        [[1.0, np.nan], [np.nan, np.nan]],
+                    ],
+                    shape=(T, K := 2, N := 2),
+                ),
+                y=array(
+                    [
+                        [[np.nan, np.nan], [np.nan, np.nan]],
+                        [[np.nan, np.nan], [np.nan, np.nan]],
+                        [[0.0, np.nan], [np.nan, np.nan]],
+                    ],
+                    shape=(T, K, N),
+                ),
+                heading=array(
+                    [
+                        [[np.nan, np.nan], [np.nan, np.nan]],
+                        [[np.nan, 0.0], [np.nan, np.nan]],
+                        [[0.0, np.nan], [np.nan, np.nan]],
+                    ],
+                    shape=(T, K, N),
+                ),
+            ),
+            # Indices (T, N)
+            infinite_distance_indices := [
+                # For T=0, all distances should be infinite
+                (0, 0),
+                (0, 1),
+                # For T=1, all distances should be infinite since no obstacle has all states
+                (1, 0),
+                (1, 1),
+                # For T=2, only obstacle sample 1 has all states present
+                (2, 1),
+            ],
+            finite_distance_indices := [
+                (2, 0),
+            ],
+        ),
+        (  # JAX version
+            extractor := distance.jax.circles(
+                ego=Circles(
+                    origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                    radii=array([r := 1.0], shape=(V,)),
+                ),
+                obstacle=Circles(
+                    origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                    radii=array([r_o := 1.0], shape=(C,)),
+                ),
+                position_extractor=lambda states: types.jax.positions(
+                    x=states.array[:, 0, :],
+                    y=states.array[:, 1, :],
+                ),
+                heading_extractor=lambda states: types.jax.headings(
+                    theta=states.array[:, 2, :],
+                ),
+            ),
+            states := data.jax.state_batch(
+                array(
+                    [
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                        [[0.0], [0.0], [0.0]],
+                    ],
+                    shape=(T := 3, D_x := 3, M := 1),
+                )
+            ),
+            obstacle_states := types.jax.obstacle_states.sampled(
+                x=jnp.array(
+                    [
+                        [[jnp.nan, jnp.nan], [jnp.nan, jnp.nan]],
+                        [[jnp.nan, 0.5], [jnp.nan, jnp.nan]],
+                        [[1.0, jnp.nan], [jnp.nan, jnp.nan]],
+                    ],
+                ),
+                y=jnp.array(
+                    [
+                        [[jnp.nan, jnp.nan], [jnp.nan, jnp.nan]],
+                        [[jnp.nan, jnp.nan], [jnp.nan, jnp.nan]],
+                        [[0.0, jnp.nan], [jnp.nan, jnp.nan]],
+                    ],
+                ),
+                heading=jnp.array(
+                    [
+                        [[jnp.nan, jnp.nan], [jnp.nan, jnp.nan]],
+                        [[jnp.nan, 0.0], [jnp.nan, jnp.nan]],
+                        [[0.0, jnp.nan], [jnp.nan, jnp.nan]],
+                    ],
+                ),
+            ),
+            infinite_distance_indices := [(0, 0), (0, 1), (1, 0), (1, 1), (2, 1)],
+            finite_distance_indices := [(2, 0)],
+        ),
+    ],
+)
+def test_that_distance_is_infinite_for_missing_obstacle_states[
+    DistanceT: Distance,
+    ObstacleStatesT: ObstacleStates,
+    StateT: StateBatch,
+](
+    extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+    states: StateT,
+    obstacle_states: ObstacleStatesT,
+    infinite_distance_indices: list[tuple[int, int]],
+    finite_distance_indices: list[tuple[int, int]],
+) -> None:
+    distances = np.asarray(extractor(states=states, obstacle_states=obstacle_states))
+
+    assert all(
+        np.isinf(distances[t, :, :, n]).all() for t, n in infinite_distance_indices
+    )
+    assert all(
+        np.isfinite(distances[t, :, :, n]).all() for t, n in finite_distance_indices
+    )
