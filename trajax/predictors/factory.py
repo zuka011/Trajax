@@ -18,8 +18,13 @@ from trajax.predictors.covariance import (
 
 
 class predictor:
-    curvilinear: Final = CurvilinearPredictor.create
-    static: Final = StaticPredictor.create
+    class numpy:
+        curvilinear: Final = CurvilinearPredictor.create
+        static: Final = StaticPredictor.create
+
+    class jax:
+        curvilinear: Final = CurvilinearPredictor.create
+        static: Final = StaticPredictor.create
 
 
 class propagator:

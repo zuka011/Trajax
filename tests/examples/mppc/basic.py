@@ -411,7 +411,7 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.curvilinear(
+            predictor.numpy.curvilinear(
                 horizon=HORIZON,
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=dt, wheelbase=(L := 2.5)
@@ -555,7 +555,7 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.curvilinear(
+            predictor.numpy.curvilinear(
                 horizon=HORIZON,
                 model=model.numpy.bicycle.obstacle(
                     time_step_size=dt, wheelbase=(L := 2.5)
