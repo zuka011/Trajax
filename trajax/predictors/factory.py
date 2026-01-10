@@ -11,7 +11,9 @@ from trajax.predictors.propagators import (
 )
 from trajax.predictors.covariance import (
     NumPyConstantVarianceProvider,
+    NumPyConstantCovarianceProvider,
     JaxConstantVarianceProvider,
+    JaxConstantCovarianceProvider,
 )
 
 
@@ -21,16 +23,20 @@ class predictor:
 
 
 class propagator:
-    padding: Final = CovariancePadding.create
-
     class numpy:
         linear: Final = NumPyLinearCovariancePropagator.create
 
         class covariance:
-            constant_variance: Final = NumPyConstantVarianceProvider
+            constant_variance: Final = NumPyConstantVarianceProvider.create
+            constant_covariance: Final = NumPyConstantCovarianceProvider.create
+
+        padding: Final = CovariancePadding.create
 
     class jax:
         linear: Final = JaxLinearCovariancePropagator.create
 
         class covariance:
-            constant_variance: Final = JaxConstantVarianceProvider
+            constant_variance: Final = JaxConstantVarianceProvider.create
+            constant_covariance: Final = JaxConstantCovarianceProvider.create
+
+        padding: Final = CovariancePadding.create

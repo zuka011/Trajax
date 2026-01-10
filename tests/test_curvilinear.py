@@ -768,7 +768,7 @@ def test_that_no_covariance_information_is_provided_when_propagator_is_not_avail
                     initial_covariance=propagator.numpy.covariance.constant_variance(
                         position_variance=0.1, velocity_variance=0.2
                     ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-15),
+                    padding=propagator.numpy.padding(to_dimension=3, epsilon=1e-15),
                 ),
                 prediction=NumPyBicyclePredictionCreator(),
             ),
@@ -789,7 +789,7 @@ def test_that_no_covariance_information_is_provided_when_propagator_is_not_avail
                     initial_covariance=propagator.jax.covariance.constant_variance(
                         position_variance=0.1, velocity_variance=0.2
                     ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-15),
+                    padding=propagator.jax.padding(to_dimension=3, epsilon=1e-15),
                 ),
                 prediction=JaxBicyclePredictionCreator(),
             ),

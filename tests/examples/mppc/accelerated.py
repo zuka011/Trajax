@@ -442,7 +442,7 @@ class configure:
                     initial_covariance=propagator.jax.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.jax.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
@@ -582,7 +582,7 @@ class configure:
                     initial_covariance=propagator.jax.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.jax.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
