@@ -79,8 +79,8 @@ class NumPyContouringCost[StateBatchT](
         positions = self.position_extractor(states)
 
         return NumPyError(
-            np.sin(heading) * (positions.x - ref_points.x())
-            - np.cos(heading) * (positions.y - ref_points.y())
+            np.sin(heading) * (positions.x() - ref_points.x())
+            - np.cos(heading) * (positions.y() - ref_points.y())
         )
 
 
@@ -131,8 +131,8 @@ class NumPyLagCost[StateBatchT](
         positions = self.position_extractor(states)
 
         return NumPyError(
-            -np.cos(heading) * (positions.x - ref_points.x())
-            - np.sin(heading) * (positions.y - ref_points.y())
+            -np.cos(heading) * (positions.x() - ref_points.x())
+            - np.sin(heading) * (positions.y() - ref_points.y())
         )
 
 

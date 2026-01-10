@@ -59,15 +59,15 @@ class JaxCircleDistanceExtractor[StateT, V: int, C: int](
         ego_headings = self.headings_from(states)
 
         if self._no_obstacles_exist(obstacle_states):
-            T, M = ego_positions.x.shape
+            T, M = ego_positions.horizon, ego_positions.rollout_count
             V = self._ego_circle_count
             N = obstacle_states.sample_count
             return JaxDistance(jnp.full((T, V, M, N), jnp.inf))
 
         return JaxDistance(
             compute_circle_distances(
-                ego_x=ego_positions.x,
-                ego_y=ego_positions.y,
+                ego_x=ego_positions.x_array,
+                ego_y=ego_positions.y_array,
                 ego_heading=ego_headings.theta,
                 ego_origins=self.ego_origins,
                 ego_radii=self.ego_radii,

@@ -1,6 +1,6 @@
 from typing import Final
 
-from tests.visualize.mpcc import MpccVisualizer
+from visualizer.api.mpcc import MpccVisualizer
 
 
 class visualizer:

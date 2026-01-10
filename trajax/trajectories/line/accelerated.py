@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -6,6 +7,9 @@ from trajax.types import (
     Trajectory,
     JaxPathParameters,
     JaxReferencePoints,
+    JaxPositions,
+    JaxLateralPositions,
+    JaxLongitudinalPositions,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -14,15 +18,26 @@ import jax
 import jax.numpy as jnp
 
 
-@dataclass(kw_only=True, frozen=True)
-class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
-    start: tuple[float, float]
-    end: tuple[float, float]
+type Vector = Float[JaxArray, "2"]
 
-    delta_x: float
-    delta_y: float
-    length: float
-    heading: float
+
+@jaxtyped
+@dataclass(kw_only=True, frozen=True)
+class JaxLineTrajectory(
+    Trajectory[
+        JaxPathParameters,
+        JaxReferencePoints,
+        JaxPositions,
+        JaxLateralPositions,
+        JaxLongitudinalPositions,
+    ]
+):
+    start: Vector
+    direction: Vector
+
+    heading: Scalar
+
+    _path_length: Scalar
 
     @staticmethod
     def create(
@@ -30,12 +45,10 @@ class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
     ) -> "JaxLineTrajectory":
         """Generates a straight line trajectory from start to end."""
         return JaxLineTrajectory(
-            start=start,
-            end=end,
-            delta_x=(delta_x := end[0] - start[0]),
-            delta_y=(delta_y := end[1] - start[1]),
-            length=path_length,
-            heading=float(jnp.arctan2(delta_y, delta_x)),
+            start=(start_array := jnp.array(start)),
+            direction=(direction := jnp.array(end) - start_array),
+            heading=jnp.arctan2(direction[1], direction[0]),
+            _path_length=jnp.array(path_length),
         )
 
     def query[T: int, M: int](
@@ -44,17 +57,54 @@ class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
         return JaxReferencePoints(
             query(
                 parameters=parameters.array,
-                length=self.length,
-                delta_x=self.delta_x,
-                delta_y=self.delta_y,
                 start=self.start,
+                direction=self.direction,
+                path_length=self._path_length,
                 heading=self.heading,
+            )
+        )
+
+    def lateral[T: int, M: int](
+        self, positions: JaxPositions[T, M]
+    ) -> JaxLateralPositions[T, M]:
+        return JaxLateralPositions(
+            lateral(
+                positions=positions.array,
+                start=self.start,
+                perpendicular=self.perpendicular,
+            )
+        )
+
+    def longitudinal[T: int, M: int](
+        self, positions: JaxPositions[T, M]
+    ) -> JaxLongitudinalPositions[T, M]:
+        return JaxLongitudinalPositions(
+            longitudinal(
+                positions=positions.array,
+                start=self.start,
+                tangent=self.tangent,
+                path_length=self._path_length,
+                line_length=self.line_length,
             )
         )
 
     @property
     def path_length(self) -> float:
-        return self.length
+        return float(self._path_length)
+
+    @cached_property
+    def perpendicular(self) -> Vector:
+        tangent = self.tangent
+        perpendicular = jnp.array([tangent[1], -tangent[0]])
+        return perpendicular
+
+    @cached_property
+    def tangent(self) -> Vector:
+        return self.direction / self.line_length
+
+    @cached_property
+    def line_length(self) -> Scalar:
+        return jnp.linalg.norm(self.direction)
 
 
 @jax.jit
@@ -62,15 +112,43 @@ class JaxLineTrajectory(Trajectory[JaxPathParameters, JaxReferencePoints]):
 def query(
     parameters: Float[JaxArray, "T M"],
     *,
-    length: Scalar,
-    delta_x: Scalar,
-    delta_y: Scalar,
-    start: tuple[Scalar, Scalar],
+    start: Vector,
+    direction: Vector,
+    path_length: Scalar,
     heading: Scalar,
 ) -> Float[JaxArray, f"T {D_R} M"]:
-    normalized = parameters / length
-    x = start[0] + normalized * delta_x
-    y = start[1] + normalized * delta_y
+    normalized = parameters / path_length
+    x, y = (
+        start[:, jnp.newaxis, jnp.newaxis]
+        + direction[:, jnp.newaxis, jnp.newaxis] * normalized
+    )
     heading = jnp.full_like(x, heading)
 
     return jnp.stack([x, y, heading], axis=1)
+
+
+@jax.jit
+@jaxtyped
+def lateral(
+    positions: Float[JaxArray, "T 2 M"],
+    *,
+    start: Vector,
+    perpendicular: Vector,
+) -> Float[JaxArray, "T M"]:
+    relative = positions - start[:, jnp.newaxis]
+    return jnp.einsum("tpm,p->tm", relative, perpendicular)
+
+
+@jax.jit
+@jaxtyped
+def longitudinal(
+    positions: Float[JaxArray, "T 2 M"],
+    *,
+    start: Vector,
+    tangent: Vector,
+    path_length: Scalar,
+    line_length: Scalar,
+) -> Float[JaxArray, "T M"]:
+    relative = positions - start[:, jnp.newaxis]
+    projection = jnp.einsum("tpm,p->tm", relative, tangent)
+    return projection * path_length / line_length

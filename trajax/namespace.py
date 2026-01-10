@@ -36,11 +36,15 @@ from trajax.types import (
     NumPyReferencePoints,
     NumPyPositions,
     NumPyHeadings,
+    NumPyLateralPositions,
+    NumPyLongitudinalPositions,
     NumPyRisk,
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
     JaxHeadings,
+    JaxLateralPositions,
+    JaxLongitudinalPositions,
     JaxRisk,
     D_o as D_o_,
     D_O as D_O_,
@@ -209,6 +213,10 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = NumPyReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = NumPyPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = NumPyHeadings[T, M]
+        type LateralPositions[T: int = Any, M: int = Any] = NumPyLateralPositions[T, M]
+        type LongitudinalPositions[T: int = Any, M: int = Any] = (
+            NumPyLongitudinalPositions[T, M]
+        )
         type ObstacleIds[K: int = Any] = NumPyObstacleIds[K]
         type ObstacleStates[T: int = Any, K: int = Any] = NumPyObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
@@ -260,6 +268,8 @@ class types:
         reference_points: Final = NumPyReferencePoints.create
         positions: Final = NumPyPositions.create
         headings: Final = NumPyHeadings.create
+        lateral_positions: Final = NumPyLateralPositions.create
+        longitudinal_positions: Final = NumPyLongitudinalPositions.create
         distance: Final = NumPyDistance
         obstacle_ids: Final = NumPyObstacleIds
         obstacle_states: Final = NumPyObstacleStates
@@ -354,6 +364,10 @@ class types:
         type ReferencePoints[T: int = Any, M: int = Any] = JaxReferencePoints[T, M]
         type Positions[T: int = Any, M: int = Any] = JaxPositions[T, M]
         type Headings[T: int = Any, M: int = Any] = JaxHeadings[T, M]
+        type LateralPositions[T: int = Any, M: int = Any] = JaxLateralPositions[T, M]
+        type LongitudinalPositions[T: int = Any, M: int = Any] = (
+            JaxLongitudinalPositions[T, M]
+        )
         type ObstacleIds[K: int = Any] = JaxObstacleIds[K]
         type ObstacleStates[T: int = Any, K: int = Any] = JaxObstacleStates[T, K]
         type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
@@ -403,6 +417,8 @@ class types:
         reference_points: Final = JaxReferencePoints.create
         positions: Final = JaxPositions.create
         headings: Final = JaxHeadings.create
+        lateral_positions: Final = JaxLateralPositions.create
+        longitudinal_positions: Final = JaxLongitudinalPositions.create
         distance: Final = JaxDistance
         obstacle_ids: Final = JaxObstacleIds
         obstacle_states: Final = JaxObstacleStates

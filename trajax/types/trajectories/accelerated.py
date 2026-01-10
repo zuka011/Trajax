@@ -1,5 +1,6 @@
 from typing import cast, overload
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types.array import jaxtyped
 from trajax.types.trajectories.common import (
@@ -7,6 +8,9 @@ from trajax.types.trajectories.common import (
     D_R,
     PathParameters,
     ReferencePoints,
+    Positions,
+    LateralPositions,
+    LongitudinalPositions,
 )
 
 from jaxtyping import Array as JaxArray, Float
@@ -62,33 +66,61 @@ class JaxPathParameters[T: int, M: int](PathParameters[T, M]):
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxPositions[T: int, M: int]:
-    x: Float[JaxArray, "T M"]
-    y: Float[JaxArray, "T M"]
+class JaxPositions[T: int, M: int](Positions[T, M]):
+    x_array: Float[JaxArray, "T M"]
+    y_array: Float[JaxArray, "T M"]
 
     @staticmethod
     def create[T_: int, M_: int](
         *,
-        x: Float[JaxArray, "T M"],
-        y: Float[JaxArray, "T M"],
+        x: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
+        y: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
         horizon: T_ | None = None,
         rollout_count: M_ | None = None,
     ) -> "JaxPositions[T_, M_]":
         """Creates a JAX positions instance from x and y coordinate arrays."""
-        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
+        x_jax = jnp.asarray(x)
+        y_jax = jnp.asarray(y)
+        horizon = horizon if horizon is not None else cast(T_, x_jax.shape[0])
         rollout_count = (
-            rollout_count if rollout_count is not None else cast(M_, x.shape[1])
+            rollout_count if rollout_count is not None else cast(M_, x_jax.shape[1])
         )
 
-        assert x.shape == y.shape == (horizon, rollout_count), (
+        assert x_jax.shape == y_jax.shape == (horizon, rollout_count), (
             f"Expected x and y to have shape {(horizon, rollout_count)}, "
-            f"but got {x.shape} and {y.shape}."
+            f"but got {x_jax.shape} and {y_jax.shape}."
         )
 
-        return JaxPositions(x=x, y=y)
+        return JaxPositions(x_array=x_jax, y_array=y_jax)
 
     def __array__(self) -> Array[Dims[T, D[2], M]]:
-        return np.asarray(jnp.stack([self.x, self.y], axis=1))
+        return self._numpy_array
+
+    def x(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.x_array)
+
+    def y(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.y_array)
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.x_array.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self.x_array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T 2 M"]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Float[JaxArray, "T 2 M"]:
+        return jnp.stack([self.x_array, self.y_array], axis=1)
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D[2], M]]:
+        return np.asarray(jnp.stack([self.x_array, self.y_array], axis=1))
 
 
 @jaxtyped
@@ -179,3 +211,67 @@ class JaxReferencePoints[T: int, M: int](ReferencePoints[T, M]):
     @property
     def heading_array(self) -> Float[JaxArray, "T M"]:
         return self.array[:, 2]
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxLateralPositions[T: int, M: int](LateralPositions[T, M]):
+    _array: Float[JaxArray, "T M"]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        array: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
+    ) -> "JaxLateralPositions[T_, M_]":
+        """Creates a JAX lateral positions instance from an array."""
+        return JaxLateralPositions(jnp.asarray(array))
+
+    def __array__(self) -> Array[Dims[T, M]]:
+        return self._numpy_array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._array.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self._array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T M"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxLongitudinalPositions[T: int, M: int](LongitudinalPositions[T, M]):
+    _array: Float[JaxArray, "T M"]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        array: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
+    ) -> "JaxLongitudinalPositions[T_, M_]":
+        """Creates a JAX longitudinal positions instance from an array."""
+        return JaxLongitudinalPositions(jnp.asarray(array))
+
+    def __array__(self) -> Array[Dims[T, M]]:
+        return self._numpy_array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._array.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self._array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "T M"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array)

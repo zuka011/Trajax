@@ -12,10 +12,7 @@ from trajax import (
     Risk,
 )
 
-import numpy as np
-from numtypes import Array, Dim1, Dim2
-
-from tests.visualize.simulation import (
+from visualizer.api.simulation import (
     SimulationVisualizer,
     SimulationData,
     ReferenceTrajectory,
@@ -27,6 +24,9 @@ from tests.visualize.simulation import (
     PlotBand,
 )
 
+from numtypes import Array, Dim1, Dim2
+
+import numpy as np
 
 type PhysicalState = types.numpy.bicycle.State | types.jax.bicycle.State
 type VirtualState = types.numpy.simple.State | types.jax.simple.State

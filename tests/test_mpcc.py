@@ -20,11 +20,12 @@ from trajax import (
     RiskCollector,
     ControlCollector,
 )
+from visualizer import visualizer, MpccSimulationResult
 
 import numpy as np
 from numtypes import Array, Dim1
 
-from tests.visualize import VisualizationData, visualizer, MpccSimulationResult
+from tests.visualize import VisualizationData
 from tests.examples import mpcc, reference, obstacles, SimulatingObstacleStateProvider
 from pytest import mark
 

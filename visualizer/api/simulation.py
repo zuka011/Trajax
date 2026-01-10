@@ -3,27 +3,29 @@ from typing import Literal, Final, Sequence, Any
 from dataclasses import dataclass
 from pathlib import Path
 
+from visualizer.api.root import find_root
+
 from aiopath import AsyncPath
 from numtypes import Array, D, Dims, Dim1, IndexArray
 
 import msgspec
 import numpy as np
 
-from tests.visualize.root import find_root
 
-
-def enc_hook(obj: Any) -> Any:
+def encode_hook(obj: Any) -> Any:
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     raise NotImplementedError(f"Cannot serialize {type(obj)}")
 
 
-encoder = msgspec.json.Encoder(enc_hook=enc_hook)
+encoder = msgspec.json.Encoder(enc_hook=encode_hook)
 
 
 PROJECT_ROOT: Final = find_root()
 VISUALIZATION_DIR: Final = PROJECT_ROOT / "tests" / "visualizations"
-VISUALIZER_CLI: Final = PROJECT_ROOT / "visualizer" / "dist" / "cli" / "index.js"
+VISUALIZER_CLI: Final = (
+    PROJECT_ROOT / "visualizer" / "core" / "dist" / "cli" / "index.js"
+)
 
 type VehicleType = Literal["triangle", "car"]
 type ScaleType = Literal["linear", "log"]

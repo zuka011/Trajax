@@ -74,9 +74,21 @@ class JaxContouringCost[StateBatchT](
 
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
-    ) -> JaxCosts[T, M]:
-        error = self.error(inputs=inputs, states=states)
-        return JaxSimpleCosts(self.weight * error.array**2)
+    ) -> JaxCosts[T, M]:  #
+        ref_points = self.reference.query(self.path_parameter_extractor(states))
+        heading = ref_points.heading_array
+        positions = self.position_extractor(states)
+
+        return JaxSimpleCosts(
+            contour_cost(
+                heading=heading,
+                x=positions.x_array,
+                y=positions.y_array,
+                x_ref=ref_points.x_array,
+                y_ref=ref_points.y_array,
+                weight=self.weight,
+            )
+        )
 
     def error[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
@@ -88,8 +100,8 @@ class JaxContouringCost[StateBatchT](
         return JaxError(
             contour_error(
                 heading=heading,
-                x=positions.x,
-                y=positions.y,
+                x=positions.x_array,
+                y=positions.y_array,
                 x_ref=ref_points.x_array,
                 y_ref=ref_points.y_array,
             )
@@ -138,8 +150,8 @@ class JaxLagCost[StateBatchT](
         return JaxSimpleCosts(
             lag_cost(
                 heading=heading,
-                x=positions.x,
-                y=positions.y,
+                x=positions.x_array,
+                y=positions.y_array,
                 x_ref=ref_points.x_array,
                 y_ref=ref_points.y_array,
                 weight=self.weight,
@@ -155,8 +167,8 @@ class JaxLagCost[StateBatchT](
         return JaxError(
             lag_error(
                 heading=heading,
-                x=positions.x,
-                y=positions.y,
+                x=positions.x_array,
+                y=positions.y_array,
                 x_ref=ref_points.x_array,
                 y_ref=ref_points.y_array,
             )

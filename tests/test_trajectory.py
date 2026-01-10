@@ -1,6 +1,15 @@
 from typing import Sequence
 
-from trajax import trajectory, types, Trajectory, PathParameters, ReferencePoints
+from trajax import (
+    Trajectory,
+    PathParameters,
+    ReferencePoints,
+    Positions,
+    LateralPositions,
+    LongitudinalPositions,
+    trajectory,
+    types,
+)
 
 from numtypes import array
 
@@ -307,6 +316,334 @@ class test_that_heading_changes_smoothly_through_waypoints:
             assert all(
                 headings[i + 1] <= headings[i] for i in range(len(headings) - 1)
             ), f"Headings did not decrease monotonically. Got: {headings}"
+
+
+class test_that_lateral_position_is_signed_perpendicular_distance_from_trajectory:
+    @staticmethod
+    def cases(trajectory, types) -> Sequence[tuple]:
+        cases = []
+
+        for horizontal_line in [
+            trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0),
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 0.0]], shape=(2, 2)), path_length=10.0
+            ),
+        ]:
+            cases.extend(
+                [
+                    (  # Point on horizontal line has zero lateral deviation
+                        horizontal_line,
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[0.0]], shape=(T, M)),
+                        ),
+                    ),
+                    (  # Point to the left of the horizontal line has negative lateral deviation
+                        horizontal_line,
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[2.0]], shape=(T, M)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[-2.0]], shape=(T, M)),
+                        ),
+                    ),
+                    (  # Point to the right of the horizontal line has positive lateral deviation
+                        horizontal_line,
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[-3.0]], shape=(T, M)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[3.0]], shape=(T, M)),
+                        ),
+                    ),
+                ]
+            )
+
+        for diagonal_line in [  # Diagonal trajectory 45 degrees
+            trajectory.line(start=(0.0, 0.0), end=(10.0, 10.0), path_length=10.0),
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 10.0]], shape=(2, 2)), path_length=10.0
+            ),
+        ]:
+            cases.extend(
+                [
+                    (
+                        diagonal_line,
+                        positions := types.positions(
+                            x=array([[0.0]], shape=(T := 1, M := 1)),
+                            y=array([[1.0]], shape=(T, M)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[-np.sqrt(2) / 2]], shape=(T, M)),
+                        ),
+                    )
+                ]
+            )
+
+        for curved_line in [  # Curved trajectory with three waypoints
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [5.0, 5.0], [10.0, 0.0]], shape=(3, 2)),
+                path_length=10.0,
+            )
+        ]:
+            no_deviation = types.lateral_positions(array([[0.0]], shape=(1, 1)))
+            cases.extend(
+                [
+                    (  # First waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[0.0]], shape=(1, 1)),
+                            y=array([[0.0]], shape=(1, 1)),
+                        ),
+                        expected := no_deviation,
+                    ),
+                    (  # Last waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[10.0]], shape=(1, 1)),
+                            y=array([[0.0]], shape=(1, 1)),
+                        ),
+                        expected := no_deviation,
+                    ),
+                    (  # Middle waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(1, 1)),
+                            y=array([[5.0]], shape=(1, 1)),
+                        ),
+                        expected := no_deviation,
+                    ),
+                    (
+                        # Left of middle waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(1, 1)),
+                            y=array([[6.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[-1.0]], shape=(1, 1))
+                        ),
+                    ),
+                ]
+            )
+
+        for l_shaped_line in [  # L-shaped trajectory with three waypoints
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]], shape=(3, 2)),
+                path_length=20.0,
+            )
+        ]:
+            cases.extend(
+                [
+                    (  # Point diagonally offset left from middle point
+                        l_shaped_line,
+                        positions := types.positions(
+                            x=array([[9.0]], shape=(1, 1)),
+                            y=array([[1.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[-1.0 * np.sqrt(2)]], shape=(1, 1))
+                        ),
+                    ),
+                    (  # Point diagonally offset right from middle point
+                        l_shaped_line,
+                        positions := types.positions(
+                            x=array([[12.0]], shape=(1, 1)),
+                            y=array([[-2.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[2.0 * np.sqrt(2)]], shape=(1, 1))
+                        ),
+                    ),
+                ]
+            )
+
+        return cases
+
+    @mark.parametrize(
+        ["trajectory", "positions", "expected"],
+        [
+            *cases(trajectory=trajectory.numpy, types=types.numpy),
+            *cases(trajectory=trajectory.jax, types=types.jax),
+        ],
+    )
+    def test[PositionsT: Positions, LateralT: LateralPositions](
+        self,
+        trajectory: Trajectory[
+            PathParameters, ReferencePoints, PositionsT, LateralT, LongitudinalPositions
+        ],
+        positions: PositionsT,
+        expected: LateralT,
+    ) -> None:
+        actual = trajectory.lateral(positions)
+
+        assert np.allclose(actual, expected, atol=1e-6)
+
+
+class test_that_longitudinal_position_is_distance_along_trajectory:
+    @staticmethod
+    def cases(trajectory, types) -> Sequence[tuple]:
+        cases = []
+
+        for horizontal_line in [
+            trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0),
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 0.0]], shape=(2, 2)), path_length=10.0
+            ),
+        ]:
+            cases.extend(
+                [
+                    (  # Point at start of horizontal line
+                        trajectory.line(
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                        ),
+                        positions := types.positions(
+                            x=array([[0.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array([[0.0]], shape=(T, M)),
+                        ),
+                    ),
+                    (  # Point at middle of horizontal line
+                        trajectory.line(
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                        ),
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array([[5.0]], shape=(T, M)),
+                        ),
+                    ),
+                    (  # Point at end of horizontal line
+                        trajectory.line(
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                        ),
+                        positions := types.positions(
+                            x=array([[10.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array([[10.0]], shape=(T, M)),
+                        ),
+                    ),
+                    (  # Point offset from horizontal line (projection matters)
+                        trajectory.line(
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                        ),
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[3.0]], shape=(T, M)),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array([[5.0]], shape=(T, M)),
+                        ),
+                    ),
+                ]
+            )
+
+        for diagonal_line in [  # Diagonal trajectory 45 degrees
+            trajectory.line(start=(0.0, 0.0), end=(10.0, 10.0), path_length=10.0),
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 10.0]], shape=(2, 2)), path_length=10.0
+            ),
+        ]:
+            cases.extend(
+                [
+                    (
+                        trajectory.line(
+                            start=(0.0, 0.0), end=(10.0, 10.0), path_length=10.0
+                        ),
+                        positions := types.positions(
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[5.0]], shape=(T, M)),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array([[np.sqrt(50) / np.sqrt(200) * 10.0]], shape=(T, M)),
+                        ),
+                    ),
+                ]
+            )
+
+        for curved_line in [  # Long curved trajectory with three waypoints
+            trajectory.waypoints(
+                points=array([[0.0, 0.0], [10.0, 5.0], [20.0, 0.0]], shape=(3, 2)),
+                path_length=20.0,
+            )
+        ]:
+            cases.extend(
+                [
+                    (  # Below middle waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[10.0]], shape=(1, 1)),
+                            y=array([[0.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[10.0]], shape=(1, 1))
+                        ),
+                    ),
+                    (
+                        # Above middle waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[10.0]], shape=(1, 1)),
+                            y=array([[30.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[10.0]], shape=(1, 1))
+                        ),
+                    ),
+                    (  # Before first waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[-5.0]], shape=(1, 1)),
+                            y=array([[0.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[0.0]], shape=(1, 1))
+                        ),
+                    ),
+                    (  # After last waypoint
+                        curved_line,
+                        positions := types.positions(
+                            x=array([[25.0]], shape=(1, 1)),
+                            y=array([[0.0]], shape=(1, 1)),
+                        ),
+                        expected := types.lateral_positions(
+                            array([[20.0]], shape=(1, 1))
+                        ),
+                    ),
+                ]
+            )
+
+        return cases
+
+    @mark.parametrize(
+        ["trajectory", "positions", "expected"],
+        [
+            *cases(trajectory=trajectory.numpy, types=types.numpy),
+            *cases(trajectory=trajectory.jax, types=types.jax),
+        ],
+    )
+    def test[PositionsT: Positions, LongitudinalT: LongitudinalPositions](
+        self,
+        trajectory: Trajectory[
+            PathParameters, ReferencePoints, PositionsT, LateralPositions, LongitudinalT
+        ],
+        positions: PositionsT,
+        expected: LongitudinalT,
+    ) -> None:
+        actual = trajectory.longitudinal(positions)
+
+        assert np.allclose(actual, expected, atol=1e-5)
 
 
 # TODO: Add tests for optimal behavior when following looped trajectories.
