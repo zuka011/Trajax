@@ -54,11 +54,11 @@ class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
         *,
         x: float | Scalar,
         y: float | Scalar,
-        theta: float | Scalar,
-        v: float | Scalar,
+        heading: float | Scalar,
+        speed: float | Scalar,
     ) -> "JaxBicycleState":
         """Creates a JAX bicycle state from individual state components."""
-        return JaxBicycleState(jnp.array([x, y, theta, v]))
+        return JaxBicycleState(jnp.array([x, y, heading, speed]))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_x]]:
         return np.asarray(self.array)

@@ -1,4 +1,3 @@
-from typing import NamedTuple
 from trajax import ObstacleIdAssignment, ObstacleIds, types, obstacles
 
 from numtypes import array
@@ -39,223 +38,205 @@ class JaxObstaclePositionExtractor:
         return states.positions()
 
 
-class AssignmentTestCase[ObstacleStatesForTimeStepT, IdT, HistoryT](NamedTuple):
-    name: str
-    assignment: ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT]
-    states: ObstacleStatesForTimeStepT
-    history: HistoryT
-    ids: IdT
-    expected: IdT
-
-
-def cases(id_assignment, position_extractor, data_backend) -> None:
-    return [
-        AssignmentTestCase(
-            name="All new obstacles (no history)",
-            assignment=id_assignment.hungarian(
-                position_extractor=position_extractor(),
-                cutoff=0.5,
-                start_id=1,
+class test_that_ids_are_assigned_to_obstacles:
+    def cases(id_assignment, position_extractor, data) -> None:
+        return [
+            (  # All new obstacles (no history)
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.2, 1.5, 3.0], shape=(K := 3,)),
+                    y=array([1.2, 2.5, 4.0], shape=(K,)),
+                    heading=array([1.0, 2.0, 1.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=np.empty((0, 0)),
+                    y=np.empty((0, 0)),
+                    heading=np.empty((0, 0)),
+                ),
+                ids := data.obstacle_ids([]),
+                expected := data.obstacle_ids([1, 2, 3]),
             ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([0.2, 1.5, 3.0], shape=(K := 3,)),
-                y=array([1.2, 2.5, 4.0], shape=(K,)),
-                heading=array([1.0, 2.0, 1.0], shape=(K,)),
+            (  # Single obstacle is tracked
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.3], shape=(K := 1,)),
+                    y=array([1.3], shape=(K,)),
+                    heading=array([1.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2]], shape=(1, 1)),
+                    y=array([[1.2]], shape=(1, 1)),
+                    heading=array([[1.0]], shape=(1, 1)),
+                ),
+                ids := data.obstacle_ids([5]),
+                expected := data.obstacle_ids([5]),
             ),
-            history=data_backend.obstacle_states(
-                x=np.empty((0, 0)),
-                y=np.empty((0, 0)),
-                heading=np.empty((0, 0)),
+            (  # Single obstacle outside cutoff should get a new ID
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([5.0], shape=(K := 1,)),
+                    y=array([5.0], shape=(K,)),
+                    heading=array([1.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2]], shape=(1, 1)),
+                    y=array([[1.2]], shape=(1, 1)),
+                    heading=array([[1.0]], shape=(1, 1)),
+                ),
+                ids := data.obstacle_ids([5]),
+                expected := data.obstacle_ids([1]),
             ),
-            ids=data_backend.obstacle_ids([]),
-            expected=data_backend.obstacle_ids([1, 2, 3]),
-        ),
-        AssignmentTestCase(
-            name="Single obstacle is tracked",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
+            (  # Multiple well-separated obstacles persist
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.3, 10.1], shape=(K := 2,)),
+                    y=array([0.1, 10.2], shape=(K,)),
+                    heading=array([0.0, 0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2, 10.0]], shape=(1, 2)),
+                    y=array([[0.0, 10.0]], shape=(1, 2)),
+                    heading=array([[0.0, 0.0]], shape=(1, 2)),
+                ),
+                ids := data.obstacle_ids([3, 7]),
+                expected := data.obstacle_ids([3, 7]),
             ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([0.3], shape=(K := 1,)),
-                y=array([1.3], shape=(K,)),
-                heading=array([1.0], shape=(K,)),
+            (  # New obstacle appears (one matches, one new)
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=10,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.3, 50.0], shape=(K := 2,)),
+                    y=array([0.1, 50.0], shape=(K,)),
+                    heading=array([0.0, 0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2]], shape=(1, 1)),
+                    y=array([[0.0]], shape=(1, 1)),
+                    heading=array([[0.0]], shape=(1, 1)),
+                ),
+                ids := data.obstacle_ids([3]),
+                expected := data.obstacle_ids([3, 10]),
             ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2]], shape=(1, 1)),
-                y=array([[1.2]], shape=(1, 1)),
-                heading=array([[1.0]], shape=(1, 1)),
+            (  # Obstacle disappears
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([10.1], shape=(K := 1,)),
+                    y=array([10.2], shape=(K,)),
+                    heading=array([0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2, 10.0]], shape=(1, 2)),
+                    y=array([[0.0, 10.0]], shape=(1, 2)),
+                    heading=array([[0.0, 0.0]], shape=(1, 2)),
+                ),
+                ids := data.obstacle_ids([3, 7]),
+                expected := data.obstacle_ids([7]),
             ),
-            ids=data_backend.obstacle_ids([5]),
-            expected=data_backend.obstacle_ids([5]),
-        ),
-        AssignmentTestCase(
-            name="Single obstacle outside cutoff should get a new ID",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
+            (  # Input order: swapped observation order, IDs follow obstacles
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([10.1, 0.3], shape=(K := 2,)),  # swapped vs history
+                    y=array([10.2, 0.1], shape=(K,)),
+                    heading=array([0.0, 0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2, 10.0]], shape=(1, 2)),
+                    y=array([[0.0, 10.0]], shape=(1, 2)),
+                    heading=array([[0.0, 0.0]], shape=(1, 2)),
+                ),
+                ids := data.obstacle_ids([3, 7]),
+                expected := data.obstacle_ids([7, 3]),
             ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([5.0], shape=(K := 1,)),
-                y=array([5.0], shape=(K,)),
-                heading=array([1.0], shape=(K,)),
+            (  # Empty observations
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([], shape=(K := 0,)),
+                    y=array([], shape=(K,)),
+                    heading=array([], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.2, 10.0]], shape=(1, 2)),
+                    y=array([[0.0, 10.0]], shape=(1, 2)),
+                    heading=array([[0.0, 0.0]], shape=(1, 2)),
+                ),
+                ids := data.obstacle_ids([3, 7]),
+                expected := data.obstacle_ids([]),
             ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2]], shape=(1, 1)),
-                y=array([[1.2]], shape=(1, 1)),
-                heading=array([[1.0]], shape=(1, 1)),
+            (  # History padded with NaN columns (K_history > K_ids)
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=0.5,
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.3, 10.1], shape=(K := 2,)),
+                    y=array([0.1, 10.2], shape=(K,)),
+                    heading=array([0.0, 0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    # 4 columns, but only 2 are valid (rest are NaN padding)
+                    x=array([[0.2, 10.0, np.nan, np.nan]], shape=(1, 4)),
+                    y=array([[0.0, 10.0, np.nan, np.nan]], shape=(1, 4)),
+                    heading=array([[0.0, 0.0, np.nan, np.nan]], shape=(1, 4)),
+                ),
+                # Only 2 IDs (matching the valid columns)
+                ids := data.obstacle_ids([3, 7]),
+                expected := data.obstacle_ids([3, 7]),
             ),
-            ids=data_backend.obstacle_ids([5]),
-            expected=data_backend.obstacle_ids([1]),
-        ),
-        AssignmentTestCase(
-            name="Multiple well-separated obstacles persist",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([0.3, 10.1], shape=(K := 2,)),
-                y=array([0.1, 10.2], shape=(K,)),
-                heading=array([0.0, 0.0], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2, 10.0]], shape=(1, 2)),
-                y=array([[0.0, 10.0]], shape=(1, 2)),
-                heading=array([[0.0, 0.0]], shape=(1, 2)),
-            ),
-            ids=data_backend.obstacle_ids([3, 7]),
-            expected=data_backend.obstacle_ids([3, 7]),
-        ),
-        AssignmentTestCase(
-            name="New obstacle appears (one matches, one new)",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=10,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([0.3, 50.0], shape=(K := 2,)),
-                y=array([0.1, 50.0], shape=(K,)),
-                heading=array([0.0, 0.0], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2]], shape=(1, 1)),
-                y=array([[0.0]], shape=(1, 1)),
-                heading=array([[0.0]], shape=(1, 1)),
-            ),
-            ids=data_backend.obstacle_ids([3]),
-            expected=data_backend.obstacle_ids([3, 10]),
-        ),
-        AssignmentTestCase(
-            name="Obstacle disappears",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([10.1], shape=(K := 1,)),
-                y=array([10.2], shape=(K,)),
-                heading=array([0.0], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2, 10.0]], shape=(1, 2)),
-                y=array([[0.0, 10.0]], shape=(1, 2)),
-                heading=array([[0.0, 0.0]], shape=(1, 2)),
-            ),
-            ids=data_backend.obstacle_ids([3, 7]),
-            expected=data_backend.obstacle_ids([7]),
-        ),
-        AssignmentTestCase(
-            name="Input order: swapped observation order, IDs follow obstacles",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([10.1, 0.3], shape=(K := 2,)),  # swapped vs history
-                y=array([10.2, 0.1], shape=(K,)),
-                heading=array([0.0, 0.0], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2, 10.0]], shape=(1, 2)),
-                y=array([[0.0, 10.0]], shape=(1, 2)),
-                heading=array([[0.0, 0.0]], shape=(1, 2)),
-            ),
-            ids=data_backend.obstacle_ids([3, 7]),
-            expected=data_backend.obstacle_ids([7, 3]),
-        ),
-        AssignmentTestCase(
-            name="Empty observations",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([], shape=(K := 0,)),
-                y=array([], shape=(K,)),
-                heading=array([], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                x=array([[0.2, 10.0]], shape=(1, 2)),
-                y=array([[0.0, 10.0]], shape=(1, 2)),
-                heading=array([[0.0, 0.0]], shape=(1, 2)),
-            ),
-            ids=data_backend.obstacle_ids([3, 7]),
-            expected=data_backend.obstacle_ids([]),
-        ),
-        AssignmentTestCase(
-            name="History padded with NaN columns (K_history > K_ids)",
-            assignment=id_assignment.hungarian(
-                position_extractor=NumPyObstaclePositionExtractor(),
-                cutoff=0.5,
-                start_id=1,
-            ),
-            states=data_backend.obstacle_states_for_time_step(
-                x=array([0.3, 10.1], shape=(K := 2,)),
-                y=array([0.1, 10.2], shape=(K,)),
-                heading=array([0.0, 0.0], shape=(K,)),
-            ),
-            history=data_backend.obstacle_states(
-                # 4 columns, but only 2 are valid (rest are NaN padding)
-                x=array([[0.2, 10.0, np.nan, np.nan]], shape=(1, 4)),
-                y=array([[0.0, 10.0, np.nan, np.nan]], shape=(1, 4)),
-                heading=array([[0.0, 0.0, np.nan, np.nan]], shape=(1, 4)),
-            ),
-            # Only 2 IDs (matching the valid columns)
-            ids=data_backend.obstacle_ids([3, 7]),
-            expected=data_backend.obstacle_ids([3, 7]),
-        ),
-    ]
-
-
-@mark.parametrize(
-    ["name", "assignment", "states", "history", "ids", "expected"],
-    [
-        case
-        for (id_assignment, position_extractor, data_backend) in [
-            (obstacles.id_assignment.numpy, NumPyObstaclePositionExtractor, data.numpy),
-            (obstacles.id_assignment.jax, JaxObstaclePositionExtractor, data.jax),
         ]
-        for case in cases(id_assignment, position_extractor, data_backend)
-    ],
-)
-def test_that_ids_are_assigned_to_obstacles[
-    ObstacleStatesForTimeStepT,
-    IdT: ObstacleIds,
-    HistoryT,
-](
-    name: str,
-    assignment: ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT],
-    states: ObstacleStatesForTimeStepT,
-    history: HistoryT,
-    ids: IdT,
-    expected: IdT,
-) -> None:
-    assert np.allclose(assignment(states, history=history, ids=ids), expected)
+
+    @mark.parametrize(
+        ["assignment", "states", "history", "ids", "expected"],
+        [
+            *cases(
+                id_assignment=obstacles.numpy.id_assignment,
+                position_extractor=NumPyObstaclePositionExtractor,
+                data=data.numpy,
+            ),
+            *cases(
+                id_assignment=obstacles.jax.id_assignment,
+                position_extractor=JaxObstaclePositionExtractor,
+                data=data.jax,
+            ),
+        ],
+    )
+    def test[ObstacleStatesForTimeStepT, IdT: ObstacleIds, HistoryT](
+        self,
+        assignment: ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT],
+        states: ObstacleStatesForTimeStepT,
+        history: HistoryT,
+        ids: IdT,
+        expected: IdT,
+    ) -> None:
+        assert np.allclose(assignment(states, history=history, ids=ids), expected)

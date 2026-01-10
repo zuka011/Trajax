@@ -14,13 +14,13 @@ from trajax.obstacles.sampler import (
     NumPyGaussianObstacleStateSampler,
     JaxGaussianObstacleStateSampler,
 )
-from trajax.obstacles.assignment import id_assignment
+from trajax.obstacles.assignment import (
+    NumPyHungarianObstacleIdAssignment,
+    JaxHungarianObstacleIdAssignment,
+)
 
 
 class obstacles:
-    predicting: Final = PredictingObstacleStateProvider.create  # TODO: REmove!
-    id_assignment: Final = id_assignment
-
     class numpy:
         empty: Final = NumPyStaticObstacleStateProvider.empty
         static: Final = NumPyStaticObstacleStateProvider.create
@@ -30,6 +30,9 @@ class obstacles:
         class sampler:
             gaussian: Final = NumPyGaussianObstacleStateSampler.create
 
+        class id_assignment:
+            hungarian: Final = NumPyHungarianObstacleIdAssignment.create
+
     class jax:
         empty: Final = JaxStaticObstacleStateProvider.empty
         static: Final = JaxStaticObstacleStateProvider.create
@@ -38,3 +41,6 @@ class obstacles:
 
         class sampler:
             gaussian: Final = JaxGaussianObstacleStateSampler.create
+
+        class id_assignment:
+            hungarian: Final = JaxHungarianObstacleIdAssignment.create

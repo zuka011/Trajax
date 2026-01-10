@@ -136,4 +136,4 @@ class jax:
 
     @staticmethod
     def state(*, x: float, y: float, theta: float, v: float) -> JaxState:
-        return types.jax.bicycle.state(jnp.array([x, y, theta, v]))
+        return types.jax.bicycle.state.create(x=x, y=y, heading=theta, speed=v)

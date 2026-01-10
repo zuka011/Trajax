@@ -161,7 +161,9 @@ class JaxMpccPlannerConfiguration:
     @property
     def initial_state(self) -> MpccState:
         return types.jax.augmented.state.of(
-            physical=types.jax.bicycle.state.create(x=0.0, y=0.0, theta=0.0, v=0.0),
+            physical=types.jax.bicycle.state.create(
+                x=0.0, y=0.0, heading=0.0, speed=0.0
+            ),
             virtual=types.jax.simple.state.zeroes(dimension=1),
         )
 

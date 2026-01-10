@@ -4,4 +4,3 @@ from .basic import (
 from .accelerated import (
     JaxHungarianObstacleIdAssignment as JaxHungarianObstacleIdAssignment,
 )
-from .factory import id_assignment as id_assignment
