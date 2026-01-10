@@ -12,7 +12,7 @@ from trajax import (
     Risk,
 )
 
-from visualizer.api.simulation import (
+from trajax_visualizer.api.simulation import (
     SimulationVisualizer,
     SimulationData,
     ReferenceTrajectory,
@@ -58,10 +58,16 @@ class MpccVisualizer:
 
     @staticmethod
     def create(
-        *, output: str = "mpcc-simulation", reference_sample_count: int = 200
+        *,
+        output: str = "mpcc-simulation",
+        reference_sample_count: int = 200,
+        output_directory: str | None = None,
     ) -> "MpccVisualizer":
         return MpccVisualizer(
-            SimulationVisualizer.create(output=output), reference_sample_count
+            SimulationVisualizer.create(
+                output=output, output_directory=output_directory
+            ),
+            reference_sample_count,
         )
 
     async def __call__(self, data: MpccSimulationResult, *, key: str) -> None:

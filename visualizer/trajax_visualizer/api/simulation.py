@@ -1,9 +1,10 @@
 import asyncio
-from typing import Literal, Final, Sequence, Any
+from typing import Literal, Sequence, Any
 from dataclasses import dataclass
 from pathlib import Path
+from importlib.resources import files
 
-from visualizer.api.root import find_root
+from trajax_visualizer.api.config import config
 
 from aiopath import AsyncPath
 from numtypes import Array, D, Dims, Dim1, IndexArray
@@ -21,11 +22,13 @@ def encode_hook(obj: Any) -> Any:
 encoder = msgspec.json.Encoder(enc_hook=encode_hook)
 
 
-PROJECT_ROOT: Final = find_root()
-VISUALIZATION_DIR: Final = PROJECT_ROOT / "tests" / "visualizations"
-VISUALIZER_CLI: Final = (
-    PROJECT_ROOT / "visualizer" / "core" / "dist" / "cli" / "index.js"
-)
+def cli_path() -> Path:
+    return Path(str(files("trajax_visualizer") / "assets" / "cli.js"))
+
+
+def default_output_directory() -> Path:
+    return config.output_directory
+
 
 type VehicleType = Literal["triangle", "car"]
 type ScaleType = Literal["linear", "log"]
@@ -235,7 +238,10 @@ async def export(data: SimulationData, *, to: AsyncPath) -> None:
 
 
 async def html(*, of: AsyncPath, to: AsyncPath, visualizer: AsyncPath) -> None:
-    assert await visualizer.exists(), f"Visualizer CLI not found at {visualizer}."
+    assert await visualizer.exists(), (
+        f"Visualizer CLI not found at {visualizer}. "
+        "Make sure Node.js is installed and the CLI has been built."
+    )
 
     command = ["node", str(visualizer), "generate", str(of), "-o", str(to)]
     process = await asyncio.create_subprocess_exec(
@@ -254,12 +260,18 @@ class SimulationVisualizer:
 
     @staticmethod
     def create(
-        *, output: str = "mpcc-simulation", directory: Path | None = None
+        *,
+        output: str = "mpcc-simulation",
+        output_directory: str | None = None,
     ) -> "SimulationVisualizer":
+        directory = (
+            Path(output_directory)
+            if output_directory is not None
+            else default_output_directory()
+        )
         return SimulationVisualizer(
-            output=AsyncPath(directory if directory is not None else VISUALIZATION_DIR)
-            / output,
-            visualizer=AsyncPath(VISUALIZER_CLI),
+            output=AsyncPath(directory) / output,
+            visualizer=AsyncPath(cli_path()),
         )
 
     async def __call__(self, data: SimulationData, *, key: str) -> None:

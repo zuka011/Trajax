@@ -15,14 +15,16 @@ const cli = {
     entryPoints: ["src/cli/index.ts"],
     bundle: true,
     platform: "node",
-    format: "esm",
-    packages: "external",
+    format: "cjs",
     loader: {
         ".html": "text",
         ".css": "text",
         ".bundle.js": "text",
     },
     outfile: "dist/cli/index.js",
+    banner: {
+        js: "#!/usr/bin/env node",
+    },
 };
 
 switch (args) {

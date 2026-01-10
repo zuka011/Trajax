@@ -1,6 +1,7 @@
 stages:
   - verify
   - publish
+  - triggers
 
 include:
   - project: 'zurabm/ci-templates'
@@ -34,3 +35,13 @@ benchmark:
       --testbed gitlab-ci
       --adapter python_pytest
       --file benchmark.json
+
+visualizer:
+  stage: triggers
+  trigger:
+    include: visualizer/.gitlab-ci.yml
+    strategy: depend
+  rules:
+    - changes: 
+        - "visualizer/**/*"
+      when: always

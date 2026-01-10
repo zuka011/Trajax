@@ -20,7 +20,7 @@ from trajax import (
     RiskCollector,
     ControlCollector,
 )
-from visualizer import visualizer, MpccSimulationResult
+from trajax_visualizer import visualizer, MpccSimulationResult
 
 import numpy as np
 from numtypes import Array, Dim1

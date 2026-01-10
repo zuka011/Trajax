@@ -1,6 +1,6 @@
 from typing import Final
 
-from visualizer.api.mpcc import MpccVisualizer
+from trajax_visualizer.api.mpcc import MpccVisualizer
 
 
 class visualizer:

@@ -124,6 +124,9 @@ class JaxDynamicObstacleStateProvider[PredictionT, K: int](
         assert self.time_step is not None, (
             "Time step must be set to advance obstacle states."
         )
+        assert self.inner is not None, (
+            "Motion predictor must be set to advance obstacle states."
+        )
 
         last = self.history.last()
         x, y = step_obstacles(
@@ -132,7 +135,7 @@ class JaxDynamicObstacleStateProvider[PredictionT, K: int](
             velocities=self.velocities,
             time_step=self.time_step,
         )
-        self.history = self.history.append(
+        self.history = self.inner.history = self.history.append(
             JaxObstacleStatesForTimeStep.create(x=x, y=y, heading=last.heading_array)
         )
 

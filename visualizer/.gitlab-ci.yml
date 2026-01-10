@@ -1,0 +1,13 @@
+stages:
+  - verify
+
+variables:
+  PIPELINE_ROOT: "visualizer"
+  PYPI_PROJECT_NAME: "trajax-visualizer"
+
+include:
+  - project: 'zurabm/ci-templates'
+    ref: v1.3.0
+    file:
+      - '/python/verify.yml'
+      - '/python/publish.yml'
