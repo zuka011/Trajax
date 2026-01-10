@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     "numtypes>=0.5.1",
     "jax>=0.8.2",
-    "jaxtyping>=0.3.4",
+    "jaxtyping>=0.3.5",
     "riskit>=0.2.2",
     "scipy>=1.16.3",
     "beartype>=0.22.9",
@@ -36,8 +36,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
-    "pyright>=1.1.407",
-    "ruff>=0.14.10",
+    "pyright>=1.1.408",
+    "ruff>=0.14.11",
 ]
 doc = ["typi>=0.1.1"]
 test = [
@@ -83,7 +83,8 @@ packages = ["trajax"]
 [tool.pytest.ini_options]
 pythonpath = [".", "trajax", "tests"]
 python_files = ["test_*.py", "bench_*.py"]
-python_functions = ["test_*", "bench_*"]
+python_classes = ["test_*"]
+python_functions = ["test_*", "bench_*", "test"]
 markers = [
     "integration: Mark the test as an integration test.",
     "visualize: Mark the test to produce visualization data using the given visualizer.",
