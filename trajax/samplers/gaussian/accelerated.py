@@ -36,7 +36,8 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = 
         standard_deviation: Array[Dims[D_u_]],
         rollout_count: M_,
         to_batch: JaxControlInputBatchCreator[B],
-        key: PRNGKeyArray,
+        key: PRNGKeyArray | None = None,
+        seed: int | None = None,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
         sequence.
@@ -51,7 +52,8 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = 
         control_dimension: D_u_ | None = None,
         rollout_count: M_,
         to_batch: JaxControlInputBatchCreator[B],
-        key: PRNGKeyArray,
+        key: PRNGKeyArray | None = None,
+        seed: int | None = None,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
         sequence.
@@ -65,7 +67,8 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = 
         control_dimension: D_u_ | None = None,
         rollout_count: M_,
         to_batch: JaxControlInputBatchCreator[B],
-        key: PRNGKeyArray,
+        key: PRNGKeyArray | None = None,
+        seed: int | None = None,
     ) -> "JaxGaussianSampler[B, D_u_, M_]":
         """Creates a sampler generating Gaussian noise around the specified control input
         sequence.
@@ -79,7 +82,7 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = 
                 else cast(D_u_, standard_deviation.shape[0])
             ),
             _rollout_count=rollout_count,
-            key=key,
+            key=key if key is not None else jrandom.PRNGKey(seed or 0),
         )
 
     def __post_init__(self) -> None:
