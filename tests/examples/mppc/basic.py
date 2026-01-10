@@ -487,7 +487,7 @@ class configure:
                 ),
                 costs.numpy.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.sampler.numpy.gaussian(
+                    sampler=create_obstacles.numpy.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(
@@ -593,7 +593,7 @@ class configure:
                 ),
                 costs.numpy.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.sampler.numpy.gaussian(
+                    sampler=create_obstacles.numpy.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(

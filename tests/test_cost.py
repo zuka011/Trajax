@@ -1601,7 +1601,7 @@ def test_that_collision_cost_is_zero_when_no_obstacles_are_present[
                         ),
                     )
                 ),
-                sampler=obstacles.sampler.numpy.gaussian(),
+                sampler=obstacles.numpy.sampler.gaussian(),
                 distance=distance_measure.numpy.circles(
                     ego=Circles(
                         origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
@@ -1656,7 +1656,7 @@ def test_that_collision_cost_is_zero_when_no_obstacles_are_present[
                         ),
                     )
                 ),
-                sampler=obstacles.sampler.jax.gaussian(),
+                sampler=obstacles.jax.sampler.gaussian(),
                 distance=distance_measure.jax.circles(
                     ego=Circles(
                         origins=array([[0.0, 0.0]], shape=(V := 1, 2)),

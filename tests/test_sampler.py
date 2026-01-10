@@ -48,8 +48,8 @@ class test_that_samplers_produce_same_results_when_seeded_identically:
     @mark.parametrize(
         ["provider", "states"],
         [
-            *cases(obstacles.sampler.numpy, data.numpy),
-            *cases(obstacles.sampler.jax, data.jax),
+            *cases(obstacles.numpy.sampler, data.numpy),
+            *cases(obstacles.jax.sampler, data.jax),
         ],
     )
     def test[StateT, SampleT: SampledObstacleStates](
@@ -113,8 +113,8 @@ class test_that_sampler_returns_empty_samples_when_no_obstacles_are_present:
     @mark.parametrize(
         ["sampler", "states", "sample_count", "expected"],
         [
-            *cases(obstacles.sampler.numpy, data.numpy),
-            *cases(obstacles.sampler.jax, data.jax),
+            *cases(obstacles.numpy.sampler, data.numpy),
+            *cases(obstacles.jax.sampler, data.jax),
         ],
     )
     def test[StateT, SampleT: SampledObstacleStates](
