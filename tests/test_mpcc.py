@@ -145,9 +145,21 @@ class MpccPlannerConfiguration[
         (mpcc.numpy.planner_from_base(), "numpy-from-base"),
         (mpcc.numpy.planner_from_augmented(), "numpy-from-augmented"),
         (mpcc.numpy.planner_from_mpcc(), "numpy-from-mpcc"),
+        (
+            mpcc.numpy.planner_from_mpcc(
+                reference=reference.numpy.short_loop, use_boundary=True
+            ),
+            "numpy-from-mpcc-with-boundary",
+        ),
         (mpcc.jax.planner_from_base(), "jax-from-base"),
         (mpcc.jax.planner_from_augmented(), "jax-from-augmented"),
         (mpcc.jax.planner_from_mpcc(), "jax-from-mpcc"),
+        (
+            mpcc.jax.planner_from_mpcc(
+                reference=reference.jax.short_loop, use_boundary=True
+            ),
+            "jax-from-mpcc-with-boundary",
+        ),
     ],
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: seed)

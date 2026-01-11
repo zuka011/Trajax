@@ -22,6 +22,7 @@ from trajax.numpy import (
     sampler,
     costs,
     distance,
+    boundary,
     trajectory,
     types,
     extract,
@@ -156,6 +157,7 @@ class NumPyMpccPlannerWeights:
         default_factory=lambda: array([2.0, 5.0, 5.0], shape=(3,))
     )
     collision: float = 1000.0
+    boundary: float = 500.0
 
 
 @dataclass(frozen=True)
@@ -191,6 +193,23 @@ class reference:
             shape=(13, 2),
         ),
         path_length=30.0,
+    )
+
+    short_loop: Final = trajectory.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 5.0],
+                [25.0, 15.0],
+                [20.0, 25.0],
+                [10.0, 25.0],
+                [5.0, 15.0],
+                [10.0, 5.0],
+            ],
+            shape=(8, 2),
+        ),
+        path_length=70.0,
     )
 
     loop: Final = trajectory.waypoints(
@@ -543,6 +562,7 @@ class configure:
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
         use_covariance_propagation: bool = False,
+        use_boundary: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
             predictor.curvilinear(
@@ -616,6 +636,22 @@ class configure:
                         )
                     ),
                 ),
+            )
+            + (
+                (
+                    costs.safety.boundary(
+                        distance=boundary.fixed_width(
+                            reference=reference,
+                            position_extractor=position_extractor,
+                            left=3.0,
+                            right=3.0,
+                        ),
+                        distance_threshold=0.25,
+                        weight=weights.boundary,
+                    ),
+                )
+                if use_boundary
+                else ()
             ),
             reference=reference,
             position_extractor=position_extractor,
