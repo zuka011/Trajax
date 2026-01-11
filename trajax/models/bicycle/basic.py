@@ -68,12 +68,12 @@ class NumPyBicycleState(BicycleState, NumPyState[BicycleD_x]):
         return self.array[1]
 
     @property
-    def theta(self) -> float:
-        """Returns the orientation (heading) of the bicycle."""
+    def heading(self) -> float:
+        """Returns the heading (orientation) of the bicycle."""
         return self.array[2]
 
     @property
-    def v(self) -> float:
+    def speed(self) -> float:
         """Returns the speed (velocity magnitude) of the bicycle."""
         return self.array[3]
 
@@ -130,7 +130,7 @@ class NumPyBicycleStateBatch[T: int, M: int](
     def __array__(self, dtype: DataType | None = None) -> StateBatchArray[T, M]:
         return self.array
 
-    def orientations(self) -> Array[Dims[T, M]]:
+    def heading(self) -> Array[Dims[T, M]]:
         return self.array[:, 2, :]
 
     def velocities(self) -> Array[Dims[T, M]]:
@@ -296,11 +296,11 @@ class NumPyBicycleObstacleStates[K: int]:
         *,
         x: Array[Dims[K]],
         y: Array[Dims[K]],
-        theta: Array[Dims[K]],
-        v: Array[Dims[K]],
+        heading: Array[Dims[K]],
+        speed: Array[Dims[K]],
     ) -> "NumPyBicycleObstacleStates[K]":
         """Creates a NumPy bicycle obstacle states from individual state components."""
-        array = np.stack([x, y, theta, v], axis=0)
+        array = np.stack([x, y, heading, speed], axis=0)
 
         assert shape_of(array, matches=(BICYCLE_D_X, x.shape[0]))
 
@@ -316,12 +316,12 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
         *,
         x: Array[Dims[T, K]],
         y: Array[Dims[T, K]],
-        theta: Array[Dims[T, K]],
-        v: Array[Dims[T, K]],
+        heading: Array[Dims[T, K]],
+        speed: Array[Dims[T, K]],
     ) -> "NumPyBicycleObstacleStateSequences[T, K]":
         """Creates a NumPy bicycle obstacle state sequences from individual state components."""
         T, K = x.shape
-        array = np.stack([x, y, theta, v], axis=1)
+        array = np.stack([x, y, heading, speed], axis=1)
 
         assert shape_of(array, matches=(T, BICYCLE_D_X, K))
 
@@ -336,7 +336,7 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
     def y(self) -> Array[Dims[T, K]]:
         return self.array[:, 1, :]
 
-    def theta(self) -> Array[Dims[T, K]]:
+    def heading(self) -> Array[Dims[T, K]]:
         return self.array[:, 2, :]
 
     @property
@@ -430,8 +430,8 @@ class NumPyBicycleModel(
             [
                 np.full(rollout_count, initial_state.x),
                 np.full(rollout_count, initial_state.y),
-                np.full(rollout_count, initial_state.theta),
-                np.full(rollout_count, initial_state.v),
+                np.full(rollout_count, initial_state.heading),
+                np.full(rollout_count, initial_state.speed),
             ]
         )
 
@@ -532,8 +532,8 @@ class NumPyBicycleObstacleModel(
             states=NumPyBicycleObstacleStates.create(
                 x=history.x()[-1],
                 y=history.y()[-1],
-                theta=history.heading()[-1, :],
-                v=speeds,
+                heading=history.heading()[-1, :],
+                speed=speeds,
             ),
             velocities=NumPyBicycleObstacleVelocities(steering_angles=steering_angles),
         )
@@ -575,8 +575,8 @@ class NumPyBicycleObstacleModel(
         return NumPyBicycleObstacleStateSequences.create(
             x=result[:, 0, :],
             y=result[:, 1, :],
-            theta=result[:, 2, :],
-            v=result[:, 3, :],
+            heading=result[:, 2, :],
+            speed=result[:, 3, :],
         )
 
 

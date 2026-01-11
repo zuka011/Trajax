@@ -1105,7 +1105,7 @@ class test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty:
                             y=states.array[:, 1],
                         ),
                         heading_extractor=lambda states: types.headings(
-                            theta=states.array[:, 2]
+                            heading=states.array[:, 2]
                         ),
                     ),
                     distance_threshold=array([0.5], shape=(V,)),

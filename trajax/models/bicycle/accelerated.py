@@ -78,12 +78,12 @@ class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
         return float(self.array[1])
 
     @property
-    def theta(self) -> float:
-        """Returns the orientation (heading) of the bicycle."""
+    def heading(self) -> float:
+        """Returns the heading (orientation) of the bicycle."""
         return float(self.array[2])
 
     @property
-    def v(self) -> float:
+    def speed(self) -> float:
         """Returns the speed (velocity magnitude) of the bicycle."""
         return float(self.array[3])
 
@@ -100,11 +100,11 @@ class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
         return self.array[1]
 
     @property
-    def theta_scalar(self) -> Scalar:
+    def heading_scalar(self) -> Scalar:
         return self.array[2]
 
     @property
-    def v_scalar(self) -> Scalar:
+    def speed_scalar(self) -> Scalar:
         return self.array[3]
 
 
@@ -159,7 +159,7 @@ class JaxBicycleStateBatch[T: int, M: int](
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, M]]:
         return np.asarray(self.array)
 
-    def orientations(self) -> Array[Dims[T, M]]:
+    def heading(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array[:, 2, :])
 
     def velocities(self) -> Array[Dims[T, M]]:
@@ -189,7 +189,7 @@ class JaxBicycleStateBatch[T: int, M: int](
         return self._array
 
     @property
-    def orientations_array(self) -> Float[JaxArray, "T M"]:
+    def heading_array(self) -> Float[JaxArray, "T M"]:
         return self.array[:, 2, :]
 
 
@@ -347,12 +347,12 @@ class JaxBicycleObstacleStates[K: int]:
         *,
         x: Float[JaxArray, "K"],
         y: Float[JaxArray, "K"],
-        theta: Float[JaxArray, "K"],
-        v: Float[JaxArray, "K"],
+        heading: Float[JaxArray, "K"],
+        speed: Float[JaxArray, "K"],
         count: K_ | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
         """Creates a JAX bicycle obstacle states from individual state components."""
-        array = jnp.stack([x, y, theta, v], axis=0)
+        array = jnp.stack([x, y, heading, speed], axis=0)
         return JaxBicycleObstacleStates(array)
 
 
@@ -366,11 +366,11 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         *,
         x: Float[JaxArray, "T K"],
         y: Float[JaxArray, "T K"],
-        theta: Float[JaxArray, "T K"],
-        v: Float[JaxArray, "T K"],
+        heading: Float[JaxArray, "T K"],
+        speed: Float[JaxArray, "T K"],
     ) -> "JaxBicycleObstacleStateSequences[int, int]":
         """Creates a JAX bicycle obstacle state sequences from individual state components."""
-        array = jnp.stack([x, y, theta, v], axis=1)
+        array = jnp.stack([x, y, heading, speed], axis=1)
         return JaxBicycleObstacleStateSequences(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
@@ -382,7 +382,7 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
     def y(self) -> Array[Dims[T, K]]:
         return np.asarray(self.array[:, 1, :])
 
-    def theta(self) -> Array[Dims[T, K]]:
+    def heading(self) -> Array[Dims[T, K]]:
         return np.asarray(self.array[:, 2, :])
 
     @property
@@ -406,7 +406,7 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         return self.array[:, 1, :]
 
     @property
-    def theta_array(self) -> Float[JaxArray, "T K"]:
+    def heading_array(self) -> Float[JaxArray, "T K"]:
         return self.array[:, 2, :]
 
 
@@ -486,8 +486,8 @@ class JaxBicycleModel(
             [
                 jnp.full(rollout_count, initial_state.x_scalar),
                 jnp.full(rollout_count, initial_state.y_scalar),
-                jnp.full(rollout_count, initial_state.theta_scalar),
-                jnp.full(rollout_count, initial_state.v_scalar),
+                jnp.full(rollout_count, initial_state.heading_scalar),
+                jnp.full(rollout_count, initial_state.speed_scalar),
             ]
         )
 
@@ -569,8 +569,8 @@ class JaxBicycleObstacleModel(
             states=JaxBicycleObstacleStates.create(
                 x=history.x_array[-1],
                 y=history.y_array[-1],
-                theta=history.heading_array[-1],
-                v=speeds,
+                heading=history.heading_array[-1],
+                speed=speeds,
             ),
             velocities=JaxBicycleObstacleVelocities(steering_angles=steering_angles),
         )

@@ -68,7 +68,7 @@ class JaxCircleDistanceExtractor[StateT, V: int, C: int](
             compute_circle_distances(
                 ego_x=ego_positions.x_array,
                 ego_y=ego_positions.y_array,
-                ego_heading=ego_headings.theta,
+                ego_heading=ego_headings.heading,
                 ego_origins=self.ego_origins,
                 ego_radii=self.ego_radii,
                 obstacle_x=obstacle_states.x_array,

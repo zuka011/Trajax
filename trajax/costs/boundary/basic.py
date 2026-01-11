@@ -29,7 +29,7 @@ class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCos
         distance: NumPyBoundaryDistanceExtractor[S, NumPyBoundaryDistance],
         distance_threshold: float,
         weight: float,
-    ) -> "NumPyBoundaryCost":
+    ) -> "NumPyBoundaryCost[S]":
         return NumPyBoundaryCost(
             distance=distance, distance_threshold=distance_threshold, weight=weight
         )
@@ -37,15 +37,12 @@ class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCos
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateT
     ) -> NumPyCosts[T, M]:
-        cost = (
-            np.asarray(self.distance_threshold)[np.newaxis, np.newaxis]
-            - self.distance(states=states).array
-        )
+        cost = self.distance_threshold - self.distance(states=states).array
 
         return NumPySimpleCosts(self.weight * np.clip(cost, 0, None))
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class NumPyFixedWidthBoundary[StateT](
     NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
 ):
@@ -73,6 +70,11 @@ class NumPyFixedWidthBoundary[StateT](
             left: The width of the left side of the corridor.
             right: The width of the right side of the corridor.
         """
+        assert left >= -right, (
+            f"The boundaries appear to be inverted. Left: {left}, Right: {right}. "
+            f"Make sure the total width (left + right) is non-negative, got {left + right}."
+        )
+
         return NumPyFixedWidthBoundary(
             reference=reference,
             position_extractor=position_extractor,

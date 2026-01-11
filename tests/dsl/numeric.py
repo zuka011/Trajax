@@ -17,19 +17,19 @@ class estimate:
     def displacements[T: int, M: int](
         *,
         velocities: Array[Dims[T, M]],
-        orientations: Array[Dims[T, M]],
+        heading: Array[Dims[T, M]],
         time_step_size: float,
     ) -> DisplacementEstimates[Dims[int, M]]:
         """
         Estimate displacement using the trapezoidal rule.
 
-        Given velocity magnitudes and orientations at each timestep, computes
+        Given velocity magnitudes and headings at each timestep, computes
         the expected displacement between consecutive timesteps using the
         trapezoidal approximation: displacement ≈ (v_start + v_end) / 2 * dt.
         """
         T, M = velocities.shape
-        vx = velocities * np.cos(orientations)
-        vy = velocities * np.sin(orientations)
+        vx = velocities * np.cos(heading)
+        vy = velocities * np.sin(heading)
 
         delta_x = (vx[:-1] + vx[1:]) / 2 * time_step_size
         delta_y = (vy[:-1] + vy[1:]) / 2 * time_step_size

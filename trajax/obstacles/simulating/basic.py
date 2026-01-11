@@ -1,4 +1,4 @@
-from typing import Self, Final, Never
+from typing import Self, Final, Any
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider, ObstacleMotionPredictor
@@ -59,7 +59,7 @@ class NumPyDynamicObstacleStateProvider[PredictionT, K: int](
         *,
         positions: Array[Dims[K_, D[2]]],
         velocities: Array[Dims[K_, D[2]]],
-    ) -> "NumPyDynamicObstacleStateProvider[Never, K_]":
+    ) -> "NumPyDynamicObstacleStateProvider[Any, K_]":
         headings = headings_from(velocities)
 
         return NumPyDynamicObstacleStateProvider(

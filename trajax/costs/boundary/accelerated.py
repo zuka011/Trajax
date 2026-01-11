@@ -33,7 +33,7 @@ class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts])
         distance: JaxBoundaryDistanceExtractor[S, JaxBoundaryDistance],
         distance_threshold: float,
         weight: float,
-    ) -> "JaxBoundaryCost":
+    ) -> "JaxBoundaryCost[S]":
         return JaxBoundaryCost(
             distance=distance,
             distance_threshold=jnp.array(distance_threshold),
@@ -52,7 +52,7 @@ class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts])
         )
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class JaxFixedWidthBoundary[StateT](
     JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
 ):
@@ -80,6 +80,11 @@ class JaxFixedWidthBoundary[StateT](
             left: The width of the left side of the corridor.
             right: The width of the right side of the corridor.
         """
+        assert left >= -right, (
+            f"The boundaries appear to be inverted. Left: {left}, Right: {right}. "
+            f"Make sure the total width (left + right) is non-negative, got {left + right}."
+        )
+
         return JaxFixedWidthBoundary(
             reference=reference,
             position_extractor=position_extractor,

@@ -31,12 +31,12 @@ class BicycleState(Protocol):
         ...
 
     @property
-    def theta(self) -> float:
+    def heading(self) -> float:
         """Orientation of the agent."""
         ...
 
     @property
-    def v(self) -> float:
+    def speed(self) -> float:
         """Velocity of the agent."""
         ...
 
@@ -57,8 +57,8 @@ class BicycleStateBatch[T: int, M: int](Protocol):
         """Returns the states as a NumPy array."""
         ...
 
-    def orientations(self) -> Array[Dims[T, M]]:
-        """Returns the orientations of the states in the batch."""
+    def heading(self) -> Array[Dims[T, M]]:
+        """Returns the headings (orientations) of the states in the batch."""
         ...
 
     def velocities(self) -> Array[Dims[T, M]]:

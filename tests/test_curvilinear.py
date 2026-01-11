@@ -49,7 +49,7 @@ class NumPyBicyclePredictionCreator:
         return data.numpy.obstacle_states(
             x=states.x(),
             y=states.y(),
-            heading=states.theta(),
+            heading=states.heading(),
             covariance=covariances,
         )
 
@@ -92,7 +92,7 @@ class JaxBicyclePredictionCreator:
         return data.jax.obstacle_states(
             x=states.x(),
             y=states.y(),
-            heading=states.theta(),
+            heading=states.heading(),
             covariance=covariances,
         )
 

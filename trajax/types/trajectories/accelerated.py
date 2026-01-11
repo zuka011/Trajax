@@ -126,17 +126,17 @@ class JaxPositions[T: int, M: int](Positions[T, M]):
 @jaxtyped
 @dataclass(frozen=True)
 class JaxHeadings[T: int, M: int]:
-    theta: Float[JaxArray, "T M"]
+    heading: Float[JaxArray, "T M"]
 
     @staticmethod
     def create[T_: int, M_: int](
         *,
-        theta: Float[JaxArray, "T M"],
+        heading: Float[JaxArray, "T M"],
         horizon: T_ | None = None,
         rollout_count: M_ | None = None,
     ) -> "JaxHeadings[T_, M_]":
         """Creates a JAX headings instance from an array of headings."""
-        return JaxHeadings(theta=theta)
+        return JaxHeadings(heading)
 
 
 @dataclass(frozen=True)

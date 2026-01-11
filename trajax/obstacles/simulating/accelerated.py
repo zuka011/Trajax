@@ -1,4 +1,4 @@
-from typing import Self, Final, Never, cast
+from typing import Self, Final, Any, cast
 from dataclasses import dataclass
 
 from trajax.types import jaxtyped, JaxObstacleStateProvider, ObstacleMotionPredictor
@@ -61,7 +61,7 @@ class JaxDynamicObstacleStateProvider[PredictionT, K: int](
         positions: Float[JaxArray, "K 2"],
         velocities: Float[JaxArray, "K 2"],
         obstacle_count: K_ | None = None,
-    ) -> "JaxDynamicObstacleStateProvider[Never, K_]":
+    ) -> "JaxDynamicObstacleStateProvider[Any, K_]":
         headings = headings_from(velocities)
         obstacle_count = (
             obstacle_count

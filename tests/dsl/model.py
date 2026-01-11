@@ -91,8 +91,8 @@ class numpy:
                 )
 
     @staticmethod
-    def state(*, x: float, y: float, theta: float, v: float) -> NumPyState:
-        return types.numpy.bicycle.state(x=x, y=y, heading=theta, speed=v)
+    def state(*, x: float, y: float, heading: float, speed: float) -> NumPyState:
+        return types.numpy.bicycle.state(x=x, y=y, heading=heading, speed=speed)
 
 
 class jax:
@@ -135,5 +135,5 @@ class jax:
         )
 
     @staticmethod
-    def state(*, x: float, y: float, theta: float, v: float) -> JaxState:
-        return types.jax.bicycle.state.create(x=x, y=y, heading=theta, speed=v)
+    def state(*, x: float, y: float, heading: float, speed: float) -> JaxState:
+        return types.jax.bicycle.state.create(x=x, y=y, heading=heading, speed=speed)

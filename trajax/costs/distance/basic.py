@@ -88,7 +88,7 @@ def compute_circle_distances[T: int, M: int, V: int, C: int, K: int, N: int](
     ego_global_x, ego_global_y = to_global_positions(
         x=ego_positions.x(),
         y=ego_positions.y(),
-        heading=ego_headings.theta,
+        heading=ego_headings.heading,
         local_origins=ego.origins,
     )
 

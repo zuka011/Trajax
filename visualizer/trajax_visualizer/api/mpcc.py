@@ -101,7 +101,7 @@ class MpccVisualizer:
             reference=reference,
             positions_x=np.array([state.physical.x for state in result.states]),
             positions_y=np.array([state.physical.y for state in result.states]),
-            headings=np.array([state.physical.theta for state in result.states]),
+            headings=np.array([state.physical.heading for state in result.states]),
             path_parameters=path_parameters,
             path_length=result.reference.path_length,
             ghost_x=ghost_positions.x,

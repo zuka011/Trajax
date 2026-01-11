@@ -37,7 +37,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -71,7 +71,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -103,7 +103,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -166,7 +166,7 @@ class test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -230,7 +230,7 @@ class test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circle
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -291,7 +291,7 @@ class test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -362,7 +362,7 @@ class test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_no
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -425,7 +425,7 @@ class test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacl
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -487,7 +487,7 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -557,7 +557,7 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -625,7 +625,7 @@ class test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_rad
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -685,7 +685,7 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                             y=states.array[:, 1, :],
                         ),
                         heading_extractor=lambda states: types.headings(
-                            theta=states.array[:, 2, :],
+                            heading=states.array[:, 2, :],
                         ),
                     ),
                     states := data.state_batch(
@@ -763,7 +763,7 @@ class test_that_distance_accounts_for_obstacle_heading:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -794,7 +794,7 @@ class test_that_distance_accounts_for_obstacle_heading:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -868,7 +868,7 @@ class test_that_distance_accounts_for_ego_heading:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -903,7 +903,7 @@ class test_that_distance_accounts_for_ego_heading:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -990,7 +990,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -1024,7 +1024,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -1060,7 +1060,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(
@@ -1124,7 +1124,7 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                         y=states.array[:, 1, :],
                     ),
                     heading_extractor=lambda states: types.headings(
-                        theta=states.array[:, 2, :],
+                        heading=states.array[:, 2, :],
                     ),
                 ),
                 states := data.state_batch(

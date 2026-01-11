@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Final, TypeAlias
 
 from trajax.namespace import types as _types, classes as _classes
 from trajax.factory import (
@@ -20,7 +20,7 @@ from trajax.samplers import sampler as _sampler
 from trajax.trajectories import trajectory as _trajectory
 from trajax.states import extract as _extract
 
-types: Final = _types.numpy
+types: TypeAlias = _types.numpy
 classes: Final = _classes.numpy
 mppi: Final = _mppi.numpy
 update: Final = _update.numpy

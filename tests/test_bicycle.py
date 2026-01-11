@@ -32,8 +32,8 @@ class test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zer
                 initial_state := data.state(
                     x=(x_0 := 15.0),
                     y=(y_0 := 12.0),
-                    theta=(theta_0 := 0.5),
-                    v=(v_0 := 0.0),
+                    heading=(theta_0 := 0.5),
+                    speed=(v_0 := 0.0),
                 ),
                 M,
                 T,
@@ -89,9 +89,7 @@ class test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zer
         )
         assert np.allclose(positions.x(), array([[x_0] * M] * T, shape=(T, M)))
         assert np.allclose(positions.y(), array([[y_0] * M] * T, shape=(T, M)))
-        assert np.allclose(
-            rollouts.orientations(), array([[theta_0] * M] * T, shape=(T, M))
-        )
+        assert np.allclose(rollouts.heading(), array([[theta_0] * M] * T, shape=(T, M)))
         assert np.allclose(rollouts.velocities(), array([[v_0] * M] * T, shape=(T, M)))
 
 
@@ -111,8 +109,8 @@ class test_that_vehicle_follows_straight_line_when_velocity_is_constant:
                     x=(x_0 := 1.0),
                     y=(y_0 := 2.0),
                     # Choose theta, v, such that velocity components are (v_x, v_y)
-                    theta=(theta_0 := np.arctan2(v_y := 4, v_x := 2)),
-                    v=(v_0 := (v_x**2 + v_y**2) ** 0.5),
+                    heading=(theta_0 := np.arctan2(v_y := 4, v_x := 2)),
+                    speed=(v_0 := (v_x**2 + v_y**2) ** 0.5),
                 ),
                 expected_x := array(
                     [
@@ -178,7 +176,7 @@ class test_that_vehicle_follows_straight_line_when_velocity_is_constant:
 
         assert np.allclose(rollouts.positions.x(), expected_x)
         assert np.allclose(rollouts.positions.y(), expected_y)
-        assert np.allclose(rollouts.orientations(), expected_theta)
+        assert np.allclose(rollouts.heading(), expected_theta)
         assert np.allclose(rollouts.velocities(), expected_v)
 
 
@@ -197,8 +195,8 @@ class test_that_vehicle_follows_straight_line_when_acceleration_is_constant:
                 initial_state := data.state(
                     x=(x_0 := 1.0),
                     y=(y_0 := 2.0),
-                    theta=(theta_0 := np.pi / 6),
-                    v=(v_0 := 2.0),
+                    heading=(theta_0 := np.pi / 6),
+                    speed=(v_0 := 2.0),
                 ),
                 # Using the formula x = x_0 + v_x_0 * t + a_x * t^2 / 2
                 expected_x_final := array(
@@ -274,7 +272,7 @@ class test_that_vehicle_follows_straight_line_when_acceleration_is_constant:
 
         assert np.allclose(rollouts.positions.x()[-1], expected_x_final, atol=1e-6)
         assert np.allclose(rollouts.positions.y()[-1], expected_y_final, atol=1e-6)
-        assert np.allclose(rollouts.orientations(), expected_theta, atol=1e-6)
+        assert np.allclose(rollouts.heading(), expected_theta, atol=1e-6)
         assert np.allclose(
             rollouts.velocities()[(T // 2)], expected_v_middle, atol=1e-6
         )
@@ -293,7 +291,7 @@ class test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed:
                     steering=array([0.2, 0.4, 1.0, -1.0, -0.4, -0.2], shape=(T,)),
                 ),
                 initial_state := data.state(
-                    x=2.0, y=4.0, theta=(theta_0 := 1.23), v=1.0
+                    x=2.0, y=4.0, heading=(theta_0 := 1.23), speed=1.0
                 ),
                 expected_final_theta := array([theta_0] * M, shape=(M,)),
             ),
@@ -327,7 +325,7 @@ class test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        assert np.allclose(rollouts.orientations()[-1], expected_final_theta, atol=1e-6)
+        assert np.allclose(rollouts.heading()[-1], expected_final_theta, atol=1e-6)
 
 
 class test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed:
@@ -343,7 +341,9 @@ class test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed:
                     ),
                     steering=array([0.0] * T, shape=(T,)),
                 ),
-                initial_state := data.state(x=2.0, y=4.0, theta=1.23, v=(v_0 := 1.0)),
+                initial_state := data.state(
+                    x=2.0, y=4.0, heading=1.23, speed=(v_0 := 1.0)
+                ),
                 expected_final_v := array([v_0] * M, shape=(M,)),
             ),
         ]
@@ -396,7 +396,7 @@ class test_that_vehicle_returns_to_starting_position_when_initially_not_moving_a
                     steering=array([0.0] * T, shape=(T,)),
                 ),
                 initial_state := data.state(
-                    x=(x_0 := 2.0), y=(y_0 := 4.0), theta=(theta_0 := 1.23), v=0
+                    x=(x_0 := 2.0), y=(y_0 := 4.0), heading=(theta_0 := 1.23), speed=0
                 ),
                 expected_final_x := array([x_0] * M, shape=(M,)),
                 expected_final_y := array([y_0] * M, shape=(M,)),
@@ -443,7 +443,7 @@ class test_that_vehicle_returns_to_starting_position_when_initially_not_moving_a
 
         assert np.allclose(rollouts.positions.x()[-1], expected_final_x, atol=1e-6)
         assert np.allclose(rollouts.positions.y()[-1], expected_final_y, atol=1e-6)
-        assert np.allclose(rollouts.orientations()[-1], expected_final_theta, atol=1e-6)
+        assert np.allclose(rollouts.heading()[-1], expected_final_theta, atol=1e-6)
 
 
 class test_that_displacement_is_consistent_with_velocity_state:
@@ -457,7 +457,7 @@ class test_that_displacement_is_consistent_with_velocity_state:
                     acceleration=np.random.uniform(-1.0, 1.0, size=(T := 12)),
                     steering=np.random.uniform(-0.1, 0.1, size=(T,)),
                 ),
-                initial_state := data.state(x=4.0, y=5.0, theta=1.2, v=2.0),
+                initial_state := data.state(x=4.0, y=5.0, heading=1.2, speed=2.0),
                 time_step_size := dt,
             ),
         ]
@@ -493,15 +493,15 @@ class test_that_displacement_is_consistent_with_velocity_state:
         # Prepend initial state to get full trajectory
         full_x = np.insert(rollouts.positions.x(), 0, initial_state.x, axis=0)
         full_y = np.insert(rollouts.positions.y(), 0, initial_state.y, axis=0)
-        full_theta = np.insert(rollouts.orientations(), 0, initial_state.theta, axis=0)
-        full_v = np.insert(rollouts.velocities(), 0, initial_state.v, axis=0)
+        full_theta = np.insert(rollouts.heading(), 0, initial_state.heading, axis=0)
+        full_v = np.insert(rollouts.velocities(), 0, initial_state.speed, axis=0)
 
         # Actual displacements
         delta_x = np.diff(full_x, axis=0)
         delta_y = np.diff(full_y, axis=0)
 
         expected = estimate.displacements(
-            velocities=full_v, orientations=full_theta, time_step_size=time_step_size
+            velocities=full_v, heading=full_theta, time_step_size=time_step_size
         )
 
         # Allowing O(dt²) error to allow 1st order integrators to pass.
@@ -535,7 +535,7 @@ class test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_
                     ),
                 ),
                 initial_state := data.state(
-                    x=(x_0 := 2.4), y=(y_0 := 3.6), theta=(theta_0 := 0.5), v=v
+                    x=(x_0 := 2.4), y=(y_0 := 3.6), heading=(theta_0 := 0.5), speed=v
                 ),
                 expected_final_x := array([x_0] * M, shape=(M,)),
                 expected_final_y := array([y_0] * M, shape=(M,)),
@@ -582,7 +582,7 @@ class test_that_vehicle_returns_to_start_when_completing_a_circle_with_constant_
 
         final_x = rollouts.positions.x()[-1]
         final_y = rollouts.positions.y()[-1]
-        final_theta = rollouts.orientations()[-1]
+        final_theta = rollouts.heading()[-1]
 
         assert np.allclose(final_x, expected_final_x, atol=0.5)
         assert np.allclose(final_y, expected_final_y, atol=0.5)
@@ -603,7 +603,9 @@ class test_that_angular_velocity_depends_on_wheelbase:
                     acceleration=0.0,
                     steering=(delta := 0.5),
                 ),
-                initial_state := data.state(x=2.0, y=4.0, theta=5.0, v=(v := 2.0)),
+                initial_state := data.state(
+                    x=2.0, y=4.0, heading=5.0, speed=(v := 2.0)
+                ),
                 dt,
                 expected_angular_velocity := array(
                     [v * np.tan(delta) / L] * M, shape=(M,)
@@ -646,8 +648,8 @@ class test_that_angular_velocity_depends_on_wheelbase:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        theta = rollouts.orientations()
-        theta_with_initial = np.insert(theta, 0, initial_state.theta, axis=0)
+        theta = rollouts.heading()
+        theta_with_initial = np.insert(theta, 0, initial_state.heading, axis=0)
         angular_velocities = np.diff(theta_with_initial, axis=0) / time_step_size
 
         assert np.allclose(angular_velocities, expected_angular_velocity, atol=1e-6)
@@ -668,7 +670,7 @@ class test_that_velocity_is_clamped_to_speed_limits:
                         acceleration=a,  # Without speed limits, v would reach T * a
                         steering=0.4,
                     ),
-                    initial_state := data.state(x=3.0, y=4.0, theta=0.2, v=2.0),
+                    initial_state := data.state(x=3.0, y=4.0, heading=0.2, speed=2.0),
                     v_max,
                     v_min,
                 )
@@ -731,7 +733,9 @@ class test_that_steering_input_is_clipped_to_max_steering:
                         acceleration=0.0,
                         steering=delta,
                     ),
-                    initial_state := data.state(x=2.0, y=4.0, theta=2.0, v=(v := 1.0)),
+                    initial_state := data.state(
+                        x=2.0, y=4.0, heading=2.0, speed=(v := 1.0)
+                    ),
                     expected_theta_change := array(
                         [
                             (
@@ -777,8 +781,8 @@ class test_that_steering_input_is_clipped_to_max_steering:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        final_theta = rollouts.orientations()[-1]
-        actual_theta_change = final_theta - initial_state.theta
+        final_theta = rollouts.heading()[-1]
+        actual_theta_change = final_theta - initial_state.heading
 
         assert np.allclose(actual_theta_change, expected_theta_change, atol=1e-6)
 
@@ -802,7 +806,7 @@ class test_that_acceleration_input_is_clipped_to_max_acceleration:
                         steering=0.0,
                     ),
                     initial_state := data.state(
-                        x=0.0, y=0.0, theta=0.0, v=(v_0 := 0.0)
+                        x=0.0, y=0.0, heading=0.0, speed=(v_0 := 0.0)
                     ),
                     expected_velocity := array(
                         [v_0 + (a_max if expected == "max" else a_min) * dt * T] * M,
@@ -863,7 +867,7 @@ class test_that_simulating_individual_steps_matches_horizon_simulation:
                     acceleration=array([2.0, 1.5, -0.5, 0.0, 1.0], shape=(T := 5,)),
                     steering=array([0.1, -0.1, 0.2, 0.0, -0.2], shape=(T,)),
                 ),
-                initial_state := data.state(x=0.0, y=0.0, theta=0.0, v=5.0),
+                initial_state := data.state(x=0.0, y=0.0, heading=0.0, speed=5.0),
                 horizon := T,
                 input_of := lambda input_batch, t: types.bicycle.control_input_sequence(
                     input_batch.array[t:, :, 0]
@@ -926,7 +930,7 @@ class test_that_simulating_individual_input_sequence_matches_horizon_simulation:
                     acceleration=array([1.0, 0.5, -0.5, 0.0], shape=(T := 4,)),
                     steering=array([0.1, -0.1, 0.2, 0.0], shape=(T,)),
                 ),
-                initial_state := data.state(x=0.0, y=0.0, theta=0.0, v=2.0),
+                initial_state := data.state(x=0.0, y=0.0, heading=0.0, speed=2.0),
                 input_of := lambda input_batch, t: types.bicycle.control_input_sequence(
                     input_batch.array[..., t]
                 ),

@@ -86,14 +86,14 @@ def position(states: PhysicalStateBatch) -> types.Positions:
 
 
 def heading(states: PhysicalStateBatch) -> types.Headings:
-    return types.headings(theta=states.orientations())
+    return types.headings(heading=states.heading())
 
 
 def bicycle_to_obstacle_states(
     states: types.bicycle.ObstacleStateSequences, covariances: Array | None
 ) -> ObstacleStates:
     return types.obstacle_states.create(
-        x=states.x(), y=states.y(), heading=states.theta(), covariance=covariances
+        x=states.x(), y=states.y(), heading=states.heading(), covariance=covariances
     )
 
 
