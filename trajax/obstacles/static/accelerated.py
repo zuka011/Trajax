@@ -1,4 +1,4 @@
-from typing import Self, Any
+from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import JaxObstacleStateProvider
@@ -58,7 +58,7 @@ class JaxStaticObstacleStateProvider[T: int, K: int](
         # Time step does not matter.
         return self
 
-    def with_predictor(self, predictor: Any) -> Self:
+    def with_predictor(self, predictor: object) -> Self:
         # Predictor does not matter.
         return self
 

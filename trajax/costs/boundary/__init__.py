@@ -1,2 +1,8 @@
-from .basic import NumPyBoundaryCost as NumPyBoundaryCost
-from .accelerated import JaxBoundaryCost as JaxBoundaryCost
+from .basic import (
+    NumPyBoundaryCost as NumPyBoundaryCost,
+    NumPyFixedWidthBoundary as NumPyFixedWidthBoundary,
+)
+from .accelerated import (
+    JaxBoundaryCost as JaxBoundaryCost,
+    JaxFixedWidthBoundary as JaxFixedWidthBoundary,
+)

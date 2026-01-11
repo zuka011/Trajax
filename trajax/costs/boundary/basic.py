@@ -1,14 +1,18 @@
+from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
     CostFunction,
     ControlInputBatch,
+    Trajectory,
     NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor,
     NumPyCosts,
+    NumPyPositions,
+    NumPyLateralPositions,
+    NumPyPositionExtractor,
 )
 from trajax.states import NumPySimpleCosts
-
 
 import numpy as np
 
@@ -39,3 +43,48 @@ class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCos
         )
 
         return NumPySimpleCosts(self.weight * np.clip(cost, 0, None))
+
+
+@dataclass(frozen=True)
+class NumPyFixedWidthBoundary[StateT](
+    NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
+):
+    reference: Trajectory[Any, Any, NumPyPositions, NumPyLateralPositions]
+    position_extractor: NumPyPositionExtractor[StateT]
+    left: float
+    right: float
+
+    @staticmethod
+    def create[S](
+        *,
+        reference: Trajectory[Any, Any, NumPyPositions, NumPyLateralPositions],
+        position_extractor: NumPyPositionExtractor[S],
+        left: float,
+        right: float,
+    ) -> "NumPyFixedWidthBoundary[S]":
+        """Creates a fixed-width boundary distance extractor.
+
+        This component assumes a fixed-width corridor around a reference trajectory. The left and
+        right widths can be different (asymmetric corridor).
+
+        Args:
+            reference: The reference trajectory defining the center of the corridor.
+            position_extractor: Function to extract positions from states.
+            left: The width of the left side of the corridor.
+            right: The width of the right side of the corridor.
+        """
+        return NumPyFixedWidthBoundary(
+            reference=reference,
+            position_extractor=position_extractor,
+            left=left,
+            right=right,
+        )
+
+    def __call__(self, *, states: StateT) -> NumPyBoundaryDistance:
+        positions = self.position_extractor(states)
+        lateral = self.reference.lateral(positions)
+
+        distance_to_left = self.left + lateral.array
+        distance_to_right = self.right - lateral.array
+
+        return NumPyBoundaryDistance(np.minimum(distance_to_left, distance_to_right))

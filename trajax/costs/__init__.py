@@ -26,5 +26,9 @@ from .distance import (
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
+from .boundary import (
+    NumPyFixedWidthBoundary as NumPyFixedWidthBoundary,
+    JaxFixedWidthBoundary as JaxFixedWidthBoundary,
+)
 from .risk import RiskCollector as RiskCollector, risk as risk
-from .factory import costs as costs, distance as distance
+from .factory import costs as costs, distance as distance, boundary as boundary

@@ -1,4 +1,4 @@
-from typing import Self, Any, cast
+from typing import Self, cast
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateProvider
@@ -62,7 +62,7 @@ class NumPyStaticObstacleStateProvider[T: int, K: int](
         # Time step does not matter.
         return self
 
-    def with_predictor(self, predictor: Any) -> Self:
+    def with_predictor(self, predictor: object) -> Self:
         # Predictor does not matter.
         return self
 

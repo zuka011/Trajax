@@ -1,12 +1,17 @@
+from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
     jaxtyped,
     CostFunction,
     ControlInputBatch,
+    Trajectory,
     JaxBoundaryDistance,
     JaxBoundaryDistanceExtractor,
     JaxCosts,
+    JaxPositions,
+    JaxLateralPositions,
+    JaxPositionExtractor,
 )
 from trajax.states import JaxSimpleCosts
 
@@ -47,6 +52,50 @@ class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts])
         )
 
 
+@dataclass(frozen=True)
+class JaxFixedWidthBoundary[StateT](
+    JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
+):
+    reference: Trajectory[Any, Any, JaxPositions, JaxLateralPositions]
+    position_extractor: JaxPositionExtractor[StateT]
+    left: Scalar
+    right: Scalar
+
+    @staticmethod
+    def create[S](
+        *,
+        reference: Trajectory[Any, Any, JaxPositions, JaxLateralPositions],
+        position_extractor: JaxPositionExtractor[S],
+        left: float,
+        right: float,
+    ) -> "JaxFixedWidthBoundary[S]":
+        """Creates a fixed-width boundary distance extractor.
+
+        This component assumes a fixed-width corridor around a reference trajectory. The left and
+        right widths can be different (asymmetric corridor).
+
+        Args:
+            reference: The reference trajectory defining the center of the corridor.
+            position_extractor: Function to extract positions from states.
+            left: The width of the left side of the corridor.
+            right: The width of the right side of the corridor.
+        """
+        return JaxFixedWidthBoundary(
+            reference=reference,
+            position_extractor=position_extractor,
+            left=jnp.array(left),
+            right=jnp.array(right),
+        )
+
+    def __call__(self, *, states: StateT) -> JaxBoundaryDistance:
+        positions = self.position_extractor(states)
+        lateral = self.reference.lateral(positions)
+
+        return JaxBoundaryDistance(
+            boundary_distance(lateral=lateral.array, left=self.left, right=self.right)
+        )
+
+
 @jax.jit
 @jaxtyped
 def boundary_cost(
@@ -54,3 +103,13 @@ def boundary_cost(
 ) -> Float[JaxArray, "T M"]:
     cost = distance_threshold - distance
     return weight * jnp.clip(cost, 0, None)
+
+
+@jax.jit
+@jaxtyped
+def boundary_distance(
+    *, lateral: Float[JaxArray, "T M"], left: Scalar, right: Scalar
+) -> Float[JaxArray, "T M"]:
+    distance_to_left = left + lateral
+    distance_to_right = right - lateral
+    return jnp.minimum(distance_to_left, distance_to_right)

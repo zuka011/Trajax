@@ -7,7 +7,12 @@ from trajax.factory import (
     padding as _padding,
     filters as _filters,
 )
-from trajax.costs import costs as _costs, distance as _distance, risk as _risk
+from trajax.costs import (
+    costs as _costs,
+    distance as _distance,
+    boundary as _boundary,
+    risk as _risk,
+)
 from trajax.models import model as _model
 from trajax.obstacles import obstacles as _obstacles
 from trajax.predictors import predictor as _predictor, propagator as _propagator
@@ -23,6 +28,7 @@ padding: Final = _padding.numpy
 filters: Final = _filters.numpy
 costs: Final = _costs.numpy
 distance: Final = _distance.numpy
+boundary: Final = _boundary.numpy
 risk: Final = _risk.numpy
 model: Final = _model.numpy
 obstacles: Final = _obstacles.numpy

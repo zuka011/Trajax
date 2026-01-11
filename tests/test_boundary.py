@@ -1,0 +1,226 @@
+from typing import Sequence
+
+from trajax import BoundaryDistanceExtractor, types, trajectory, boundary
+
+from numtypes import array
+
+import numpy as np
+
+from tests.dsl import mppi as data
+from pytest import mark
+
+
+class test_that_extractor_returns_zero_distance_when_ego_is_on_the_boundary:
+    @staticmethod
+    def cases(trajectory, types, data, create_boundary) -> Sequence[tuple]:
+        return [
+            (  # Ego on left boundary of line trajectory
+                boundary := create_boundary.fixed_width(
+                    reference=trajectory.line(
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                    ),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                    ),
+                    left=(left_width := 2.0),
+                    right=5.0,
+                ),
+                states := data.state_batch(
+                    array(
+                        # Left boundary at y = left_width
+                        [[[x := 5.0], [y := left_width], [phi := 5.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                expected_distance := 0.0,
+            ),
+            (  # Ego on right boundary of line trajectory
+                boundary := create_boundary.fixed_width(
+                    reference=trajectory.line(
+                        start=(0.0, 0.0),
+                        end=(10.0, 0.0),
+                        path_length=10.0,
+                    ),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                    ),
+                    left=2.0,
+                    right=(right_width := 5.0),
+                ),
+                states := data.state_batch(
+                    array(
+                        # Right boundary at y = -right_width
+                        [[[x := 5.0], [y := -right_width], [phi := 5.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                expected_distance := 0.0,
+            ),
+        ]
+
+    @mark.parametrize(
+        ["boundary", "states", "expected_distance"],
+        [
+            *cases(
+                trajectory=trajectory.numpy,
+                types=types.numpy,
+                data=data.numpy,
+                create_boundary=boundary.numpy,
+            ),
+            *cases(
+                trajectory=trajectory.jax,
+                types=types.jax,
+                data=data.jax,
+                create_boundary=boundary.jax,
+            ),
+        ],
+    )
+    def test[StateBatchT](
+        self,
+        boundary: BoundaryDistanceExtractor,
+        states: StateBatchT,
+        expected_distance: float,
+    ) -> None:
+        distances = np.asarray(boundary(states=states))
+
+        assert np.allclose(distances, expected_distance, atol=1e-6), (
+            f"Boundary distance should be {expected_distance} when on boundary. "
+            f"Got: {distances}"
+        )
+
+
+class test_that_extractor_returns_positive_distance_inside_boundary:
+    @staticmethod
+    def cases(trajectory, types, data, create_boundary) -> Sequence[tuple]:
+        return [
+            (  # Vehicle inside corridor on line trajectory
+                boundary := create_boundary.fixed_width(
+                    reference=trajectory.line(
+                        start=(0.0, 0.0),
+                        end=(10.0, 0.0),
+                        path_length=10.0,
+                    ),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                    ),
+                    left=2.0,
+                    right=5.0,
+                ),
+                states := data.state_batch(
+                    array(
+                        [
+                            [  # Left 2m, left 1m, left 3m, right 3m, left/right 3.5m
+                                x := [5.0, 5.0, 5.0, 6.0, 7.0],
+                                y := [0.0, 1.0, -1.0, -2.0, -1.5],
+                                phi := [5.0, 5.0, 5.0, 5.0, 5.0],
+                            ]
+                        ],
+                        shape=(T := 1, D_x := 3, M := 5),
+                    )
+                ),
+                expected_distances := array([[2.0, 1.0, 3.0, 3.0, 3.5]], shape=(T, M)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["boundary", "states", "expected_distances"],
+        [
+            *cases(
+                trajectory=trajectory.numpy,
+                types=types.numpy,
+                data=data.numpy,
+                create_boundary=boundary.numpy,
+            ),
+            *cases(
+                trajectory=trajectory.jax,
+                types=types.jax,
+                data=data.jax,
+                create_boundary=boundary.jax,
+            ),
+        ],
+    )
+    def test[StateBatchT](
+        self,
+        boundary: BoundaryDistanceExtractor,
+        states: StateBatchT,
+        expected_distances: np.ndarray,
+    ) -> None:
+        distances = np.asarray(boundary(states=states))
+
+        assert np.allclose(distances, expected_distances, atol=1e-6), (
+            f"Boundary distances do not match expected. "
+            f"Expected: {expected_distances}, Got: {distances}"
+        )
+
+
+class test_that_extractor_returns_negative_distance_inside_boundary:
+    @staticmethod
+    def cases(trajectory, types, data, create_boundary) -> Sequence[tuple]:
+        return [
+            (
+                boundary := create_boundary.fixed_width(
+                    reference=trajectory.line(
+                        start=(2.0, 0.0),
+                        end=(2.0, -10.0),
+                        path_length=10.0,
+                    ),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                    ),
+                    left=3.0,
+                    right=4.0,
+                ),
+                states := data.state_batch(
+                    array(
+                        [
+                            [
+                                x := [-2.5, -4.0],
+                                y := [-4.0, -3.0],
+                                phi := [0.0, 0.0],
+                            ],
+                            [
+                                x := [6.0, 10.0],
+                                y := [-5.0, -8.0],
+                                phi := [0.0, 0.0],
+                            ],
+                        ],
+                        shape=(T := 2, D_x := 3, M := 2),
+                    )
+                ),
+                expected_distance := array([[-0.5, -2.0], [-1.0, -5.0]], shape=(T, M)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["boundary", "states", "expected_distance"],
+        [
+            *cases(
+                trajectory=trajectory.numpy,
+                types=types.numpy,
+                data=data.numpy,
+                create_boundary=boundary.numpy,
+            ),
+            *cases(
+                trajectory=trajectory.jax,
+                types=types.jax,
+                data=data.jax,
+                create_boundary=boundary.jax,
+            ),
+        ],
+    )
+    def test[StateBatchT](
+        self,
+        boundary: BoundaryDistanceExtractor,
+        states: StateBatchT,
+        expected_distance: float,
+    ) -> None:
+        distances = np.asarray(boundary(states=states))
+
+        assert np.allclose(distances, expected_distance, atol=1e-6), (
+            f"Boundary distance should be {expected_distance} when outside corridor. "
+            f"Got: {distances}"
+        )

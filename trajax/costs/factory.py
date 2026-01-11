@@ -25,7 +25,12 @@ from trajax.costs.distance import (
     NumPyCircleDistanceExtractor,
     JaxCircleDistanceExtractor,
 )
-from trajax.costs.boundary import NumPyBoundaryCost, JaxBoundaryCost
+from trajax.costs.boundary import (
+    NumPyBoundaryCost,
+    NumPyFixedWidthBoundary,
+    JaxBoundaryCost,
+    JaxFixedWidthBoundary,
+)
 
 
 class costs:
@@ -84,3 +89,11 @@ class distance:
 
     class jax:
         circles: Final = JaxCircleDistanceExtractor.create
+
+
+class boundary:
+    class numpy:
+        fixed_width: Final = NumPyFixedWidthBoundary.create
+
+    class jax:
+        fixed_width: Final = JaxFixedWidthBoundary.create

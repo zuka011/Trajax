@@ -5,6 +5,7 @@ from .trajectories import (
 from .costs import (
     costs as costs,
     distance as distance,
+    boundary as boundary,
     risk as risk,
     CombinedCost as CombinedCost,
     Circles as Circles,
