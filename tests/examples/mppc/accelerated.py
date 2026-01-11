@@ -14,6 +14,8 @@ from trajax import (
     ObstacleMotionPredictor,
     RiskCollector,
     ControlCollector,
+)
+from trajax.jax import (
     mppi,
     filters,
     model,
@@ -39,22 +41,20 @@ from tests.examples.common import SimulatingObstacleStateProvider
 
 HORIZON: Final = 30
 
-type PhysicalState = types.jax.bicycle.State
-type PhysicalStateBatch = types.jax.bicycle.StateBatch
-type PhysicalInputSequence = types.jax.bicycle.ControlInputSequence
-type PhysicalInputBatch = types.jax.bicycle.ControlInputBatch
-type VirtualState = types.jax.simple.State
-type VirtualStateBatch = types.jax.simple.StateBatch
-type VirtualInputSequence = types.jax.simple.ControlInputSequence
-type VirtualInputBatch = types.jax.simple.ControlInputBatch
-type MpccState = types.jax.augmented.State[PhysicalState, VirtualState]
-type MpccStateBatch = types.jax.augmented.StateBatch[
-    PhysicalStateBatch, VirtualStateBatch
-]
-type MpccInputSequence = types.jax.augmented.ControlInputSequence[
+type PhysicalState = types.bicycle.State
+type PhysicalStateBatch = types.bicycle.StateBatch
+type PhysicalInputSequence = types.bicycle.ControlInputSequence
+type PhysicalInputBatch = types.bicycle.ControlInputBatch
+type VirtualState = types.simple.State
+type VirtualStateBatch = types.simple.StateBatch
+type VirtualInputSequence = types.simple.ControlInputSequence
+type VirtualInputBatch = types.simple.ControlInputBatch
+type MpccState = types.augmented.State[PhysicalState, VirtualState]
+type MpccStateBatch = types.augmented.StateBatch[PhysicalStateBatch, VirtualStateBatch]
+type MpccInputSequence = types.augmented.ControlInputSequence[
     PhysicalInputSequence, VirtualInputSequence
 ]
-type MpccInputBatch = types.jax.augmented.ControlInputBatch[
+type MpccInputBatch = types.augmented.ControlInputBatch[
     PhysicalInputBatch, VirtualInputBatch
 ]
 type Model = AugmentedModel[
@@ -77,8 +77,8 @@ type Sampler = AugmentedSampler[
     MpccInputBatch,
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
-type ObstacleStates = types.jax.ObstacleStates
-type ObstacleStatesHistory = types.jax.ObstacleStates
+type ObstacleStates = types.ObstacleStates
+type ObstacleStatesHistory = types.ObstacleStates
 
 
 class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):
@@ -93,26 +93,26 @@ class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Pro
         ...
 
 
-def path_parameter(states: VirtualStateBatch) -> types.jax.PathParameters:
-    return types.jax.path_parameters(states.array[:, 0, :])
+def path_parameter(states: VirtualStateBatch) -> types.PathParameters:
+    return types.path_parameters(states.array[:, 0, :])
 
 
 def path_velocity(inputs: VirtualInputBatch) -> Float[JaxArray, "T M"]:
     return inputs.array[:, 0, :]
 
 
-def position(states: PhysicalStateBatch) -> types.jax.Positions:
-    return types.jax.positions(x=states.positions.x_array, y=states.positions.y_array)
+def position(states: PhysicalStateBatch) -> types.Positions:
+    return types.positions(x=states.positions.x_array, y=states.positions.y_array)
 
 
-def heading(states: PhysicalStateBatch) -> types.jax.Headings:
-    return types.jax.headings(theta=states.orientations_array)
+def heading(states: PhysicalStateBatch) -> types.Headings:
+    return types.headings(theta=states.orientations_array)
 
 
 def bicycle_to_obstacle_states(
-    states: types.jax.bicycle.ObstacleStateSequences, covariances: JaxArray
+    states: types.bicycle.ObstacleStateSequences, covariances: JaxArray
 ) -> ObstacleStates:
-    return types.jax.obstacle_states.create(
+    return types.obstacle_states.create(
         x=states.x_array,
         y=states.y_array,
         heading=states.theta_array,
@@ -136,44 +136,38 @@ class JaxMpccPlannerConfiguration:
 
     @staticmethod
     def stack_states(states: Sequence[MpccState]) -> MpccStateBatch:
-        return types.jax.augmented.state_batch.of(
-            physical=types.jax.bicycle.state_batch.of_states(
+        return types.augmented.state_batch.of(
+            physical=types.bicycle.state_batch.of_states(
                 [it.physical for it in states]
             ),
-            virtual=types.jax.simple.state_batch.of_states(
-                [it.virtual for it in states]
-            ),
+            virtual=types.simple.state_batch.of_states([it.virtual for it in states]),
         )
 
     @staticmethod
     def stack_obstacles(obstacle_states: Sequence[ObstacleStates]) -> ObstacleStates:
-        return types.jax.obstacle_states.of_states(obstacle_states)
+        return types.obstacle_states.of_states(obstacle_states)
 
     @staticmethod
     def zero_inputs(horizon: int) -> MpccInputBatch:
-        return types.jax.augmented.control_input_batch.of(
-            physical=types.jax.bicycle.control_input_batch.zero(horizon=horizon),
-            virtual=types.jax.simple.control_input_batch.zero(
-                horizon=horizon, dimension=1
-            ),
+        return types.augmented.control_input_batch.of(
+            physical=types.bicycle.control_input_batch.zero(horizon=horizon),
+            virtual=types.simple.control_input_batch.zero(horizon=horizon, dimension=1),
         )
 
     @property
     def initial_state(self) -> MpccState:
-        return types.jax.augmented.state.of(
-            physical=types.jax.bicycle.state.create(
-                x=0.0, y=0.0, heading=0.0, speed=0.0
-            ),
-            virtual=types.jax.simple.state.zeroes(dimension=1),
+        return types.augmented.state.of(
+            physical=types.bicycle.state.create(x=0.0, y=0.0, heading=0.0, speed=0.0),
+            virtual=types.simple.state.zeroes(dimension=1),
         )
 
     @property
     def nominal_input(self) -> MpccInputSequence:
-        return types.jax.augmented.control_input_sequence.of(
-            physical=types.jax.bicycle.control_input_sequence.zeroes(
+        return types.augmented.control_input_sequence.of(
+            physical=types.bicycle.control_input_sequence.zeroes(
                 horizon=(horizon := 30)
             ),
-            virtual=types.jax.simple.control_input_sequence.zeroes(
+            virtual=types.simple.control_input_sequence.zeroes(
                 horizon=horizon, dimension=1
             ),
         )
@@ -203,7 +197,7 @@ class JaxSamplingOptions:
 
 
 class reference:
-    small_circle: Final = trajectory.jax.waypoints(
+    small_circle: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -225,7 +219,7 @@ class reference:
         path_length=30.0,
     )
 
-    loop: Final = trajectory.jax.waypoints(
+    loop: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -248,7 +242,7 @@ class reference:
         path_length=120.0,
     )
 
-    slalom: Final = trajectory.jax.waypoints(
+    slalom: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -265,7 +259,7 @@ class reference:
         path_length=100.0,
     )
 
-    short: Final = trajectory.jax.waypoints(
+    short: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -280,10 +274,10 @@ class reference:
 
 
 class obstacles:
-    none: Final = create_obstacles.jax.empty(horizon=HORIZON)
+    none: Final = create_obstacles.empty(horizon=HORIZON)
 
     class static:
-        loop: Final = create_obstacles.jax.static(
+        loop: Final = create_obstacles.static(
             positions=jnp.array(
                 [
                     [15.0, 2.5],
@@ -310,7 +304,7 @@ class obstacles:
         )
 
     class dynamic:
-        slalom: Final = create_obstacles.jax.dynamic(
+        slalom: Final = create_obstacles.dynamic(
             positions=jnp.array(
                 [
                     [25.0, 22.5],
@@ -329,7 +323,7 @@ class obstacles:
             ),
         )
 
-        short: Final = create_obstacles.jax.dynamic(
+        short: Final = create_obstacles.dynamic(
             positions=jnp.array(
                 [
                     [15.0, 10.0],
@@ -352,28 +346,28 @@ class configure:
     ) -> JaxMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
-        planner: Planner = mppi.jax.base(
+        planner: Planner = mppi.base(
             model=(
                 augmented_model := AugmentedModel.of(
-                    physical=model.jax.bicycle.dynamical(
+                    physical=model.bicycle.dynamical(
                         time_step_size=(dt := 0.1),
                         wheelbase=(L := 2.5),
                         speed_limits=(0.0, 15.0),
                         steering_limits=(-0.5, 0.5),
                         acceleration_limits=(-3.0, 3.0),
                     ),
-                    virtual=model.jax.integrator.dynamical(
+                    virtual=model.integrator.dynamical(
                         time_step_size=dt,
                         state_limits=(0, reference.path_length),
                         velocity_limits=(0, 15),
                     ),
-                    state=types.jax.augmented.state,
-                    sequence=types.jax.augmented.state_sequence,
-                    batch=types.jax.augmented.state_batch,
+                    state=types.augmented.state,
+                    sequence=types.augmented.state_sequence,
+                    batch=types.augmented.state_batch,
                 )
             ),
-            cost_function=costs.jax.combined(
-                contouring_cost := costs.jax.tracking.contouring(
+            cost_function=costs.combined(
+                contouring_cost := costs.tracking.contouring(
                     reference=reference,
                     path_parameter_extractor=(
                         path_extractor := extract.from_virtual(path_parameter)
@@ -383,35 +377,35 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                lag_cost := costs.jax.tracking.lag(
+                lag_cost := costs.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
                     weight=weights.lag,
                 ),
-                costs.jax.tracking.progress(
+                costs.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
                     weight=weights.progress,
                 ),
-                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
             ),
             sampler=AugmentedSampler.of(
-                physical=sampler.jax.gaussian(
+                physical=sampler.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.jax.bicycle.control_input_batch.create,
+                    to_batch=types.bicycle.control_input_batch.create,
                     key=sampling.physical_key,
                 ),
-                virtual=sampler.jax.gaussian(
+                virtual=sampler.gaussian(
                     standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.jax.simple.control_input_batch.create,
+                    to_batch=types.simple.control_input_batch.create,
                     key=sampling.virtual_key,
                 ),
-                batch=types.jax.augmented.control_input_batch,
+                batch=types.augmented.control_input_batch,
             ),
-            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         return JaxMpccPlannerConfiguration(
@@ -433,55 +427,53 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> JaxMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.jax.curvilinear(
+            predictor.curvilinear(
                 horizon=HORIZON,
-                model=model.jax.bicycle.obstacle(
-                    time_step_size=dt, wheelbase=(L := 2.5)
-                ),
+                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
                 prediction=bicycle_to_obstacle_states,
-                propagator=propagator.jax.linear(
+                propagator=propagator.linear(
                     time_step_size=dt,
-                    initial_covariance=propagator.jax.covariance.constant_variance(
+                    initial_covariance=propagator.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.jax.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
             )
         )
 
-        planner, augmented_model = mppi.jax.augmented(
+        planner, augmented_model = mppi.augmented(
             models=(
-                model.jax.bicycle.dynamical(
+                model.bicycle.dynamical(
                     time_step_size=dt,
                     wheelbase=L,
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),
                 ),
-                model.jax.integrator.dynamical(
+                model.integrator.dynamical(
                     time_step_size=dt,
                     state_limits=(0, reference.path_length),
                     velocity_limits=(0, 15),
                 ),
             ),
             samplers=(
-                sampler.jax.gaussian(
+                sampler.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.jax.bicycle.control_input_batch.create,
+                    to_batch=types.bicycle.control_input_batch.create,
                     key=sampling.physical_key,
                 ),
-                sampler.jax.gaussian(
+                sampler.gaussian(
                     standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.jax.simple.control_input_batch.create,
+                    to_batch=types.simple.control_input_batch.create,
                     key=sampling.virtual_key,
                 ),
             ),
-            cost=costs.jax.combined(
-                contouring_cost := costs.jax.tracking.contouring(
+            cost=costs.combined(
+                contouring_cost := costs.tracking.contouring(
                     reference=reference,
                     path_parameter_extractor=(
                         path_extractor := extract.from_virtual(path_parameter)
@@ -491,25 +483,25 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                lag_cost := costs.jax.tracking.lag(
+                lag_cost := costs.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
                     weight=weights.lag,
                 ),
-                costs.jax.tracking.progress(
+                costs.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
                     weight=weights.progress,
                 ),
-                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
-                costs.jax.safety.collision(
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.jax.sampler.gaussian(
+                    sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(
-                        circles_distance := distance.jax.circles(
+                        circles_distance := distance.circles(
                             ego=Circles(
                                 origins=array(
                                     [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
@@ -533,7 +525,7 @@ class configure:
                     metric=(
                         risk_collector := (
                             risk.collector.decorating(
-                                risk.jax.mean_variance(gamma=0.5, sample_count=10)
+                                risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
                             else None
@@ -541,11 +533,11 @@ class configure:
                     ),
                 ),
             ),
-            state=types.jax.augmented.state,
-            state_sequence=types.jax.augmented.state_sequence,
-            state_batch=types.jax.augmented.state_batch,
-            input_batch=types.jax.augmented.control_input_batch,
-            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
+            state=types.augmented.state,
+            state_sequence=types.augmented.state_sequence,
+            state_batch=types.augmented.state_batch,
+            input_batch=types.augmented.control_input_batch,
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))
@@ -573,47 +565,45 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> JaxMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.jax.curvilinear(
+            predictor.curvilinear(
                 horizon=HORIZON,
-                model=model.jax.bicycle.obstacle(
-                    time_step_size=dt, wheelbase=(L := 2.5)
-                ),
+                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
                 prediction=bicycle_to_obstacle_states,
-                propagator=propagator.jax.linear(
+                propagator=propagator.linear(
                     time_step_size=dt,
-                    initial_covariance=propagator.jax.covariance.constant_variance(
+                    initial_covariance=propagator.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.jax.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
             )
         )
 
-        planner, augmented_model, contouring_cost, lag_cost = mppi.jax.mpcc(
-            model=model.jax.bicycle.dynamical(
+        planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
+            model=model.bicycle.dynamical(
                 time_step_size=dt,
                 wheelbase=L,
                 speed_limits=(0.0, 15.0),
                 steering_limits=(-0.5, 0.5),
                 acceleration_limits=(-3.0, 3.0),
             ),
-            sampler=sampler.jax.gaussian(
+            sampler=sampler.gaussian(
                 standard_deviation=sampling.physical_standard_deviation,
                 rollout_count=sampling.rollout_count,
-                to_batch=types.jax.bicycle.control_input_batch.create,
+                to_batch=types.bicycle.control_input_batch.create,
                 key=sampling.physical_key,
             ),
             costs=(
-                costs.jax.comfort.control_smoothing(weights=weights.control_smoothing),
-                costs.jax.safety.collision(
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.jax.sampler.gaussian(
+                    sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(
-                        circles_distance := distance.jax.circles(
+                        circles_distance := distance.circles(
                             ego=Circles(
                                 origins=array(
                                     [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
@@ -639,7 +629,7 @@ class configure:
                     metric=(
                         risk_collector := (
                             risk.collector.decorating(
-                                risk.jax.mean_variance(gamma=0.5, sample_count=10)
+                                risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
                             else None
@@ -661,7 +651,7 @@ class configure:
                     "sampling_key": sampling.virtual_key,
                 },
             },
-            filter_function=filters.jax.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))

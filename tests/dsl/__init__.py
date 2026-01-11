@@ -5,4 +5,3 @@ from . import (
     stubs as stubs,
 )
 from .numeric import estimate as estimate, compute as compute
-from .type import clear_type as clear_type

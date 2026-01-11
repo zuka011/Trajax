@@ -1,3 +1,4 @@
+from . import numpy as numpy, jax as jax
 from .trajectories import (
     trajectory as trajectory,
 )

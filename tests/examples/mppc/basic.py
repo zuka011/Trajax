@@ -14,18 +14,20 @@ from trajax import (
     ObstacleMotionPredictor,
     RiskCollector,
     ControlCollector,
+)
+from trajax.numpy import (
     mppi,
     filters,
     model,
     sampler,
     costs,
+    distance,
     trajectory,
     types,
     extract,
-    distance,
-    obstacles as create_obstacles,
     predictor,
     propagator,
+    obstacles as create_obstacles,
     risk,
 )
 
@@ -37,27 +39,25 @@ from tests.examples.common import SimulatingObstacleStateProvider
 
 HORIZON: Final = 30
 
-type PhysicalState = types.numpy.bicycle.State
-type PhysicalStateBatch = types.numpy.bicycle.StateBatch
-type PhysicalInputSequence = types.numpy.bicycle.ControlInputSequence
-type PhysicalInputBatch = types.numpy.bicycle.ControlInputBatch
-type VirtualState = types.numpy.simple.State
-type VirtualStateBatch = types.numpy.simple.StateBatch
-type VirtualInputSequence = types.numpy.simple.ControlInputSequence
-type VirtualInputBatch = types.numpy.simple.ControlInputBatch
-type MpccState = types.numpy.augmented.State[PhysicalState, VirtualState]
-type MpccStateBatch = types.numpy.augmented.StateBatch[
-    PhysicalStateBatch, VirtualStateBatch
-]
-type MpccInputSequence = types.numpy.augmented.ControlInputSequence[
+type PhysicalState = types.bicycle.State
+type PhysicalStateBatch = types.bicycle.StateBatch
+type PhysicalInputSequence = types.bicycle.ControlInputSequence
+type PhysicalInputBatch = types.bicycle.ControlInputBatch
+type VirtualState = types.simple.State
+type VirtualStateBatch = types.simple.StateBatch
+type VirtualInputSequence = types.simple.ControlInputSequence
+type VirtualInputBatch = types.simple.ControlInputBatch
+type MpccState = types.augmented.State[PhysicalState, VirtualState]
+type MpccStateBatch = types.augmented.StateBatch[PhysicalStateBatch, VirtualStateBatch]
+type MpccInputSequence = types.augmented.ControlInputSequence[
     PhysicalInputSequence, VirtualInputSequence
 ]
-type MpccInputBatch = types.numpy.augmented.ControlInputBatch[
+type MpccInputBatch = types.augmented.ControlInputBatch[
     PhysicalInputBatch, VirtualInputBatch
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
-type ObstacleStates = types.numpy.ObstacleStates
-type ObstacleStatesHistory = types.numpy.ObstacleStates
+type ObstacleStates = types.ObstacleStates
+type ObstacleStatesHistory = types.ObstacleStates
 
 
 class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):
@@ -72,26 +72,26 @@ class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Pro
         ...
 
 
-def path_parameter(states: VirtualStateBatch) -> types.numpy.PathParameters:
-    return types.numpy.path_parameters(states.array[:, 0, :])
+def path_parameter(states: VirtualStateBatch) -> types.PathParameters:
+    return types.path_parameters(states.array[:, 0, :])
 
 
 def path_velocity(inputs: VirtualInputBatch) -> Array[Dim2]:
     return inputs.array[:, 0, :]
 
 
-def position(states: PhysicalStateBatch) -> types.numpy.Positions:
-    return types.numpy.positions(x=states.positions.x(), y=states.positions.y())
+def position(states: PhysicalStateBatch) -> types.Positions:
+    return types.positions(x=states.positions.x(), y=states.positions.y())
 
 
-def heading(states: PhysicalStateBatch) -> types.numpy.Headings:
-    return types.numpy.headings(theta=states.orientations())
+def heading(states: PhysicalStateBatch) -> types.Headings:
+    return types.headings(theta=states.orientations())
 
 
 def bicycle_to_obstacle_states(
-    states: types.numpy.bicycle.ObstacleStateSequences, covariances: Array | None
+    states: types.bicycle.ObstacleStateSequences, covariances: Array | None
 ) -> ObstacleStates:
-    return types.numpy.obstacle_states.create(
+    return types.obstacle_states.create(
         x=states.x(), y=states.y(), heading=states.theta(), covariance=covariances
     )
 
@@ -112,40 +112,36 @@ class NumPyMpccPlannerConfiguration:
 
     @staticmethod
     def stack_states(states: list[MpccState]) -> MpccStateBatch:
-        return types.numpy.augmented.state_batch.of(
-            physical=types.numpy.bicycle.state_batch.of_states(
+        return types.augmented.state_batch.of(
+            physical=types.bicycle.state_batch.of_states(
                 [it.physical for it in states]
             ),
-            virtual=types.numpy.simple.state_batch.of_states(
-                [it.virtual for it in states]
-            ),
+            virtual=types.simple.state_batch.of_states([it.virtual for it in states]),
         )
 
     @staticmethod
     def stack_obstacles(obstacle_states: Sequence[ObstacleStates]) -> ObstacleStates:
-        return types.numpy.obstacle_states.of_states(obstacle_states)
+        return types.obstacle_states.of_states(obstacle_states)
 
     @staticmethod
     def zero_inputs(horizon: int) -> MpccInputBatch:
-        return types.numpy.augmented.control_input_batch.of(
-            physical=types.numpy.bicycle.control_input_batch.zero(horizon=horizon),
-            virtual=types.numpy.simple.control_input_batch.zero(
-                horizon=horizon, dimension=1
-            ),
+        return types.augmented.control_input_batch.of(
+            physical=types.bicycle.control_input_batch.zero(horizon=horizon),
+            virtual=types.simple.control_input_batch.zero(horizon=horizon, dimension=1),
         )
 
     @property
     def initial_state(self) -> MpccState:
-        return types.numpy.augmented.state.of(
-            physical=types.numpy.bicycle.state(x=0.0, y=0.0, heading=0.0, speed=0.0),
-            virtual=types.numpy.simple.state.zeroes(dimension=1),
+        return types.augmented.state.of(
+            physical=types.bicycle.state(x=0.0, y=0.0, heading=0.0, speed=0.0),
+            virtual=types.simple.state.zeroes(dimension=1),
         )
 
     @property
     def nominal_input(self) -> MpccInputSequence:
-        return types.numpy.augmented.control_input_sequence.of(
-            physical=types.numpy.bicycle.control_input_sequence.zeroes(horizon=HORIZON),
-            virtual=types.numpy.simple.control_input_sequence.zeroes(
+        return types.augmented.control_input_sequence.of(
+            physical=types.bicycle.control_input_sequence.zeroes(horizon=HORIZON),
+            virtual=types.simple.control_input_sequence.zeroes(
                 horizon=HORIZON, dimension=1
             ),
         )
@@ -175,7 +171,7 @@ class NumPySamplingOptions:
 
 
 class reference:
-    small_circle: Final = trajectory.numpy.waypoints(
+    small_circle: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -197,7 +193,7 @@ class reference:
         path_length=30.0,
     )
 
-    loop: Final = trajectory.numpy.waypoints(
+    loop: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -220,7 +216,7 @@ class reference:
         path_length=120.0,
     )
 
-    slalom: Final = trajectory.numpy.waypoints(
+    slalom: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -237,7 +233,7 @@ class reference:
         path_length=100.0,
     )
 
-    short: Final = trajectory.numpy.waypoints(
+    short: Final = trajectory.waypoints(
         points=array(
             [
                 [0.0, 0.0],
@@ -252,10 +248,10 @@ class reference:
 
 
 class obstacles:
-    none: Final = create_obstacles.numpy.empty(horizon=HORIZON)
+    none: Final = create_obstacles.empty(horizon=HORIZON)
 
     class static:
-        loop: Final = create_obstacles.numpy.static(
+        loop: Final = create_obstacles.static(
             positions=array(
                 [
                     [15.0, 2.5],
@@ -284,7 +280,7 @@ class obstacles:
         )
 
     class dynamic:
-        slalom: Final = create_obstacles.numpy.dynamic(
+        slalom: Final = create_obstacles.dynamic(
             positions=array(
                 [
                     [25.0, 22.5],
@@ -305,7 +301,7 @@ class obstacles:
             ),
         )
 
-        short: Final = create_obstacles.numpy.dynamic(
+        short: Final = create_obstacles.dynamic(
             positions=array(
                 [[15.0, 10.0]],
                 shape=(1, 2),
@@ -326,28 +322,28 @@ class configure:
     ) -> NumPyMpccPlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
-        planner: Planner = mppi.numpy.base(
+        planner: Planner = mppi.base(
             model=(
                 augmented_model := AugmentedModel.of(
-                    physical=model.numpy.bicycle.dynamical(
+                    physical=model.bicycle.dynamical(
                         time_step_size=(dt := 0.1),
                         wheelbase=(L := 2.5),
                         speed_limits=(0.0, 15.0),
                         steering_limits=(-0.5, 0.5),
                         acceleration_limits=(-3.0, 3.0),
                     ),
-                    virtual=model.numpy.integrator.dynamical(
+                    virtual=model.integrator.dynamical(
                         time_step_size=dt,
                         state_limits=(0, reference.path_length),
                         velocity_limits=(0, 15),
                     ),
-                    state=types.numpy.augmented.state,
-                    sequence=types.numpy.augmented.state_sequence,
-                    batch=types.numpy.augmented.state_batch,
+                    state=types.augmented.state,
+                    sequence=types.augmented.state_sequence,
+                    batch=types.augmented.state_batch,
                 )
             ),
-            cost_function=costs.numpy.combined(
-                contouring_cost := costs.numpy.tracking.contouring(
+            cost_function=costs.combined(
+                contouring_cost := costs.tracking.contouring(
                     reference=reference,
                     path_parameter_extractor=(
                         path_extractor := extract.from_virtual(path_parameter)
@@ -357,39 +353,37 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                lag_cost := costs.numpy.tracking.lag(
+                lag_cost := costs.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
                     weight=weights.lag,
                 ),
-                costs.numpy.tracking.progress(
+                costs.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
                     weight=weights.progress,
                 ),
-                costs.numpy.comfort.control_smoothing(
-                    weights=weights.control_smoothing
-                ),
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
             ),
             sampler=AugmentedSampler.of(
-                physical=sampler.numpy.gaussian(
+                physical=sampler.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.bicycle.control_input_batch.create,
+                    to_batch=types.bicycle.control_input_batch.create,
                     seed=sampling.physical_seed,
                 ),
-                virtual=sampler.numpy.gaussian(
+                virtual=sampler.gaussian(
                     standard_deviation=array(
                         [sampling.virtual_standard_deviation], shape=(1,)
                     ),
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.simple.control_input_batch.create,
+                    to_batch=types.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
                 ),
-                batch=types.numpy.augmented.control_input_batch,
+                batch=types.augmented.control_input_batch,
             ),
-            filter_function=filters.numpy.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         return NumPyMpccPlannerConfiguration(
@@ -411,57 +405,55 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.numpy.curvilinear(
+            predictor.curvilinear(
                 horizon=HORIZON,
-                model=model.numpy.bicycle.obstacle(
-                    time_step_size=dt, wheelbase=(L := 2.5)
-                ),
+                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
                 prediction=bicycle_to_obstacle_states,
-                propagator=propagator.numpy.linear(
+                propagator=propagator.linear(
                     time_step_size=dt,
-                    initial_covariance=propagator.numpy.covariance.constant_variance(
+                    initial_covariance=propagator.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.numpy.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
             )
         )
 
-        planner, augmented_model = mppi.numpy.augmented(
+        planner, augmented_model = mppi.augmented(
             models=(
-                model.numpy.bicycle.dynamical(
+                model.bicycle.dynamical(
                     time_step_size=dt,
                     wheelbase=L,
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),
                 ),
-                model.numpy.integrator.dynamical(
+                model.integrator.dynamical(
                     time_step_size=dt,
                     state_limits=(0, reference.path_length),
                     velocity_limits=(0, 15),
                 ),
             ),
             samplers=(
-                sampler.numpy.gaussian(
+                sampler.gaussian(
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.bicycle.control_input_batch.create,
+                    to_batch=types.bicycle.control_input_batch.create,
                     seed=sampling.physical_seed,
                 ),
-                sampler.numpy.gaussian(
+                sampler.gaussian(
                     standard_deviation=array(
                         [sampling.virtual_standard_deviation], shape=(1,)
                     ),
                     rollout_count=sampling.rollout_count,
-                    to_batch=types.numpy.simple.control_input_batch.create,
+                    to_batch=types.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
                 ),
             ),
-            cost=costs.numpy.combined(
-                contouring_cost := costs.numpy.tracking.contouring(
+            cost=costs.combined(
+                contouring_cost := costs.tracking.contouring(
                     reference=reference,
                     path_parameter_extractor=(
                         path_extractor := extract.from_virtual(path_parameter)
@@ -471,27 +463,25 @@ class configure:
                     ),
                     weight=weights.contouring,
                 ),
-                lag_cost := costs.numpy.tracking.lag(
+                lag_cost := costs.tracking.lag(
                     reference=reference,
                     path_parameter_extractor=path_extractor,
                     position_extractor=position_extractor,
                     weight=weights.lag,
                 ),
-                costs.numpy.tracking.progress(
+                costs.tracking.progress(
                     path_velocity_extractor=extract.from_virtual(path_velocity),
                     time_step_size=dt,
                     weight=weights.progress,
                 ),
-                costs.numpy.comfort.control_smoothing(
-                    weights=weights.control_smoothing
-                ),
-                costs.numpy.safety.collision(
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.numpy.sampler.gaussian(
+                    sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(
-                        circles_distance := distance.numpy.circles(
+                        circles_distance := distance.circles(
                             ego=Circles(
                                 origins=array(
                                     [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
@@ -515,7 +505,7 @@ class configure:
                     metric=(
                         risk_collector := (
                             risk.collector.decorating(
-                                risk.numpy.mean_variance(gamma=0.5, sample_count=10)
+                                risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
                             else None
@@ -523,11 +513,11 @@ class configure:
                     ),
                 ),
             ),
-            state=types.numpy.augmented.state,
-            state_sequence=types.numpy.augmented.state_sequence,
-            state_batch=types.numpy.augmented.state_batch,
-            input_batch=types.numpy.augmented.control_input_batch,
-            filter_function=filters.numpy.savgol(window_length=11, polynomial_order=3),
+            state=types.augmented.state,
+            state_sequence=types.augmented.state_sequence,
+            state_batch=types.augmented.state_batch,
+            input_batch=types.augmented.control_input_batch,
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))
@@ -555,49 +545,45 @@ class configure:
         use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.numpy.curvilinear(
+            predictor.curvilinear(
                 horizon=HORIZON,
-                model=model.numpy.bicycle.obstacle(
-                    time_step_size=dt, wheelbase=(L := 2.5)
-                ),
+                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
                 prediction=bicycle_to_obstacle_states,
-                propagator=propagator.numpy.linear(
+                propagator=propagator.linear(
                     time_step_size=dt,
-                    initial_covariance=propagator.numpy.covariance.constant_variance(
+                    initial_covariance=propagator.covariance.constant_variance(
                         position_variance=0.01, velocity_variance=1.0
                     ),
-                    padding=propagator.numpy.padding(to_dimension=3, epsilon=1e-9),
+                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
                 )
                 if use_covariance_propagation
                 else None,
             )
         )
 
-        planner, augmented_model, contouring_cost, lag_cost = mppi.numpy.mpcc(
-            model=model.numpy.bicycle.dynamical(
+        planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
+            model=model.bicycle.dynamical(
                 time_step_size=dt,
                 wheelbase=L,
                 speed_limits=(0.0, 15.0),
                 steering_limits=(-0.5, 0.5),
                 acceleration_limits=(-3.0, 3.0),
             ),
-            sampler=sampler.numpy.gaussian(
+            sampler=sampler.gaussian(
                 standard_deviation=sampling.physical_standard_deviation,
                 rollout_count=sampling.rollout_count,
-                to_batch=types.numpy.bicycle.control_input_batch.create,
+                to_batch=types.bicycle.control_input_batch.create,
                 seed=sampling.physical_seed,
             ),
             costs=(
-                costs.numpy.comfort.control_smoothing(
-                    weights=weights.control_smoothing
-                ),
-                costs.numpy.safety.collision(
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.safety.collision(
                     obstacle_states=obstacles,
-                    sampler=create_obstacles.numpy.sampler.gaussian(
+                    sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
                     distance=(
-                        circles_distance := distance.numpy.circles(
+                        circles_distance := distance.circles(
                             ego=Circles(
                                 origins=array(
                                     [[-0.5, 0.0], [0.0, 0.0], [0.5, 0.0]],
@@ -623,7 +609,7 @@ class configure:
                     metric=(
                         risk_collector := (
                             risk.collector.decorating(
-                                risk.numpy.mean_variance(gamma=0.5, sample_count=10)
+                                risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
                             else None
@@ -645,7 +631,7 @@ class configure:
                     "sampling_seed": sampling.virtual_seed,
                 },
             },
-            filter_function=filters.numpy.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
         planner = (control_collector := mppi.collector.controls.decorating(planner))

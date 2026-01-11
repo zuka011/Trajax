@@ -12,25 +12,26 @@ from trajax.mppi import (
     NumPySavGolFilter,
     JaxSavGolFilter,
 )
-from trajax.states import AugmentedMppi, NumPyAugmentedMppi, JaxAugmentedMppi
+from trajax.states import NumPyAugmentedMppi, JaxAugmentedMppi
 from trajax.mpcc import NumPyMpccMppi, JaxMpccMppi
 
 
 class mppi:
-    augmented: Final = AugmentedMppi.create
-
-    class collector:
-        controls: Final = ControlCollector
-
     class numpy:
         base: Final = NumPyMppi.create
         augmented: Final = NumPyAugmentedMppi.create
         mpcc: Final = NumPyMpccMppi.create
 
+        class collector:
+            controls: Final = ControlCollector
+
     class jax:
         base: Final = JaxMppi.create
         augmented: Final = JaxAugmentedMppi.create
         mpcc: Final = JaxMpccMppi.create
+
+        class collector:
+            controls: Final = ControlCollector
 
 
 class update:

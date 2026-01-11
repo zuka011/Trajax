@@ -286,22 +286,6 @@ The tracking cost requires a global reference trajectory that is to be followed.
 
 The progress cost given by @progress-cost-equation pushes #path-parameter to move forward along the reference trajectory as fast as possible, pulling the robot along with it. Simultaneously, the contouring and lag costs given by @contouring-lag-cost-equations also pull the #path-parameter back, preventing it from moving too far ahead of the robot. If the weights #contouring-weight, #lag-weight and #progress-weight are chosen appropriately, the robot will try to follow the reference trajectory closely and maximize progress.
 
-=== Comfort Cost
-
-#let smoothing-cost = $#cost-()_s$
-#let input-change = $Delta #input-single$
-#let input-smooth-weight = $K_u$
-
-#definition(title: [Control Smoothing Cost @Liniger2015])[
-  To prevent erratic control behavior a *smoothing cost* #smoothing-cost can be used, which penalizes the rate of change of the control inputs.
-
-  Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost at time step $t$ is then defined as:
-
-  $
-    #smoothing-cost = || #input-smooth-weight #input-change _t ||^2
-  $ <smoothing-cost-equation>
-]
-
 === Safety Cost
 
 #let collision-cost-(sub: none) = function(
@@ -309,6 +293,11 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
   sub: $"col" #sub$,
 )
 #let collision-cost = collision-cost-()
+#let boundary-cost-(sub: none) = function(
+  name: $#cost-()$,
+  sub: $"bnd" #sub$,
+)
+#let boundary-cost = boundary-cost-()
 #let min-distance-single-(sub: none) = function(
   name: $sans(d)$,
   sub: sub,
@@ -332,6 +321,37 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
   $ <collision-cost-equation>
 
   where $#collision-weight > 0$ is a weighting factor.
+]
+
+#definition(title: "Boundary Cost")[
+  Although the contouring cost already encourages the robot to stay close to the reference trajectory, it may be possible that an environment boundary (e.g. a wall) is close to the reference trajectory. In such cases, an additional *boundary cost* similar to the collision cost can be used to prevent the robot from getting too close to the boundary.
+
+  The boundary cost formulation is similar to @collision-cost-equation. Let #min-distance-single-(sub: none) be the minimum distance between the robot and the environment boundary at a time step $t$. Given a safety distance threshold #distance-threshold, the boundary cost at time step $t$ is defined as:
+
+  $
+    #boundary-cost = cases(
+      #collision-weight (#distance-threshold - #min-distance-single-(sub: none)) comma quad "if" #min-distance-single-(sub: none) < #distance-threshold,
+      0 comma quad "otherwise"
+    )
+  $ <boundary-cost-equation>
+
+  Note that the distance #min-distance-single-(sub: none) is measured w.r.t. the entire robot, not individual parts as in @collision-cost-equation.
+]
+
+=== Comfort Cost
+
+#let smoothing-cost = $#cost-()_s$
+#let input-change = $Delta #input-single$
+#let input-smooth-weight = $K_u$
+
+#definition(title: [Control Smoothing Cost @Liniger2015])[
+  To prevent erratic control behavior a *smoothing cost* #smoothing-cost can be used, which penalizes the rate of change of the control inputs.
+
+  Let $#input-change _t = #input-single _t - #input-single _(t-1)$ be the change in control inputs at time step $t$ and $#input-smooth-weight := "diag"(k_1, ..., k_(#control-dimension))$ be a positive definite weighting matrix. The smoothing cost at time step $t$ is then defined as:
+
+  $
+    #smoothing-cost = || #input-smooth-weight #input-change _t ||^2
+  $ <smoothing-cost-equation>
 ]
 
 == Motion Prediction

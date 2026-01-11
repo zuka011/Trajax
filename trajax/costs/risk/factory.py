@@ -9,8 +9,6 @@ import riskit as rk
 
 
 class risk:
-    collector: Final = RiskCollector
-
     class numpy:
         none: Final = NumPyNoMetric.create
 
@@ -34,6 +32,8 @@ class risk:
                 to_risk=NumPyRisk,
             )
 
+        collector: Final = RiskCollector
+
     class jax:
         none: Final = JaxNoMetric.create
 
@@ -56,3 +56,5 @@ class risk:
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=JaxRisk,
             )
+
+        collector: Final = RiskCollector

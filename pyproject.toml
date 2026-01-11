@@ -83,7 +83,7 @@ packages = ["trajax"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "trajax", "tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "bench_*.py"]
 python_classes = ["test_*"]
 python_functions = ["test_*", "bench_*", "test"]
