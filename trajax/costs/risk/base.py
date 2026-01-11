@@ -41,6 +41,7 @@ class RisKitRiskMetric[
     backend: rk.Backend[CostsT, RkRiskT, ArrayT]
     creator: RiskMetricCreator[StateT, SampleT, CostsT, RkRiskT, ArrayT]
     to_risk: RiskConverter[RkRiskT, RiskT]
+    _name: str
 
     @staticmethod
     def create[SB: StateBatch, SOS, R, RKR: rk.Risk, C: rk.Costs, A: rk.ArrayLike](
@@ -48,8 +49,11 @@ class RisKitRiskMetric[
         backend: rk.Backend[C, RKR, A],
         creator: RiskMetricCreator[SB, SOS, C, RKR, A],
         to_risk: RiskConverter[RKR, R],
+        name: str,
     ) -> "RisKitRiskMetric[SB, SOS, R, RKR, C, A]":
-        return RisKitRiskMetric(backend=backend, creator=creator, to_risk=to_risk)
+        return RisKitRiskMetric(
+            backend=backend, creator=creator, to_risk=to_risk, _name=name
+        )
 
     def compute[ObstacleStateT](
         self,
@@ -70,6 +74,10 @@ class RisKitRiskMetric[
                 ),
             )
         )
+
+    @property
+    def name(self) -> str:
+        return self._name
 
 
 @dataclass(frozen=True)

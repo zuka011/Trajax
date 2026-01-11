@@ -43,3 +43,7 @@ class RiskCollector[
     @property
     def collected(self) -> Sequence[RiskT]:
         return self._collected
+
+    @property
+    def name(self) -> str:
+        return f"Collected({self.inner.name})"

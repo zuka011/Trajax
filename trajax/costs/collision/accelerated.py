@@ -79,6 +79,10 @@ class JaxNoMetric:
         samples = sampler(obstacle_states, count=1)
         return JaxRisk(cost_function(states=states, samples=samples).squeeze(axis=-1))
 
+    @property
+    def name(self) -> str:
+        return "No Metric"
+
 
 @dataclass(kw_only=True, frozen=True)
 class JaxCollisionCost[

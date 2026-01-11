@@ -208,3 +208,8 @@ class RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT](
     ) -> RiskT:
         """Computes the risk metric based on the provided cost function."""
         ...
+
+    @property
+    def name(self) -> str:
+        """Returns a human-readable name for the risk metric."""
+        ...

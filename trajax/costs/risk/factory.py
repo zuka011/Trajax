@@ -20,6 +20,7 @@ class risk:
                     cost, backend=backend
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=NumPyRisk,
+                name="Expected Value",
             )
 
         @staticmethod
@@ -30,6 +31,7 @@ class risk:
                     cost, backend=backend, gamma=gamma
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=NumPyRisk,
+                name="Mean-Variance",
             )
 
         collector: Final = RiskCollector
@@ -45,6 +47,7 @@ class risk:
                     cost, backend=backend
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=JaxRisk,
+                name="Expected Value",
             )
 
         @staticmethod
@@ -55,6 +58,7 @@ class risk:
                     cost, backend=backend, gamma=gamma
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=JaxRisk,
+                name="Mean-Variance",
             )
 
         collector: Final = RiskCollector
