@@ -25,6 +25,7 @@ from trajax.costs.distance import (
     NumPyCircleDistanceExtractor,
     JaxCircleDistanceExtractor,
 )
+from trajax.costs.boundary import NumPyBoundaryCost, JaxBoundaryCost
 
 
 class costs:
@@ -50,6 +51,7 @@ class costs:
 
         class safety:
             collision: Final = NumPyCollisionCost.create
+            boundary: Final = NumPyBoundaryCost.create
 
     class jax:
         @staticmethod
@@ -73,6 +75,7 @@ class costs:
 
         class safety:
             collision: Final = JaxCollisionCost.create
+            boundary: Final = JaxBoundaryCost.create
 
 
 class distance:

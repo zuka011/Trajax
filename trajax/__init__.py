@@ -79,6 +79,8 @@ from .types import (
     PredictionCreator as PredictionCreator,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,
+    BoundaryDistance as BoundaryDistance,
+    BoundaryDistanceExtractor as BoundaryDistanceExtractor,
 )
 from .namespace import types as types, classes as classes
 from .factory import (

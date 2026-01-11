@@ -79,12 +79,12 @@ class test_that_waypoints_interpolate_linearly_when_waypoints_follow_a_straight_
                     path_length=5.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [2.5], [5.0]], shape=(3, 1))
+                    array([[0.0], [2.5], [5.0]], shape=(T := 3, M := 1))
                 ),
                 expected := types.reference_points(
-                    x=array([[0.0], [5.0], [10.0]], shape=(3, 1)),
-                    y=array([[0.0], [0.0], [0.0]], shape=(3, 1)),
-                    heading=array([[0.0], [0.0], [0.0]], shape=(3, 1)),
+                    x=array([[0.0], [5.0], [10.0]], shape=(T, M)),
+                    y=array([[0.0], [0.0], [0.0]], shape=(T, M)),
+                    heading=array([[0.0], [0.0], [0.0]], shape=(T, M)),
                 ),
             ),
             (  # Vertical line from (0,0) to (0,10)
@@ -93,13 +93,13 @@ class test_that_waypoints_interpolate_linearly_when_waypoints_follow_a_straight_
                     path_length=20.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [10.0], [20.0]], shape=(3, 1))
+                    array([[0.0], [10.0], [20.0]], shape=(T := 3, M := 1))
                 ),
                 expected := types.reference_points(
-                    x=array([[0.0], [0.0], [0.0]], shape=(3, 1)),
-                    y=array([[0.0], [5.0], [10.0]], shape=(3, 1)),
+                    x=array([[0.0], [0.0], [0.0]], shape=(T, M)),
+                    y=array([[0.0], [5.0], [10.0]], shape=(T, M)),
                     heading=array(
-                        [[np.pi / 2], [np.pi / 2], [np.pi / 2]], shape=(3, 1)
+                        [[np.pi / 2], [np.pi / 2], [np.pi / 2]], shape=(T, M)
                     ),
                 ),
             ),
@@ -132,7 +132,9 @@ class test_that_query_returns_first_waypoint_when_path_parameter_is_zero:
                     points=array([[1.0, 2.0], [5.0, 3.0], [10.0, 7.0]], shape=(3, 2)),
                     path_length=20.0,
                 ),
-                path_parameters := types.path_parameters(array([[0.0]], shape=(1, 1))),
+                path_parameters := types.path_parameters(
+                    array([[0.0]], shape=(T := 1, M := 1))
+                ),
             ),
         ]
 
@@ -164,7 +166,7 @@ class test_that_query_returns_last_waypoint_when_path_parameter_is_total_length:
                     path_length=(total_length := 7.2),
                 ),
                 path_parameters := types.path_parameters(
-                    array([[total_length]], shape=(1, 1))
+                    array([[total_length]], shape=(T := 1, M := 1))
                 ),
             ),
         ]
@@ -197,7 +199,7 @@ class test_that_heading_matches_tangent_direction_of_waypoint_trajectory:
                     path_length=20.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [10.0], [20.0]], shape=(3, 1))
+                    array([[0.0], [10.0], [20.0]], shape=(T := 3, M := 1))
                 ),
                 expected_heading := 0.0,
             ),
@@ -207,7 +209,7 @@ class test_that_heading_matches_tangent_direction_of_waypoint_trajectory:
                     path_length=1.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [0.5], [1.0]], shape=(3, 1))
+                    array([[0.0], [0.5], [1.0]], shape=(T := 3, M := 1))
                 ),
                 expected_heading := np.pi / 2,
             ),
@@ -217,7 +219,7 @@ class test_that_heading_matches_tangent_direction_of_waypoint_trajectory:
                     path_length=1.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [0.5], [1.0]], shape=(3, 1))
+                    array([[0.0], [0.5], [1.0]], shape=(T := 3, M := 1))
                 ),
                 expected_heading := np.pi / 4,
             ),
@@ -227,7 +229,7 @@ class test_that_heading_matches_tangent_direction_of_waypoint_trajectory:
                     path_length=1.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [0.5], [1.0]], shape=(3, 1))
+                    array([[0.0], [0.5], [1.0]], shape=(T := 3, M := 1))
                 ),
                 expected_heading := 3 * np.pi / 4,
             ),
@@ -261,7 +263,7 @@ class test_that_heading_changes_smoothly_through_waypoints:
                     path_length=2.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [1.0], [2.0]], shape=(3, 1))
+                    array([[0.0], [1.0], [2.0]], shape=(T := 3, M := 1))
                 ),
                 expected_start_heading := 0.0,
                 expected_end_heading := np.pi / 2,
@@ -273,7 +275,7 @@ class test_that_heading_changes_smoothly_through_waypoints:
                     path_length=2.0,
                 ),
                 path_parameters := types.path_parameters(
-                    array([[0.0], [1.0], [2.0]], shape=(3, 1))
+                    array([[0.0], [1.0], [2.0]], shape=(T := 3, M := 1))
                 ),
                 expected_start_heading := np.pi / 2,
                 expected_end_heading := 0.0,
@@ -391,30 +393,32 @@ class test_that_lateral_position_is_signed_perpendicular_distance_from_trajector
                 path_length=10.0,
             )
         ]:
-            no_deviation = types.lateral_positions(array([[0.0]], shape=(1, 1)))
+            no_deviation = types.lateral_positions(
+                array([[0.0]], shape=(T := 1, M := 1))
+            )
             cases.extend(
                 [
                     (  # First waypoint
                         curved_line,
                         positions := types.positions(
-                            x=array([[0.0]], shape=(1, 1)),
-                            y=array([[0.0]], shape=(1, 1)),
+                            x=array([[0.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
                         ),
                         expected := no_deviation,
                     ),
                     (  # Last waypoint
                         curved_line,
                         positions := types.positions(
-                            x=array([[10.0]], shape=(1, 1)),
-                            y=array([[0.0]], shape=(1, 1)),
+                            x=array([[10.0]], shape=(T := 1, M := 1)),
+                            y=array([[0.0]], shape=(T, M)),
                         ),
                         expected := no_deviation,
                     ),
                     (  # Middle waypoint
                         curved_line,
                         positions := types.positions(
-                            x=array([[5.0]], shape=(1, 1)),
-                            y=array([[5.0]], shape=(1, 1)),
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[5.0]], shape=(T, M)),
                         ),
                         expected := no_deviation,
                     ),
@@ -422,11 +426,11 @@ class test_that_lateral_position_is_signed_perpendicular_distance_from_trajector
                         # Left of middle waypoint
                         curved_line,
                         positions := types.positions(
-                            x=array([[5.0]], shape=(1, 1)),
-                            y=array([[6.0]], shape=(1, 1)),
+                            x=array([[5.0]], shape=(T := 1, M := 1)),
+                            y=array([[6.0]], shape=(T, M)),
                         ),
                         expected := types.lateral_positions(
-                            array([[-1.0]], shape=(1, 1))
+                            array([[-1.0]], shape=(T, M))
                         ),
                     ),
                 ]
@@ -443,21 +447,40 @@ class test_that_lateral_position_is_signed_perpendicular_distance_from_trajector
                     (  # Point diagonally offset left from middle point
                         l_shaped_line,
                         positions := types.positions(
-                            x=array([[9.0]], shape=(1, 1)),
-                            y=array([[1.0]], shape=(1, 1)),
+                            x=array([[9.0]], shape=(T := 1, M := 1)),
+                            y=array([[1.0]], shape=(T, M)),
                         ),
                         expected := types.lateral_positions(
-                            array([[-1.0 * np.sqrt(2)]], shape=(1, 1))
+                            array([[-1.0 * np.sqrt(2)]], shape=(T, M))
                         ),
                     ),
                     (  # Point diagonally offset right from middle point
                         l_shaped_line,
                         positions := types.positions(
-                            x=array([[12.0]], shape=(1, 1)),
-                            y=array([[-2.0]], shape=(1, 1)),
+                            x=array([[12.0]], shape=(T := 1, M := 1)),
+                            y=array([[-2.0]], shape=(T, M)),
                         ),
                         expected := types.lateral_positions(
-                            array([[2.0 * np.sqrt(2)]], shape=(1, 1))
+                            array([[2.0 * np.sqrt(2)]], shape=(T, M))
+                        ),
+                    ),
+                    (  # Multi-step, Multi-rollout query
+                        l_shaped_line,
+                        positions := types.positions(
+                            x=array(
+                                [[11.0, 12.0], [13.0, 14.0], [15.0, 16.0]],
+                                shape=(T := 3, M := 2),
+                            ),
+                            y=array(
+                                [[-1.0, -2.0], [-3.0, -4.0], [-5.0, -6.0]], shape=(T, M)
+                            ),
+                        ),
+                        expected := types.lateral_positions(
+                            array(
+                                np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+                                * np.sqrt(2),
+                                shape=(T, M),
+                            )
                         ),
                     ),
                 ]
@@ -619,6 +642,24 @@ class test_that_longitudinal_position_is_distance_along_trajectory:
                         ),
                         expected := types.lateral_positions(
                             array([[20.0]], shape=(1, 1))
+                        ),
+                    ),
+                    (  # Multi-step, Multi-rollout query
+                        curved_line,
+                        positions := types.positions(
+                            x=array(
+                                [[10.0, -5.0], [25.0, 10.0], [-10.0, 30.0]],
+                                shape=(T := 3, M := 2),
+                            ),
+                            y=array(
+                                [[0.0, -5.0], [-5.0, 10.0], [5.0, 5.0]], shape=(T, M)
+                            ),
+                        ),
+                        expected := types.longitudinal_positions(
+                            array(
+                                np.array([[10.0, 0.0], [20.0, 10.0], [0.0, 20.0]]),
+                                shape=(T, M),
+                            )
                         ),
                     ),
                 ]

@@ -13,6 +13,7 @@ from trajax import (
     ObstacleStates,
     ObstacleStatesForTimeStep,
     SampledObstacleStates,
+    BoundaryDistance,
     Sampler as SamplerLike,
     ObstacleMotionPredictor as ObstacleMotionPredictorLike,
     ObstacleStateProvider as ObstacleStateProviderLike,
@@ -22,6 +23,7 @@ from trajax import (
     FilterFunction as FilterFunctionLike,
     DynamicalModel as DynamicalModelLike,
     DistanceExtractor as DistanceExtractorLike,
+    BoundaryDistanceExtractor as BoundaryDistanceExtractorLike,
 )
 
 import numpy as np
@@ -348,5 +350,28 @@ class ObstacleStateSampler[StateT: ObstacleStates, SampleT: SampledObstacleState
         assert self.expected_sample_count == count, (
             f"ObstacleStateSampler received an unexpected sample count. "
             f"Expected: {self.expected_sample_count}, Got: {count}"
+        )
+        return self.result
+
+
+@dataclass(frozen=True)
+class BoundaryDistanceExtractor[StateT: StateBatch, DistanceT: BoundaryDistance](
+    BoundaryDistanceExtractorLike[StateT, DistanceT]
+):
+    expected_states: StateT
+    result: DistanceT
+
+    @staticmethod
+    def returns[SB: StateBatch, BD: BoundaryDistance](
+        distances: BD, *, when_states_are: SB
+    ) -> "BoundaryDistanceExtractor[SB, BD]":
+        return BoundaryDistanceExtractor(
+            expected_states=when_states_are, result=distances
+        )
+
+    def __call__(self, *, states: StateT) -> DistanceT:
+        assert np.array_equal(self.expected_states, states), (
+            f"BoundaryDistanceExtractor received unexpected states. "
+            f"Expected: {self.expected_states}, Got: {states}"
         )
         return self.result

@@ -28,6 +28,7 @@ type NumPyObstacleIds[K: int] = types.numpy.ObstacleIds[K]
 type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.ObstacleStatesForTimeStep[K]
 type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
 type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
+type NumPyBoundaryDistance[T: int, M: int] = types.numpy.BoundaryDistance[T, M]
 
 type JaxState[D_x: int] = types.jax.simple.State[D_x]
 type JaxStateBatch[T: int, D_x: int, M: int] = types.jax.simple.StateBatch[T, D_x, M]
@@ -44,6 +45,7 @@ type JaxObstacleIds[K: int] = types.jax.ObstacleIds[K]
 type JaxObstacleStatesForTimeStep[K: int] = types.jax.ObstacleStatesForTimeStep[K]
 type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
+type JaxBoundaryDistance[T: int, M: int] = types.jax.BoundaryDistance[T, M]
 
 
 class numpy:
@@ -122,6 +124,12 @@ class numpy:
     ) -> NumPyDistance[T, V, M, N]:
         return types.numpy.distance(array)
 
+    @staticmethod
+    def boundary_distance[T: int, M: int](
+        array: Array[Dims[T, M]],
+    ) -> NumPyBoundaryDistance[T, M]:
+        return types.numpy.boundary_distance(array)
+
 
 class jax:
     @staticmethod
@@ -197,6 +205,12 @@ class jax:
 
     @staticmethod
     def distance[T: int, V: int, M: int, N: int](
-        array: Array[Dims[T, V, M, N]],
+        array: Array[Dims[T, V, M, N]] | Float[JaxArray, "T V M N"],
     ) -> JaxDistance[T, V, M, N]:
         return types.jax.distance(jnp.asarray(array))
+
+    @staticmethod
+    def boundary_distance[T: int, M: int](
+        array: Array[Dims[T, M]] | Float[JaxArray, "T M"],
+    ) -> JaxBoundaryDistance[T, M]:
+        return types.jax.boundary_distance(jnp.asarray(array))

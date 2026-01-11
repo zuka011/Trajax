@@ -7,6 +7,7 @@ from numtypes import Array, Dims, D
 D_O: Final = 3
 
 type D_o = D[3]
+"""Dimension of a single obstacle state (x, y, heading)."""
 
 
 class SampledObstacleStates[T: int, K: int, N: int](Protocol):
@@ -138,6 +139,26 @@ class ObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT](Protocol):
 class Distance[T: int, V: int, M: int, N: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
         """Returns the distances between ego parts and obstacles as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon over which the distances are computed."""
+        ...
+
+    @property
+    def vehicle_parts(self) -> V:
+        """The number of ego vehicle parts for which distances are computed."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """The number of rollouts for which distances are computed."""
+        ...
+
+    @property
+    def sample_count(self) -> N:
+        """The number of obstacle samples for which distances are computed."""
         ...
 
 

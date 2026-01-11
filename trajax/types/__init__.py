@@ -155,6 +155,12 @@ from .costs import (
     JaxDistanceExtractor as JaxDistanceExtractor,
     JaxRisk as JaxRisk,
     JaxRiskMetric as JaxRiskMetric,
+    BoundaryDistance as BoundaryDistance,
+    BoundaryDistanceExtractor as BoundaryDistanceExtractor,
+    NumPyBoundaryDistance as NumPyBoundaryDistance,
+    NumPyBoundaryDistanceExtractor as NumPyBoundaryDistanceExtractor,
+    JaxBoundaryDistance as JaxBoundaryDistance,
+    JaxBoundaryDistanceExtractor as JaxBoundaryDistanceExtractor,
 )
 from .predictors import (
     EstimatedObstacleStates as EstimatedObstacleStates,

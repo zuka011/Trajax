@@ -79,6 +79,10 @@ from trajax.types import (
     JaxInitialVelocityCovariance,
     JaxInitialCovarianceProvider,
     JaxPositionCovariance,
+    NumPyBoundaryDistance,
+    NumPyBoundaryDistanceExtractor,
+    JaxBoundaryDistance,
+    JaxBoundaryDistanceExtractor,
 )
 from trajax.models import (
     NumPyBicycleState,
@@ -235,6 +239,7 @@ class types:
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
         )
+        type BoundaryDistance[T: int = Any, M: int = Any] = NumPyBoundaryDistance[T, M]
         type Risk[T: int = Any, M: int = Any] = NumPyRisk[T, M]
         type InitialPositionCovariance[K: int = Any] = NumPyInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = NumPyInitialVelocityCovariance[K]
@@ -256,6 +261,7 @@ class types:
         type PathVelocityExtractor[I] = NumPyPathVelocityExtractor[I]
         type PositionExtractor[S] = NumPyPositionExtractor[S]
         type DistanceExtractor[SB, SOS, D] = NumPyDistanceExtractor[SB, SOS, D]
+        type BoundaryDistanceExtractor[SB, D] = NumPyBoundaryDistanceExtractor[SB, D]
         type RiskMetric[SB, OS, SOS] = NumPyRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = NumPyContouringCost[S]
         type ObstacleStateProvider[O] = NumPyObstacleStateProvider[O]
@@ -271,6 +277,7 @@ class types:
         lateral_positions: Final = NumPyLateralPositions.create
         longitudinal_positions: Final = NumPyLongitudinalPositions.create
         distance: Final = NumPyDistance
+        boundary_distance: Final = NumPyBoundaryDistance
         obstacle_ids: Final = NumPyObstacleIds
         obstacle_states: Final = NumPyObstacleStates
         obstacle_states_for_time_step: Final = NumPyObstacleStatesForTimeStep
@@ -386,6 +393,7 @@ class types:
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]
         )
+        type BoundaryDistance[T: int = Any, M: int = Any] = JaxBoundaryDistance[T, M]
         type Risk[T: int = Any, M: int = Any] = JaxRisk[T, M]
         type InitialPositionCovariance[K: int = Any] = JaxInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = JaxInitialVelocityCovariance[K]
@@ -405,6 +413,7 @@ class types:
         type PathVelocityExtractor[I] = JaxPathVelocityExtractor[I]
         type PositionExtractor[S] = JaxPositionExtractor[S]
         type DistanceExtractor[SB, SOS, D] = JaxDistanceExtractor[SB, SOS, D]
+        type BoundaryDistanceExtractor[SB, D] = JaxBoundaryDistanceExtractor[SB, D]
         type RiskMetric[SB, OS, SOS] = JaxRiskMetric[SB, OS, SOS]
         type ContouringCost[S] = JaxContouringCost[S]
         type ObstacleStateProvider[O] = JaxObstacleStateProvider[O]
@@ -420,6 +429,7 @@ class types:
         lateral_positions: Final = JaxLateralPositions.create
         longitudinal_positions: Final = JaxLongitudinalPositions.create
         distance: Final = JaxDistance
+        boundary_distance: Final = JaxBoundaryDistance
         obstacle_ids: Final = JaxObstacleIds
         obstacle_states: Final = JaxObstacleStates
         obstacle_states_for_time_step: Final = JaxObstacleStatesForTimeStep

@@ -25,10 +25,30 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
-    array: Array[Dims[T, V, M, N]]
+    _array: Array[Dims[T, V, M, N]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
         return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self._array.shape[0]
+
+    @property
+    def vehicle_parts(self) -> V:
+        return self._array.shape[1]
+
+    @property
+    def rollout_count(self) -> M:
+        return self._array.shape[2]
+
+    @property
+    def sample_count(self) -> N:
+        return self._array.shape[3]
+
+    @property
+    def array(self) -> Array[Dims[T, V, M, N]]:
+        return self._array
 
 
 class NumPyNoMetric:

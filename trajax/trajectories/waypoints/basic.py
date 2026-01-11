@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -134,7 +135,7 @@ class NumPyWaypointsTrajectory(
     def _nearest_samples_to[T: int, M: int](
         self, positions: NumPyPositions[T, M]
     ) -> Array[Dims[T, M]]:
-        """Finds the nearest samples along the spline for given positions."""
+        # Finds the nearest samples along the spline for given positions.
         T, M = positions.horizon, positions.rollout_count
         arc_lengths, tree = self._guess_samples
 
@@ -151,7 +152,7 @@ class NumPyWaypointsTrajectory(
         arc_lengths: Array[Dims[T, M]],
         positions: NumPyPositions[T, M],
     ) -> Array[Dims[T, M]]:
-        """Refines the arc lengths using Newton's method."""
+        # Refines the arc lengths using Newton's method.
         s_0 = arc_lengths
         x, y = positions.x(), positions.y()
 
@@ -166,15 +167,19 @@ class NumPyWaypointsTrajectory(
             ddx, ddy = self.spline_x(s, 2), self.spline_y(s, 2)
             return -(dx**2 + dy**2) + (x - c_x) * ddx + (y - c_y) * ddy
 
-        result = newton(
-            f, s_0, fprime=f_prime, maxiter=self.refining_iterations, disp=False
-        )
+        # NOTE: Newton may not fully converge for points far from trajectory.
+        # This is fine, since we don't care about high precision for such points.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="some failed to converge")
+            result = newton(
+                f, s_0, fprime=f_prime, maxiter=self.refining_iterations, disp=False
+            )
 
         return np.clip(result, 0.0, self.length)
 
     @cached_property
     def _guess_samples(self) -> tuple[Array[Dim1], cKDTree]:
-        """Computes samples along the spline and builds a KD-tree for fast lookup."""
+        # Computes samples along the spline and builds a KD-tree for fast lookup.
         s = np.linspace(0, self.length, self.kd_tree_samples)
 
         return s, cKDTree(np.column_stack([self.spline_x(s), self.spline_y(s)]))

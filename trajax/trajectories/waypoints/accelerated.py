@@ -163,12 +163,12 @@ def report_invalid_parameters(valid: bool, parameters: Float[JaxArray, "S 4"]) -
 
 
 def coefficients_from(spline: CubicSpline) -> Float[JaxArray, "S 4"]:
-    """Extracts cubic spline coefficients from scipy CubicSpline.
+    # Extracts cubic spline coefficients from scipy CubicSpline.
+    #
+    # Returns coefficients [a, b, c, d] for each segment where:
+    # p(t) = a + b*t + c*t^2 + d*t^3
+    # with t being the local parameter within each segment.
 
-    Returns coefficients [a, b, c, d] for each segment where:
-    p(t) = a + b*t + c*t^2 + d*t^3
-    with t being the local parameter within each segment.
-    """
     # SciPy stores coefficients in shape (n_segments, 4) with columns [d, c, b, a]
     # We need to reorder to [a, b, c, d]
     # Transpose to get (n_segments, 4), Reverse to get [a, b, c, d]
@@ -325,7 +325,7 @@ def nearest_sample(
     y: Float[JaxArray, "T M"],
     guess: GuessSamples,
 ) -> Float[JaxArray, "T M"]:
-    """Find nearest pre-computed sample for each position (coarse search)."""
+    # Find nearest pre-computed sample for each position (coarse search).
     diff_x = guess.x[:, None, None] - x[None, :, :]
     diff_y = guess.y[:, None, None] - y[None, :, :]
     distances_sq = diff_x**2 + diff_y**2
@@ -347,7 +347,7 @@ def refine_newton(
     path_length: Scalar,
     iterations: int,
 ) -> Float[JaxArray, "T M"]:
-    """Refine arc length estimates using Newton's method."""
+    # Refine arc length estimates using Newton's method.
 
     def newton_step(
         s: Float[JaxArray, "T M"], _: None
@@ -388,7 +388,7 @@ def compute_lateral(
     coefficients_x: Float[JaxArray, "S 4"],
     coefficients_y: Float[JaxArray, "S 4"],
 ) -> Float[JaxArray, "T M"]:
-    """Compute signed lateral deviation from trajectory."""
+    # Compute signed lateral deviation from trajectory.
     closest_x = evaluate(arc_lengths, reference_points, coefficients_x)
     closest_y = evaluate(arc_lengths, reference_points, coefficients_y)
 

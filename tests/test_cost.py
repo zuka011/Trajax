@@ -2,8 +2,6 @@ from typing import Callable, Sequence
 from functools import partial
 
 from trajax import (
-    ControlInputBatch,
-    StateBatch,
     Costs,
     CostFunction,
     Circles,
@@ -208,11 +206,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
             ),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -298,11 +292,7 @@ class test_that_contouring_cost_increases_with_lateral_deviation:
             ),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -406,11 +396,7 @@ class test_that_lag_cost_increases_with_longitudinal_deviation:
             ),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -513,7 +499,9 @@ class test_that_cost_increases_with_weight:
                         ),
                         distance=stubs.DistanceExtractor.returns(
                             data.distance(
-                                np.random.uniform(size=(T, V := 3, M := 2, N))
+                                np.random.default_rng(0).uniform(
+                                    size=(T, V := 3, M := 2, N)
+                                )
                             ),
                             when_states_are=expected_states,
                             and_obstacle_states_are=obstacle_state_samples,
@@ -522,6 +510,22 @@ class test_that_cost_increases_with_weight:
                         weight=weight,
                     ),
                     expected_states=states,
+                ),
+            ),
+            (
+                inputs := data.control_input_batch(
+                    np.random.uniform(size=(T := 2, D_u := 2, M := 2))
+                ),
+                states := data.state_batch(np.random.uniform(size=(T, D_x := 4, M))),
+                create_cost := lambda weight: costs.safety.boundary(
+                    distance=stubs.BoundaryDistanceExtractor.returns(
+                        data.boundary_distance(
+                            np.random.default_rng(0).uniform(size=(T, M))
+                        ),
+                        when_states_are=states,
+                    ),
+                    distance_threshold=2.0,
+                    weight=weight,
                 ),
             ),
         ]
@@ -543,11 +547,7 @@ class test_that_cost_increases_with_weight:
             ),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -592,11 +592,7 @@ class test_that_progress_cost_rewards_velocity:
             *cases(data=data.jax, costs=costs.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         inputs_slow: ControlInputBatchT,
@@ -660,11 +656,7 @@ class test_that_control_smoothing_cost_increases_with_higher_jerk:
             *cases(data=data.jax, costs=costs.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -744,11 +736,7 @@ class test_that_control_smoothing_cost_respects_dimension_weights:
             *cases(data=data.jax, costs=costs.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -856,11 +844,7 @@ class test_that_collision_cost_decreases_with_distance:
             *cases(data=data.jax, costs=costs.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         inputs: ControlInputBatchT,
@@ -952,11 +936,7 @@ class test_that_collision_cost_uses_different_thresholds_for_different_parts:
             *cases(data=data.jax, costs=costs.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         inputs: ControlInputBatchT,
@@ -1052,11 +1032,7 @@ class test_that_collision_cost_is_zero_when_no_obstacles_are_present:
             *cases(data=data.jax, costs=costs.jax, risk=risk.jax),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
         inputs: ControlInputBatchT,
@@ -1160,11 +1136,7 @@ class test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty:
             ),
         ],
     )
-    def test[
-        ControlInputBatchT: ControlInputBatch,
-        StateBatchT: StateBatch,
-        CostsT: Costs,
-    ](
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
         self,
         inputs: ControlInputBatchT,
         states: StateBatchT,
@@ -1178,4 +1150,133 @@ class test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty:
         assert np.all(J_high > J_low), (
             f"Collision cost should increase with higher position uncertainty. "
             f"Got costs: {J_low} (low variance) vs {J_high} (high variance)"
+        )
+
+
+class test_that_boundary_cost_is_zero_when_boundary_is_far:
+    @staticmethod
+    def cases(data, costs) -> Sequence[tuple]:
+        return [
+            (  # Infinitely far boundary
+                cost := costs.safety.boundary(
+                    distance=stubs.BoundaryDistanceExtractor.returns(
+                        data.boundary_distance(np.full((T := 5, M := 4), np.inf)),
+                        when_states_are=(
+                            states := data.state_batch(
+                                np.random.uniform(size=(T, D_x := 2, M)),
+                            )
+                        ),
+                    ),
+                    distance_threshold=10.0,
+                    weight=5.0,
+                ),
+                inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
+                states,
+            ),
+            (  # Far boundary
+                cost := costs.safety.boundary(
+                    distance=stubs.BoundaryDistanceExtractor.returns(
+                        data.boundary_distance(np.full((T := 5, M := 4), 10.0)),
+                        when_states_are=(
+                            states := data.state_batch(
+                                np.random.uniform(size=(T, D_x := 2, M)),
+                            )
+                        ),
+                    ),
+                    distance_threshold=3.0,
+                    weight=5.0,
+                ),
+                inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
+                states,
+            ),
+        ]
+
+    @mark.parametrize(
+        ["cost", "inputs", "states"],
+        [
+            *cases(data=data.numpy, costs=costs.numpy),
+            *cases(data=data.jax, costs=costs.jax),
+        ],
+    )
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
+        self,
+        cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        inputs: ControlInputBatchT,
+        states: StateBatchT,
+    ) -> None:
+        J = np.asarray(cost(inputs=inputs, states=states))
+
+        assert np.allclose(J, 0.0, atol=1e-6), (
+            f"Boundary cost should be zero when boundary is infinitely far. Got costs: {J}"
+        )
+
+
+class test_that_boundary_cost_increases_with_decreasing_distance:
+    @staticmethod
+    def cases(data, costs) -> Sequence[tuple]:
+        return [
+            (
+                cost := costs.safety.boundary(
+                    distance=stubs.BoundaryDistanceExtractor.returns(
+                        data.boundary_distance(
+                            array(
+                                [
+                                    [0.1, 0.5, 1.0, 5.0],
+                                    [0.2, 0.6, 1.5, 6.0],
+                                    [0.3, 0.7, 2.0, 7.0],
+                                ],
+                                shape=(T := 3, M := 4),
+                            )
+                        ),
+                        when_states_are=(
+                            states := data.state_batch(
+                                np.random.uniform(size=(T, D_x := 2, M)),
+                            )
+                        ),
+                    ),
+                    distance_threshold=6.5,  # Only one value is above threshold
+                    weight=5.0,
+                ),
+                inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
+                states,
+                cost_order := [
+                    (0, 0),
+                    (1, 0),
+                    (2, 0),
+                    (0, 1),
+                    (1, 1),
+                    (2, 1),
+                    (0, 2),
+                    (1, 2),
+                    (2, 2),
+                    (0, 3),
+                    (1, 3),
+                    (2, 3),
+                ],
+            ),
+        ]
+
+    @mark.parametrize(
+        ["cost", "inputs", "states", "cost_order"],
+        [
+            *cases(data=data.numpy, costs=costs.numpy),
+            *cases(data=data.jax, costs=costs.jax),
+        ],
+    )
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
+        self,
+        cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        inputs: ControlInputBatchT,
+        states: StateBatchT,
+        cost_order: list[tuple[int, int]],
+    ) -> None:
+        J = np.asarray(cost(inputs=inputs, states=states))
+
+        assert all(
+            [
+                J[t, m] > J[next_t, next_m]
+                for (t, m), (next_t, next_m) in zip(cost_order, cost_order[1:])
+            ]
+        ), (
+            f"Boundary cost should increase with decreasing distance to boundary. Got costs: {J}"
         )
