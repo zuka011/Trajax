@@ -30,6 +30,9 @@ dependencies = [
     "numpy>=2.0.0",
 ]
 
+[tool.uv.sources]
+trajax = { path = "..", editable = true }
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
