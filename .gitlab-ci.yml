@@ -41,6 +41,8 @@ visualizer:
   trigger:
     include: visualizer/.gitlab-ci.yml
     strategy: depend
+  inherit:
+    variables: false
   rules:
     - changes: 
         - "visualizer/**/*"
