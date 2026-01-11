@@ -40,10 +40,12 @@ visualizer:
   stage: triggers
   trigger:
     include: visualizer/.gitlab-ci.yml
-    strategy: depend
   inherit:
     variables: false
   rules:
     - changes: 
         - "visualizer/**/*"
       when: always
+  variables:
+    PYPI_API_TOKEN: $PYPI_API_TOKEN_VISUALIZER 
+    

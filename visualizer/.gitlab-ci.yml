@@ -5,8 +5,6 @@ stages:
 variables:
   PIPELINE_ROOT: "visualizer"
   PYPI_PROJECT_NAME: "trajax-visualizer"
-  PYPI_API_TOKEN: $PYPI_API_TOKEN_VISUALIZER 
-
 
 include:
   - project: 'zurabm/ci-templates'
