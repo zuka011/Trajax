@@ -115,11 +115,44 @@ class JaxBicycleStateSequence[T: int, M: int = Any](
     batch: "JaxBicycleStateBatch[T, M]"
     rollout: int
 
-    def step(self, index: int) -> JaxBicycleState:
-        return JaxBicycleState(self.array[index])
+    @staticmethod
+    def of_states[T_: int = int](
+        states: Sequence[JaxBicycleState], *, horizon: T_ | None = None
+    ) -> "JaxBicycleStateSequence[T_, D[1]]":
+        """Creates a JAX bicycle state sequence from a sequence of bicycle states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+        array = jnp.stack([state.array for state in states], axis=0)[:, :, jnp.newaxis]
+
+        assert array.shape == (horizon, BICYCLE_D_X, 1), (
+            f"Array shape {array.shape} does not match expected shape {(horizon, BICYCLE_D_X, 1)}."
+        )
+
+        return JaxBicycleStateSequence(
+            batch=JaxBicycleStateBatch.wrap(array), rollout=0
+        )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x]]:
         return np.asarray(self.array)
+
+    def step(self, index: int) -> JaxBicycleState:
+        return JaxBicycleState(self.array[index])
+
+    def batched(self) -> "JaxBicycleStateBatch[T, D[1]]":
+        return JaxBicycleStateBatch.wrap(self.array[..., jnp.newaxis])
+
+    def x(self) -> Array[Dims[T]]:
+        return np.asarray(self.array[:, 0])
+
+    def y(self) -> Array[Dims[T]]:
+        return np.asarray(self.array[:, 1])
+
+    def heading(self) -> Array[Dims[T]]:
+        return np.asarray(self.array[:, 2])
+
+    def speed(self) -> Array[Dims[T]]:
+        return np.asarray(self.array[:, 3])
 
     @property
     def horizon(self) -> T:
@@ -142,12 +175,20 @@ class JaxBicycleStateBatch[T: int, M: int](
     _array: StateBatchArray[T, M]
 
     @staticmethod
+    def wrap[T_: int, M_: int](
+        array: StateBatchArray[T_, M_],
+    ) -> "JaxBicycleStateBatch[T_, M_]":
+        """Creates a JAX bicycle state batch from the given array."""
+        return JaxBicycleStateBatch(array)
+
+    @staticmethod
     def of_states[T_: int = int](
         states: Sequence[JaxBicycleState], *, horizon: T_ | None = None
     ) -> "JaxBicycleStateBatch[T_, int]":
         """Creates a bicycle state batch from a sequence of bicycle states."""
-        horizon = horizon if horizon is not None else cast(T_, len(states))
+        assert len(states) > 0, "States sequence must not be empty."
 
+        horizon = horizon if horizon is not None else cast(T_, len(states))
         array = jnp.stack([state.array for state in states], axis=0)[:, :, jnp.newaxis]
 
         assert array.shape == (expected := (horizon, BICYCLE_D_X, 1)), (
@@ -162,7 +203,7 @@ class JaxBicycleStateBatch[T: int, M: int](
     def heading(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array[:, 2, :])
 
-    def velocities(self) -> Array[Dims[T, M]]:
+    def speed(self) -> Array[Dims[T, M]]:
         return np.asarray(self.array[:, 3, :])
 
     def rollout(self, index: int) -> JaxBicycleStateSequence[T, M]:

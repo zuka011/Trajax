@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from trajax import State, ControlInputSequence, Mppi
+from trajax import (
+    State,
+    ControlInputSequence,
+    Mppi,
+    ObstacleSimulator,
+    ObstacleStateObserver,
+)
 
 from tests.benchmarks.runner import (
     run_benchmark,
@@ -8,7 +14,7 @@ from tests.benchmarks.runner import (
     NumPyBenchmarkRunner,
     JaxBenchmarkRunner,
 )
-from tests.examples import mpcc, reference, obstacles, SimulatingObstacleStateProvider
+from tests.examples import mpcc, reference, obstacles
 
 from pytest import mark
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -20,7 +26,8 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
     initial_state: StateT
     nominal_input: InputT
 
-    obstacles: SimulatingObstacleStateProvider | None = None
+    obstacle_simulator: ObstacleSimulator | None = None
+    obstacle_state_observer: ObstacleStateObserver | None = None
 
     def __repr__(self) -> str:
         return f"MpccConfiguration(planner={self.planner.__class__.__name__})"
@@ -29,16 +36,18 @@ class MpccConfiguration[StateT: State, InputT: ControlInputSequence]:
 def accumulate_obstacle_states(
     configuration: MpccConfiguration, steps: int = 5
 ) -> None:
-    provider = configuration.obstacles
+    simulator = configuration.obstacle_simulator
+    observer = configuration.obstacle_state_observer
 
-    assert provider is not None, (
-        "A simulating obstacle state provider must be provided to accumulate obstacle states."
+    assert simulator is not None, "Obstacle simulator is required to accumulate states."
+    assert observer is not None, (
+        "Obstacle state observer is required to accumulate states."
     )
 
     # NOTE: To collect sufficient obstacle state history, we simulate a few steps
     # for the obstacles.
     for _ in range(steps):
-        provider.step()
+        observer.observe(simulator.step())
 
 
 @mark.parametrize(
@@ -98,7 +107,8 @@ def bench_mpcc_single_step(
                 ).planner,
                 initial_state=np_configuration.initial_state,
                 nominal_input=np_configuration.nominal_input,
-                obstacles=np_configuration.obstacles,
+                obstacle_simulator=np_configuration.obstacle_simulator,
+                obstacle_state_observer=np_configuration.obstacle_state_observer,
             ),
         ),
         (
@@ -112,7 +122,8 @@ def bench_mpcc_single_step(
                 ).planner,
                 initial_state=jax_configuration.initial_state,
                 nominal_input=jax_configuration.nominal_input,
-                obstacles=jax_configuration.obstacles,
+                obstacle_simulator=jax_configuration.obstacle_simulator,
+                obstacle_state_observer=jax_configuration.obstacle_state_observer,
             ),
         ),
     ],
@@ -155,7 +166,8 @@ def bench_mpcc_static_obstacles_single_step(
                 ).planner,
                 initial_state=np_configuration.initial_state,
                 nominal_input=np_configuration.nominal_input,
-                obstacles=np_configuration.obstacles,
+                obstacle_simulator=np_configuration.obstacle_simulator,
+                obstacle_state_observer=np_configuration.obstacle_state_observer,
             ),
         ),
         (
@@ -169,7 +181,8 @@ def bench_mpcc_static_obstacles_single_step(
                 ).planner,
                 initial_state=jax_configuration.initial_state,
                 nominal_input=jax_configuration.nominal_input,
-                obstacles=jax_configuration.obstacles,
+                obstacle_simulator=jax_configuration.obstacle_simulator,
+                obstacle_state_observer=jax_configuration.obstacle_state_observer,
             ),
         ),
     ],
@@ -213,7 +226,8 @@ def bench_mpcc_dynamic_obstacles_single_step(
                 ).planner,
                 initial_state=np_configuration.initial_state,
                 nominal_input=np_configuration.nominal_input,
-                obstacles=np_configuration.obstacles,
+                obstacle_simulator=np_configuration.obstacle_simulator,
+                obstacle_state_observer=np_configuration.obstacle_state_observer,
             ),
         ),
         (
@@ -228,7 +242,8 @@ def bench_mpcc_dynamic_obstacles_single_step(
                 ).planner,
                 initial_state=jax_configuration.initial_state,
                 nominal_input=jax_configuration.nominal_input,
-                obstacles=jax_configuration.obstacles,
+                obstacle_simulator=jax_configuration.obstacle_simulator,
+                obstacle_state_observer=jax_configuration.obstacle_state_observer,
             ),
         ),
     ],

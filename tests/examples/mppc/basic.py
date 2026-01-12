@@ -1,19 +1,21 @@
-from typing import Final, Sequence, Protocol, Self
+from typing import Final
 from dataclasses import dataclass, field
 
 from trajax import (
     Mppi,
     AugmentedModel,
+    DynamicalModel,
     AugmentedSampler,
-    ContouringCost,
-    LagCost,
     Trajectory,
     Circles,
-    Distance,
-    DistanceExtractor,
-    ObstacleMotionPredictor,
-    RiskCollector,
-    ControlCollector,
+    ObstaclePositionExtractor,
+    ObstacleStateObserver,
+    ObstacleSimulator,
+    MetricRegistry,
+    MpccErrorMetric,
+    CollisionMetric,
+    collectors,
+    metrics,
 )
 from trajax.numpy import (
     mppi,
@@ -36,9 +38,6 @@ from numtypes import array, Array, Dim1, Dim2
 
 import numpy as np
 
-from tests.examples.common import SimulatingObstacleStateProvider
-
-HORIZON: Final = 30
 
 type PhysicalState = types.bicycle.State
 type PhysicalStateBatch = types.bicycle.StateBatch
@@ -58,19 +57,26 @@ type MpccInputBatch = types.augmented.ControlInputBatch[
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.ObstacleStates
-type ObstacleStatesHistory = types.ObstacleStates
+type ObstacleStatesForTimeStep = types.ObstacleStatesForTimeStep
+type ObstaclePositions = types.Obstacle2dPositions
+type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
 
 
-class ObstacleStateProvider(SimulatingObstacleStateProvider[ObstacleStates], Protocol):
-    def with_time_step(self, time_step: float) -> Self:
-        """Returns a new obstacle state provider configured for the given time step size."""
-        ...
+class NumPyObstaclePositionExtractor(
+    ObstaclePositionExtractor[
+        ObstacleStatesForTimeStep,
+        ObstacleStates,
+        ObstaclePositionsForTimeStep,
+        ObstaclePositions,
+    ]
+):
+    def of_states_for_time_step(
+        self, states: ObstacleStatesForTimeStep, /
+    ) -> ObstaclePositionsForTimeStep:
+        return states.positions()
 
-    def with_predictor(
-        self, predictor: ObstacleMotionPredictor[ObstacleStatesHistory, ObstacleStates]
-    ) -> Self:
-        """Returns a new obstacle state provider using the given motion predictor."""
-        ...
+    def of_states(self, states: ObstacleStates, /) -> ObstaclePositions:
+        return states.positions()
 
 
 def path_parameter(states: VirtualStateBatch) -> types.PathParameters:
@@ -99,51 +105,31 @@ def bicycle_to_obstacle_states(
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyMpccPlannerConfiguration:
+    horizon: int
+
     reference: Trajectory
     planner: Planner
-    model: AugmentedModel
-    contouring_cost: ContouringCost
-    lag_cost: LagCost
+    model: DynamicalModel
     wheelbase: float
+    registry: MetricRegistry
+    metrics: tuple[MpccErrorMetric, CollisionMetric | None]
 
-    distance: DistanceExtractor[MpccStateBatch, ObstacleStates, Distance] | None = None
-    obstacles: ObstacleStateProvider | None = None
-    risk_collector: RiskCollector | None = None
-    control_collector: ControlCollector | None = None
-
-    @staticmethod
-    def stack_states(states: list[MpccState]) -> MpccStateBatch:
-        return types.augmented.state_batch.of(
-            physical=types.bicycle.state_batch.of_states(
-                [it.physical for it in states]
-            ),
-            virtual=types.simple.state_batch.of_states([it.virtual for it in states]),
-        )
-
-    @staticmethod
-    def stack_obstacles(obstacle_states: Sequence[ObstacleStates]) -> ObstacleStates:
-        return types.obstacle_states.of_states(obstacle_states)
-
-    @staticmethod
-    def zero_inputs(horizon: int) -> MpccInputBatch:
-        return types.augmented.control_input_batch.of(
-            physical=types.bicycle.control_input_batch.zero(horizon=horizon),
-            virtual=types.simple.control_input_batch.zero(horizon=horizon, dimension=1),
-        )
+    obstacle_simulator: ObstacleSimulator | None = None
+    obstacle_state_observer: ObstacleStateObserver | None = None
 
     @property
     def initial_state(self) -> MpccState:
         return types.augmented.state.of(
-            physical=types.bicycle.state(x=0.0, y=0.0, heading=0.0, speed=0.0),
+            physical=types.bicycle.state.create(x=0.0, y=0.0, heading=0.0, speed=0.0),
             virtual=types.simple.state.zeroes(dimension=1),
         )
 
     @property
     def nominal_input(self) -> MpccInputSequence:
         return types.augmented.control_input_sequence.of(
-            physical=types.bicycle.control_input_sequence.zeroes(horizon=HORIZON),
+            physical=types.bicycle.control_input_sequence.zeroes(horizon=self.horizon),
             virtual=types.simple.control_input_sequence.zeroes(
-                horizon=HORIZON, dimension=1
+                horizon=self.horizon, dimension=1
             ),
         )
 
@@ -267,7 +253,7 @@ class reference:
 
 
 class obstacles:
-    none: Final = create_obstacles.empty(horizon=HORIZON)
+    none: Final = create_obstacles.empty()
 
     class static:
         loop: Final = create_obstacles.static(
@@ -295,7 +281,6 @@ class obstacles:
                 ],
                 shape=(7,),
             ),
-            horizon=HORIZON,
         )
 
     class dynamic:
@@ -335,6 +320,8 @@ class obstacles:
 class configure:
     @staticmethod
     def planner_from_base(
+        *,
+        horizon: int = 30,
         reference: Trajectory = reference.small_circle,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
@@ -405,46 +392,55 @@ class configure:
             filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
+        planner = (
+            trajectories_collector := collectors.trajectories.decorating(
+                control_collector := collectors.controls.decorating(
+                    state_collector := collectors.states.decorating(planner)
+                ),
+                model=augmented_model,
+            )
+        )
+
         return NumPyMpccPlannerConfiguration(
+            horizon=horizon,
             reference=reference,
             planner=planner,
             model=augmented_model,
-            contouring_cost=contouring_cost,
-            lag_cost=lag_cost,
             wheelbase=L,
+            registry=metrics.registry(
+                mpcc_error_metrics := metrics.mpcc_error(
+                    contouring=contouring_cost, lag=lag_cost
+                ),
+                collectors=collectors.registry(
+                    states=(
+                        state_collector,
+                        types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                    controls=control_collector,
+                    trajectories=trajectories_collector,
+                ),
+            ),
+            metrics=(mpcc_error_metrics, None),
         )
 
     @staticmethod
     def planner_from_augmented(
         *,
+        horizon: int = 30,
         reference: Trajectory = reference.small_circle,
-        obstacles: ObstacleStateProvider = obstacles.none,
+        obstacles: ObstacleSimulator = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
         use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
-        obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.curvilinear(
-                horizon=HORIZON,
-                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
-                prediction=bicycle_to_obstacle_states,
-                propagator=propagator.linear(
-                    time_step_size=dt,
-                    initial_covariance=propagator.covariance.constant_variance(
-                        position_variance=0.01, velocity_variance=1.0
-                    ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
-                )
-                if use_covariance_propagation
-                else None,
-            )
-        )
-
         planner, augmented_model = mppi.augmented(
             models=(
                 model.bicycle.dynamical(
-                    time_step_size=dt,
-                    wheelbase=L,
+                    time_step_size=(dt := 0.1),
+                    wheelbase=(L := 2.5),
                     speed_limits=(0.0, 15.0),
                     steering_limits=(-0.5, 0.5),
                     acceleration_limits=(-3.0, 3.0),
@@ -495,7 +491,38 @@ class configure:
                 ),
                 costs.comfort.control_smoothing(weights=weights.control_smoothing),
                 costs.safety.collision(
-                    obstacle_states=obstacles,
+                    obstacle_states=(
+                        forecasts_collector := collectors.obstacle_forecasts.decorating(
+                            obstacles_provider := create_obstacles.provider.predicting(
+                                predictor=predictor.curvilinear(
+                                    horizon=horizon,
+                                    model=model.bicycle.obstacle(
+                                        time_step_size=dt, wheelbase=L
+                                    ),
+                                    prediction=bicycle_to_obstacle_states,
+                                    propagator=propagator.linear(
+                                        time_step_size=dt,
+                                        initial_covariance=propagator.covariance.constant_variance(
+                                            position_variance=0.01,
+                                            velocity_variance=1.0,
+                                        ),
+                                        padding=propagator.padding(
+                                            to_dimension=3, epsilon=1e-9
+                                        ),
+                                    )
+                                    if use_covariance_propagation
+                                    else None,
+                                ),
+                                history=types.obstacle_states_running_history.empty(
+                                    horizon=2, obstacle_count=obstacles.obstacle_count
+                                ),
+                                id_assignment=create_obstacles.id_assignment.hungarian(
+                                    position_extractor=NumPyObstaclePositionExtractor(),
+                                    cutoff=10.0,
+                                ),
+                            )
+                        )
+                    ),
                     sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
@@ -523,7 +550,7 @@ class configure:
                     weight=weights.collision,
                     metric=(
                         risk_collector := (
-                            risk.collector.decorating(
+                            collectors.risk.decorating(
                                 risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
@@ -539,52 +566,65 @@ class configure:
             filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
-        planner = (control_collector := mppi.collector.controls.decorating(planner))
+        planner = (
+            trajectories_collector := collectors.trajectories.decorating(
+                control_collector := collectors.controls.decorating(
+                    state_collector := collectors.states.decorating(planner)
+                ),
+                model=augmented_model,
+            )
+        )
+
+        obstacle_collector = collectors.obstacles.decorating(obstacles_provider)
 
         return NumPyMpccPlannerConfiguration(
+            horizon=horizon,
             reference=reference,
             planner=planner,
             model=augmented_model,
-            contouring_cost=contouring_cost,
-            lag_cost=lag_cost,
             wheelbase=L,
-            distance=circles_distance,
-            obstacles=obstacles,
-            risk_collector=risk_collector,
-            control_collector=control_collector,
+            registry=metrics.registry(
+                mpcc_error_metrics := metrics.mpcc_error(
+                    contouring=contouring_cost, lag=lag_cost
+                ),
+                collision_metrics := metrics.collision(
+                    distance_threshold=0.0, distance=circles_distance
+                ),
+                collectors=collectors.registry(
+                    states=(
+                        state_collector,
+                        types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                    controls=control_collector,
+                    risks=risk_collector,
+                    trajectories=trajectories_collector,
+                    obstacles=(obstacle_collector, types.obstacle_states.of_states),
+                    obstacle_forecasts=forecasts_collector,
+                ),
+            ),
+            metrics=(mpcc_error_metrics, collision_metrics),
+            obstacle_simulator=obstacles.with_time_step_size(dt),
+            obstacle_state_observer=obstacle_collector,
         )
 
     @staticmethod
     def planner_from_mpcc(
         *,
+        horizon: int = 30,
         reference: Trajectory = reference.small_circle,
-        obstacles: ObstacleStateProvider = obstacles.none,
+        obstacles: ObstacleSimulator = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
-        obstacles = obstacles.with_time_step(dt := 0.1).with_predictor(
-            predictor.curvilinear(
-                horizon=HORIZON,
-                model=model.bicycle.obstacle(time_step_size=dt, wheelbase=(L := 2.5)),
-                prediction=bicycle_to_obstacle_states,
-                propagator=propagator.linear(
-                    time_step_size=dt,
-                    initial_covariance=propagator.covariance.constant_variance(
-                        position_variance=0.01, velocity_variance=1.0
-                    ),
-                    padding=propagator.padding(to_dimension=3, epsilon=1e-9),
-                )
-                if use_covariance_propagation
-                else None,
-            )
-        )
-
         planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
             model=model.bicycle.dynamical(
-                time_step_size=dt,
-                wheelbase=L,
+                time_step_size=(dt := 0.1),
+                wheelbase=(L := 2.5),
                 speed_limits=(0.0, 15.0),
                 steering_limits=(-0.5, 0.5),
                 acceleration_limits=(-3.0, 3.0),
@@ -598,7 +638,38 @@ class configure:
             costs=(
                 costs.comfort.control_smoothing(weights=weights.control_smoothing),
                 costs.safety.collision(
-                    obstacle_states=obstacles,
+                    obstacle_states=(
+                        forecasts_collector := collectors.obstacle_forecasts.decorating(
+                            obstacles_provider := create_obstacles.provider.predicting(
+                                predictor=predictor.curvilinear(
+                                    horizon=horizon,
+                                    model=model.bicycle.obstacle(
+                                        time_step_size=dt, wheelbase=L
+                                    ),
+                                    prediction=bicycle_to_obstacle_states,
+                                    propagator=propagator.linear(
+                                        time_step_size=dt,
+                                        initial_covariance=propagator.covariance.constant_variance(
+                                            position_variance=0.01,
+                                            velocity_variance=1.0,
+                                        ),
+                                        padding=propagator.padding(
+                                            to_dimension=3, epsilon=1e-9
+                                        ),
+                                    )
+                                    if use_covariance_propagation
+                                    else None,
+                                ),
+                                history=types.obstacle_states_running_history.empty(
+                                    horizon=2, obstacle_count=obstacles.obstacle_count
+                                ),
+                                id_assignment=create_obstacles.id_assignment.hungarian(
+                                    position_extractor=NumPyObstaclePositionExtractor(),
+                                    cutoff=10.0,
+                                ),
+                            )
+                        )
+                    ),
                     sampler=create_obstacles.sampler.gaussian(
                         seed=sampling.obstacle_seed
                     ),
@@ -628,7 +699,7 @@ class configure:
                     weight=weights.collision,
                     metric=(
                         risk_collector := (
-                            risk.collector.decorating(
+                            collectors.risk.decorating(
                                 risk.mean_variance(gamma=0.5, sample_count=10)
                             )
                             if use_covariance_propagation
@@ -670,17 +741,46 @@ class configure:
             filter_function=filters.savgol(window_length=11, polynomial_order=3),
         )
 
-        planner = (control_collector := mppi.collector.controls.decorating(planner))
+        planner = (
+            trajectories_collector := collectors.trajectories.decorating(
+                control_collector := collectors.controls.decorating(
+                    state_collector := collectors.states.decorating(planner)
+                ),
+                model=augmented_model,
+            )
+        )
+
+        obstacle_collector = collectors.obstacles.decorating(obstacles_provider)
 
         return NumPyMpccPlannerConfiguration(
+            horizon=horizon,
             reference=reference,
             planner=planner,
             model=augmented_model,
-            contouring_cost=contouring_cost,
-            lag_cost=lag_cost,
             wheelbase=L,
-            distance=circles_distance,
-            obstacles=obstacles,
-            risk_collector=risk_collector,
-            control_collector=control_collector,
+            registry=metrics.registry(
+                mpcc_error_metrics := metrics.mpcc_error(
+                    contouring=contouring_cost, lag=lag_cost
+                ),
+                collision_metrics := metrics.collision(
+                    distance_threshold=0.0, distance=circles_distance
+                ),
+                collectors=collectors.registry(
+                    states=(
+                        state_collector,
+                        types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                    controls=control_collector,
+                    risks=risk_collector,
+                    trajectories=trajectories_collector,
+                    obstacles=(obstacle_collector, types.obstacle_states.of_states),
+                    obstacle_forecasts=forecasts_collector,
+                ),
+            ),
+            metrics=(mpcc_error_metrics, collision_metrics),
+            obstacle_simulator=obstacles.with_time_step_size(dt),
+            obstacle_state_observer=obstacle_collector,
         )

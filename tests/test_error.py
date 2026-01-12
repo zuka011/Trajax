@@ -50,12 +50,10 @@ class test_that_contouring_cost_computes_correct_lateral_error:
                     ),
                     weight=1.0,
                 ),
-                inputs := data.control_input_batch(
-                    np.zeros((T := 1, D_u := 1, M := 1))
-                ),
                 states := data.state_batch(
                     array(
-                        [[[phi := 5.0], [x := 7.5], [y := 7.5]]], shape=(T, D_x := 3, M)
+                        [[[phi := 5.0], [x := 7.5], [y := 7.5]]],
+                        shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
                 expected_error := 0.0,
@@ -77,13 +75,10 @@ class test_that_contouring_cost_computes_correct_lateral_error:
                         ),
                         weight=1.0,
                     ),
-                    inputs := data.control_input_batch(
-                        np.zeros((T := 1, D_u := 1, M := 1))
-                    ),
                     states := data.state_batch(
                         array(
                             [[[phi], [5.0], [lateral_deviation]]],
-                            shape=(T, D_x := 3, M),
+                            shape=(T := 1, D_x := 3, M := 1),
                         )
                     ),
                     # Left of path is negative error
@@ -95,7 +90,7 @@ class test_that_contouring_cost_computes_correct_lateral_error:
         ]
 
     @mark.parametrize(
-        ["contouring_cost", "inputs", "states", "expected_error"],
+        ["contouring_cost", "states", "expected_error"],
         [
             *cases(
                 costs=costs.numpy,
@@ -116,11 +111,10 @@ class test_that_contouring_cost_computes_correct_lateral_error:
     def test[InputBatchT, StateBatchT](
         self,
         contouring_cost: ContouringCost[InputBatchT, StateBatchT, Error],
-        inputs: InputBatchT,
         states: StateBatchT,
         expected_error: float,
     ) -> None:
-        error = contouring_cost.error(inputs=inputs, states=states)
+        error = contouring_cost.error(states=states)
         assert np.allclose(error, expected_error, atol=1e-6)
 
 
@@ -146,16 +140,13 @@ class test_that_contouring_error_handles_multiple_timesteps_and_rollouts:
                     ),
                     weight=1.0,
                 ),
-                inputs := data.control_input_batch(
-                    np.zeros((T := 2, D_u := 1, M := 3))
-                ),
                 states := data.state_batch(
                     array(
                         [
                             [[2.0, 5.0, 8.0], [2.0, 5.0, 8.0], [0.5, 1.0, -1.5]],
                             [[3.0, 6.0, 9.0], [3.0, 6.0, 9.0], [1.0, -2.0, 0.0]],
                         ],
-                        shape=(T, D_x := 3, M),
+                        shape=(T := 2, D_x := 3, M := 3),
                     )
                 ),
                 expected_errors := array(
@@ -165,7 +156,7 @@ class test_that_contouring_error_handles_multiple_timesteps_and_rollouts:
         ]
 
     @mark.parametrize(
-        ["contouring_cost", "inputs", "states", "expected_errors"],
+        ["contouring_cost", "states", "expected_errors"],
         [
             *cases(
                 costs=costs.numpy,
@@ -186,11 +177,10 @@ class test_that_contouring_error_handles_multiple_timesteps_and_rollouts:
     def test[InputBatchT, StateBatchT](
         self,
         contouring_cost: ContouringCost[InputBatchT, StateBatchT, Error],
-        inputs: InputBatchT,
         states: StateBatchT,
         expected_errors: Array,
     ) -> None:
-        error = contouring_cost.error(inputs=inputs, states=states)
+        error = contouring_cost.error(states=states)
         assert np.allclose(np.abs(error), expected_errors, atol=1e-10)
 
 
@@ -217,13 +207,10 @@ class test_that_lag_cost_computes_correct_longitudinal_error:
                         ),
                         weight=1.0,
                     ),
-                    inputs := data.control_input_batch(
-                        np.zeros((T := 1, D_u := 1, M := 1))
-                    ),
                     states := data.state_batch(
                         array(
                             [[[phi := 5.0], [x := 5.0 + offset], [y := 5.0 - offset]]],
-                            shape=(T, D_x := 3, M),
+                            shape=(T := 1, D_x := 3, M := 1),
                         )
                     ),
                     expected_error := 0.0,
@@ -247,11 +234,11 @@ class test_that_lag_cost_computes_correct_longitudinal_error:
                         ),
                         weight=1.0,
                     ),
-                    inputs := data.control_input_batch(
-                        np.zeros((T := 1, D_u := 1, M := 1))
-                    ),
                     states := data.state_batch(
-                        array([[[phi], [x_position], [0.0]]], shape=(T, D_x := 3, M))
+                        array(
+                            [[[phi], [x_position], [0.0]]],
+                            shape=(T := 1, D_x := 3, M := 1),
+                        )
                     ),
                     # Horizontal path at y=0, heading=0, reference at x=phi
                     # Lag error = -cos(0)*(x - x_ref) - sin(0)*(y - y_ref) = phi - x
@@ -263,7 +250,7 @@ class test_that_lag_cost_computes_correct_longitudinal_error:
         ]
 
     @mark.parametrize(
-        ["lag_cost", "inputs", "states", "expected_error"],
+        ["lag_cost", "states", "expected_error"],
         [
             *cases(
                 costs=costs.numpy,
@@ -284,11 +271,10 @@ class test_that_lag_cost_computes_correct_longitudinal_error:
     def test[InputBatchT, StateBatchT](
         self,
         lag_cost: LagCost[InputBatchT, StateBatchT, Error],
-        inputs: InputBatchT,
         states: StateBatchT,
         expected_error: float,
     ) -> None:
-        error = lag_cost.error(inputs=inputs, states=states)
+        error = lag_cost.error(states=states)
         assert np.allclose(error, expected_error, atol=1e-10)
 
 
@@ -314,9 +300,6 @@ class test_that_lag_error_handles_multiple_timesteps_and_rollouts:
                     ),
                     weight=1.0,
                 ),
-                inputs := data.control_input_batch(
-                    np.zeros((T := 2, D_u := 1, M := 3))
-                ),
                 states := data.state_batch(
                     array(
                         [
@@ -332,7 +315,7 @@ class test_that_lag_error_handles_multiple_timesteps_and_rollouts:
                                 [0.0, 0.0, 0.0],
                             ],
                         ],
-                        shape=(T, D_x := 3, M),
+                        shape=(T := 2, D_x := 3, M := 3),
                     )
                 ),
                 expected_errors := array(
@@ -346,7 +329,7 @@ class test_that_lag_error_handles_multiple_timesteps_and_rollouts:
         ]
 
     @mark.parametrize(
-        ["lag_cost", "inputs", "states", "expected_errors"],
+        ["lag_cost", "states", "expected_errors"],
         [
             *cases(
                 costs=costs.numpy,
@@ -367,9 +350,8 @@ class test_that_lag_error_handles_multiple_timesteps_and_rollouts:
     def test[InputBatchT, StateBatchT](
         self,
         lag_cost: LagCost[InputBatchT, StateBatchT, Error],
-        inputs: InputBatchT,
         states: StateBatchT,
         expected_errors: Array,
     ) -> None:
-        error = lag_cost.error(inputs=inputs, states=states)
+        error = lag_cost.error(states=states)
         assert np.allclose(error, expected_errors, atol=1e-10)

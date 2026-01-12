@@ -56,8 +56,28 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
 class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
     _array: Float[JaxArray, "T D_x"]
 
+    @staticmethod
+    def of_states[T_: int, D_x_: int](
+        states: Sequence[JaxSimpleState[D_x_]], *, horizon: T_ | None = None
+    ) -> "JaxSimpleStateSequence[T_, D_x_]":
+        """Creates a simple state sequence from a sequence of simple states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+        dimension = states[0].dimension
+        array = jnp.stack([state.array for state in states], axis=0)
+
+        assert array.shape == (horizon, dimension), (
+            f"Expected array shape {(horizon, dimension)}, but got {array.shape}"
+        )
+
+        return JaxSimpleStateSequence(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
         return np.asarray(self.array)
+
+    def batched(self) -> "JaxSimpleStateBatch[T, D_x, D[1]]":
+        return JaxSimpleStateBatch.wrap(self.array[..., jnp.newaxis])
 
     @property
     def horizon(self) -> T:
@@ -78,15 +98,24 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     _array: Float[JaxArray, "T D_x M"]
 
     @staticmethod
+    def wrap(array: Float[JaxArray, "T D_x M"]) -> "JaxSimpleStateBatch[T, D_x, M]":
+        """Creates a JAX simple state batch from the given array."""
+        return JaxSimpleStateBatch(array)
+
+    @staticmethod
     def of_states[D_x_: int, T_: int = int](
-        states: Sequence[JaxSimpleState[D_x_]], *, horizon: T_ | None = None
+        states: Sequence[JaxState[D_x_]], *, horizon: T_ | None = None
     ) -> "JaxSimpleStateBatch[T_, D_x_, int]":
         """Creates a simple state batch from a sequence of simple states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
-
+        dimension = states[0].dimension
         array = jnp.stack([state.array for state in states], axis=0)[:, :, jnp.newaxis]
+
+        assert array.shape == (horizon, dimension, 1), (
+            f"Expected array shape {(horizon, dimension, 1)}, but got {array.shape}"
+        )
 
         return JaxSimpleStateBatch(array)
 
@@ -95,6 +124,9 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
 
     def rollout(self, index: int) -> JaxSimpleStateSequence[T, D_x]:
         return JaxSimpleStateSequence(self.array[..., index])
+
+    def at(self, *, time_step: int, rollout: int) -> JaxSimpleState[D_x]:
+        return JaxSimpleState(self.array[time_step, :, rollout])
 
     @property
     def horizon(self) -> T:

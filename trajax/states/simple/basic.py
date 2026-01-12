@@ -54,8 +54,26 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
 class NumPySimpleStateSequence[T: int, D_x: int](NumPyStateSequence[T, D_x]):
     _array: Array[Dims[T, D_x]]
 
+    @staticmethod
+    def of_states[T_: int, D_x_: int](
+        states: Sequence[NumPyState[D_x_]], *, horizon: T_ | None = None
+    ) -> "NumPySimpleStateSequence[T_, D_x_]":
+        """Creates a simple state sequence from a sequence of simple states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+        dimension = states[0].dimension
+        array = np.stack([state.array for state in states], axis=0)
+
+        assert shape_of(array, matches=(horizon, dimension))
+
+        return NumPySimpleStateSequence(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
         return self.array
+
+    def batched(self) -> "NumPySimpleStateBatch[T, D_x, D[1]]":
+        return NumPySimpleStateBatch.wrap(self.array[..., np.newaxis])
 
     @property
     def horizon(self) -> T:
@@ -75,6 +93,13 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
     _array: Array[Dims[T, D_x, M]]
 
     @staticmethod
+    def wrap[T_: int, D_x_: int, M_: int](
+        array: Array[Dims[T_, D_x_, M_]],
+    ) -> "NumPySimpleStateBatch[T_, D_x_, M_]":
+        """Creates a NumPy simple state batch from the given array."""
+        return NumPySimpleStateBatch(array)
+
+    @staticmethod
     def of_states[D_x_: int, T_: int = int](
         states: Sequence[NumPySimpleState[D_x_]], *, horizon: T_ | None = None
     ) -> "NumPySimpleStateBatch[T_, D_x_, D[1]]":
@@ -83,7 +108,6 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
         dimension = states[0].dimension
-
         array = np.stack([state.array for state in states], axis=0)[:, :, np.newaxis]
 
         assert shape_of(array, matches=(horizon, dimension, 1))
@@ -95,6 +119,9 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
 
     def rollout(self, index: int) -> NumPySimpleStateSequence[T, D_x]:
         return NumPySimpleStateSequence(self.array[..., index])
+
+    def at(self, *, time_step: int, rollout: int) -> NumPySimpleState[D_x]:
+        return NumPySimpleState(self.array[time_step, :, rollout])
 
     @property
     def horizon(self) -> T:

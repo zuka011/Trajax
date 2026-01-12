@@ -30,5 +30,5 @@ from .boundary import (
     NumPyFixedWidthBoundary as NumPyFixedWidthBoundary,
     JaxFixedWidthBoundary as JaxFixedWidthBoundary,
 )
-from .risk import RiskCollector as RiskCollector, risk as risk
+from .risk import risk as risk
 from .factory import costs as costs, distance as distance, boundary as boundary

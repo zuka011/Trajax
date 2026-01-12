@@ -74,7 +74,7 @@ class JaxContouringCost[StateBatchT](
 
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
-    ) -> JaxCosts[T, M]:  #
+    ) -> JaxCosts[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading_array
         positions = self.position_extractor(states)
@@ -90,8 +90,8 @@ class JaxContouringCost[StateBatchT](
             )
         )
 
-    def error[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    def error[T: int = int, M: int = int](
+        self, *, states: StateBatchT
     ) -> JaxError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading_array
@@ -158,8 +158,8 @@ class JaxLagCost[StateBatchT](
             )
         )
 
-    def error[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    def error[T: int = int, M: int = int](
+        self, *, states: StateBatchT
     ) -> JaxError[T, M]:
         ref_points, positions = self._reference_points_and_positions(states=states)
         heading = ref_points.heading_array

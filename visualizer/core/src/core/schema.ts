@@ -35,30 +35,57 @@ const AdditionalPlotSchema = z.object({
     group: z.string().optional(),
 });
 
-export const SimulationDataSchema = z.object({
-    reference: ReferenceTrajectorySchema,
-    positionsX: z.array(z.number()),
-    positionsY: z.array(z.number()),
-    headings: z.array(z.number()),
-    pathParameters: z.array(z.number()),
+const SimulationInfoSchema = z.object({
     pathLength: z.number(),
-    timeStep: z.number().default(0.1),
-    ghostX: z.array(z.number()).optional(),
-    ghostY: z.array(z.number()).optional(),
-    optimalTrajectoryX: z.array(z.array(z.number())).optional(),
-    optimalTrajectoryY: z.array(z.array(z.number())).optional(),
-    nominalTrajectoryX: z.array(z.array(z.number())).optional(),
-    nominalTrajectoryY: z.array(z.array(z.number())).optional(),
-    vehicleType: z.enum(["triangle", "car"]).default("triangle"),
-    wheelbase: z.number().default(2.5),
-    vehicleWidth: z.number().default(1.2),
-    obstaclePositionsX: z.array(z.array(z.number())).optional(),
-    obstaclePositionsY: z.array(z.array(z.number())).optional(),
-    obstacleHeadings: z.array(z.array(z.number())).optional(),
-    obstacleForecastX: z.array(z.array(z.array(z.number()))).optional(),
-    obstacleForecastY: z.array(z.array(z.array(z.number()))).optional(),
-    obstacleForecastHeading: z.array(z.array(z.array(z.number()))).optional(),
-    obstacleForecastCovariance: z.array(z.array(z.array(z.array(z.array(z.number()))))).optional(),
+    timeStep: z.number().optional().default(0.1),
+    wheelbase: z.number().optional().default(2.5),
+    vehicleWidth: z.number().optional().default(1.2),
+    vehicleType: z.enum(["triangle", "car"]).optional().default("triangle"),
+});
+
+const EgoGhostSchema = z.object({
+    x: z.array(z.number()),
+    y: z.array(z.number()),
+});
+
+const EgoSchema = z.object({
+    x: z.array(z.number()),
+    y: z.array(z.number()),
+    heading: z.array(z.number()),
+    pathParameter: z.array(z.number()),
+    ghost: EgoGhostSchema.optional(),
+});
+
+const PlannedTrajectorySchema = z.object({
+    x: z.array(z.array(z.number())),
+    y: z.array(z.array(z.number())),
+});
+
+const PlannedTrajectoriesSchema = z.object({
+    optimal: PlannedTrajectorySchema.optional(),
+    nominal: PlannedTrajectorySchema.optional(),
+});
+
+const ObstacleForecastSchema = z.object({
+    x: z.array(z.array(z.array(z.number().nullable()))),
+    y: z.array(z.array(z.array(z.number().nullable()))),
+    heading: z.array(z.array(z.array(z.number().nullable()))),
+    covariance: z.array(z.array(z.array(z.array(z.array(z.number().nullable()))))).optional(),
+});
+
+const ObstaclesSchema = z.object({
+    x: z.array(z.array(z.number())),
+    y: z.array(z.array(z.number())),
+    heading: z.array(z.array(z.number())),
+    forecast: ObstacleForecastSchema.optional(),
+});
+
+export const SimulationDataSchema = z.object({
+    info: SimulationInfoSchema,
+    reference: ReferenceTrajectorySchema,
+    ego: EgoSchema,
+    trajectories: PlannedTrajectoriesSchema.optional(),
+    obstacles: ObstaclesSchema.optional(),
     additionalPlots: z.array(AdditionalPlotSchema).optional(),
 });
 

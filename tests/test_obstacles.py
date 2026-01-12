@@ -16,7 +16,7 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
     def cases(obstacles, data, types) -> Sequence[tuple]:
         return [
             (
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 5),
@@ -44,7 +44,7 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
             ),
             *[
                 (  # No History
-                    provider := obstacles.predicting(
+                    provider := obstacles.provider.predicting(
                         predictor=stubs.ObstacleMotionPredictor.returns(
                             prediction := data.obstacle_states(
                                 x=np.random.rand(T := 10, K := 3),
@@ -75,7 +75,7 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                 ]
             ],
             (  # Old observations should be dropped when horizon is exceeded
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 5),
@@ -139,7 +139,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
     def cases(obstacles, data, types) -> Sequence[tuple]:
         return [
             (
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 3),
@@ -315,7 +315,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                 prediction,
             ),
             (  # Obstacle disappears then reappears
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 4),
@@ -501,7 +501,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                 prediction,
             ),
             (  # Total number of IDs is less than expected.
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 4),
@@ -583,7 +583,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                 prediction,
             ),
             (  # Total number of IDs exceeds expected. Older IDs are dropped.
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 3),
@@ -757,7 +757,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                 prediction,
             ),
             (  # No limit on total number of IDs.
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 4),
@@ -825,7 +825,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                 prediction,
             ),
             (  # Not enough history to fill horizon.
-                provider := obstacles.predicting(
+                provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
                         prediction := data.obstacle_states(
                             x=np.random.rand(T := 15, K := 2),

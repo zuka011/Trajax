@@ -92,7 +92,7 @@ class numpy:
 
     @staticmethod
     def state(*, x: float, y: float, heading: float, speed: float) -> NumPyState:
-        return types.numpy.bicycle.state(x=x, y=y, heading=heading, speed=speed)
+        return types.numpy.bicycle.state.create(x=x, y=y, heading=heading, speed=speed)
 
 
 class jax:

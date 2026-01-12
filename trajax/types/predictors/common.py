@@ -81,9 +81,13 @@ class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT](Pr
         ...
 
 
-class ObstacleStateSequences[T: int, D_o: int, K: int](Protocol):
+class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the obstacle state sequences as a NumPy array."""
+        ...
+
+    def single(self) -> SingleSampleT:
+        """Returns the state sequences as a sampled obstacle state batch with one sample."""
         ...
 
     @property

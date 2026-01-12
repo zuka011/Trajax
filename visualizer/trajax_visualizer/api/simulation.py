@@ -7,7 +7,7 @@ from importlib.resources import files
 from trajax_visualizer.api.config import config
 
 from aiopath import AsyncPath
-from numtypes import Array, D, Dims, Dim1, IndexArray
+from numtypes import Array, D, Dims, Dim1
 
 import msgspec
 import numpy as np
@@ -32,17 +32,154 @@ def default_output_directory() -> Path:
 
 type VehicleType = Literal["triangle", "car"]
 type ScaleType = Literal["linear", "log"]
-type ObstacleCoordinate[T: int = int, K: int = int] = Array[Dims[T, K]]
-type ObstacleForecast[T: int = int, H: int = int, K: int = int] = Array[Dims[T, H, K]]
-type ObstacleForecastCovariance[T: int = int, H: int = int, K: int = int] = Array[
+type ObstacleCoordinateArray[T: int = int, K: int = int] = Array[Dims[T, K]]
+type ObstacleForecastArray[T: int = int, H: int = int, K: int = int] = Array[
+    Dims[T, H, K]
+]
+type ObstacleForecastCovarianceArray[T: int = int, H: int = int, K: int = int] = Array[
     Dims[T, H, D[2], D[2], K]
 ]
-type PlannedTrajectory[T: int = int, H: int = int] = Array[Dims[T, H]]
+type PlannedTrajectoryCoordinateArray[T: int = int, H: int = int] = Array[Dims[T, H]]
 
 
 class ReferenceTrajectory(msgspec.Struct):
     x: Array[Dim1]
     y: Array[Dim1]
+
+
+class SimulationInfo(msgspec.Struct, rename="camel", omit_defaults=True):
+    path_length: float
+    time_step: float | None = None
+    wheelbase: float | None = None
+    vehicle_width: float | None = None
+    vehicle_type: VehicleType | None = None
+
+
+class EgoGhost(msgspec.Struct, rename="camel", omit_defaults=True):
+    x: Array[Dim1]
+    y: Array[Dim1]
+
+    def __post_init__(self) -> None:
+        assert len(self.x) == len(self.y), (
+            f"Ego ghost x and y must have the same length. Got {len(self.x)} (x) and {len(self.y)} (y)."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return len(self.x)
+
+
+class Ego(msgspec.Struct, rename="camel", omit_defaults=True):
+    x: Array[Dim1]
+    y: Array[Dim1]
+    heading: Array[Dim1]
+    path_parameter: Array[Dim1]
+    ghost: EgoGhost | None = None
+
+    def __post_init__(self) -> None:
+        assert (
+            len(self.x) == len(self.y) == len(self.heading) == len(self.path_parameter)
+        ), (
+            f"Ego x, y, heading, and path_parameter must have the same length. "
+            f"Got {len(self.x)} (x), {len(self.y)} (y), {len(self.heading)} (heading), "
+            f"and {len(self.path_parameter)} (path_parameter)."
+        )
+        assert (
+            self.ghost is None or self.ghost.time_step_count == self.time_step_count
+        ), (
+            f"Ego ghost must have the same number of time steps as ego. "
+            f"Got {self.ghost.time_step_count} (ghost) and {self.time_step_count} (ego)."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return len(self.x)
+
+
+class PlannedTrajectory(msgspec.Struct, rename="camel", omit_defaults=True):
+    x: PlannedTrajectoryCoordinateArray
+    y: PlannedTrajectoryCoordinateArray
+
+    def __post_init__(self) -> None:
+        assert self.x.shape == self.y.shape, (
+            f"Trajectory x and y must have the same shape. Got {self.x.shape} (x) and {self.y.shape} (y)."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return len(self.x)
+
+
+class PlannedTrajectories(msgspec.Struct, rename="camel", omit_defaults=True):
+    optimal: PlannedTrajectory | None = None
+    nominal: PlannedTrajectory | None = None
+
+    def __post_init__(self) -> None:
+        assert (
+            self.optimal is None
+            or self.nominal is None
+            or self.optimal.time_step_count == self.nominal.time_step_count
+        ), (
+            f"Optimal and nominal trajectories must have the same number of time steps. "
+            f"Got {self.optimal.time_step_count} (optimal) and {self.nominal.time_step_count} (nominal)."
+        )
+
+    @property
+    def time_step_count(self) -> int | None:
+        if self.optimal is not None:
+            return self.optimal.time_step_count
+
+        if self.nominal is not None:
+            return self.nominal.time_step_count
+
+
+class ObstacleForecast(msgspec.Struct, rename="camel", omit_defaults=True):
+    x: ObstacleForecastArray
+    y: ObstacleForecastArray
+    heading: ObstacleForecastArray
+    covariance: ObstacleForecastCovarianceArray | None = None
+
+    def __post_init__(self) -> None:
+        assert self.x.shape == self.y.shape == self.heading.shape, (
+            f"Obstacle forecast x, y, and heading must have the same shape. "
+            f"Got {self.x.shape} (x), {self.y.shape} (y), and {self.heading.shape} (heading)."
+        )
+
+        assert (
+            self.covariance is None or self.covariance.shape[:2] == self.x.shape[:2]
+        ), (
+            f"Obstacle forecast covariance must have the same first two dimensions as x, y, and heading. "
+            f"Got {self.covariance.shape} (covariance) and {self.x.shape} (x)."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return self.x.shape[0]
+
+
+class Obstacles(msgspec.Struct, rename="camel", omit_defaults=True):
+    x: ObstacleCoordinateArray
+    y: ObstacleCoordinateArray
+    heading: ObstacleCoordinateArray
+    forecast: ObstacleForecast | None = None
+
+    def __post_init__(self) -> None:
+        assert self.x.shape == self.y.shape == self.heading.shape, (
+            f"Obstacle x, y, and heading must have the same shape. "
+            f"Got {self.x.shape} (x), {self.y.shape} (y), and {self.heading.shape} (heading)."
+        )
+
+        assert (
+            self.forecast is None
+            or self.forecast.time_step_count == self.time_step_count
+        ), (
+            f"Obstacle forecast must have the same number of time steps as obstacles. "
+            f"Got {self.forecast.time_step_count} (forecast) and {self.time_step_count} (obstacles)."
+        )
+
+    @property
+    def time_step_count(self) -> int:
+        return self.x.shape[0]
 
 
 class PlotSeries(msgspec.Struct, rename="camel", omit_defaults=True):
@@ -102,119 +239,40 @@ class AdditionalPlot(msgspec.Struct, rename="camel", omit_defaults=True):
 
 
 class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
+    info: SimulationInfo
     reference: ReferenceTrajectory
-    positions_x: Array[Dim1]
-    positions_y: Array[Dim1]
-    headings: Array[Dim1]
-    path_parameters: Array[Dim1]
-    path_length: float
-    time_step: float | None = None
-    wheelbase: float | None = None
-    vehicle_width: float | None = None
-    ghost_x: Array[Dim1] | None = None
-    ghost_y: Array[Dim1] | None = None
-    optimal_trajectory_x: PlannedTrajectory | None = None
-    optimal_trajectory_y: PlannedTrajectory | None = None
-    nominal_trajectory_x: PlannedTrajectory | None = None
-    nominal_trajectory_y: PlannedTrajectory | None = None
-    vehicle_type: VehicleType | None = None
-    obstacle_positions_x: ObstacleCoordinate | None = None
-    obstacle_positions_y: ObstacleCoordinate | None = None
-    obstacle_headings: ObstacleCoordinate | None = None
-    obstacle_forecast_x: ObstacleForecast | None = None
-    obstacle_forecast_y: ObstacleForecast | None = None
-    obstacle_forecast_heading: ObstacleForecast | None = None
-    obstacle_forecast_covariance: ObstacleForecastCovariance | None = None
+    ego: Ego
+    trajectories: PlannedTrajectories | None = None
+    obstacles: Obstacles | None = None
     additional_plots: Sequence[AdditionalPlot] | None = None
 
     @staticmethod
     def create(
         *,
+        info: SimulationInfo,
         reference: ReferenceTrajectory,
-        positions_x: Array[Dim1],
-        positions_y: Array[Dim1],
-        headings: Array[Dim1],
-        path_parameters: Array[Dim1],
-        path_length: float,
-        time_step: float | None = None,
-        ghost_x: Array[Dim1] | None = None,
-        ghost_y: Array[Dim1] | None = None,
-        optimal_trajectory_x: PlannedTrajectory | None = None,
-        optimal_trajectory_y: PlannedTrajectory | None = None,
-        nominal_trajectory_x: PlannedTrajectory | None = None,
-        nominal_trajectory_y: PlannedTrajectory | None = None,
-        vehicle_type: VehicleType | None = None,
-        wheelbase: float | None = None,
-        vehicle_width: float | None = None,
-        obstacle_positions_x: ObstacleCoordinate | None = None,
-        obstacle_positions_y: ObstacleCoordinate | None = None,
-        obstacle_headings: ObstacleCoordinate | None = None,
-        obstacle_forecast_x: ObstacleForecast | None = None,
-        obstacle_forecast_y: ObstacleForecast | None = None,
-        obstacle_forecast_heading: ObstacleForecast | None = None,
-        obstacle_forecast_covariance: ObstacleForecastCovariance | None = None,
+        ego: Ego,
+        trajectories: PlannedTrajectories | None = None,
+        obstacles: Obstacles | None = None,
         additional_plots: Sequence[AdditionalPlot] | None = None,
     ) -> "SimulationData":
         return SimulationData(
+            info=info,
             reference=reference,
-            positions_x=positions_x,
-            positions_y=positions_y,
-            headings=headings,
-            path_parameters=path_parameters,
-            path_length=path_length,
-            time_step=time_step,
-            ghost_x=ghost_x,
-            ghost_y=ghost_y,
-            optimal_trajectory_x=optimal_trajectory_x,
-            optimal_trajectory_y=optimal_trajectory_y,
-            nominal_trajectory_x=nominal_trajectory_x,
-            nominal_trajectory_y=nominal_trajectory_y,
-            vehicle_type=vehicle_type,
-            wheelbase=wheelbase,
-            vehicle_width=vehicle_width,
-            obstacle_positions_x=obstacle_positions_x,
-            obstacle_positions_y=obstacle_positions_y,
-            obstacle_headings=obstacle_headings,
-            obstacle_forecast_x=obstacle_forecast_x,
-            obstacle_forecast_y=obstacle_forecast_y,
-            obstacle_forecast_heading=obstacle_forecast_heading,
-            obstacle_forecast_covariance=obstacle_forecast_covariance,
+            ego=ego,
+            trajectories=trajectories,
+            obstacles=obstacles,
             additional_plots=additional_plots,
         )
 
     def __post_init__(self) -> None:
-        self._validate_time_step_counts()
-
-    @property
-    def time_step_count(self) -> int:
-        return len(self.positions_x)
-
-    @property
-    def time_steps(self) -> IndexArray[Dim1]:
-        return np.arange(self.time_step_count)
-
-    def _validate_time_step_counts(self) -> None:
         for value, name in (
-            (self.positions_x, "positions_x"),
-            (self.positions_y, "positions_y"),
-            (self.headings, "headings"),
-            (self.path_parameters, "path_parameters"),
-            (self.ghost_x, "ghost_x"),
-            (self.ghost_y, "ghost_y"),
-            (self.optimal_trajectory_x, "optimal_trajectory_x"),
-            (self.optimal_trajectory_y, "optimal_trajectory_y"),
-            (self.nominal_trajectory_x, "nominal_trajectory_x"),
-            (self.nominal_trajectory_y, "nominal_trajectory_y"),
-            (self.obstacle_positions_x, "obstacle_positions_x"),
-            (self.obstacle_positions_y, "obstacle_positions_y"),
-            (self.obstacle_headings, "obstacle_headings"),
-            (self.obstacle_forecast_x, "obstacle_forecast_x"),
-            (self.obstacle_forecast_y, "obstacle_forecast_y"),
-            (self.obstacle_forecast_heading, "obstacle_forecast_heading"),
-            (self.obstacle_forecast_covariance, "obstacle_forecast_covariance"),
+            (self.ego, "ego"),
+            (self.trajectories, "trajectories"),
+            (self.obstacles, "obstacles"),
         ):
-            assert value is None or len(value) == self.time_step_count, (
-                f"{name} length ({len(value)}) != time step count ({self.time_step_count})"
+            assert value is None or value.time_step_count == self.time_step_count, (
+                f"{name} length ({value.time_step_count}) != time step count ({self.time_step_count})"
             )
 
         if self.additional_plots:
@@ -222,6 +280,10 @@ class SimulationData(msgspec.Struct, rename="camel", omit_defaults=True):
                 assert plot.time_step_count == self.time_step_count, (
                     f"Plot '{plot.name}' has {plot.time_step_count} steps, expected {self.time_step_count}"
                 )
+
+    @property
+    def time_step_count(self) -> int:
+        return self.ego.time_step_count
 
 
 def serialize(data: SimulationData) -> bytes:

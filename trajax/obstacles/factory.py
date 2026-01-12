@@ -3,12 +3,12 @@ from typing import Final
 
 from trajax.obstacles.common import PredictingObstacleStateProvider
 from trajax.obstacles.static import (
-    NumPyStaticObstacleStateProvider,
-    JaxStaticObstacleStateProvider,
+    NumPyStaticObstacleSimulator,
+    JaxStaticObstacleSimulator,
 )
-from trajax.obstacles.simulating import (
-    NumPyDynamicObstacleStateProvider,
-    JaxDynamicObstacleStateProvider,
+from trajax.obstacles.dynamic import (
+    NumPyDynamicObstacleSimulator,
+    JaxDynamicObstacleSimulator,
 )
 from trajax.obstacles.sampler import (
     NumPyGaussianObstacleStateSampler,
@@ -22,10 +22,12 @@ from trajax.obstacles.assignment import (
 
 class obstacles:
     class numpy:
-        empty: Final = NumPyStaticObstacleStateProvider.empty
-        static: Final = NumPyStaticObstacleStateProvider.create
-        dynamic: Final = NumPyDynamicObstacleStateProvider.create
-        predicting: Final = PredictingObstacleStateProvider.create
+        empty: Final = NumPyStaticObstacleSimulator.empty
+        static: Final = NumPyStaticObstacleSimulator.create
+        dynamic: Final = NumPyDynamicObstacleSimulator.create
+
+        class provider:
+            predicting: Final = PredictingObstacleStateProvider.create
 
         class sampler:
             gaussian: Final = NumPyGaussianObstacleStateSampler.create
@@ -34,10 +36,12 @@ class obstacles:
             hungarian: Final = NumPyHungarianObstacleIdAssignment.create
 
     class jax:
-        empty: Final = JaxStaticObstacleStateProvider.empty
-        static: Final = JaxStaticObstacleStateProvider.create
-        dynamic: Final = JaxDynamicObstacleStateProvider.create
-        predicting: Final = PredictingObstacleStateProvider.create
+        empty: Final = JaxStaticObstacleSimulator.empty
+        static: Final = JaxStaticObstacleSimulator.create
+        dynamic: Final = JaxDynamicObstacleSimulator.create
+
+        class provider:
+            predicting: Final = PredictingObstacleStateProvider.create
 
         class sampler:
             gaussian: Final = JaxGaussianObstacleStateSampler.create

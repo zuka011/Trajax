@@ -300,6 +300,7 @@ class types:
             type Costs[T: int = Any, M: int = Any] = NumPySimpleCosts[T, M]
 
             state: Final = NumPySimpleState
+            state_sequence: Final = NumPySimpleStateSequence
             state_batch: Final = NumPySimpleStateBatch
             control_input_sequence: Final = NumPySimpleControlInputSequence
             control_input_batch: Final = NumPySimpleControlInputBatch
@@ -325,7 +326,8 @@ class types:
                 NumPyBicycleObstacleStateSequences[T, K]
             )
 
-            state: Final = NumPyBicycleState.create
+            state: Final = NumPyBicycleState
+            state_sequence: Final = NumPyBicycleStateSequence
             state_batch: Final = NumPyBicycleStateBatch
             positions: Final = NumPyBicyclePositions
             control_input_sequence: Final = NumPyBicycleControlInputSequence
@@ -452,6 +454,7 @@ class types:
             type Costs[T: int = Any, M: int = Any] = JaxSimpleCosts[T, M]
 
             state: Final = JaxSimpleState
+            state_sequence: Final = JaxSimpleStateSequence
             state_batch: Final = JaxSimpleStateBatch
             control_input_sequence: Final = JaxSimpleControlInputSequence
             control_input_batch: Final = JaxSimpleControlInputBatch
@@ -476,6 +479,7 @@ class types:
             )
 
             state: Final = JaxBicycleState
+            state_sequence: Final = JaxBicycleStateSequence
             state_batch: Final = JaxBicycleStateBatch
             positions: Final = JaxBicyclePositions
             control_input_sequence: Final = JaxBicycleControlInputSequence

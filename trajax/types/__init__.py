@@ -18,8 +18,8 @@ from .mppi import (
     PaddingFunction as PaddingFunction,
     FilterFunction as FilterFunction,
     Weights as Weights,
-    DebugData as DebugData,
     Control as Control,
+    DebugData as DebugData,
     Mppi as Mppi,
     NumPyState as NumPyState,
     NumPyStateSequence as NumPyStateSequence,
@@ -189,10 +189,24 @@ from .obstacles import (
     ObstaclePositionsForTimeStep as ObstaclePositionsForTimeStep,
     ObstaclePositions as ObstaclePositions,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
+    ObstacleSimulator as ObstacleSimulator,
     NumPyObstaclePositionsForTimeStep as NumPyObstaclePositionsForTimeStep,
     NumPyObstaclePositions as NumPyObstaclePositions,
     NumPyObstaclePositionExtractor as NumPyObstaclePositionExtractor,
+    NumPyObstacleSimulator as NumPyObstacleSimulator,
     JaxObstaclePositionsForTimeStep as JaxObstaclePositionsForTimeStep,
     JaxObstaclePositions as JaxObstaclePositions,
     JaxObstaclePositionExtractor as JaxObstaclePositionExtractor,
+    JaxObstacleSimulator as JaxObstacleSimulator,
+)
+from .collectors import (
+    SimulationDataAccessor as SimulationDataAccessor,
+    SimulationData as SimulationData,
+    StateSequenceCreator as StateSequenceCreator,
+    ObstacleStateSequencesCreator as ObstacleStateSequencesCreator,
+    ObstacleStateObserver as ObstacleStateObserver,
+    StateTrajectories as StateTrajectories,
+)
+from .metrics import (
+    Metric as Metric,
 )

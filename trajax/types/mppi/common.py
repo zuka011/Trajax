@@ -17,9 +17,13 @@ class State[D_x: int](Protocol):
         ...
 
 
-class StateSequence[T: int, D_x: int](Protocol):
+class StateSequence[T: int, D_x: int, StateBatchT = Any](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
         """Returns the state sequence as a NumPy array."""
+        ...
+
+    def batched(self) -> StateBatchT:
+        """Returns the state sequence as a batch with a single rollout."""
         ...
 
     @property

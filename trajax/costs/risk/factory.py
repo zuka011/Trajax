@@ -3,7 +3,6 @@ from typing import Final
 from trajax.types import NumPyRisk, NumPyRiskMetric, JaxRisk, JaxRiskMetric
 from trajax.costs.collision import NumPyNoMetric, JaxNoMetric
 from trajax.costs.risk.base import RisKitRiskMetric
-from trajax.costs.risk.collect import RiskCollector
 
 import riskit as rk
 
@@ -34,8 +33,6 @@ class risk:
                 name="Mean-Variance",
             )
 
-        collector: Final = RiskCollector
-
     class jax:
         none: Final = JaxNoMetric.create
 
@@ -60,5 +57,3 @@ class risk:
                 to_risk=JaxRisk,
                 name="Mean-Variance",
             )
-
-        collector: Final = RiskCollector

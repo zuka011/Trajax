@@ -1,4 +1,4 @@
-from typing import Protocol, Self, overload
+from typing import Protocol, Self, Any, overload
 
 from trajax.types.mppi.common import (
     State,
@@ -25,7 +25,9 @@ class JaxState[D_x: int](State[D_x], Protocol):
         ...
 
 
-class JaxStateSequence[T: int, D_x: int](StateSequence[T, D_x], Protocol):
+class JaxStateSequence[T: int, D_x: int, StateBatchT = Any](
+    StateSequence[T, D_x, StateBatchT], Protocol
+):
     @property
     def array(self) -> Float[JaxArray, "T D_x"]:
         """Returns the underlying JAX array representing the state sequence."""

@@ -1,4 +1,6 @@
-from .basic import NumPyStaticObstacleStateProvider as NumPyStaticObstacleStateProvider
+from .basic import (
+    NumPyStaticObstacleSimulator as NumPyStaticObstacleSimulator,
+)
 from .accelerated import (
-    JaxStaticObstacleStateProvider as JaxStaticObstacleStateProvider,
+    JaxStaticObstacleSimulator as JaxStaticObstacleSimulator,
 )

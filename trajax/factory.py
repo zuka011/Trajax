@@ -5,7 +5,6 @@ from trajax.mppi import (
     NumPyZeroPadding,
     JaxMppi,
     JaxZeroPadding,
-    ControlCollector,
     NoUpdate,
     UseOptimalControlUpdate,
     NoFilter,
@@ -22,16 +21,10 @@ class mppi:
         augmented: Final = NumPyAugmentedMppi.create
         mpcc: Final = NumPyMpccMppi.create
 
-        class collector:
-            controls: Final = ControlCollector
-
     class jax:
         base: Final = JaxMppi.create
         augmented: Final = JaxAugmentedMppi.create
         mpcc: Final = JaxMpccMppi.create
-
-        class collector:
-            controls: Final = ControlCollector
 
 
 class update:

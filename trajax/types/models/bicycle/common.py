@@ -61,8 +61,8 @@ class BicycleStateBatch[T: int, M: int](Protocol):
         """Returns the headings (orientations) of the states in the batch."""
         ...
 
-    def velocities(self) -> Array[Dims[T, M]]:
-        """Returns the velocities of the states in the batch."""
+    def speed(self) -> Array[Dims[T, M]]:
+        """Returns the speeds of the states in the batch."""
         ...
 
     def rollout(self, index: int) -> BicycleStateSequence:

@@ -1,4 +1,4 @@
-from typing import Self, overload, cast
+from typing import Self, Sequence, overload, cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -15,6 +15,7 @@ from trajax.types import (
     AugmentedControlInputBatch,
     HasPhysical,
     HasVirtual,
+    StateSequenceCreator,
 )
 from trajax.states.augmented.base import (
     BaseAugmentedState,
@@ -41,10 +42,7 @@ class JaxAugmentedState[P: JaxState, V: JaxState](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedState[P_, V_]":
         return JaxAugmentedState(
-            cast(
-                BaseAugmentedState[P_, V_],
-                BaseAugmentedState.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedState.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
@@ -80,14 +78,39 @@ class JaxAugmentedStateSequence[P: JaxStateSequence, V: JaxStateSequence](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedStateSequence[P_, V_]":
         return JaxAugmentedStateSequence(
-            cast(
-                BaseAugmentedStateSequence[P_, V_],
-                BaseAugmentedStateSequence.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedStateSequence.of(physical=physical, virtual=virtual)
         )
+
+    @staticmethod
+    def of_states[
+        PS: JaxState,
+        PSS: JaxStateSequence,
+        VS: JaxState,
+        VSS: JaxStateSequence,
+    ](
+        *,
+        physical: StateSequenceCreator[PS, PSS],
+        virtual: StateSequenceCreator[VS, VSS],
+    ) -> StateSequenceCreator[
+        JaxAugmentedState[PS, VS], "JaxAugmentedStateSequence[PSS, VSS]"
+    ]:
+        """Returns a state sequence creator for augmented states."""
+
+        def creator(
+            states: Sequence[JaxAugmentedState[PS, VS]],
+        ) -> "JaxAugmentedStateSequence[PSS, VSS]":
+            return JaxAugmentedStateSequence.of(
+                physical=physical([s.physical for s in states]),
+                virtual=virtual([s.virtual for s in states]),
+            )
+
+        return creator
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return self.inner.__array__(dtype=dtype)
+
+    def batched(self) -> "JaxAugmentedStateBatch":
+        return JaxAugmentedStateBatch(self.inner.batched())
 
     @property
     def physical(self) -> P:
@@ -123,10 +146,7 @@ class JaxAugmentedStateBatch[P: JaxStateBatch, V: JaxStateBatch](
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedStateBatch[P_, V_]":
         return JaxAugmentedStateBatch(
-            cast(
-                BaseAugmentedStateBatch[P_, V_],
-                BaseAugmentedStateBatch.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedStateBatch.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
@@ -176,12 +196,7 @@ class JaxAugmentedControlInputSequence[
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedControlInputSequence[P_, V_]":
         return JaxAugmentedControlInputSequence(
-            cast(
-                BaseAugmentedControlInputSequence[P_, V_],
-                BaseAugmentedControlInputSequence.of(
-                    physical=physical, virtual=virtual
-                ),
-            )
+            BaseAugmentedControlInputSequence.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
@@ -260,10 +275,7 @@ class JaxAugmentedControlInputBatch[
         *, physical: P_, virtual: V_
     ) -> "JaxAugmentedControlInputBatch[P_, V_]":
         return JaxAugmentedControlInputBatch(
-            cast(
-                BaseAugmentedControlInputBatch[P_, V_],
-                BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:

@@ -5,7 +5,7 @@ stages:
 
 include:
   - project: 'zurabm/ci-templates'
-    ref: v1.3.0
+    ref: v1.4.1
     file:
       - '/python/verify.yml'
       - '/python/publish.yml'

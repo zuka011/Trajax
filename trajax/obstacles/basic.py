@@ -41,6 +41,13 @@ class NumPySampledObstacleStates[T: int, K: int, N: int](
     def heading(self) -> Array[Dims[T, K, N]]:
         return self._heading
 
+    def at(self, *, time_step: int, sample: int) -> "NumPyObstacleStatesForTimeStep[K]":
+        return NumPyObstacleStatesForTimeStep.create(
+            x=self._x[time_step, :, sample],
+            y=self._y[time_step, :, sample],
+            heading=self._heading[time_step, :, sample],
+        )
+
     @property
     def horizon(self) -> T:
         return self._x.shape[0]
@@ -150,17 +157,18 @@ class NumPyObstacleStates[T: int, K: int](
 
     @staticmethod
     def of_states[T_: int, K_: int](
-        obstacle_states: Sequence["NumPyObstacleStates[int, K_]"],
+        obstacle_states: Sequence["NumPyObstacleStatesForTimeStep[K_]"],
         *,
         horizon: T_ | None = None,
     ) -> "NumPyObstacleStates[T_, K_]":
+        assert len(obstacle_states) > 0, "Obstacle states sequence must not be empty."
         assert horizon is None or len(obstacle_states) == horizon, (
             f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
         )
 
-        x = np.stack([states.x()[0] for states in obstacle_states], axis=0)
-        y = np.stack([states.y()[0] for states in obstacle_states], axis=0)
-        heading = np.stack([states.heading()[0] for states in obstacle_states], axis=0)
+        x = np.stack([states.x() for states in obstacle_states], axis=0)
+        y = np.stack([states.y() for states in obstacle_states], axis=0)
+        heading = np.stack([states.heading() for states in obstacle_states], axis=0)
 
         return NumPyObstacleStates.create(x=x, y=y, heading=heading)
 

@@ -54,4 +54,4 @@ Visualizations are saved as:
 
 ## Development
 
-The bundled CLI (`dist/cli/index.js`) is included in the package distribution. See `visualizer/core/README.md` for build and usage instructions.
+The bundled CLI (`visualizer/trajax_visualizer/assets/cli.js`) is included in the package distribution. See `visualizer/core/README.md` for build instructions.

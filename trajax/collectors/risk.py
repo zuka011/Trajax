@@ -2,6 +2,7 @@ from typing import Sequence
 from dataclasses import dataclass, field
 
 from trajax.types import Risk, RiskMetric
+from trajax.collectors.access import access
 
 
 @dataclass(frozen=True)
@@ -10,13 +11,13 @@ class RiskCollector[
     StateBatchT,
     ObstacleStatesT,
     SamplerT,
-    RiskT: Risk = Risk,
+    RiskT = Risk,
 ](RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT]):
     inner: RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT]
     _collected: list[RiskT] = field(default_factory=list)
 
     @staticmethod
-    def decorating[CF, SB, OS, S, R: Risk](
+    def decorating[CF, SB, OS, S, R](
         metric: RiskMetric[CF, SB, OS, S, R],
     ) -> "RiskCollector[CF, SB, OS, S, R]":
         return RiskCollector(metric)
@@ -41,9 +42,13 @@ class RiskCollector[
         return risk
 
     @property
+    def name(self) -> str:
+        return self.inner.name
+
+    @property
     def collected(self) -> Sequence[RiskT]:
         return self._collected
 
     @property
-    def name(self) -> str:
-        return f"Collected({self.inner.name})"
+    def key(self) -> str:
+        return access.risks.key

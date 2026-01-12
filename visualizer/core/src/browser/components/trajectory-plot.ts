@@ -56,27 +56,27 @@ function buildTraces(data: ProcessedSimulationData, theme: Theme, t: number): Tr
     traces.push(createActualPathTrace(data, theme, t));
     traces.push(createVehicleTrace(data, theme, t));
 
-    if (data.ghostX?.[t]) {
+    if (data.ego.ghost?.x[t] !== undefined) {
         traces.push(createGhostTrace(data, theme, t));
     }
 
-    if (data.optimalTrajectoryX?.[t]) {
+    if (data.trajectories?.optimal?.x[t]) {
         traces.push(createOptimalTrajectoryTrace(data, t));
     }
 
-    if (data.nominalTrajectoryX?.[t]) {
+    if (data.trajectories?.nominal?.x[t]) {
         traces.push(createNominalTrajectoryTrace(data, t));
     }
 
-    if (data.obstaclePositionsX?.[t]) {
+    if (data.obstacles?.x[t]) {
         traces.push(...createObstacleTraces(data, theme, t));
     }
 
-    if (data.obstacleForecastX?.[t]?.length) {
+    if (data.obstacles?.forecast?.x[t]?.length) {
         traces.push(...createForecastTraces(data, theme, t));
     }
 
-    if (data.obstacleForecastCovariance?.[t]) {
+    if (data.obstacles?.forecast?.covariance?.[t]) {
         traces.push(...createUncertaintyTraces(data, theme, t));
     }
 
@@ -96,8 +96,8 @@ function createReferenceTrace(data: ProcessedSimulationData, theme: Theme): Trac
 
 function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     return {
-        x: data.positionsX.slice(0, t + 1),
-        y: data.positionsY.slice(0, t + 1),
+        x: data.ego.x.slice(0, t + 1),
+        y: data.ego.y.slice(0, t + 1),
         mode: "lines",
         line: { color: theme.colors.primary, width: 2 },
         name: "Actual",
@@ -107,11 +107,11 @@ function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: n
 
 function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     const corners = transformCorners(
-        data.positionsX[t],
-        data.positionsY[t],
-        data.headings[t],
-        data.wheelbase,
-        data.vehicleWidth,
+        data.ego.x[t],
+        data.ego.y[t],
+        data.ego.heading[t],
+        data.info.wheelbase,
+        data.info.vehicleWidth,
     );
     return {
         x: corners.map((c) => c[0]),
@@ -128,8 +128,8 @@ function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: numb
 
 function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
     return {
-        x: [data.ghostX![t]],
-        y: [data.ghostY![t]],
+        x: [data.ego.ghost!.x[t]],
+        y: [data.ego.ghost!.y[t]],
         mode: "markers",
         marker: { color: theme.colors.secondary, size: 12, opacity: 0.5 },
         name: "Ghost",
@@ -139,8 +139,8 @@ function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number
 
 function createOptimalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
     return {
-        x: data.optimalTrajectoryX![t],
-        y: data.optimalTrajectoryY![t],
+        x: data.trajectories!.optimal!.x[t],
+        y: data.trajectories!.optimal!.y[t],
         mode: "lines+markers",
         line: { color: "#e63946", width: 2 },
         marker: { color: "#e63946", size: 5, symbol: "circle" },
@@ -152,8 +152,8 @@ function createOptimalTrajectoryTrace(data: ProcessedSimulationData, t: number):
 
 function createNominalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
     return {
-        x: data.nominalTrajectoryX![t],
-        y: data.nominalTrajectoryY![t],
+        x: data.trajectories!.nominal!.x[t],
+        y: data.trajectories!.nominal!.y[t],
         mode: "lines+markers",
         line: { color: "#2a9d8f", width: 2 },
         marker: { color: "#2a9d8f", size: 5, symbol: "circle" },
@@ -164,13 +164,13 @@ function createNominalTrajectoryTrace(data: ProcessedSimulationData, t: number):
 }
 
 function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
-    return data.obstaclePositionsX![t].map((ox, i) => {
+    return data.obstacles!.x[t].map((ox, i) => {
         const corners = transformCorners(
             ox,
-            data.obstaclePositionsY![t][i],
-            data.obstacleHeadings?.[t]?.[i] ?? 0,
-            data.wheelbase,
-            data.vehicleWidth,
+            data.obstacles!.y[t][i],
+            data.obstacles!.heading[t]?.[i] ?? 0,
+            data.info.wheelbase,
+            data.info.vehicleWidth,
         );
         return {
             x: corners.map((c) => c[0]),
@@ -188,14 +188,20 @@ function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: nu
 }
 
 function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
-    const obstacleCount = data.obstacleForecastX![t][0].length;
+    const forecast = data.obstacles!.forecast!;
+    const obstacleCount = forecast.x[t][0].length;
     return Array.from({ length: obstacleCount }, (_, k) => {
-        const xPoints = data.obstacleForecastX![t].map((h) => h[k]);
-        const yPoints = data.obstacleForecastY![t].map((h) => h[k]);
+        const xPoints = forecast.x[t].map((h) => h[k]);
+        const yPoints = forecast.y[t].map((h) => h[k]);
         const lastIdx = xPoints.length - 1;
 
-        const dx = xPoints[lastIdx] - xPoints[lastIdx - 1];
-        const dy = yPoints[lastIdx] - yPoints[lastIdx - 1];
+        const lastX = xPoints[lastIdx];
+        const prevX = xPoints[lastIdx - 1];
+        const lastY = yPoints[lastIdx];
+        const prevY = yPoints[lastIdx - 1];
+
+        const dx = lastX !== null && prevX !== null ? lastX - prevX : 0;
+        const dy = lastY !== null && prevY !== null ? lastY - prevY : 0;
         const angle = radiansToDegrees(Math.atan2(dy, dx));
 
         return {
@@ -219,22 +225,41 @@ function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: nu
 
 function createUncertaintyTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
     const traces: Trace[] = [];
-    const cov = data.obstacleForecastCovariance![t];
+    const forecast = data.obstacles!.forecast!;
+    const cov = forecast.covariance![t];
     const obstacleCount = cov[0][0][0].length;
     let isFirst = true;
 
     cov.forEach((_, h) => {
         for (let k = 0; k < obstacleCount; k++) {
+            const c00 = cov[h][0][0][k];
+            const c01 = cov[h][0][1][k];
+            const c10 = cov[h][1][0][k];
+            const c11 = cov[h][1][1][k];
+            const fx = forecast.x[t][h][k];
+            const fy = forecast.y[t][h][k];
+
+            if (
+                c00 === null ||
+                c01 === null ||
+                c10 === null ||
+                c11 === null ||
+                fx === null ||
+                fy === null
+            ) {
+                continue;
+            }
+
             const ellipse = covarianceToEllipse(
                 [
-                    [cov[h][0][0][k], cov[h][0][1][k]],
-                    [cov[h][1][0][k], cov[h][1][1][k]],
+                    [c00, c01],
+                    [c10, c11],
                 ],
                 defaults.confidenceScale,
             );
             const points = generateEllipsePoints(
-                data.obstacleForecastX![t][h][k],
-                data.obstacleForecastY![t][h][k],
+                fx,
+                fy,
                 ellipse.width / 2,
                 ellipse.height / 2,
                 ellipse.angle,

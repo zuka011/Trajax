@@ -272,7 +272,7 @@ export function createAdditionalPlot(
     state: VisualizationState,
     updateManager: UpdateManager,
 ): void {
-    const times = data.positionsX.map((_, i) => i * data.timeStep);
+    const times = data.ego.x.map((_, i) => i * data.info.timeStep);
     const allSeries = group.plots.flatMap((plot) => plot.series);
     const hasBands = group.plots.some((plot) => plot.bands && plot.bands.length > 0);
     const yAxisLabel = group.plots[0]?.yAxisLabel ?? "";

@@ -1,4 +1,4 @@
-from typing import Protocol, Self, overload
+from typing import Protocol, Self, Any, overload
 
 from trajax.types.mppi.common import (
     State,
@@ -25,7 +25,9 @@ class NumPyState[D_x: int](State[D_x], Protocol):
         ...
 
 
-class NumPyStateSequence[T: int, D_x: int](StateSequence[T, D_x], Protocol):
+class NumPyStateSequence[T: int, D_x: int, StateBatchT = Any](
+    StateSequence[T, D_x, StateBatchT], Protocol
+):
     @property
     def array(self) -> Array[Dims[T, D_x]]:
         """Returns the underlying NumPy array representing the state sequence."""

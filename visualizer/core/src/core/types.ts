@@ -36,30 +36,57 @@ export interface AdditionalPlot {
     group?: string;
 }
 
-export interface SimulationData {
-    reference: ReferenceTrajectory;
-    positionsX: number[];
-    positionsY: number[];
-    headings: number[];
-    pathParameters: number[];
+export interface SimulationInfo {
     pathLength: number;
     timeStep: number;
-    ghostX?: number[];
-    ghostY?: number[];
-    vehicleType: VehicleType;
     wheelbase: number;
     vehicleWidth: number;
-    obstaclePositionsX?: number[][];
-    obstaclePositionsY?: number[][];
-    obstacleHeadings?: number[][];
-    obstacleForecastX?: number[][][];
-    obstacleForecastY?: number[][][];
-    obstacleForecastHeading?: number[][][];
-    obstacleForecastCovariance?: number[][][][][];
-    optimalTrajectoryX?: number[][];
-    optimalTrajectoryY?: number[][];
-    nominalTrajectoryX?: number[][];
-    nominalTrajectoryY?: number[][];
+    vehicleType: VehicleType;
+}
+
+export interface EgoGhost {
+    x: number[];
+    y: number[];
+}
+
+export interface Ego {
+    x: number[];
+    y: number[];
+    heading: number[];
+    pathParameter: number[];
+    ghost?: EgoGhost;
+}
+
+export interface PlannedTrajectory {
+    x: number[][];
+    y: number[][];
+}
+
+export interface PlannedTrajectories {
+    optimal?: PlannedTrajectory;
+    nominal?: PlannedTrajectory;
+}
+
+export interface ObstacleForecast {
+    x: (number | null)[][][];
+    y: (number | null)[][][];
+    heading: (number | null)[][][];
+    covariance?: (number | null)[][][][][];
+}
+
+export interface Obstacles {
+    x: number[][];
+    y: number[][];
+    heading: number[][];
+    forecast?: ObstacleForecast;
+}
+
+export interface SimulationData {
+    info: SimulationInfo;
+    reference: ReferenceTrajectory;
+    ego: Ego;
+    trajectories?: PlannedTrajectories;
+    obstacles?: Obstacles;
     additionalPlots?: AdditionalPlot[];
 }
 

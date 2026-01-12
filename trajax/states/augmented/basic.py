@@ -1,4 +1,4 @@
-from typing import Self, overload, cast
+from typing import Self, Sequence, overload, cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -15,6 +15,7 @@ from trajax.types import (
     AugmentedControlInputBatch,
     HasPhysical,
     HasVirtual,
+    StateSequenceCreator,
 )
 from trajax.states.augmented.base import (
     BaseAugmentedState,
@@ -40,10 +41,7 @@ class NumPyAugmentedState[P: NumPyState, V: NumPyState](
         *, physical: P_, virtual: V_
     ) -> "NumPyAugmentedState[P_, V_]":
         return NumPyAugmentedState(
-            cast(
-                BaseAugmentedState[P_, V_],
-                BaseAugmentedState.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedState.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
@@ -82,14 +80,39 @@ class NumPyAugmentedStateSequence[P: NumPyStateSequence, V: NumPyStateSequence](
         *, physical: P_, virtual: V_
     ) -> "NumPyAugmentedStateSequence[P_, V_]":
         return NumPyAugmentedStateSequence(
-            cast(
-                BaseAugmentedStateSequence[P_, V_],
-                BaseAugmentedStateSequence.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedStateSequence.of(physical=physical, virtual=virtual)
         )
+
+    @staticmethod
+    def of_states[
+        PS: NumPyState,
+        PSS: NumPyStateSequence,
+        VS: NumPyState,
+        VSS: NumPyStateSequence,
+    ](
+        *,
+        physical: StateSequenceCreator[PS, PSS],
+        virtual: StateSequenceCreator[VS, VSS],
+    ) -> StateSequenceCreator[
+        NumPyAugmentedState[PS, VS], "NumPyAugmentedStateSequence[PSS, VSS]"
+    ]:
+        """Returns a state sequence creator for augmented states."""
+
+        def creator(
+            states: Sequence[NumPyAugmentedState[PS, VS]],
+        ) -> "NumPyAugmentedStateSequence[PSS, VSS]":
+            return NumPyAugmentedStateSequence.of(
+                physical=physical([s.physical for s in states]),
+                virtual=virtual([s.virtual for s in states]),
+            )
+
+        return creator
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
         return self.inner.__array__(dtype=dtype)
+
+    def batched(self) -> "NumPyAugmentedStateBatch ":
+        return NumPyAugmentedStateBatch(self.inner.batched())
 
     @property
     def physical(self) -> P:
@@ -125,10 +148,7 @@ class NumPyAugmentedStateBatch[P: NumPyStateBatch, V: NumPyStateBatch](
         *, physical: P_, virtual: V_
     ) -> "NumPyAugmentedStateBatch[P_, V_]":
         return NumPyAugmentedStateBatch(
-            cast(
-                BaseAugmentedStateBatch[P_, V_],
-                BaseAugmentedStateBatch.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedStateBatch.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:
@@ -178,12 +198,7 @@ class NumPyAugmentedControlInputSequence[
         *, physical: P_, virtual: V_
     ) -> "NumPyAugmentedControlInputSequence[P_, V_]":
         return NumPyAugmentedControlInputSequence(
-            cast(
-                BaseAugmentedControlInputSequence[P_, V_],
-                BaseAugmentedControlInputSequence.of(
-                    physical=physical, virtual=virtual
-                ),
-            )
+            BaseAugmentedControlInputSequence.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
@@ -259,10 +274,7 @@ class NumPyAugmentedControlInputBatch[
         *, physical: P_, virtual: V_
     ) -> "NumPyAugmentedControlInputBatch[P_, V_]":
         return NumPyAugmentedControlInputBatch(
-            cast(
-                BaseAugmentedControlInputBatch[P_, V_],
-                BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual),
-            )
+            BaseAugmentedControlInputBatch.of(physical=physical, virtual=virtual)
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim3]:

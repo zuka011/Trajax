@@ -57,6 +57,13 @@ class JaxSampledObstacleStates[T: int, K: int, N: int](SampledObstacleStates[T, 
     def heading(self) -> Array[Dims[T, K, N]]:
         return np.asarray(self._heading)
 
+    def at(self, *, time_step: int, sample: int) -> "JaxObstacleStatesForTimeStep[K]":
+        return JaxObstacleStatesForTimeStep.create(
+            x=self._x[time_step, :, sample],
+            y=self._y[time_step, :, sample],
+            heading=self._heading[time_step, :, sample],
+        )
+
     @property
     def horizon(self) -> T:
         return cast(T, self._x.shape[0])
@@ -152,16 +159,19 @@ class JaxObstacleStates[T: int, K: int](
 
     @staticmethod
     def of_states[T_: int, K_: int](
-        obstacle_states: Sequence["JaxObstacleStates[int, K_]"],
+        obstacle_states: Sequence["JaxObstacleStatesForTimeStep[K_]"],
         *,
         horizon: T_ | None = None,
     ) -> "JaxObstacleStates[T_, K_]":
-        assert horizon is None or len(obstacle_states) == horizon
+        assert len(obstacle_states) > 0, "Obstacle states sequence must not be empty."
+        assert horizon is None or len(obstacle_states) == horizon, (
+            f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
+        )
 
-        x = jnp.stack([states.x_array[0] for states in obstacle_states], axis=0)
-        y = jnp.stack([states.y_array[0] for states in obstacle_states], axis=0)
+        x = jnp.stack([states.x_array for states in obstacle_states], axis=0)
+        y = jnp.stack([states.y_array for states in obstacle_states], axis=0)
         heading = jnp.stack(
-            [states.heading_array[0] for states in obstacle_states], axis=0
+            [states.heading_array for states in obstacle_states], axis=0
         )
 
         return JaxObstacleStates.create(x=x, y=y, heading=heading, horizon=horizon)

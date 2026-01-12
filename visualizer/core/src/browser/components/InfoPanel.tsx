@@ -9,13 +9,13 @@ interface InfoPanelProps {
 
 export const InfoPanel: FunctionalComponent<InfoPanelProps> = ({ currentTimestep, data }) => {
     const t = currentTimestep;
-    const time = (t * data.timeStep).toFixed(2);
-    const posX = data.positionsX[t].toFixed(2);
-    const posY = data.positionsY[t].toFixed(2);
-    const heading = radiansToDegrees(data.headings[t]).toFixed(1);
-    const pathParam = data.pathParameters[t].toFixed(2);
-    const pathLength = data.pathLength.toFixed(1);
-    const progress = ((100 * data.pathParameters[t]) / data.pathLength).toFixed(1);
+    const time = (t * data.info.timeStep).toFixed(2);
+    const posX = data.ego.x[t].toFixed(2);
+    const posY = data.ego.y[t].toFixed(2);
+    const heading = radiansToDegrees(data.ego.heading[t]).toFixed(1);
+    const pathParam = data.ego.pathParameter[t].toFixed(2);
+    const pathLength = data.info.pathLength.toFixed(1);
+    const progress = ((100 * data.ego.pathParameter[t]) / data.info.pathLength).toFixed(1);
 
     return (
         <div class="info-panel" id="info-panel">

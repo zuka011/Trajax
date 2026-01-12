@@ -13,8 +13,5 @@ from .accelerated import (
     JaxMppi as JaxMppi,
     JaxZeroPadding as JaxZeroPadding,
 )
-from .collect import (
-    ControlCollector as ControlCollector,
-)
 from .savgol import NumPySavGolFilter as NumPySavGolFilter
 from .savgol import JaxSavGolFilter as JaxSavGolFilter

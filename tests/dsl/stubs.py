@@ -1,4 +1,4 @@
-from typing import Protocol, NamedTuple, Sequence
+from typing import Protocol, NamedTuple, Sequence, Any
 from dataclasses import dataclass
 
 from trajax import (
@@ -14,6 +14,8 @@ from trajax import (
     ObstacleStatesForTimeStep,
     SampledObstacleStates,
     BoundaryDistance,
+    Control,
+    DebugData,
     Sampler as SamplerLike,
     ObstacleMotionPredictor as ObstacleMotionPredictorLike,
     ObstacleStateProvider as ObstacleStateProviderLike,
@@ -24,6 +26,8 @@ from trajax import (
     DynamicalModel as DynamicalModelLike,
     DistanceExtractor as DistanceExtractorLike,
     BoundaryDistanceExtractor as BoundaryDistanceExtractorLike,
+    Mppi as MppiLike,
+    ObstacleStateObserver as ObstacleStateObserverLike,
 )
 
 import numpy as np
@@ -375,3 +379,34 @@ class BoundaryDistanceExtractor[StateT: StateBatch, DistanceT: BoundaryDistance]
             f"Expected: {self.expected_states}, Got: {states}"
         )
         return self.result
+
+
+@dataclass(frozen=True)
+class Mppi(MppiLike):
+    @staticmethod
+    def create() -> "Mppi":
+        return Mppi()
+
+    def step(
+        self,
+        *,
+        temperature: float,
+        nominal_input: Any,
+        initial_state: Any,
+    ) -> Control[Any, Any]:
+        return Control(
+            optimal=nominal_input,
+            nominal=nominal_input,
+            debug=DebugData(trajectory_weights=None),
+        )
+
+
+@dataclass(frozen=True)
+class ObstacleStateObserver[ObstacleStatesForTimeStepT](
+    ObstacleStateObserverLike[ObstacleStatesForTimeStepT]
+):
+    @staticmethod
+    def create() -> "ObstacleStateObserver[ObstacleStatesForTimeStepT]":
+        return ObstacleStateObserver()
+
+    def observe(self, states: ObstacleStatesForTimeStepT) -> None: ...

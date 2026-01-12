@@ -5,10 +5,14 @@ stages:
 variables:
   PIPELINE_ROOT: "visualizer"
   PYPI_PROJECT_NAME: "trajax-visualizer"
+  PYPI_PRE_PUBLISH_COMMANDS: |
+    apt-get update -qq && apt-get install -qq -y nodejs npm
+    corepack enable
+    cd core && pnpm install --frozen-lockfile && pnpm build && cd ..
 
 include:
-  - project: 'zurabm/ci-templates'
-    ref: v1.3.0
+  - project: "zurabm/ci-templates"
+    ref: v1.4.1
     file:
-      - '/python/verify.yml'
-      - '/python/publish.yml'
+      - "/python/verify.yml"
+      - "/python/publish.yml"

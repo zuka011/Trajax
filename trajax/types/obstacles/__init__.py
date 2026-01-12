@@ -9,3 +9,12 @@ from .history import (
     JaxObstaclePositions as JaxObstaclePositions,
     JaxObstaclePositionExtractor as JaxObstaclePositionExtractor,
 )
+from .common import (
+    ObstacleSimulator as ObstacleSimulator,
+)
+from .basic import (
+    NumPyObstacleSimulator as NumPyObstacleSimulator,
+)
+from .accelerated import (
+    JaxObstacleSimulator as JaxObstacleSimulator,
+)

@@ -89,11 +89,42 @@ class NumPyBicycleStateSequence[T: int, M: int = Any](
     batch: "NumPyBicycleStateBatch[T, M]"
     rollout: int
 
-    def step(self, index: int) -> NumPyBicycleState:
-        return NumPyBicycleState(self.array[index])
+    @staticmethod
+    def of_states[T_: int = int](
+        states: Sequence[NumPyBicycleState], *, horizon: T_ | None = None
+    ) -> "NumPyBicycleStateSequence[T_, D[1]]":
+        """Creates a NumPy bicycle state sequence from a sequence of bicycle states."""
+        assert len(states) > 0, "States sequence must not be empty."
+
+        horizon = horizon if horizon is not None else cast(T_, len(states))
+        array = np.stack([state.array for state in states], axis=0)[:, :, np.newaxis]
+
+        assert shape_of(array, matches=(horizon, BICYCLE_D_X, 1))
+
+        return NumPyBicycleStateSequence(
+            batch=NumPyBicycleStateBatch.wrap(array), rollout=0
+        )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x]]:
         return self.array
+
+    def step(self, index: int) -> NumPyBicycleState:
+        return NumPyBicycleState(self.array[index])
+
+    def batched(self) -> "NumPyBicycleStateBatch[T, D[1]]":
+        return NumPyBicycleStateBatch.wrap(self.array[..., np.newaxis])
+
+    def x(self) -> Array[Dims[T]]:
+        return self.array[:, 0]
+
+    def y(self) -> Array[Dims[T]]:
+        return self.array[:, 1]
+
+    def heading(self) -> Array[Dims[T]]:
+        return self.array[:, 2]
+
+    def speed(self) -> Array[Dims[T]]:
+        return self.array[:, 3]
 
     @property
     def horizon(self) -> T:
@@ -115,12 +146,20 @@ class NumPyBicycleStateBatch[T: int, M: int](
     _array: StateBatchArray[T, M]
 
     @staticmethod
+    def wrap[T_: int, M_: int](
+        array: StateBatchArray[T_, M_],
+    ) -> "NumPyBicycleStateBatch[T_, M_]":
+        """Creates a NumPy bicycle state batch from the given array."""
+        return NumPyBicycleStateBatch(array)
+
+    @staticmethod
     def of_states[T_: int = int](
         states: Sequence[NumPyBicycleState], *, horizon: T_ | None = None
     ) -> "NumPyBicycleStateBatch[int, D[1]]":
         """Creates a NumPy bicycle state batch from a sequence of bicycle states."""
-        horizon = horizon if horizon is not None else cast(T_, len(states))
+        assert len(states) > 0, "States sequence must not be empty."
 
+        horizon = horizon if horizon is not None else cast(T_, len(states))
         array = np.stack([state.array for state in states], axis=0)[:, :, np.newaxis]
 
         assert shape_of(array, matches=(horizon, BICYCLE_D_X, 1))
@@ -133,7 +172,7 @@ class NumPyBicycleStateBatch[T: int, M: int](
     def heading(self) -> Array[Dims[T, M]]:
         return self.array[:, 2, :]
 
-    def velocities(self) -> Array[Dims[T, M]]:
+    def speed(self) -> Array[Dims[T, M]]:
         return self.array[:, 3, :]
 
     def rollout(self, index: int) -> NumPyBicycleStateSequence[T, M]:

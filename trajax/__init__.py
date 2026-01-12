@@ -9,7 +9,6 @@ from .costs import (
     risk as risk,
     CombinedCost as CombinedCost,
     Circles as Circles,
-    RiskCollector as RiskCollector,
 )
 from .samplers import sampler as sampler
 from .states import (
@@ -21,7 +20,6 @@ from .states import (
 from .mppi import (
     NumPyMppi as NumPyMppi,
     JaxMppi as JaxMppi,
-    ControlCollector as ControlCollector,
 )
 from .models import (
     model as model,
@@ -51,6 +49,7 @@ from .types import (
     FilterFunction as FilterFunction,
     Control as Control,
     Weights as Weights,
+    DebugData as DebugData,
     Mppi as Mppi,
     Trajectory as Trajectory,
     PathParameters as PathParameters,
@@ -82,6 +81,12 @@ from .types import (
     ObstacleIdAssignment as ObstacleIdAssignment,
     BoundaryDistance as BoundaryDistance,
     BoundaryDistanceExtractor as BoundaryDistanceExtractor,
+    ObstacleSimulator as ObstacleSimulator,
+    SimulationDataAccessor as SimulationDataAccessor,
+    SimulationData as SimulationData,
+    StateSequenceCreator as StateSequenceCreator,
+    ObstacleStateSequencesCreator as ObstacleStateSequencesCreator,
+    ObstacleStateObserver as ObstacleStateObserver,
 )
 from .namespace import types as types, classes as classes
 from .factory import (
@@ -89,4 +94,17 @@ from .factory import (
     update as update,
     padding as padding,
     filters as filters,
+)
+from .collectors import (
+    NoCollectedDataWarning as NoCollectedDataWarning,
+    collectors as collectors,
+    access as access,
+)
+from .metrics import (
+    metrics as metrics,
+    MetricRegistry as MetricRegistry,
+    CollisionMetricResult as CollisionMetricResult,
+    CollisionMetric as CollisionMetric,
+    MpccErrorMetricResult as MpccErrorMetricResult,
+    MpccErrorMetric as MpccErrorMetric,
 )

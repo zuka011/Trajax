@@ -31,7 +31,7 @@ class BaseAugmentedState[P: State, V: State](
     @staticmethod
     def of[P_: State, V_: State](
         *, physical: P_, virtual: V_
-    ) -> "AugmentedState[P_, V_]":
+    ) -> "BaseAugmentedState[P_, V_]":
         return BaseAugmentedState(_physical=physical, _virtual=virtual)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim1]:
@@ -60,13 +60,19 @@ class BaseAugmentedStateSequence[P: StateSequence, V: StateSequence](
     @staticmethod
     def of[P_: StateSequence, V_: StateSequence](
         *, physical: P_, virtual: V_
-    ) -> "AugmentedStateSequence[P_, V_]":
+    ) -> "BaseAugmentedStateSequence[P_, V_]":
         return BaseAugmentedStateSequence(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
         assert self.physical.horizon == self.virtual.horizon, (
             f"Horizon mismatch in {self.__class__.__name__}: "
             f"Got {self.physical.horizon} (physical) and {self.virtual.horizon} (virtual)"
+        )
+
+    def batched(self) -> "BaseAugmentedStateBatch":
+        return BaseAugmentedStateBatch.of(
+            physical=self.physical.batched(),
+            virtual=self.virtual.batched(),
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dim2]:
@@ -101,7 +107,7 @@ class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
     @staticmethod
     def of[P_: StateBatch, V_: StateBatch](
         *, physical: P_, virtual: V_
-    ) -> "AugmentedStateBatch[P_, V_]":
+    ) -> "BaseAugmentedStateBatch[P_, V_]":
         return BaseAugmentedStateBatch(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
@@ -156,7 +162,7 @@ class BaseAugmentedControlInputSequence[
     @staticmethod
     def of[P_: ControlInputSequence, V_: ControlInputSequence](
         *, physical: P_, virtual: V_
-    ) -> "AugmentedControlInputSequence[P_, V_]":
+    ) -> "BaseAugmentedControlInputSequence[P_, V_]":
         return BaseAugmentedControlInputSequence(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:
@@ -197,7 +203,7 @@ class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch]
     @staticmethod
     def of[P_: ControlInputBatch, V_: ControlInputBatch](
         *, physical: P_, virtual: V_
-    ) -> "AugmentedControlInputBatch[P_, V_]":
+    ) -> "BaseAugmentedControlInputBatch[P_, V_]":
         return BaseAugmentedControlInputBatch(_physical=physical, _virtual=virtual)
 
     def __post_init__(self) -> None:

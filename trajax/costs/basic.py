@@ -68,11 +68,11 @@ class NumPyContouringCost[StateBatchT](
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
     ) -> NumPyCosts[T, M]:
-        error = self.error(inputs=inputs, states=states)
+        error = self.error(states=states)
         return NumPySimpleCosts(self.weight * error.array**2)
 
-    def error[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    def error[T: int = int, M: int = int](
+        self, *, states: StateBatchT
     ) -> NumPyError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()
@@ -120,11 +120,11 @@ class NumPyLagCost[StateBatchT](
     def __call__[T: int, M: int](
         self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
     ) -> NumPyCosts[T, M]:
-        error = self.error(inputs=inputs, states=states)
+        error = self.error(states=states)
         return NumPySimpleCosts(self.weight * error.array**2)
 
-    def error[T: int, M: int](
-        self, *, inputs: ControlInputBatch[T, int, M], states: StateBatchT
+    def error[T: int = int, M: int = int](
+        self, *, states: StateBatchT
     ) -> NumPyError[T, M]:
         ref_points = self.reference.query(self.path_parameter_extractor(states))
         heading = ref_points.heading()

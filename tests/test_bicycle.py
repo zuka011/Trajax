@@ -90,7 +90,7 @@ class test_that_vehicle_position_does_not_change_when_velocity_and_input_are_zer
         assert np.allclose(positions.x(), array([[x_0] * M] * T, shape=(T, M)))
         assert np.allclose(positions.y(), array([[y_0] * M] * T, shape=(T, M)))
         assert np.allclose(rollouts.heading(), array([[theta_0] * M] * T, shape=(T, M)))
-        assert np.allclose(rollouts.velocities(), array([[v_0] * M] * T, shape=(T, M)))
+        assert np.allclose(rollouts.speed(), array([[v_0] * M] * T, shape=(T, M)))
 
 
 class test_that_vehicle_follows_straight_line_when_velocity_is_constant:
@@ -177,7 +177,7 @@ class test_that_vehicle_follows_straight_line_when_velocity_is_constant:
         assert np.allclose(rollouts.positions.x(), expected_x)
         assert np.allclose(rollouts.positions.y(), expected_y)
         assert np.allclose(rollouts.heading(), expected_theta)
-        assert np.allclose(rollouts.velocities(), expected_v)
+        assert np.allclose(rollouts.speed(), expected_v)
 
 
 class test_that_vehicle_follows_straight_line_when_acceleration_is_constant:
@@ -273,10 +273,8 @@ class test_that_vehicle_follows_straight_line_when_acceleration_is_constant:
         assert np.allclose(rollouts.positions.x()[-1], expected_x_final, atol=1e-6)
         assert np.allclose(rollouts.positions.y()[-1], expected_y_final, atol=1e-6)
         assert np.allclose(rollouts.heading(), expected_theta, atol=1e-6)
-        assert np.allclose(
-            rollouts.velocities()[(T // 2)], expected_v_middle, atol=1e-6
-        )
-        assert np.allclose(rollouts.velocities()[-1], expected_v_final, atol=1e-6)
+        assert np.allclose(rollouts.speed()[(T // 2)], expected_v_middle, atol=1e-6)
+        assert np.allclose(rollouts.speed()[-1], expected_v_final, atol=1e-6)
 
 
 class test_that_vehicle_orientation_returns_to_start_when_steering_is_reversed:
@@ -376,7 +374,7 @@ class test_that_vehicle_velocity_returns_to_start_when_acceleration_is_reversed:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        assert np.allclose(rollouts.velocities()[-1], expected_final_v, atol=1e-6)
+        assert np.allclose(rollouts.speed()[-1], expected_final_v, atol=1e-6)
 
 
 class test_that_vehicle_returns_to_starting_position_when_initially_not_moving_and_acceleration_is_reversed:
@@ -494,7 +492,7 @@ class test_that_displacement_is_consistent_with_velocity_state:
         full_x = np.insert(rollouts.positions.x(), 0, initial_state.x, axis=0)
         full_y = np.insert(rollouts.positions.y(), 0, initial_state.y, axis=0)
         full_theta = np.insert(rollouts.heading(), 0, initial_state.heading, axis=0)
-        full_v = np.insert(rollouts.velocities(), 0, initial_state.speed, axis=0)
+        full_v = np.insert(rollouts.speed(), 0, initial_state.speed, axis=0)
 
         # Actual displacements
         delta_x = np.diff(full_x, axis=0)
@@ -707,10 +705,10 @@ class test_that_velocity_is_clamped_to_speed_limits:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        velocities = rollouts.velocities()
+        speed = rollouts.speed()
 
-        assert np.all(velocities <= max_speed + 1e-6)
-        assert np.all(velocities >= min_speed - 1e-6)
+        assert np.all(speed <= max_speed + 1e-6)
+        assert np.all(speed >= min_speed - 1e-6)
 
 
 class test_that_steering_input_is_clipped_to_max_steering:
@@ -845,7 +843,7 @@ class test_that_acceleration_input_is_clipped_to_max_acceleration:
     ) -> None:
         rollouts = model.simulate(inputs, initial_state)
 
-        final_velocity = rollouts.velocities()[-1]
+        final_velocity = rollouts.speed()[-1]
 
         assert np.allclose(final_velocity, expected_velocity, atol=1e-6)
 
