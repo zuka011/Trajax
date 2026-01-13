@@ -116,7 +116,7 @@ class MpccPlannerConfiguration[
     ],
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: seed)
-@mark.filterwarnings("ignore:.*'obstacles'.*did not collect any data.*")
+@mark.filterwarnings("ignore:.*'obstacle_states'.*not.*data.*")
 @mark.filterwarnings("error")
 @mark.integration
 def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
@@ -145,7 +145,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     min_progress = reference.path_length * 0.9
     progress = 0.0
 
-    for _ in range(max_steps := 150):
+    for t in range(max_steps := 150):
         control = planner.step(
             temperature=0.05, nominal_input=nominal_input, initial_state=current_state
         )
@@ -187,6 +187,10 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     assert (max_lag := errors.max_lag) < max_lag_error, (
         f"Vehicle had excessive lag error along the reference trajectory. "
         f"Max lag error: {max_lag:.2f} m, expected < {max_lag_error:.2f} m"
+    )
+
+    assert len(trajectories) == t + 1, (
+        f"Expected {t + 1} collected trajectories, but found {len(trajectories)}."
     )
 
 
@@ -289,7 +293,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     min_progress = reference.path_length * 0.7
     progress = 0.0
 
-    for _ in range(max_steps := 350):
+    for t in range(max_steps := 350):
         control = planner.step(
             temperature=0.05, nominal_input=nominal_input, initial_state=current_state
         )
@@ -342,4 +346,8 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     assert (min_distance := collision.min_distances.min()) > (safe_distance := 0.0), (
         f"Vehicle came too close to obstacles. "
         f"Min distance to obstacles: {min_distance:.2f} m, expected > {safe_distance:.2f} m"
+    )
+
+    assert len(trajectories) == t + 1, (
+        f"Expected {t + 1} collected trajectories, but found {len(trajectories)}."
     )

@@ -1,4 +1,4 @@
-from typing import cast, overload, Self, Sequence, Final, Any
+from typing import Never, cast, overload, Self, Sequence, Final, Any
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -416,6 +416,12 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
         return np.asarray(self.array)
+
+    def single(self) -> Never:
+        # TODO: Fix this!
+        raise NotImplementedError(
+            "single() is not implemented for JaxBicycleObstacleStateSequences."
+        )
 
     def x(self) -> Array[Dims[T, K]]:
         return np.asarray(self.array[:, 0, :])

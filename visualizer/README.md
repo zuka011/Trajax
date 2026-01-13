@@ -55,3 +55,9 @@ Visualizations are saved as:
 ## Development
 
 The bundled CLI (`visualizer/trajax_visualizer/assets/cli.js`) is included in the package distribution. See `visualizer/core/README.md` for build instructions.
+
+To make sure the CLI bundle is ignored by VCS, run:
+
+```bash
+git update-index --skip-worktree visualizer/trajax_visualizer/assets/cli.js
+``` 

@@ -7,6 +7,8 @@ from trajax.types.costs.collision.common import (
     ObstacleStateSampler,
     DistanceExtractor,
     SampleCostFunction,
+    Risk,
+    RiskMetric,
 )
 
 from numtypes import Array, Dims
@@ -32,7 +34,7 @@ class JaxDistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT](
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxRisk[T: int, M: int]:
+class JaxRisk[T: int, M: int](Risk[T, M]):
     _array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
@@ -51,7 +53,9 @@ class JaxRisk[T: int, M: int]:
         return self._array
 
 
-class JaxRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT](Protocol):
+class JaxRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT](
+    RiskMetric, Protocol
+):
     def compute(
         self,
         cost_function: SampleCostFunction[

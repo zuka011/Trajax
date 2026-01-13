@@ -10,7 +10,7 @@ import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class MpccErrorMetricResult[T: int]:
+class MpccErrorMetricResult[T: int = int]:
     contouring: Array[Dims[T]]
     lag: Array[Dims[T]]
 
@@ -26,7 +26,7 @@ class MpccErrorMetricResult[T: int]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class MpccErrorMetric[StateBatchT](Metric[MpccErrorMetricResult]):
+class MpccErrorMetric[StateBatchT](Metric[MpccErrorMetricResult[Any]]):
     contouring: ContouringCost[Any, StateBatchT]
     lag: LagCost[Any, StateBatchT]
 

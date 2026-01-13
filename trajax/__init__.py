@@ -96,6 +96,7 @@ from .factory import (
     filters as filters,
 )
 from .collectors import (
+    CollectorRegistry as CollectorRegistry,
     NoCollectedDataWarning as NoCollectedDataWarning,
     collectors as collectors,
     access as access,

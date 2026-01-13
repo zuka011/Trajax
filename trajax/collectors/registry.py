@@ -1,19 +1,35 @@
 from warnings import warn
-from typing import Protocol, Sequence, Mapping, Any, runtime_checkable
+from typing import Protocol, Sequence, Any, Callable
 from dataclasses import dataclass
 
 from trajax.types import SimulationData
+
+
+type OnModifyCallback = Callable[[], None]
 
 
 class NoCollectedDataWarning(RuntimeWarning):
     """Warning raised when no data has been collected by a registered collector."""
 
 
-@runtime_checkable
-class SimpleCollector[T](Protocol):
+class DataTransformer[InputT, OutputT = Any](Protocol):
+    def __call__(self, data: Sequence[InputT], /) -> OutputT:
+        """Transforms the collected data into the desired output format."""
+        ...
+
+
+class Collector[T](Protocol):
+    def on_modified(self, callback: OnModifyCallback) -> None:
+        """Registers a callback to be invoked when new data is collected."""
+        ...
+
+    def collected(self, *, take: int) -> Sequence[T]:
+        """Returns the first `take` collected data points."""
+        ...
+
     @property
-    def collected(self) -> Sequence[T]:
-        """Returns the collected data sequence for each time step."""
+    def count(self) -> int:
+        """Returns the number of collected data points."""
         ...
 
     @property
@@ -21,61 +37,95 @@ class SimpleCollector[T](Protocol):
         """Returns the key of the data being collected."""
         ...
 
-
-@runtime_checkable
-class DataTransformer[InputT, OutputT](Protocol):
-    def __call__(self, data: Sequence[InputT]) -> OutputT:
-        """Transforms the collected data sequence into the desired output format."""
+    @property
+    def transformer(self) -> DataTransformer[T, Any]:
+        """Returns the transformer function to be applied to the collected data."""
         ...
 
 
-type Collector = SimpleCollector | tuple[SimpleCollector, DataTransformer]
+class HasCallbacks(Protocol):
+    @property
+    def _callbacks(self) -> list[OnModifyCallback]:
+        """Returns the list of registered modification callbacks."""
+        ...
 
 
-@dataclass(frozen=True)
+class HasList[T](Protocol):
+    @property
+    def _collected(self) -> list[T]:
+        """Returns the list of collected data."""
+        ...
+
+
+class IdentityTransformer[InputT]:
+    def __call__(self, data: Sequence[InputT], /) -> Sequence[InputT]:
+        """Returns the input data unchanged."""
+        return data
+
+
+class ModificationNotifierMixin:
+    def notify(self: HasCallbacks) -> None:
+        for callback in self._callbacks:
+            callback()
+
+    def on_modified(self: HasCallbacks, callback: OnModifyCallback) -> None:
+        self._callbacks.append(callback)
+
+
+class ListCollectorMixin:
+    def collected[T](self: HasList[T], *, take: int) -> Sequence[T]:
+        return self._collected[:take]
+
+    @property
+    def count(self: HasList[Any]) -> int:
+        return len(self._collected)
+
+
+@dataclass
 class CollectorRegistry:
-    collectors_by_name: Mapping[str, Collector | None]
+    collectors: tuple[Collector, ...]
+    _data: SimulationData | None
 
     @staticmethod
     def of(**kwargs: Collector | None) -> "CollectorRegistry":
-        return CollectorRegistry(collectors_by_name=kwargs)
+        registry = CollectorRegistry(collectors=(), _data=None)
+        registry.collectors = tuple(
+            registry._with_callback(collector)
+            for collector in kwargs.values()
+            if collector is not None
+        )
+
+        return registry
 
     @property
     def data(self) -> SimulationData:
-        return SimulationData.create(
-            **{
-                self._key_from(collector, name=name): data
-                for name, collector in self.collectors_by_name.items()
-                if collector is not None
-                and (data := self._data_from(collector, name=name)) is not None
+        if self._data is not None:
+            return self._data
+
+        for collector in self.collectors:
+            if collector.count == 0:
+                warn(
+                    f"Collector for key '{collector.key}' has not collected any data.",
+                    NoCollectedDataWarning,
+                )
+
+        collectors = [it for it in self.collectors if it.count > 0]
+        time_step_count = min(collector.count for collector in collectors)
+
+        self._data = SimulationData.create(
+            {
+                collector.key: collector.transformer(
+                    collector.collected(take=time_step_count)
+                )
+                for collector in collectors
             }
         )
 
-    def _key_from(self, collector: Collector, *, name: str) -> str:
-        match collector:
-            case (SimpleCollector() as simple, _):
-                return simple.key
-            case SimpleCollector() as simple:
-                return simple.key
-            case _:
-                raise TypeError(
-                    f"Unexpected collector '{name}' of type: {type(collector)}"
-                )
+        return self._data
 
-    def _data_from(self, collector: Collector, *, name: str) -> Any:
-        match collector:
-            case (SimpleCollector() as simple, DataTransformer() as transformer):
-                if len(collected := simple.collected) == 0:
-                    warn(
-                        f"The collector '{name}' did not collect any data.",
-                        NoCollectedDataWarning,
-                    )
-                    return
+    def _modified(self) -> None:
+        self._data = None
 
-                return transformer(collected)
-            case SimpleCollector() as simple:
-                return simple.collected
-            case _:
-                raise TypeError(
-                    f"Unexpected collector '{name}' of type: {type(collector)}"
-                )
+    def _with_callback(self, collector: Collector) -> Collector:
+        collector.on_modified(self._modified)
+        return collector

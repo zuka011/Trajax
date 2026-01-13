@@ -395,7 +395,13 @@ class configure:
         planner = (
             trajectories_collector := collectors.trajectories.decorating(
                 control_collector := collectors.controls.decorating(
-                    state_collector := collectors.states.decorating(planner)
+                    state_collector := collectors.states.decorating(
+                        planner,
+                        transformer=types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    )
                 ),
                 model=augmented_model,
             )
@@ -412,13 +418,7 @@ class configure:
                     contouring=contouring_cost, lag=lag_cost
                 ),
                 collectors=collectors.registry(
-                    states=(
-                        state_collector,
-                        types.augmented.state_sequence.of_states(
-                            physical=types.bicycle.state_sequence.of_states,
-                            virtual=types.simple.state_sequence.of_states,
-                        ),
-                    ),
+                    states=state_collector,
                     controls=control_collector,
                     trajectories=trajectories_collector,
                 ),
@@ -569,13 +569,21 @@ class configure:
         planner = (
             trajectories_collector := collectors.trajectories.decorating(
                 control_collector := collectors.controls.decorating(
-                    state_collector := collectors.states.decorating(planner)
+                    state_collector := collectors.states.decorating(
+                        planner,
+                        transformer=types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    )
                 ),
                 model=augmented_model,
             )
         )
 
-        obstacle_collector = collectors.obstacles.decorating(obstacles_provider)
+        obstacle_collector = collectors.obstacle_states.decorating(
+            obstacles_provider, transformer=types.obstacle_states.of_states
+        )
 
         return NumPyMpccPlannerConfiguration(
             horizon=horizon,
@@ -591,17 +599,11 @@ class configure:
                     distance_threshold=0.0, distance=circles_distance
                 ),
                 collectors=collectors.registry(
-                    states=(
-                        state_collector,
-                        types.augmented.state_sequence.of_states(
-                            physical=types.bicycle.state_sequence.of_states,
-                            virtual=types.simple.state_sequence.of_states,
-                        ),
-                    ),
+                    states=state_collector,
                     controls=control_collector,
                     risks=risk_collector,
                     trajectories=trajectories_collector,
-                    obstacles=(obstacle_collector, types.obstacle_states.of_states),
+                    obstacles=obstacle_collector,
                     obstacle_forecasts=forecasts_collector,
                 ),
             ),
@@ -744,13 +746,21 @@ class configure:
         planner = (
             trajectories_collector := collectors.trajectories.decorating(
                 control_collector := collectors.controls.decorating(
-                    state_collector := collectors.states.decorating(planner)
+                    state_collector := collectors.states.decorating(
+                        planner,
+                        transformer=types.augmented.state_sequence.of_states(
+                            physical=types.bicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    )
                 ),
                 model=augmented_model,
             )
         )
 
-        obstacle_collector = collectors.obstacles.decorating(obstacles_provider)
+        obstacle_collector = collectors.obstacle_states.decorating(
+            obstacles_provider, transformer=types.obstacle_states.of_states
+        )
 
         return NumPyMpccPlannerConfiguration(
             horizon=horizon,
@@ -766,17 +776,11 @@ class configure:
                     distance_threshold=0.0, distance=circles_distance
                 ),
                 collectors=collectors.registry(
-                    states=(
-                        state_collector,
-                        types.augmented.state_sequence.of_states(
-                            physical=types.bicycle.state_sequence.of_states,
-                            virtual=types.simple.state_sequence.of_states,
-                        ),
-                    ),
+                    states=state_collector,
                     controls=control_collector,
                     risks=risk_collector,
                     trajectories=trajectories_collector,
-                    obstacles=(obstacle_collector, types.obstacle_states.of_states),
+                    obstacles=obstacle_collector,
                     obstacle_forecasts=forecasts_collector,
                 ),
             ),

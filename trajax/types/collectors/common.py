@@ -32,8 +32,8 @@ class SimulationData:
     data: Mapping[str, Any]
 
     @staticmethod
-    def create(**kwargs: Any) -> "SimulationData":
-        return SimulationData(data=kwargs)
+    def create(data: Mapping[str, Any]) -> "SimulationData":
+        return SimulationData(data=data)
 
     @overload
     def __call__[T](self, accessor: SimulationDataAccessor[T, Required]) -> T:

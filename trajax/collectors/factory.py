@@ -18,6 +18,6 @@ class collectors:
     controls: Final = ControlCollector
     trajectories: Final = TrajectoryCollector
     risk: Final = RiskCollector
-    obstacles: Final = ObstacleStateCollector
+    obstacle_states: Final = ObstacleStateCollector
     obstacle_forecasts: Final = ObstacleForecastCollector
     registry: Final = CollectorRegistry.of

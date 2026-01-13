@@ -8,6 +8,7 @@ from trajax.types.costs.collision.common import (
     DistanceExtractor,
     SampleCostFunction,
     Risk,
+    RiskMetric,
 )
 
 from numtypes import Array, Dims
@@ -48,7 +49,9 @@ class NumPyRisk[T: int, M: int](Risk[T, M]):
         return self._array
 
 
-class NumPyRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT](Protocol):
+class NumPyRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT](
+    RiskMetric, Protocol
+):
     def compute[T: int, M: int](
         self,
         cost_function: SampleCostFunction[

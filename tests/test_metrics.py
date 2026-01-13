@@ -54,14 +54,16 @@ class test_that_collision_is_detected_when_distance_is_below_threshold:
                     ),
                     collectors=collectors.registry(
                         states=(
-                            mppi := collectors.states.decorating(stubs.Mppi.create()),
-                            types.simple.state_sequence.of_states,
+                            mppi := collectors.states.decorating(
+                                stubs.Mppi.create(),
+                                transformer=types.simple.state_sequence.of_states,
+                            )
                         ),
                         obstacles=(
-                            observer := collectors.obstacles.decorating(
-                                stubs.ObstacleStateObserver.create()
-                            ),
-                            types.obstacle_states.of_states,
+                            observer := collectors.obstacle_states.decorating(
+                                stubs.ObstacleStateObserver.create(),
+                                transformer=types.obstacle_states.of_states,
+                            )
                         ),
                     ),
                 ),

@@ -87,7 +87,7 @@ class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Prot
         ...
 
     def single(self) -> SingleSampleT:
-        """Returns the state sequences as a sampled obstacle state batch with one sample."""
+        """Returns the state sequences as a sampled obstacle states with one sample."""
         ...
 
     @property

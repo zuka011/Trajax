@@ -18,7 +18,7 @@ import numpy as np
 
 
 @dataclass(kw_only=True, frozen=True)
-class CollisionMetricResult[T: int, V: int = int]:
+class CollisionMetricResult[T: int = int, V: int = int]:
     distances: Array[Dims[T, V]]
     distance_threshold: float
 
@@ -37,7 +37,7 @@ class CollisionMetricResult[T: int, V: int = int]:
 
 @dataclass(kw_only=True, frozen=True)
 class CollisionMetric[StateBatchT, SampledObstacleStatesT](
-    Metric[CollisionMetricResult]
+    Metric[CollisionMetricResult[Any]]
 ):
     distance: DistanceExtractor[StateBatchT, SampledObstacleStatesT, Distance]
     distance_threshold: float
