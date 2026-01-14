@@ -1,13 +1,13 @@
 import type { FunctionalComponent } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { Theme } from "../../core/defaults.js";
-import type { ProcessedSimulationData } from "../../core/types.js";
+import type { Visualizable } from "../../core/types.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 import { Controls } from "./Controls.js";
 
 interface ControlsContainerProps {
-    data: ProcessedSimulationData;
+    data: Visualizable.ProcessedSimulationResult;
     theme: Theme;
     state: VisualizationState;
     updateManager: UpdateManager;

@@ -1,12 +1,12 @@
 import type { FunctionalComponent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { AdditionalPlot, ProcessedSimulationData } from "../../core/types.js";
+import type { Plot, Visualizable } from "../../core/types.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 import { createAdditionalPlot, groupPlots, type PlotGroup } from "./additional-plot.js";
 
 interface PlotContainerProps {
-    data: ProcessedSimulationData;
+    data: Visualizable.ProcessedSimulationResult;
     state: VisualizationState;
     updateManager: UpdateManager;
 }
@@ -39,7 +39,7 @@ function truncateName(name: string, maxLength: number): string {
 
 interface SinglePlotPanelProps {
     group: PlotGroup;
-    data: ProcessedSimulationData;
+    data: Visualizable.ProcessedSimulationResult;
     state: VisualizationState;
     updateManager: UpdateManager;
 }
@@ -72,7 +72,7 @@ export const AdditionalPlotsContainer: FunctionalComponent<PlotContainerProps> =
     state,
     updateManager,
 }) => {
-    const plots: AdditionalPlot[] = data.additionalPlots ?? [];
+    const plots: Plot.Additional[] = data.additionalPlots ?? [];
 
     if (plots.length === 0) {
         return null;

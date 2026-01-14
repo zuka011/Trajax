@@ -1,10 +1,10 @@
 import type { FunctionalComponent } from "preact";
-import type { ProcessedSimulationData } from "../../core/types.js";
+import type { Visualizable } from "../../core/types.js";
 import { radiansToDegrees } from "../../utils/math.js";
 
 interface InfoPanelProps {
     currentTimestep: number;
-    data: ProcessedSimulationData;
+    data: Visualizable.ProcessedSimulationResult;
 }
 
 export const InfoPanel: FunctionalComponent<InfoPanelProps> = ({ currentTimestep, data }) => {

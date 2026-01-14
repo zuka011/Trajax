@@ -14,21 +14,10 @@ from trajax import (
 )
 
 from trajax_visualizer.api.simulation import (
+    Arrays,
+    Plot,
+    Visualizable,
     SimulationVisualizer,
-    SimulationData,
-    SimulationInfo,
-    ReferenceTrajectory,
-    Ego,
-    EgoGhost,
-    PlannedTrajectories,
-    PlannedTrajectory,
-    Obstacles,
-    ObstacleForecast,
-    PlotSeries,
-    PlotBound,
-    PlotBand,
-    AdditionalPlot,
-    ObstacleForecastCovarianceArray,
 )
 
 from numtypes import Array, Dim1, Dims, D
@@ -56,6 +45,7 @@ class MpccSimulationResult:
     wheelbase: float
     max_contouring_error: float
     max_lag_error: float
+    vehicle_width: float | None = None
     optimal_trajectories: Sequence[AugmentedStateSequence] | None = None
     nominal_trajectories: Sequence[AugmentedStateSequence] | None = None
     obstacles: ObstacleStates | None = None
@@ -91,8 +81,8 @@ class MpccVisualizer:
     async def can_visualize(self, data: object) -> bool:
         return isinstance(data, MpccSimulationResult)
 
-    def extract(self, result: MpccSimulationResult) -> SimulationData:
-        return SimulationData.create(
+    def extract(self, result: MpccSimulationResult) -> Visualizable.SimulationResult:
+        return Visualizable.SimulationResult.create(
             info=self.info_from(result),
             reference=self.reference_trajectory_from(result),
             ego=self.ego_from(result),
@@ -101,17 +91,18 @@ class MpccVisualizer:
             additional_plots=self.additional_plots_from(result),
         )
 
-    def info_from(self, result: MpccSimulationResult) -> SimulationInfo:
-        return SimulationInfo(
+    def info_from(self, result: MpccSimulationResult) -> Visualizable.SimulationInfo:
+        return Visualizable.SimulationInfo(
             path_length=result.reference.path_length,
             time_step=result.time_step_size,
             wheelbase=result.wheelbase,
+            vehicle_width=result.vehicle_width,
             vehicle_type="car",
         )
 
     def reference_trajectory_from(
         self, result: MpccSimulationResult
-    ) -> ReferenceTrajectory:
+    ) -> Visualizable.ReferenceTrajectory:
         path_parameters = np.linspace(
             0, result.reference.path_length, self.reference_sample_count
         ).reshape(-1, 1)
@@ -120,12 +111,12 @@ class MpccVisualizer:
             types.numpy.path_parameters(path_parameters)
         )
 
-        return ReferenceTrajectory(
+        return Visualizable.ReferenceTrajectory(
             x=reference_points.x()[:, 0], y=reference_points.y()[:, 0]
         )
 
-    def ego_from(self, result: MpccSimulationResult) -> Ego:
-        return Ego(
+    def ego_from(self, result: MpccSimulationResult) -> Visualizable.Ego:
+        return Visualizable.Ego(
             x=result.states.physical.x(),
             y=result.states.physical.y(),
             heading=result.states.physical.heading(),
@@ -139,40 +130,42 @@ class MpccVisualizer:
 
     def ego_ghost_from(
         self, result: MpccSimulationResult, path_parameters: Array[Dim1]
-    ) -> EgoGhost:
+    ) -> Visualizable.EgoGhost:
         positions = result.reference.query(
             types.numpy.path_parameters(path_parameters.reshape(-1, 1))
         )
 
-        return EgoGhost(x=positions.x()[:, 0], y=positions.y()[:, 0])
+        return Visualizable.EgoGhost(x=positions.x()[:, 0], y=positions.y()[:, 0])
 
     def planned_trajectories_from(
         self, result: MpccSimulationResult
-    ) -> PlannedTrajectories | None:
+    ) -> Visualizable.PlannedTrajectories | None:
         if result.optimal_trajectories is None:
             return
 
-        return PlannedTrajectories(
+        return Visualizable.PlannedTrajectories(
             optimal=self.planned_trajectory_from(result.optimal_trajectories),
             nominal=self.planned_trajectory_from(result.nominal_trajectories),
         )
 
     def planned_trajectory_from(
         self, trajectories: Sequence[AugmentedStateSequence] | None
-    ) -> PlannedTrajectory | None:
+    ) -> Visualizable.PlannedTrajectory | None:
         if trajectories is None:
             return
 
-        return PlannedTrajectory(
+        return Visualizable.PlannedTrajectory(
             x=np.stack([it.physical.x() for it in trajectories], axis=0),
             y=np.stack([it.physical.y() for it in trajectories], axis=0),
         )
 
-    def obstacles_from(self, result: MpccSimulationResult) -> Obstacles | None:
+    def obstacles_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.Obstacles | None:
         if result.obstacles is None:
             return
 
-        return Obstacles(
+        return Visualizable.Obstacles(
             x=result.obstacles.x(),
             y=result.obstacles.y(),
             heading=result.obstacles.heading(),
@@ -181,11 +174,11 @@ class MpccVisualizer:
 
     def obstacle_forecast_from(
         self, result: MpccSimulationResult
-    ) -> ObstacleForecast | None:
+    ) -> Visualizable.ObstacleForecast | None:
         if result.obstacle_forecasts is None:
             return
 
-        return ObstacleForecast(
+        return Visualizable.ObstacleForecast(
             x=np.stack([it.x() for it in result.obstacle_forecasts], axis=0),
             y=np.stack([it.y() for it in result.obstacle_forecasts], axis=0),
             heading=np.stack(
@@ -196,7 +189,7 @@ class MpccVisualizer:
 
     def obstacle_forecast_covariance_from(
         self, result: MpccSimulationResult
-    ) -> ObstacleForecastCovarianceArray | None:
+    ) -> Arrays.ObstacleForecastCovariances | None:
         if (forecasts := result.obstacle_forecasts) is None or (
             template_covariance := self.template_covariance_from(forecasts)
         ) is None:
@@ -229,45 +222,45 @@ class MpccVisualizer:
 
     def additional_plots_from(
         self, result: MpccSimulationResult
-    ) -> list[AdditionalPlot]:
+    ) -> list[Plot.Additional]:
         path_parameters = self.path_parameters_from(result)
         plots = [
-            AdditionalPlot(
+            Plot.Additional(
                 id="progress",
                 name="Path Progress",
-                series=[PlotSeries(label="Progress", values=path_parameters)],
+                series=[Plot.Series(label="Progress", values=path_parameters)],
                 y_axis_label="Progress (m)",
-                upper_bound=PlotBound(
+                upper_bound=Plot.Bound(
                     values=result.reference.path_length, label="Path Length"
                 ),
             ),
-            AdditionalPlot(
+            Plot.Additional(
                 id="contouring-error",
                 name="Contouring Error",
                 series=[
-                    PlotSeries(
+                    Plot.Series(
                         label="Contouring Error",
                         values=np.asarray(result.contouring_errors).flatten(),
                     )
                 ],
                 y_axis_label="Error (m)",
-                upper_bound=PlotBound(values=result.max_contouring_error),
-                lower_bound=PlotBound(values=-result.max_contouring_error),
+                upper_bound=Plot.Bound(values=result.max_contouring_error),
+                lower_bound=Plot.Bound(values=-result.max_contouring_error),
                 group="errors",
             ),
-            AdditionalPlot(
+            Plot.Additional(
                 id="lag-error",
                 name="Lag Error",
                 series=[
-                    PlotSeries(
+                    Plot.Series(
                         label="Lag Error",
                         values=np.asarray(result.lag_errors).flatten(),
                         color="#9b59b6",
                     )
                 ],
                 y_axis_label="Error (m)",
-                upper_bound=PlotBound(values=result.max_lag_error),
-                lower_bound=PlotBound(values=-result.max_lag_error),
+                upper_bound=Plot.Bound(values=result.max_lag_error),
+                lower_bound=Plot.Bound(values=-result.max_lag_error),
                 group="errors",
             ),
         ]
@@ -277,7 +270,7 @@ class MpccVisualizer:
 
         return plots
 
-    def risk_plot_from(self, result: MpccSimulationResult) -> AdditionalPlot | None:
+    def risk_plot_from(self, result: MpccSimulationResult) -> Plot.Additional | None:
         if (
             result.risks is None
             or result.controls is None
@@ -297,23 +290,23 @@ class MpccVisualizer:
         risks = np.maximum(risks, 1e-10)
         selected = (risks * weights).sum(axis=1)
 
-        return AdditionalPlot(
+        return Plot.Additional(
             id="risk",
             name="Risk",
             series=[
-                PlotSeries(label="Selected", values=selected, color="#e63946"),
-                PlotSeries(
+                Plot.Series(label="Selected", values=selected, color="#e63946"),
+                Plot.Series(
                     label="Median", values=np.median(risks, axis=1), color="#457b9d"
                 ),
             ],
             bands=[
-                PlotBand(
+                Plot.Band(
                     lower=np.percentile(risks, 10, axis=1),
                     upper=np.percentile(risks, 90, axis=1),
                     color="#adb5bd",
                     label="10-90%",
                 ),
-                PlotBand(
+                Plot.Band(
                     lower=np.percentile(risks, 25, axis=1),
                     upper=np.percentile(risks, 75, axis=1),
                     color="#457b9d",

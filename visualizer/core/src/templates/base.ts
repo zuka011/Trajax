@@ -23,7 +23,7 @@ const template = (options: TemplateOptions, scriptTag: string) => `<!DOCTYPE htm
   <body>
     ${bodyHtml}
     <script>
-    window.SIMULATION_DATA = ${options.data};
+    window.__SIMULATION_RESULT__ = ${options.data};
     </script>
     ${scriptTag}
   </body>

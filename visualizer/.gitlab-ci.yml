@@ -9,6 +9,7 @@ variables:
     apt-get update -qq && apt-get install -qq -y nodejs npm
     npm install -g pnpm
     cd core && pnpm install --frozen-lockfile && pnpm build && cd ..
+    git update-index --assume-unchanged trajax_visualizer/assets/cli.js
 
 include:
   - project: "zurabm/ci-templates"

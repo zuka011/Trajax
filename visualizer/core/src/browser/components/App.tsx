@@ -1,12 +1,12 @@
 import type { FunctionalComponent } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import type { ProcessedSimulationData } from "../../core/types.js";
+import type { Visualizable } from "../../core/types.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
 import { InfoPanel } from "./InfoPanel.js";
 
 interface AppProps {
-    data: ProcessedSimulationData;
+    data: Visualizable.ProcessedSimulationResult;
     state: VisualizationState;
     updateManager: UpdateManager;
 }

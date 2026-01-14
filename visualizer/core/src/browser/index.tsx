@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { theme as defaultTheme } from "../core/defaults.js";
-import type { ProcessedSimulationData } from "../core/types.js";
+import type { Visualizable } from "../core/types.js";
 import { AdditionalPlotsContainer } from "./components/AdditionalPlotsContainer.js";
 import { App } from "./components/App.js";
 import { ControlsContainer } from "./components/ControlsContainer.js";
@@ -10,7 +10,7 @@ import { createUpdateManager } from "./update.js";
 
 declare global {
     interface Window {
-        SIMULATION_DATA: ProcessedSimulationData;
+        __SIMULATION_RESULT__: Visualizable.ProcessedSimulationResult;
     }
 }
 
@@ -23,7 +23,7 @@ function requireElement(id: string): HTMLElement {
 }
 
 function initialize(): void {
-    const data = window.SIMULATION_DATA;
+    const data = window.__SIMULATION_RESULT__;
 
     if (!data) {
         console.error("No simulation data found");

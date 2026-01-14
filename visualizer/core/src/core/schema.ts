@@ -1,97 +1,106 @@
 import { z } from "zod";
 
-const ReferenceTrajectorySchema = z.object({
-    x: z.array(z.number()),
-    y: z.array(z.number()),
-});
+export namespace Types {
+    export const Vehicle = z.enum(["triangle", "car"]);
+    export const Scale = z.enum(["linear", "log"]);
+}
 
-const PlotSeriesSchema = z.object({
-    label: z.string(),
-    values: z.array(z.number()),
-    color: z.string().optional(),
-});
+export namespace Plot {
+    export const Series = z.object({
+        label: z.string(),
+        values: z.array(z.number()),
+        color: z.string().optional(),
+    });
 
-const PlotBoundSchema = z.object({
-    values: z.union([z.array(z.number()), z.number()]),
-    label: z.string().optional(),
-});
+    export const Bound = z.object({
+        values: z.union([z.array(z.number()), z.number()]),
+        label: z.string().optional(),
+    });
 
-const PlotBandSchema = z.object({
-    lower: z.array(z.number()),
-    upper: z.array(z.number()),
-    color: z.string().optional(),
-    label: z.string().optional(),
-});
+    export const Band = z.object({
+        lower: z.array(z.number()),
+        upper: z.array(z.number()),
+        color: z.string().optional(),
+        label: z.string().optional(),
+    });
 
-const AdditionalPlotSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    series: z.array(PlotSeriesSchema),
-    upperBound: PlotBoundSchema.optional(),
-    lowerBound: PlotBoundSchema.optional(),
-    bands: z.array(PlotBandSchema).optional(),
-    yAxisLabel: z.string(),
-    yAxisScale: z.enum(["linear", "log"]).optional(),
-    group: z.string().optional(),
-});
+    export const Additional = z.object({
+        id: z.string(),
+        name: z.string(),
+        series: z.array(Series),
+        yAxisLabel: z.string(),
+        upperBound: Bound.optional(),
+        lowerBound: Bound.optional(),
+        bands: z.array(Band).optional(),
+        yAxisScale: Types.Scale.optional(),
+        group: z.string().optional(),
+    });
+}
 
-const SimulationInfoSchema = z.object({
-    pathLength: z.number(),
-    timeStep: z.number().optional().default(0.1),
-    wheelbase: z.number().optional().default(2.5),
-    vehicleWidth: z.number().optional().default(1.2),
-    vehicleType: z.enum(["triangle", "car"]).optional().default("triangle"),
-});
+export namespace Visualizable {
+    export const ReferenceTrajectory = z.object({
+        x: z.array(z.number()),
+        y: z.array(z.number()),
+    });
 
-const EgoGhostSchema = z.object({
-    x: z.array(z.number()),
-    y: z.array(z.number()),
-});
+    export const SimulationInfo = z.object({
+        pathLength: z.number(),
+        timeStep: z.number(),
+        wheelbase: z.number().optional().default(2.5),
+        vehicleWidth: z.number().optional().default(1.2),
+        vehicleType: Types.Vehicle.optional().default("triangle"),
+    });
 
-const EgoSchema = z.object({
-    x: z.array(z.number()),
-    y: z.array(z.number()),
-    heading: z.array(z.number()),
-    pathParameter: z.array(z.number()),
-    ghost: EgoGhostSchema.optional(),
-});
+    export const EgoGhost = z.object({
+        x: z.array(z.number()),
+        y: z.array(z.number()),
+    });
 
-const PlannedTrajectorySchema = z.object({
-    x: z.array(z.array(z.number())),
-    y: z.array(z.array(z.number())),
-});
+    export const Ego = z.object({
+        x: z.array(z.number()),
+        y: z.array(z.number()),
+        heading: z.array(z.number()),
+        pathParameter: z.array(z.number()),
+        ghost: EgoGhost.optional(),
+    });
 
-const PlannedTrajectoriesSchema = z.object({
-    optimal: PlannedTrajectorySchema.optional(),
-    nominal: PlannedTrajectorySchema.optional(),
-});
+    export const PlannedTrajectory = z.object({
+        x: z.array(z.array(z.number())),
+        y: z.array(z.array(z.number())),
+    });
 
-const ObstacleForecastSchema = z.object({
-    x: z.array(z.array(z.array(z.number().nullable()))),
-    y: z.array(z.array(z.array(z.number().nullable()))),
-    heading: z.array(z.array(z.array(z.number().nullable()))),
-    covariance: z.array(z.array(z.array(z.array(z.array(z.number().nullable()))))).optional(),
-});
+    export const PlannedTrajectories = z.object({
+        optimal: PlannedTrajectory.optional(),
+        nominal: PlannedTrajectory.optional(),
+    });
 
-const ObstaclesSchema = z.object({
-    x: z.array(z.array(z.number())),
-    y: z.array(z.array(z.number())),
-    heading: z.array(z.array(z.number())),
-    forecast: ObstacleForecastSchema.optional(),
-});
+    export const ObstacleForecast = z.object({
+        x: z.array(z.array(z.array(z.number().nullable()))),
+        y: z.array(z.array(z.array(z.number().nullable()))),
+        heading: z.array(z.array(z.array(z.number().nullable()))),
+        covariance: z.array(z.array(z.array(z.array(z.array(z.number().nullable()))))).optional(),
+    });
 
-export const SimulationDataSchema = z.object({
-    info: SimulationInfoSchema,
-    reference: ReferenceTrajectorySchema,
-    ego: EgoSchema,
-    trajectories: PlannedTrajectoriesSchema.optional(),
-    obstacles: ObstaclesSchema.optional(),
-    additionalPlots: z.array(AdditionalPlotSchema).optional(),
-});
+    export const Obstacles = z.object({
+        x: z.array(z.array(z.number())),
+        y: z.array(z.array(z.number())),
+        heading: z.array(z.array(z.number())),
+        forecast: ObstacleForecast.optional(),
+    });
 
-export type SimulationDataInput = z.input<typeof SimulationDataSchema>;
-export type SimulationDataOutput = z.output<typeof SimulationDataSchema>;
+    export const SimulationResult = z.object({
+        info: SimulationInfo,
+        reference: ReferenceTrajectory,
+        ego: Ego,
+        trajectories: PlannedTrajectories.optional(),
+        obstacles: Obstacles.optional(),
+        additionalPlots: z.array(Plot.Additional).optional(),
+    });
+}
+
+export type SimulationDataInput = z.input<typeof Visualizable.SimulationResult>;
+export type SimulationDataOutput = z.output<typeof Visualizable.SimulationResult>;
 
 export function parseSimulationData(data: unknown): SimulationDataOutput {
-    return SimulationDataSchema.parse(data);
+    return Visualizable.SimulationResult.parse(data);
 }

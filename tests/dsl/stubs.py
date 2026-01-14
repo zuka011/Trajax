@@ -210,30 +210,53 @@ class DistanceExtractor[
     SampleT: SampledObstacleStates,
     DistanceT: Distance,
 ](DistanceExtractorLike[StateT, SampleT, DistanceT]):
-    expected_states: StateT
-    expected_obstacle_states: SampleT
-    result: DistanceT
+    expected_states: list[StateT]
+    expected_obstacle_states: list[SampleT]
+    result: list[DistanceT]
 
     @staticmethod
     def returns[SB: StateBatch, SOS: SampledObstacleStates, D: Distance](
-        distances: D, *, when_states_are: SB, and_obstacle_states_are: SOS
+        distances: D,
+        *,
+        when_states_are: SB,
+        and_obstacle_states_are: SOS,
     ) -> "DistanceExtractor[SB, SOS, D]":
         return DistanceExtractor(
-            expected_states=when_states_are,
-            expected_obstacle_states=and_obstacle_states_are,
-            result=distances,
+            expected_states=[when_states_are],
+            expected_obstacle_states=[and_obstacle_states_are],
+            result=[distances],
         )
 
     def __call__(self, *, states: StateT, obstacle_states: SampleT) -> DistanceT:
-        assert np.array_equal(self.expected_states, states), (
-            f"DistanceExtractor received unexpected states. "
-            f"Expected: {self.expected_states}, Got: {states}"
+        for expected_states, expected_obstacle_states, result in self.result_variants:
+            if np.array_equal(expected_states, states) and np.array_equal(
+                expected_obstacle_states, obstacle_states
+            ):
+                return result
+
+        assert False, (
+            f"DistanceExtractor received unexpected inputs. "
+            f"States: {states}, Obstacle States: {obstacle_states}"
         )
-        assert np.array_equal(self.expected_obstacle_states, obstacle_states), (
-            f"DistanceExtractor received unexpected obstacle states. "
-            f"Expected: {self.expected_obstacle_states}, Got: {obstacle_states}"
+
+    def or_returns(
+        self,
+        distances: DistanceT,
+        *,
+        when_states_are: StateT,
+        and_obstacle_states_are: SampleT,
+    ) -> "DistanceExtractor[StateT, SampleT, DistanceT]":
+        self.expected_states.append(when_states_are)
+        self.expected_obstacle_states.append(and_obstacle_states_are)
+        self.result.append(distances)
+
+        return self
+
+    @property
+    def result_variants(self) -> Sequence[tuple[StateT, SampleT, DistanceT]]:
+        return list(
+            zip(self.expected_states, self.expected_obstacle_states, self.result)
         )
-        return self.result
 
 
 @dataclass(frozen=True)

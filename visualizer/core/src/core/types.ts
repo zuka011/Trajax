@@ -1,97 +1,103 @@
-export type VehicleType = "triangle" | "car";
-export type ScaleType = "linear" | "log";
-
-export interface ReferenceTrajectory {
-    x: number[];
-    y: number[];
+export namespace Types {
+    export type Vehicle = "triangle" | "car";
+    export type Scale = "linear" | "log";
 }
 
-export interface PlotSeries {
-    label: string;
-    values: number[];
-    color?: string;
+export namespace Plot {
+    export interface Series {
+        label: string;
+        values: number[];
+        color?: string;
+    }
+
+    export interface Bound {
+        values: number[] | number;
+        label?: string;
+    }
+
+    export interface Band {
+        lower: number[];
+        upper: number[];
+        color?: string;
+        label?: string;
+    }
+
+    export interface Additional {
+        id: string;
+        name: string;
+        series: Series[];
+        yAxisLabel: string;
+        upperBound?: Bound;
+        lowerBound?: Bound;
+        bands?: Band[];
+        yAxisScale?: Types.Scale;
+        group?: string;
+    }
 }
 
-export interface PlotBound {
-    values: number[] | number;
-    label?: string;
-}
+export namespace Visualizable {
+    export interface ReferenceTrajectory {
+        x: number[];
+        y: number[];
+    }
 
-export interface PlotBand {
-    lower: number[];
-    upper: number[];
-    color?: string;
-    label?: string;
-}
+    export interface SimulationInfo {
+        pathLength: number;
+        timeStep: number;
+        wheelbase: number;
+        vehicleWidth: number;
+        vehicleType: Types.Vehicle;
+    }
 
-export interface AdditionalPlot {
-    id: string;
-    name: string;
-    series: PlotSeries[];
-    upperBound?: PlotBound;
-    lowerBound?: PlotBound;
-    bands?: PlotBand[];
-    yAxisScale?: ScaleType;
-    yAxisLabel: string;
-    group?: string;
-}
+    export interface EgoGhost {
+        x: number[];
+        y: number[];
+    }
 
-export interface SimulationInfo {
-    pathLength: number;
-    timeStep: number;
-    wheelbase: number;
-    vehicleWidth: number;
-    vehicleType: VehicleType;
-}
+    export interface Ego {
+        x: number[];
+        y: number[];
+        heading: number[];
+        pathParameter: number[];
+        ghost?: EgoGhost;
+    }
 
-export interface EgoGhost {
-    x: number[];
-    y: number[];
-}
+    export interface PlannedTrajectory {
+        x: number[][];
+        y: number[][];
+    }
 
-export interface Ego {
-    x: number[];
-    y: number[];
-    heading: number[];
-    pathParameter: number[];
-    ghost?: EgoGhost;
-}
+    export interface PlannedTrajectories {
+        optimal?: PlannedTrajectory;
+        nominal?: PlannedTrajectory;
+    }
 
-export interface PlannedTrajectory {
-    x: number[][];
-    y: number[][];
-}
+    export interface ObstacleForecast {
+        x: (number | null)[][][];
+        y: (number | null)[][][];
+        heading: (number | null)[][][];
+        covariance?: (number | null)[][][][][];
+    }
 
-export interface PlannedTrajectories {
-    optimal?: PlannedTrajectory;
-    nominal?: PlannedTrajectory;
-}
+    export interface Obstacles {
+        x: number[][];
+        y: number[][];
+        heading: number[][];
+        forecast?: ObstacleForecast;
+    }
 
-export interface ObstacleForecast {
-    x: (number | null)[][][];
-    y: (number | null)[][][];
-    heading: (number | null)[][][];
-    covariance?: (number | null)[][][][][];
-}
+    export interface SimulationResult {
+        info: SimulationInfo;
+        reference: ReferenceTrajectory;
+        ego: Ego;
+        trajectories?: PlannedTrajectories;
+        obstacles?: Obstacles;
+        additionalPlots?: Plot.Additional[];
+    }
 
-export interface Obstacles {
-    x: number[][];
-    y: number[][];
-    heading: number[][];
-    forecast?: ObstacleForecast;
-}
-
-export interface SimulationData {
-    info: SimulationInfo;
-    reference: ReferenceTrajectory;
-    ego: Ego;
-    trajectories?: PlannedTrajectories;
-    obstacles?: Obstacles;
-    additionalPlots?: AdditionalPlot[];
-}
-
-export interface ProcessedSimulationData extends SimulationData {
-    timestepCount: number;
+    export interface ProcessedSimulationResult extends SimulationResult {
+        timestepCount: number;
+    }
 }
 
 export interface EllipseParameters {

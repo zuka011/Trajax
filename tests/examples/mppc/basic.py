@@ -418,9 +418,7 @@ class configure:
                     contouring=contouring_cost, lag=lag_cost
                 ),
                 collectors=collectors.registry(
-                    states=state_collector,
-                    controls=control_collector,
-                    trajectories=trajectories_collector,
+                    state_collector, control_collector, trajectories_collector
                 ),
             ),
             metrics=(mpcc_error_metrics, None),
@@ -599,12 +597,12 @@ class configure:
                     distance_threshold=0.0, distance=circles_distance
                 ),
                 collectors=collectors.registry(
-                    states=state_collector,
-                    controls=control_collector,
-                    risks=risk_collector,
-                    trajectories=trajectories_collector,
-                    obstacles=obstacle_collector,
-                    obstacle_forecasts=forecasts_collector,
+                    state_collector,
+                    control_collector,
+                    risk_collector,
+                    trajectories_collector,
+                    obstacle_collector,
+                    forecasts_collector,
                 ),
             ),
             metrics=(mpcc_error_metrics, collision_metrics),
@@ -776,12 +774,12 @@ class configure:
                     distance_threshold=0.0, distance=circles_distance
                 ),
                 collectors=collectors.registry(
-                    states=state_collector,
-                    controls=control_collector,
-                    risks=risk_collector,
-                    trajectories=trajectories_collector,
-                    obstacles=obstacle_collector,
-                    obstacle_forecasts=forecasts_collector,
+                    state_collector,
+                    control_collector,
+                    risk_collector,
+                    trajectories_collector,
+                    obstacle_collector,
+                    forecasts_collector,
                 ),
             ),
             metrics=(mpcc_error_metrics, collision_metrics),

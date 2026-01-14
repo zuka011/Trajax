@@ -1,11 +1,5 @@
 import Plotly from "plotly.js-dist-min";
-import type {
-    AdditionalPlot,
-    PlotBand,
-    PlotBound,
-    PlotSeries,
-    ProcessedSimulationData,
-} from "../../core/types.js";
+import type { Plot, Visualizable } from "../../core/types.js";
 import { withoutAutorange } from "../../utils/plot.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
@@ -33,12 +27,12 @@ function hexToRgba(hex: string, alpha: number): string {
 export interface PlotGroup {
     id: string;
     name: string;
-    plots: AdditionalPlot[];
+    plots: Plot.Additional[];
 }
 
-export function groupPlots(plots: AdditionalPlot[]): PlotGroup[] {
-    const groupMap = new Map<string, AdditionalPlot[]>();
-    const ungrouped: AdditionalPlot[] = [];
+export function groupPlots(plots: Plot.Additional[]): PlotGroup[] {
+    const groupMap = new Map<string, Plot.Additional[]>();
+    const ungrouped: Plot.Additional[] = [];
 
     for (const plot of plots) {
         if (plot.group) {
@@ -71,14 +65,14 @@ export function groupPlots(plots: AdditionalPlot[]): PlotGroup[] {
     return groups;
 }
 
-function getBoundValues(bound: PlotBound, timestepCount: number): number[] {
+function getBoundValues(bound: Plot.Bound, timestepCount: number): number[] {
     if (typeof bound.values === "number") {
         return Array(timestepCount).fill(bound.values);
     }
     return bound.values;
 }
 
-function computeYAxisRange(plots: AdditionalPlot[], timestepCount: number): [number, number] {
+function computeYAxisRange(plots: Plot.Additional[], timestepCount: number): [number, number] {
     let minValue = Infinity;
     let maxValue = -Infinity;
 
@@ -120,15 +114,15 @@ function computeYAxisRange(plots: AdditionalPlot[], timestepCount: number): [num
     return [minValue - padding, maxValue + padding];
 }
 
-function getSeriesColor(series: PlotSeries, index: number): string {
+function getSeriesColor(series: Plot.Series, index: number): string {
     return series.color ?? DEFAULT_COLORS[index % DEFAULT_COLORS.length];
 }
 
-function computeBandWidth(band: PlotBand): number {
+function computeBandWidth(band: Plot.Band): number {
     return Math.max(...band.upper) - Math.min(...band.lower);
 }
 
-function buildBandTraces(plot: AdditionalPlot, times: number[], traces: Plotly.Data[]): void {
+function buildBandTraces(plot: Plot.Additional, times: number[], traces: Plotly.Data[]): void {
     if (!plot.bands || plot.bands.length === 0) {
         return;
     }
@@ -166,7 +160,7 @@ function buildBandTraces(plot: AdditionalPlot, times: number[], traces: Plotly.D
 }
 
 function buildBoundsTraces(
-    plot: AdditionalPlot,
+    plot: Plot.Additional,
     times: number[],
     timestepCount: number,
     traces: Plotly.Data[],
@@ -201,7 +195,7 @@ function buildBoundsTraces(
 }
 
 function buildSeriesTraces(
-    plot: AdditionalPlot,
+    plot: Plot.Additional,
     times: number[],
     {
         seriesIndex,
@@ -268,7 +262,7 @@ function buildTraces(
 export function createAdditionalPlot(
     container: HTMLElement,
     group: PlotGroup,
-    data: ProcessedSimulationData,
+    data: Visualizable.ProcessedSimulationResult,
     state: VisualizationState,
     updateManager: UpdateManager,
 ): void {

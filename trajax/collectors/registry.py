@@ -87,21 +87,31 @@ class CollectorRegistry:
     _data: SimulationData | None
 
     @staticmethod
-    def of(**kwargs: Collector | None) -> "CollectorRegistry":
+    def of(*args: Collector) -> "CollectorRegistry":
         registry = CollectorRegistry(collectors=(), _data=None)
         registry.collectors = tuple(
             registry._with_callback(collector)
-            for collector in kwargs.values()
+            for collector in args
             if collector is not None
         )
 
         return registry
 
+    def on_modified(self, callback: OnModifyCallback) -> None:
+        for collector in self.collectors:
+            collector.on_modified(callback)
+
     @property
     def data(self) -> SimulationData:
-        if self._data is not None:
-            return self._data
+        if self._data is None:
+            self._data = self._collect_data()
 
+        return self._data
+
+    def _modified(self) -> None:
+        self._data = None
+
+    def _collect_data(self) -> SimulationData:
         for collector in self.collectors:
             if collector.count == 0:
                 warn(
@@ -112,7 +122,7 @@ class CollectorRegistry:
         collectors = [it for it in self.collectors if it.count > 0]
         time_step_count = min(collector.count for collector in collectors)
 
-        self._data = SimulationData.create(
+        return SimulationData.create(
             {
                 collector.key: collector.transformer(
                     collector.collected(take=time_step_count)
@@ -120,11 +130,6 @@ class CollectorRegistry:
                 for collector in collectors
             }
         )
-
-        return self._data
-
-    def _modified(self) -> None:
-        self._data = None
 
     def _with_callback(self, collector: Collector) -> Collector:
         collector.on_modified(self._modified)

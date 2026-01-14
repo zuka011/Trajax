@@ -1,6 +1,6 @@
 import Plotly from "plotly.js-dist-min";
 import { defaults, type Theme } from "../../core/defaults.js";
-import type { ProcessedSimulationData } from "../../core/types.js";
+import type { Visualizable } from "../../core/types.js";
 import { covarianceToEllipse, radiansToDegrees } from "../../utils/math.js";
 import { withoutAutorange } from "../../utils/plot.js";
 import type { VisualizationState } from "../state.js";
@@ -10,7 +10,7 @@ type Trace = Plotly.Data;
 
 export function createTrajectoryPlot(
     container: HTMLElement,
-    data: ProcessedSimulationData,
+    data: Visualizable.ProcessedSimulationResult,
     state: VisualizationState,
     theme: Theme,
     updateManager: UpdateManager,
@@ -49,7 +49,7 @@ export function createTrajectoryPlot(
     updateManager.subscribe(render);
 }
 
-function buildTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
+function buildTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
     const traces: Trace[] = [];
 
     traces.push(createReferenceTrace(data, theme));
@@ -83,7 +83,7 @@ function buildTraces(data: ProcessedSimulationData, theme: Theme, t: number): Tr
     return traces;
 }
 
-function createReferenceTrace(data: ProcessedSimulationData, theme: Theme): Trace {
+function createReferenceTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme): Trace {
     return {
         x: data.reference.x,
         y: data.reference.y,
@@ -94,7 +94,7 @@ function createReferenceTrace(data: ProcessedSimulationData, theme: Theme): Trac
     };
 }
 
-function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
+function createActualPathTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
     return {
         x: data.ego.x.slice(0, t + 1),
         y: data.ego.y.slice(0, t + 1),
@@ -105,7 +105,7 @@ function createActualPathTrace(data: ProcessedSimulationData, theme: Theme, t: n
     };
 }
 
-function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
+function createVehicleTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
     const corners = transformCorners(
         data.ego.x[t],
         data.ego.y[t],
@@ -126,7 +126,7 @@ function createVehicleTrace(data: ProcessedSimulationData, theme: Theme, t: numb
     };
 }
 
-function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number): Trace {
+function createGhostTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
     return {
         x: [data.ego.ghost!.x[t]],
         y: [data.ego.ghost!.y[t]],
@@ -137,7 +137,7 @@ function createGhostTrace(data: ProcessedSimulationData, theme: Theme, t: number
     };
 }
 
-function createOptimalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
+function createOptimalTrajectoryTrace(data: Visualizable.ProcessedSimulationResult, t: number): Trace {
     return {
         x: data.trajectories!.optimal!.x[t],
         y: data.trajectories!.optimal!.y[t],
@@ -150,7 +150,7 @@ function createOptimalTrajectoryTrace(data: ProcessedSimulationData, t: number):
     };
 }
 
-function createNominalTrajectoryTrace(data: ProcessedSimulationData, t: number): Trace {
+function createNominalTrajectoryTrace(data: Visualizable.ProcessedSimulationResult, t: number): Trace {
     return {
         x: data.trajectories!.nominal!.x[t],
         y: data.trajectories!.nominal!.y[t],
@@ -163,7 +163,7 @@ function createNominalTrajectoryTrace(data: ProcessedSimulationData, t: number):
     };
 }
 
-function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
+function createObstacleTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
     return data.obstacles!.x[t].map((ox, i) => {
         const corners = transformCorners(
             ox,
@@ -187,7 +187,7 @@ function createObstacleTraces(data: ProcessedSimulationData, theme: Theme, t: nu
     });
 }
 
-function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
+function createForecastTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
     const forecast = data.obstacles!.forecast!;
     const obstacleCount = forecast.x[t][0].length;
     return Array.from({ length: obstacleCount }, (_, k) => {
@@ -223,7 +223,7 @@ function createForecastTraces(data: ProcessedSimulationData, theme: Theme, t: nu
     });
 }
 
-function createUncertaintyTraces(data: ProcessedSimulationData, theme: Theme, t: number): Trace[] {
+function createUncertaintyTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
     const traces: Trace[] = [];
     const forecast = data.obstacles!.forecast!;
     const cov = forecast.covariance![t];

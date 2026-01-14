@@ -33,17 +33,13 @@ class test_that_collector_registry_discards_incomplete_data_for_time_step:
         return [
             (
                 registry := collectors.registry(
-                    states=(
-                        mppi := collectors.states.decorating(
-                            stubs.Mppi.create(),
-                            transformer=types.simple.state_sequence.of_states,
-                        )
+                    mppi := collectors.states.decorating(
+                        stubs.Mppi.create(),
+                        transformer=types.simple.state_sequence.of_states,
                     ),
-                    # The keyword argument name does not matter here.
-                    obstacles=(  # Can also be collected without a transformer
-                        observer := collectors.obstacle_states.decorating(
-                            stubs.ObstacleStateObserver.create()
-                        )
+                    # Can also be collected without a transformer
+                    observer := collectors.obstacle_states.decorating(
+                        stubs.ObstacleStateObserver.create()
                     ),
                 ),
                 mppi,
@@ -155,10 +151,10 @@ class test_that_collector_registry_emits_warnings_when_collectors_do_not_collect
         return [
             (
                 registry := collectors.registry(
-                    states=(mppi := collectors.states.decorating(stubs.Mppi.create())),
+                    mppi := collectors.states.decorating(stubs.Mppi.create()),
                     # This collector is registered, but it never collects any data.
                     # In such cases, the registry ignores this collector and only issues a warning.
-                    ignored=collectors.controls.decorating(mppi),
+                    collectors.controls.decorating(mppi),
                 ),
                 mppi,
                 horizon := 4,
