@@ -33,6 +33,7 @@ class NumPyLineTrajectory(
 
     heading: float
 
+    _end: tuple[float, float]
     _path_length: float
 
     @staticmethod
@@ -44,6 +45,7 @@ class NumPyLineTrajectory(
             start=(start_array := np.array(start)),
             direction=(direction := np.array(end) - start_array),
             heading=np.arctan2(direction[1], direction[0]),
+            _end=end,
             _path_length=path_length,
         )
 
@@ -93,6 +95,10 @@ class NumPyLineTrajectory(
         assert shape_of(longitudinal, matches=(T, M), name="longitudinal")
 
         return NumPyLongitudinalPositions.create(longitudinal)
+
+    @property
+    def end(self) -> tuple[float, float]:
+        return self._end
 
     @property
     def path_length(self) -> float:

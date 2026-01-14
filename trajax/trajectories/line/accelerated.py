@@ -37,7 +37,9 @@ class JaxLineTrajectory(
 
     heading: Scalar
 
+    _end: tuple[float, float]
     _path_length: Scalar
+    _path_length_float: float
 
     @staticmethod
     def create(
@@ -48,7 +50,9 @@ class JaxLineTrajectory(
             start=(start_array := jnp.array(start)),
             direction=(direction := jnp.array(end) - start_array),
             heading=jnp.arctan2(direction[1], direction[0]),
+            _end=end,
             _path_length=jnp.array(path_length),
+            _path_length_float=path_length,
         )
 
     def query[T: int, M: int](
@@ -89,8 +93,12 @@ class JaxLineTrajectory(
         )
 
     @property
+    def end(self) -> tuple[float, float]:
+        return self._end
+
+    @property
     def path_length(self) -> float:
-        return float(self._path_length)
+        return self._path_length_float
 
     @cached_property
     def perpendicular(self) -> Vector:

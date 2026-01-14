@@ -118,6 +118,11 @@ class Trajectory[
         ...
 
     @property
+    def end(self) -> tuple[float, float]:
+        """Returns the (x, y) position of the final point of the reference trajectory."""
+        ...
+
+    @property
     def path_length(self) -> float:
         """Returns the total length of the reference trajectory."""
         ...

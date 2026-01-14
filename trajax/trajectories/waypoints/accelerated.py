@@ -32,7 +32,6 @@ class GuessSamples(NamedTuple):
     arc_lengths: Float[JaxArray, "K"]
 
 
-@jaxtyped
 @dataclass(kw_only=True, frozen=True)
 class JaxWaypointsTrajectory(
     Trajectory[
@@ -50,6 +49,8 @@ class JaxWaypointsTrajectory(
 
     guess_samples: GuessSamples
     refining_iterations: int
+
+    _inner: NumPyWaypointsTrajectory
 
     @overload
     @staticmethod
@@ -97,6 +98,7 @@ class JaxWaypointsTrajectory(
                 trajectory=trajectory, sample_count=coarse_samples
             ),
             refining_iterations=refining_iterations,
+            _inner=trajectory,
         )
 
     def query[T: int, M: int](
@@ -153,8 +155,12 @@ class JaxWaypointsTrajectory(
         )
 
     @property
+    def end(self) -> tuple[float, float]:
+        return self._inner.end
+
+    @property
     def path_length(self) -> float:
-        return float(self.length)
+        return self._inner.path_length
 
 
 def report_invalid_parameters(valid: bool, parameters: Float[JaxArray, "S 4"]) -> None:

@@ -18,12 +18,51 @@ import numpy as np
 from pytest import mark
 
 
+class test_that_trajectory_returns_final_position_as_end:
+    @staticmethod
+    def cases(trajectory) -> Sequence[tuple]:
+        return [
+            (
+                trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0),
+                expected := (10.0, 0.0),
+            ),
+            (
+                trajectory.line(start=(0.0, 0.0), end=(3.0, 4.0), path_length=5.0),
+                expected := (3.0, 4.0),
+            ),
+            (
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [5.0, 5.0], [10.0, 0.0]], shape=(3, 2)),
+                    path_length=10.0,
+                ),
+                expected := (10.0, 0.0),
+            ),
+            (
+                trajectory.waypoints(
+                    points=array([[2.1, 3.4], [4.5, 6.7], [8.9, 1.2]], shape=(3, 2)),
+                    path_length=15.0,
+                ),
+                expected := (8.9, 1.2),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["trajectory", "expected"],
+        [
+            *cases(trajectory=trajectory.numpy),
+            *cases(trajectory=trajectory.jax),
+        ],
+    )
+    def test(self, trajectory: Trajectory, expected: tuple[float, float]) -> None:
+        assert np.allclose(trajectory.end, expected)
+
+
 class test_that_batch_query_returns_correct_positions_and_headings:
     @staticmethod
     def cases(trajectory, types) -> Sequence[tuple]:
         return [
             (
-                trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10),
+                trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0),
                 path_parameters := types.path_parameters(
                     array(
                         [[0.0, 10.0], [5.0, 5.0], [10.0, 0.0]],
@@ -37,7 +76,7 @@ class test_that_batch_query_returns_correct_positions_and_headings:
                 ),
             ),
             (
-                trajectory.line(start=(0.0, 0.0), end=(3.0, 4.0), path_length=5),
+                trajectory.line(start=(0.0, 0.0), end=(3.0, 4.0), path_length=5.0),
                 path_parameters := types.path_parameters(
                     array([[0.0, 5.0], [2.5, 2.5], [5.0, 0.0]], shape=(T := 3, M := 2))
                 ),

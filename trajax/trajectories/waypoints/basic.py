@@ -124,6 +124,13 @@ class NumPyWaypointsTrajectory(
         return NumPyLateralPositions.create(np.asarray(lateral, dtype=np.float64))
 
     @property
+    def end(self) -> tuple[float, float]:
+        return (
+            float(self.spline_x(self.path_length)),
+            float(self.spline_y(self.path_length)),
+        )
+
+    @property
     def path_length(self) -> float:
         return self.length
 

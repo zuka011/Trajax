@@ -31,7 +31,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
                         reference=trajectory.line(
                             start=(x_ref_0 := 2.0, y_ref_0 := 2.0),
                             end=(x_ref_f := 6.0, y_ref_f := 9.0),
-                            path_length=(length := 2),
+                            path_length=(length := 2.0),
                         ),
                         # States are: [x, y, phi, psi]
                         # The path parameter is the third state dimension (phi)
@@ -113,7 +113,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
                 (
                     cost := costs.tracking.contouring(
                         reference=trajectory.line(
-                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1.0
                         ),
                         path_parameter_extractor=(
                             path_extractor := lambda states: types.path_parameters(
@@ -129,7 +129,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
                     ),
                     transformed_cost := costs.tracking.contouring(
                         reference=trajectory.line(
-                            start=(0.0, 0.0), end=(0.0, 10.0), path_length=1
+                            start=(0.0, 0.0), end=(0.0, 10.0), path_length=1.0
                         ),
                         path_parameter_extractor=path_extractor,
                         position_extractor=position_extractor,
@@ -148,7 +148,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
                 (
                     cost := costs.tracking.lag(
                         reference=trajectory.line(
-                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1.0
                         ),
                         path_parameter_extractor=(
                             path_extractor := lambda states: types.path_parameters(
@@ -164,7 +164,7 @@ class test_that_tracking_cost_does_not_depend_on_coordinate_system:
                     ),
                     transformed_cost := costs.tracking.lag(
                         reference=trajectory.line(
-                            start=(0.0, 0.0), end=(0.0, 10.0), path_length=1
+                            start=(0.0, 0.0), end=(0.0, 10.0), path_length=1.0
                         ),
                         path_parameter_extractor=path_extractor,
                         position_extractor=position_extractor,
@@ -227,7 +227,7 @@ class test_that_contouring_cost_increases_with_lateral_deviation:
             (
                 cost := costs.tracking.contouring(
                     reference=trajectory.line(
-                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1.0
                     ),
                     path_parameter_extractor=lambda states: types.path_parameters(
                         states.array[:, 2]
@@ -331,7 +331,7 @@ class test_that_lag_cost_increases_with_longitudinal_deviation:
             (
                 cost := costs.tracking.lag(
                     reference=trajectory.line(
-                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=1.0
                     ),
                     path_parameter_extractor=lambda states: types.path_parameters(
                         states.array[:, 2]
@@ -442,7 +442,7 @@ class test_that_cost_increases_with_weight:
                     states := data.state_batch(np.random.uniform(size=(T, 3, M))),
                     create_cost := lambda weight: tracking_cost(
                         reference=trajectory.line(
-                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1
+                            start=(0.0, 0.0), end=(10.0, 0.0), path_length=1.0
                         ),
                         path_parameter_extractor=(
                             lambda states: types.path_parameters(states.array[:, 2])
