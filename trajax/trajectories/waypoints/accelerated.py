@@ -42,7 +42,6 @@ class JaxWaypointsTrajectory(
         JaxLongitudinalPositions,
     ]
 ):
-    length: Scalar
     reference_points: Float[JaxArray, "N"]
     coefficients_x: Float[JaxArray, "N-1 4"]
     coefficients_y: Float[JaxArray, "N-1 4"]
@@ -50,6 +49,7 @@ class JaxWaypointsTrajectory(
     guess_samples: GuessSamples
     refining_iterations: int
 
+    _path_length: Scalar
     _inner: NumPyWaypointsTrajectory
 
     @overload
@@ -90,7 +90,6 @@ class JaxWaypointsTrajectory(
         )
 
         return JaxWaypointsTrajectory(
-            length=jnp.asarray(trajectory.length),
             reference_points=jnp.asarray(trajectory.reference_points),
             coefficients_x=coefficients_from(trajectory.spline_x),
             coefficients_y=coefficients_from(trajectory.spline_y),
@@ -98,13 +97,16 @@ class JaxWaypointsTrajectory(
                 trajectory=trajectory, sample_count=coarse_samples
             ),
             refining_iterations=refining_iterations,
+            _path_length=jnp.asarray(path_length),
             _inner=trajectory,
         )
 
     def query[T: int, M: int](
         self, parameters: JaxPathParameters[T, M]
     ) -> JaxReferencePoints[T, M]:
-        assert path_parameters_are_valid(parameters.array, path_length=self.path_length)
+        assert path_parameters_are_valid(
+            parameters.array, path_length=self._path_length
+        )
 
         return JaxReferencePoints(
             query(
@@ -129,7 +131,7 @@ class JaxWaypointsTrajectory(
                     coefficients_x=self.coefficients_x,
                     coefficients_y=self.coefficients_y,
                     guess=self.guess_samples,
-                    path_length=self.path_length,
+                    path_length=self._path_length,
                     refining_iterations=self.refining_iterations,
                 ),
                 reference_points=self.reference_points,
@@ -149,7 +151,7 @@ class JaxWaypointsTrajectory(
                 coefficients_x=self.coefficients_x,
                 coefficients_y=self.coefficients_y,
                 guess=self.guess_samples,
-                path_length=self.path_length,
+                path_length=self._path_length,
                 refining_iterations=self.refining_iterations,
             )
         )
@@ -161,6 +163,10 @@ class JaxWaypointsTrajectory(
     @property
     def path_length(self) -> float:
         return self._inner.path_length
+
+    @property
+    def natural_length(self) -> float:
+        return self._inner.natural_length
 
 
 def report_invalid_parameters(valid: bool, parameters: Float[JaxArray, "S 4"]) -> None:
@@ -184,7 +190,7 @@ def coefficients_from(spline: CubicSpline) -> Float[JaxArray, "S 4"]:
 def compute_guess_samples(
     trajectory: NumPyWaypointsTrajectory, *, sample_count: int
 ) -> GuessSamples:
-    sample_s = np.linspace(0, trajectory.length, sample_count)
+    sample_s = np.linspace(0, trajectory.path_length, sample_count)
     sample_x = trajectory.spline_x(sample_s)
     sample_y = trajectory.spline_y(sample_s)
 

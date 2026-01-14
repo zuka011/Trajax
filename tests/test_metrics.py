@@ -9,6 +9,7 @@ from trajax import (
     collectors,
     metrics,
     types,
+    trajectory,
 )
 
 from numtypes import Array, BoolArray, array
@@ -313,12 +314,16 @@ class TaskCompletionExpectation(NamedTuple):
 
 class test_that_task_completion_is_detected:
     @staticmethod
-    def cases(data, types) -> Sequence[tuple]:
+    def cases(data, types, trajectory) -> Sequence[tuple]:
         return [
             (
                 registry := metrics.registry(
                     metric := metrics.task_completion(
-                        goal_position=(15.0, 10.0),
+                        reference=trajectory.line(
+                            start=(1.0, -1.0),
+                            end=(15.0, 10.0),  # Goal
+                            path_length=999.0,
+                        ),
                         distance_threshold=5.0,  # Within 5 meters of goal.
                         time_step_size=0.5,
                         position_extractor=lambda states: types.positions(
@@ -392,8 +397,8 @@ class test_that_task_completion_is_detected:
             "expected",
         ],
         [
-            *cases(data=data.numpy, types=types.numpy),
-            *cases(data=data.jax, types=types.jax),
+            *cases(data=data.numpy, types=types.numpy, trajectory=trajectory.numpy),
+            *cases(data=data.jax, types=types.jax, trajectory=trajectory.jax),
         ],
     )
     def test[StateT, InputSequenceT](
@@ -418,3 +423,100 @@ class test_that_task_completion_is_detected:
             assert results.completion.tolist() == expected[step].completion
             assert results.completed == expected[step].completed
             assert results.completion_time == expected[step].completion_time
+
+
+class test_that_task_efficiency_is_computed:
+    @staticmethod
+    def cases(data, types, trajectory) -> Sequence[tuple]:
+        return [
+            (
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            # Path length should not matter.
+                            # Actual length and optimal distance is 5.0
+                            start=(0.0, 0.0),
+                            end=(3.0, 4.0),
+                            path_length=999.0,
+                        ),
+                        distance_threshold=1.0,  # Does not matter for this test.
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 6),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 3.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 0.0], [y := 4.0], [phi := 0.0]],
+                            [[x := 3.0], [y := 4.0], [phi := 0.0]],  # Goal reached
+                            [[x := 3.0], [y := 4.0], [phi := 0.0]],  # Stands still
+                            [[x := 5.0], [y := 4.0], [phi := 0.0]],  # Move counts
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # Efficiency is independent of whether the task was actually completed and when.
+                # This just measures how the actual traveled distance compares to the optimal distance.
+                expected_efficiencies := [
+                    0.0,  # Super efficient!
+                    0.6,  # 3.0 / 5.0
+                    1.6,  # 8.0 / 5.0
+                    2.2,  # 11.0 / 5.0
+                    2.2,  # 11.0 / 5.0
+                    2.6,  # 13.0 / 5.0
+                ],
+            )
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected_efficiencies",
+        ],
+        [
+            *cases(data=data.numpy, types=types.numpy, trajectory=trajectory.numpy),
+            *cases(data=data.jax, types=types.jax, trajectory=trajectory.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: TaskCompletionMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected_efficiencies: Sequence[float],
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+            results = registry.get(metric)
+
+            assert np.isclose(results.efficiency, expected_efficiencies[step])

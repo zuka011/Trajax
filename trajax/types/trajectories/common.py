@@ -124,5 +124,17 @@ class Trajectory[
 
     @property
     def path_length(self) -> float:
-        """Returns the total length of the reference trajectory."""
+        """Returns the parameterization length of the reference trajectory.
+
+        Note:
+            This is not necessarily the same as the length of the trajectory itself, i.e.
+            the integral of the arc length. For example, for a straight line from (0, 0) to (1, 1),
+            the path length can be any number (e.g., 2.0, 5.0, 1e6, etc.), even though the actual
+            length of the trajectory is sqrt(2).
+        """
+        ...
+
+    @property
+    def natural_length(self) -> float:
+        """Returns the natural length of the trajectory (i.e., the integral of the arc length)."""
         ...

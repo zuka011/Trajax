@@ -104,6 +104,10 @@ class NumPyLineTrajectory(
     def path_length(self) -> float:
         return self._path_length
 
+    @property
+    def natural_length(self) -> float:
+        return self.line_length
+
     @cached_property
     def perpendicular(self) -> Vector:
         tangent = self.tangent
@@ -122,5 +126,5 @@ class NumPyLineTrajectory(
         return tangent
 
     @cached_property
-    def line_length(self) -> np.floating:
-        return np.linalg.norm(self.direction)
+    def line_length(self) -> float:
+        return float(np.linalg.norm(self.direction))

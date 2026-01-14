@@ -8,6 +8,7 @@ from trajax.types import (
     Metric,
     Positions,
     PositionExtractor,
+    Trajectory,
 )
 from trajax.collectors import access
 
@@ -20,6 +21,7 @@ import numpy as np
 class TaskCompletionMetricResult[T: int = int]:
     completion: BoolArray[Dims[T]]
     completion_time: float
+    efficiency: float
 
     @cached_property
     def completed(self) -> bool:
@@ -29,6 +31,7 @@ class TaskCompletionMetricResult[T: int = int]:
 @dataclass(kw_only=True, frozen=True)
 class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]]):
     goal_position: Array[Dims[D[2]]]
+    optimal_distance: float
     distance_threshold: float
     time_step_size: float
     position_extractor: PositionExtractor[StateBatchT, Positions]
@@ -36,13 +39,18 @@ class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]])
     @staticmethod
     def create(
         *,
-        goal_position: tuple[float, float],
+        reference: Trajectory[Any, Any],
         distance_threshold: float,
         time_step_size: float,
         position_extractor: PositionExtractor[StateBatchT, Positions],
     ) -> "TaskCompletionMetric[StateBatchT]":
+        assert reference.natural_length > 0.0, (
+            f"Reference trajectory must have positive length, got {reference.natural_length}."
+        )
+
         return TaskCompletionMetric(
-            goal_position=array(goal_position, shape=(2,)),
+            goal_position=array(reference.end, shape=(2,)),
+            optimal_distance=reference.natural_length,
             distance_threshold=distance_threshold,
             time_step_size=time_step_size,
             position_extractor=position_extractor,
@@ -55,8 +63,10 @@ class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]])
             access.states.assume(StateSequence[T, Any, StateBatchT]).require()
         )
         positions = np.asarray(self.position_extractor(states.batched()))[..., 0]
-        distances = np.linalg.norm(positions - self.goal_position, axis=-1)
-        completion = distances <= self.distance_threshold
+
+        distances_from_goal = np.linalg.norm(positions - self.goal_position, axis=1)
+        completion = distances_from_goal <= self.distance_threshold
+        traversed_distance = np.linalg.norm(np.diff(positions, axis=0), axis=1).sum()
 
         return TaskCompletionMetricResult(
             completion=completion,
@@ -65,6 +75,7 @@ class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]])
                 if completion.any()
                 else float("inf")
             ),
+            efficiency=traversed_distance / self.optimal_distance,
         )
 
     @property

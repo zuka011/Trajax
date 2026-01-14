@@ -57,6 +57,42 @@ class test_that_trajectory_returns_final_position_as_end:
         assert np.allclose(trajectory.end, expected)
 
 
+class test_that_trajectory_returns_natural_length_of_trajectory:
+    @staticmethod
+    def cases(trajectory) -> Sequence[tuple]:
+        return [
+            (
+                trajectory.line(start=(-1.0, -2.0), end=(2.0, 2.0), path_length=10.0),
+                expected := 5.0,
+            ),
+            (
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [3.0, 4.0], [6.0, 8.0]], shape=(3, 2)),
+                    path_length=20.0,
+                ),
+                expected := 10.0,
+            ),
+            (
+                trajectory.waypoints(
+                    points=array([[0.0, -2.0], [0.0, 4.0], [3.0, 4.0]], shape=(3, 2)),
+                    path_length=15.0,
+                ),
+                expected := 9.0,
+            ),
+        ]
+
+    @mark.parametrize(
+        ["trajectory", "expected"],
+        [
+            *cases(trajectory=trajectory.numpy),
+            *cases(trajectory=trajectory.jax),
+        ],
+    )
+    def test(self, trajectory: Trajectory, expected: float) -> None:
+        # The exact length may vary depending on how the trajectory is implemented.
+        assert np.allclose(trajectory.natural_length, expected, rtol=0.05)
+
+
 class test_that_batch_query_returns_correct_positions_and_headings:
     @staticmethod
     def cases(trajectory, types) -> Sequence[tuple]:

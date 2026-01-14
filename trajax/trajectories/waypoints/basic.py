@@ -11,11 +11,12 @@ from trajax.types import (
     NumPyLongitudinalPositions,
 )
 
-import numpy as np
 from numtypes import Array, Dims, Dim1, D, shape_of
 from scipy.interpolate import CubicSpline
 from scipy.optimize import newton
 from scipy.spatial import cKDTree  # type: ignore
+
+import numpy as np
 
 
 type PointArray = Array[Dims[int, D[2]]]
@@ -31,13 +32,15 @@ class NumPyWaypointsTrajectory(
         NumPyLongitudinalPositions,
     ]
 ):
-    length: float
     reference_points: Array[Dim1]
     spline_x: CubicSpline
     spline_y: CubicSpline
 
     kd_tree_samples: int
     refining_iterations: int
+
+    _path_length: float
+    _natural_length: float
 
     @staticmethod
     def create(
@@ -61,19 +64,20 @@ class NumPyWaypointsTrajectory(
         x, y = points.T
 
         path_parameters = compute_path_parameters(x=x, y=y)
-        length = path_parameters[-1]
-        normalized_length = path_parameters * (path_length / length)
+        natural_length = path_parameters[-1]
+        normalized_lengths = path_parameters * (path_length / natural_length)
 
-        spline_x = CubicSpline(normalized_length, x, bc_type="natural")
-        spline_y = CubicSpline(normalized_length, y, bc_type="natural")
+        spline_x = CubicSpline(normalized_lengths, x, bc_type="natural")
+        spline_y = CubicSpline(normalized_lengths, y, bc_type="natural")
 
         return NumPyWaypointsTrajectory(
-            length=path_length,
-            reference_points=normalized_length,
+            reference_points=normalized_lengths,
             spline_x=spline_x,
             spline_y=spline_y,
             kd_tree_samples=kd_tree_samples,
             refining_iterations=refining_iterations,
+            _path_length=path_length,
+            _natural_length=natural_length,
         )
 
     def query[T: int, M: int](
@@ -82,7 +86,7 @@ class NumPyWaypointsTrajectory(
         T, M = parameters.horizon, parameters.rollout_count
         s = np.asarray(parameters)
 
-        assert np.all((0.0 <= s) & (s <= self.length)), (
+        assert np.all((0.0 <= s) & (s <= self.path_length)), (
             f"Path parameters out of bounds. Got: {s}"
         )
 
@@ -132,7 +136,11 @@ class NumPyWaypointsTrajectory(
 
     @property
     def path_length(self) -> float:
-        return self.length
+        return self._path_length
+
+    @property
+    def natural_length(self) -> float:
+        return self._natural_length
 
     def _closest_arc_lengths[T: int, M: int](
         self, positions: NumPyPositions[T, M]
@@ -182,12 +190,12 @@ class NumPyWaypointsTrajectory(
                 f, s_0, fprime=f_prime, maxiter=self.refining_iterations, disp=False
             )
 
-        return np.clip(result, 0.0, self.length)
+        return np.clip(result, 0.0, self.path_length)
 
     @cached_property
     def _guess_samples(self) -> tuple[Array[Dim1], cKDTree]:
         # Computes samples along the spline and builds a KD-tree for fast lookup.
-        s = np.linspace(0, self.length, self.kd_tree_samples)
+        s = np.linspace(0, self.path_length, self.kd_tree_samples)
 
         return s, cKDTree(np.column_stack([self.spline_x(s), self.spline_y(s)]))
 
