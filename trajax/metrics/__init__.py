@@ -8,3 +8,7 @@ from .error import (
     MpccErrorMetricResult as MpccErrorMetricResult,
     MpccErrorMetric as MpccErrorMetric,
 )
+from .task import (
+    TaskCompletionMetricResult as TaskCompletionMetricResult,
+    TaskCompletionMetric as TaskCompletionMetric,
+)

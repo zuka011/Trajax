@@ -1,6 +1,7 @@
 from typing import Protocol
 
 from trajax.types.trajectories import JaxPathParameters, JaxPositions, JaxHeadings
+from trajax.types.costs.common import PositionExtractor
 
 from jaxtyping import Array as JaxArray, Float
 
@@ -17,10 +18,9 @@ class JaxPathVelocityExtractor[InputBatchT](Protocol):
         ...
 
 
-class JaxPositionExtractor[StateBatchT](Protocol):
-    def __call__(self, states: StateBatchT, /) -> JaxPositions:
-        """Extracts (x, y) positions from a batch of states."""
-        ...
+class JaxPositionExtractor[StateBatchT](
+    PositionExtractor[StateBatchT, JaxPositions], Protocol
+): ...
 
 
 class JaxHeadingExtractor[StateBatchT](Protocol):

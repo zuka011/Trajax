@@ -11,6 +11,12 @@ class Error[T: int, M: int](Protocol):
         ...
 
 
+class PositionExtractor[StateBatchT, PositionsT](Protocol):
+    def __call__(self, states: StateBatchT, /) -> PositionsT:
+        """Extracts (x, y) positions from a batch of states."""
+        ...
+
+
 class ContouringCost[InputBatchT, StateBatchT, ErrorT = Error](Protocol):
     def error(self, *, states: StateBatchT) -> ErrorT:
         """Computes the contouring error for the given states."""

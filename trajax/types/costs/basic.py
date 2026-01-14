@@ -1,6 +1,7 @@
 from typing import Protocol
 
 from trajax.types.trajectories import NumPyPathParameters, NumPyPositions, NumPyHeadings
+from trajax.types.costs.common import PositionExtractor
 
 from numtypes import Array, Dim2
 
@@ -17,10 +18,9 @@ class NumPyPathVelocityExtractor[InputBatchT](Protocol):
         ...
 
 
-class NumPyPositionExtractor[StateBatchT](Protocol):
-    def __call__(self, states: StateBatchT, /) -> NumPyPositions:
-        """Extracts (x, y) positions from a batch of states."""
-        ...
+class NumPyPositionExtractor[StateBatchT](
+    PositionExtractor[StateBatchT, NumPyPositions], Protocol
+): ...
 
 
 class NumPyHeadingExtractor[StateBatchT](Protocol):

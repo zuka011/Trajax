@@ -1,5 +1,6 @@
 from typing import Any
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import StateSequence, ContouringCost, LagCost, SimulationData, Metric
 from trajax.collectors import access
@@ -14,12 +15,12 @@ class MpccErrorMetricResult[T: int = int]:
     contouring: Array[Dims[T]]
     lag: Array[Dims[T]]
 
-    @property
+    @cached_property
     def max_contouring(self) -> float:
         """Returns the maximum absolute contouring error detected."""
         return float(np.abs(self.contouring).max())
 
-    @property
+    @cached_property
     def max_lag(self) -> float:
         """Returns the maximum absolute lag error detected."""
         return float(np.abs(self.lag).max())

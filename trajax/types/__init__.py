@@ -122,6 +122,7 @@ from .states import (
 )
 from .costs import (
     Error as Error,
+    PositionExtractor as PositionExtractor,
     ContouringCost as ContouringCost,
     LagCost as LagCost,
     CostSumFunction as CostSumFunction,

@@ -1,4 +1,9 @@
-from .common import Error as Error, ContouringCost as ContouringCost, LagCost as LagCost
+from .common import (
+    Error as Error,
+    PositionExtractor as PositionExtractor,
+    ContouringCost as ContouringCost,
+    LagCost as LagCost,
+)
 from .basic import (
     NumPyPathParameterExtractor as NumPyPathParameterExtractor,
     NumPyPathVelocityExtractor as NumPyPathVelocityExtractor,

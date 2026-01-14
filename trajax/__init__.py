@@ -70,6 +70,7 @@ from .types import (
     Distance as Distance,
     DistanceExtractor as DistanceExtractor,
     Error as Error,
+    PositionExtractor as PositionExtractor,
     ContouringCost as ContouringCost,
     LagCost as LagCost,
     ObstacleModel as ObstacleModel,
@@ -108,4 +109,6 @@ from .metrics import (
     CollisionMetric as CollisionMetric,
     MpccErrorMetricResult as MpccErrorMetricResult,
     MpccErrorMetric as MpccErrorMetric,
+    TaskCompletionMetricResult as TaskCompletionMetricResult,
+    TaskCompletionMetric as TaskCompletionMetric,
 )

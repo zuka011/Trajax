@@ -1,8 +1,9 @@
-from typing import Sequence, Callable
+from typing import Sequence, Callable, NamedTuple
 
 from trajax import (
     MetricRegistry,
     CollisionMetric,
+    TaskCompletionMetric,
     Mppi,
     ObstacleStateObserver,
     collectors,
@@ -224,9 +225,11 @@ class test_that_metrics_are_recomputed_when_new_data_is_collected:
                 nominal_input := data.control_input_sequence(
                     np.random.rand(T, D_u := 2)
                 ),
-                states_at := lambda t: states.at(time_step=t, rollout=0),
-                obstacle_states_at := lambda t: obstacle_states.at(
-                    time_step=t, sample=0
+                states_at := lambda t, states=states: states.at(time_step=t, rollout=0),
+                obstacle_states_at := (
+                    lambda t, obstacle_states=obstacle_states: obstacle_states.at(
+                        time_step=t, sample=0
+                    )
                 ),
                 expected_initial_collisions := array(
                     [
@@ -300,3 +303,118 @@ class test_that_metrics_are_recomputed_when_new_data_is_collected:
         observer.observe(obstacle_states_at(horizon - 1))
 
         assert np.allclose(registry.get(metric).collisions, expected_final_collisions)
+
+
+class TaskCompletionExpectation(NamedTuple):
+    completion: Sequence[bool]
+    completed: bool
+    completion_time: float
+
+
+class test_that_task_completion_is_detected:
+    @staticmethod
+    def cases(data, types) -> Sequence[tuple]:
+        return [
+            (
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        goal_position=(15.0, 10.0),
+                        distance_threshold=5.0,  # Within 5 meters of goal.
+                        time_step_size=0.5,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 5),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.1], [y := 0.1], [phi := 0.0]],  # t=0
+                            [[x := 5.0], [y := 5.0], [phi := 0.0]],  # t=1
+                            [[x := 10.0], [y := 9.9], [phi := 0.0]],  # t=2
+                            [[x := 14.0], [y := 14.0], [phi := 0.0]],  # task completed
+                            [[x := 16.0], [y := 9.0], [phi := 0.0]],  # still completed
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected := [
+                    TaskCompletionExpectation(
+                        completion=[False],
+                        completed=False,
+                        completion_time=float("inf"),
+                    ),  # t=0
+                    TaskCompletionExpectation(
+                        completion=[False, False],
+                        completed=False,
+                        completion_time=float("inf"),
+                    ),  # t=1
+                    TaskCompletionExpectation(
+                        completion=[False, False, False],
+                        completed=False,
+                        completion_time=float("inf"),
+                    ),  # t=2
+                    TaskCompletionExpectation(
+                        completion=[False, False, False, True],
+                        completed=True,
+                        completion_time=1.5,
+                    ),  # t=3 * 0.5s
+                    TaskCompletionExpectation(
+                        completion=[False, False, False, True, True],
+                        completed=True,
+                        completion_time=1.5,
+                    ),  # t=4
+                ],
+            )
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected",
+        ],
+        [
+            *cases(data=data.numpy, types=types.numpy),
+            *cases(data=data.jax, types=types.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: TaskCompletionMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected: Sequence[TaskCompletionExpectation],
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+            results = registry.get(metric)
+
+            assert results.completion.tolist() == expected[step].completion
+            assert results.completed == expected[step].completed
+            assert results.completion_time == expected[step].completion_time
