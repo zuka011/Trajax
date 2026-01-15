@@ -5,6 +5,7 @@ from trajax.types import (
     jaxtyped,
     D_R,
     Trajectory,
+    NumPyPathParameters,
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
@@ -35,7 +36,7 @@ class GuessSamples(NamedTuple):
 @dataclass(kw_only=True, frozen=True)
 class JaxWaypointsTrajectory(
     Trajectory[
-        JaxPathParameters,
+        JaxPathParameters | NumPyPathParameters,
         JaxReferencePoints,
         JaxPositions,
         JaxLateralPositions,
@@ -102,15 +103,17 @@ class JaxWaypointsTrajectory(
         )
 
     def query[T: int, M: int](
-        self, parameters: JaxPathParameters[T, M]
+        self, parameters: JaxPathParameters[T, M] | NumPyPathParameters[T, M]
     ) -> JaxReferencePoints[T, M]:
+        parameters_array = jnp.asarray(parameters.array)
+
         assert path_parameters_are_valid(
-            parameters.array, path_length=self._path_length
+            parameters_array, path_length=self._path_length
         )
 
         return JaxReferencePoints(
             query(
-                parameters=parameters.array,
+                parameters=parameters_array,
                 reference_points=self.reference_points,
                 coefficients_x=self.coefficients_x,
                 coefficients_y=self.coefficients_y,

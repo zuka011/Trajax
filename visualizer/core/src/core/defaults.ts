@@ -12,6 +12,8 @@ export interface ThemeColors {
     obstacle: string;
     obstacleBorder: string;
     forecast: string;
+    road: string;
+    roadMarking: string;
 }
 
 export interface ThemeSizes {
@@ -61,6 +63,8 @@ export const theme: Theme = {
         obstacle: "#7f8c8d",
         obstacleBorder: "#5a6263",
         forecast: "#9b59b6",
+        road: "#4a4a4a16",
+        roadMarking: "#00e5ff0d",
     },
     sizes: {
         vehicleSize: 15,

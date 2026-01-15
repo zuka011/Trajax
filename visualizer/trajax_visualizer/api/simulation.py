@@ -33,6 +33,7 @@ def default_output_directory() -> Path:
 class Types:
     type Vehicle = Literal["triangle", "car"]
     type Scale = Literal["linear", "log"]
+    type Marking = Literal["solid", "dashed", "none"]
 
 
 class Arrays:
@@ -102,8 +103,34 @@ class Plot:
             return self.series[0].time_step_count
 
 
+class Road:
+    class Lane(msgspec.Struct, rename="camel", omit_defaults=True):
+        x: Array[Dim1]
+        y: Array[Dim1]
+        boundaries: tuple[float, float]
+        markings: tuple[Types.Marking, Types.Marking] = ("none", "none")
+
+        def __post_init__(self) -> None:
+            assert len(self.x) == len(self.y), (
+                f"Lane x and y must have the same length. "
+                f"Got {len(self.x)} (x) and {len(self.y)} (y)."
+            )
+            assert (
+                width := (left := self.boundaries[0]) + (right := self.boundaries[1])
+            ) > 0, (
+                f"The width of the lane must be positive. Got {left} (left) + {right} (right) <= {width} (width)."
+            )
+
+    class Network(msgspec.Struct, rename="camel", omit_defaults=True):
+        lanes: Sequence["Road.Lane"]
+
+        @staticmethod
+        def empty() -> "Road.Network":
+            return Road.Network(lanes=[])
+
+
 class Visualizable:
-    class ReferenceTrajectory(msgspec.Struct):
+    class ReferenceTrajectory(msgspec.Struct, rename="camel", omit_defaults=True):
         x: Array[Dim1]
         y: Array[Dim1]
 
@@ -244,6 +271,7 @@ class Visualizable:
         ego: "Visualizable.Ego"
         trajectories: "Visualizable.PlannedTrajectories | None" = None
         obstacles: "Visualizable.Obstacles | None" = None
+        network: "Road.Network | None" = None
         additional_plots: Sequence[Plot.Additional] | None = None
 
         @staticmethod
@@ -254,6 +282,7 @@ class Visualizable:
             ego: "Visualizable.Ego",
             trajectories: "Visualizable.PlannedTrajectories | None" = None,
             obstacles: "Visualizable.Obstacles | None" = None,
+            network: "Road.Network | None" = None,
             additional_plots: Sequence[Plot.Additional] | None = None,
         ) -> "Visualizable.SimulationResult":
             return Visualizable.SimulationResult(
@@ -262,6 +291,7 @@ class Visualizable:
                 ego=ego,
                 trajectories=trajectories,
                 obstacles=obstacles,
+                network=network,
                 additional_plots=additional_plots,
             )
 

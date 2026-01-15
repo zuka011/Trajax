@@ -2,20 +2,20 @@ from typing import Sequence
 from dataclasses import dataclass
 
 from trajax import (
-    types,
     Trajectory,
-    PathParameters,
     ReferencePoints,
     ObstacleStates,
     ControlInputSequence,
     Weights,
     Control,
     Risk,
+    types,
 )
 
 from trajax_visualizer.api.simulation import (
     Arrays,
     Plot,
+    Road,
     Visualizable,
     SimulationVisualizer,
 )
@@ -33,6 +33,7 @@ type VirtualStateSequence = (
 type AugmentedStateSequence = types.augmented.State[
     PhysicalStateSequence, VirtualStateSequence
 ]
+type PathParameters = types.numpy.PathParameters
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -43,8 +44,8 @@ class MpccSimulationResult:
     lag_errors: Array[Dim1]
     time_step_size: float
     wheelbase: float
-    max_contouring_error: float
-    max_lag_error: float
+    max_contouring_error: float | None = None
+    max_lag_error: float | None = None
     vehicle_width: float | None = None
     optimal_trajectories: Sequence[AugmentedStateSequence] | None = None
     nominal_trajectories: Sequence[AugmentedStateSequence] | None = None
@@ -52,6 +53,7 @@ class MpccSimulationResult:
     obstacle_forecasts: Sequence[ObstacleStates] | None = None
     controls: Sequence[Control[ControlInputSequence, Weights]] | None = None
     risks: Sequence[Risk] | None = None
+    network: Road.Network | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +90,7 @@ class MpccVisualizer:
             ego=self.ego_from(result),
             trajectories=self.planned_trajectories_from(result),
             obstacles=self.obstacles_from(result),
+            network=result.network,
             additional_plots=self.additional_plots_from(result),
         )
 
@@ -244,8 +247,12 @@ class MpccVisualizer:
                     )
                 ],
                 y_axis_label="Error (m)",
-                upper_bound=Plot.Bound(values=result.max_contouring_error),
-                lower_bound=Plot.Bound(values=-result.max_contouring_error),
+                upper_bound=Plot.Bound(values=result.max_contouring_error)
+                if result.max_contouring_error is not None
+                else None,
+                lower_bound=Plot.Bound(values=-result.max_contouring_error)
+                if result.max_contouring_error is not None
+                else None,
                 group="errors",
             ),
             Plot.Additional(
@@ -259,8 +266,12 @@ class MpccVisualizer:
                     )
                 ],
                 y_axis_label="Error (m)",
-                upper_bound=Plot.Bound(values=result.max_lag_error),
-                lower_bound=Plot.Bound(values=-result.max_lag_error),
+                upper_bound=Plot.Bound(values=result.max_lag_error)
+                if result.max_lag_error is not None
+                else None,
+                lower_bound=Plot.Bound(values=-result.max_lag_error)
+                if result.max_lag_error is not None
+                else None,
                 group="errors",
             ),
         ]

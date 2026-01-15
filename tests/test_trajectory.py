@@ -95,7 +95,7 @@ class test_that_trajectory_returns_natural_length_of_trajectory:
 
 class test_that_batch_query_returns_correct_positions_and_headings:
     @staticmethod
-    def cases(trajectory, types) -> Sequence[tuple]:
+    def cases(trajectory, types, types_common) -> Sequence[tuple]:
         return [
             (
                 trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0),
@@ -124,13 +124,30 @@ class test_that_batch_query_returns_correct_positions_and_headings:
                     ),
                 ),
             ),
+            (  # Should also work with common types
+                trajectory.line(start=(0.0, 0.0), end=(3.0, 4.0), path_length=5.0),
+                path_parameters := types_common.path_parameters(
+                    array([[0.0, 5.0], [2.5, 2.5], [5.0, 0.0]], shape=(T := 3, M := 2))
+                ),
+                expected := types.reference_points(
+                    x=array([[0.0, 3.0], [1.5, 1.5], [3.0, 0.0]], shape=(T, M)),
+                    y=array([[0.0, 4.0], [2.0, 2.0], [4.0, 0.0]], shape=(T, M)),
+                    heading=array(
+                        np.full((T, M), np.arctan2(4.0, 3.0)).tolist(), shape=(T, M)
+                    ),
+                ),
+            ),
         ]
 
     @mark.parametrize(
         ["trajectory", "path_parameters", "expected"],
         [
-            *cases(trajectory=trajectory.numpy, types=types.numpy),
-            *cases(trajectory=trajectory.jax, types=types.jax),
+            *cases(
+                trajectory=trajectory.numpy, types=types.numpy, types_common=types.numpy
+            ),
+            *cases(
+                trajectory=trajectory.jax, types=types.jax, types_common=types.numpy
+            ),
         ],
     )
     def test[PathParametersT: PathParameters, ReferencePointsT: ReferencePoints](
@@ -146,7 +163,7 @@ class test_that_batch_query_returns_correct_positions_and_headings:
 
 class test_that_waypoints_interpolate_linearly_when_waypoints_follow_a_straight_line:
     @staticmethod
-    def cases(trajectory, types) -> Sequence[tuple]:
+    def cases(trajectory, types, types_common) -> Sequence[tuple]:
         return [
             (  # Horizontal line from (0,0) to (10,0)
                 trajectory.waypoints(
@@ -178,13 +195,33 @@ class test_that_waypoints_interpolate_linearly_when_waypoints_follow_a_straight_
                     ),
                 ),
             ),
+            (  # Should also work with common types
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [0.0, 10.0]], shape=(2, 2)),
+                    path_length=20.0,
+                ),
+                path_parameters := types_common.path_parameters(
+                    array([[0.0], [10.0], [20.0]], shape=(T := 3, M := 1))
+                ),
+                expected := types.reference_points(
+                    x=array([[0.0], [0.0], [0.0]], shape=(T, M)),
+                    y=array([[0.0], [5.0], [10.0]], shape=(T, M)),
+                    heading=array(
+                        [[np.pi / 2], [np.pi / 2], [np.pi / 2]], shape=(T, M)
+                    ),
+                ),
+            ),
         ]
 
     @mark.parametrize(
         ["trajectory", "path_parameters", "expected"],
         [
-            *cases(trajectory=trajectory.numpy, types=types.numpy),
-            *cases(trajectory=trajectory.jax, types=types.jax),
+            *cases(
+                trajectory=trajectory.numpy, types=types.numpy, types_common=types.numpy
+            ),
+            *cases(
+                trajectory=trajectory.jax, types=types.jax, types_common=types.numpy
+            ),
         ],
     )
     def test[PathParametersT: PathParameters, ReferencePointsT: ReferencePoints](

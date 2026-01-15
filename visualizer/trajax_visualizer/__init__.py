@@ -2,6 +2,7 @@ from .api import (
     MpccSimulationResult as MpccSimulationResult,
     Types as Types,
     Arrays as Arrays,
+    Road as Road,
     Plot as Plot,
     Visualizable as Visualizable,
     SimulationVisualizer as SimulationVisualizer,

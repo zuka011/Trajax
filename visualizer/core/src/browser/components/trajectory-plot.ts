@@ -1,7 +1,12 @@
 import Plotly from "plotly.js-dist-min";
 import { defaults, type Theme } from "../../core/defaults.js";
-import type { Visualizable } from "../../core/types.js";
-import { covarianceToEllipse, radiansToDegrees } from "../../utils/math.js";
+import type { Road, Types, Visualizable } from "../../core/types.js";
+import {
+    covarianceToEllipse,
+    laneEdge,
+    laneSurfacePolygon,
+    radiansToDegrees,
+} from "../../utils/math.js";
 import { withoutAutorange } from "../../utils/plot.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
@@ -49,8 +54,16 @@ export function createTrajectoryPlot(
     updateManager.subscribe(render);
 }
 
-function buildTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
+function buildTraces(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace[] {
     const traces: Trace[] = [];
+
+    if (data.network) {
+        traces.push(...createRoadNetworkTraces(data.network, theme));
+    }
 
     traces.push(createReferenceTrace(data, theme));
     traces.push(createActualPathTrace(data, theme, t));
@@ -83,6 +96,95 @@ function buildTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme,
     return traces;
 }
 
+function createRoadNetworkTraces(network: Road.Network, theme: Theme): Trace[] {
+    const traces: Trace[] = [];
+    let isFirstLane = true;
+    let isFirstMarking = true;
+
+    for (const lane of network.lanes) {
+        const { surfaceTrace, markingTraces } = createLaneTraces(
+            lane,
+            theme,
+            isFirstLane,
+            isFirstMarking,
+        );
+        traces.push(surfaceTrace);
+        traces.push(...markingTraces);
+        isFirstLane = false;
+        if (markingTraces.length > 0) {
+            isFirstMarking = false;
+        }
+    }
+
+    return traces;
+}
+
+function createLaneTraces(
+    lane: Road.Lane,
+    theme: Theme,
+    showLaneLegend: boolean,
+    showMarkingLegend: boolean,
+): { surfaceTrace: Trace; markingTraces: Trace[] } {
+    const surfacePolygon = laneSurfacePolygon(lane);
+    const surfaceTrace: Trace = {
+        x: surfacePolygon.x,
+        y: surfacePolygon.y,
+        mode: "lines",
+        fill: "toself",
+        fillcolor: theme.colors.road,
+        line: { color: theme.colors.road, width: 0 },
+        opacity: 0.8,
+        name: "Road",
+        legendgroup: "road",
+        showlegend: showLaneLegend,
+        hoverinfo: "skip",
+    };
+
+    const markingTraces: Trace[] = [];
+    const [leftMarkingType, rightMarkingType] = lane.markings;
+
+    if (leftMarkingType !== "none") {
+        markingTraces.push(
+            createMarkingTrace(laneEdge(lane, "left"), leftMarkingType, theme, showMarkingLegend),
+        );
+    }
+
+    if (rightMarkingType !== "none") {
+        markingTraces.push(
+            createMarkingTrace(
+                laneEdge(lane, "right"),
+                rightMarkingType,
+                theme,
+                showMarkingLegend && leftMarkingType === "none",
+            ),
+        );
+    }
+
+    return { surfaceTrace, markingTraces };
+}
+
+function createMarkingTrace(
+    edge: { x: number[]; y: number[] },
+    markingType: Types.MarkingType,
+    theme: Theme,
+    showLegend: boolean,
+): Trace {
+    return {
+        x: edge.x,
+        y: edge.y,
+        mode: "lines",
+        line: {
+            color: theme.colors.roadMarking,
+            width: 2,
+            dash: markingType === "dashed" ? "dash" : "solid",
+        },
+        name: "Lane Marking",
+        legendgroup: "lane-marking",
+        showlegend: showLegend,
+        hoverinfo: "skip",
+    };
+}
+
 function createReferenceTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme): Trace {
     return {
         x: data.reference.x,
@@ -94,7 +196,11 @@ function createReferenceTrace(data: Visualizable.ProcessedSimulationResult, them
     };
 }
 
-function createActualPathTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
+function createActualPathTrace(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace {
     return {
         x: data.ego.x.slice(0, t + 1),
         y: data.ego.y.slice(0, t + 1),
@@ -105,7 +211,11 @@ function createActualPathTrace(data: Visualizable.ProcessedSimulationResult, the
     };
 }
 
-function createVehicleTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
+function createVehicleTrace(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace {
     const corners = transformCorners(
         data.ego.x[t],
         data.ego.y[t],
@@ -126,7 +236,11 @@ function createVehicleTrace(data: Visualizable.ProcessedSimulationResult, theme:
     };
 }
 
-function createGhostTrace(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace {
+function createGhostTrace(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace {
     return {
         x: [data.ego.ghost!.x[t]],
         y: [data.ego.ghost!.y[t]],
@@ -137,7 +251,10 @@ function createGhostTrace(data: Visualizable.ProcessedSimulationResult, theme: T
     };
 }
 
-function createOptimalTrajectoryTrace(data: Visualizable.ProcessedSimulationResult, t: number): Trace {
+function createOptimalTrajectoryTrace(
+    data: Visualizable.ProcessedSimulationResult,
+    t: number,
+): Trace {
     return {
         x: data.trajectories!.optimal!.x[t],
         y: data.trajectories!.optimal!.y[t],
@@ -150,7 +267,10 @@ function createOptimalTrajectoryTrace(data: Visualizable.ProcessedSimulationResu
     };
 }
 
-function createNominalTrajectoryTrace(data: Visualizable.ProcessedSimulationResult, t: number): Trace {
+function createNominalTrajectoryTrace(
+    data: Visualizable.ProcessedSimulationResult,
+    t: number,
+): Trace {
     return {
         x: data.trajectories!.nominal!.x[t],
         y: data.trajectories!.nominal!.y[t],
@@ -163,7 +283,11 @@ function createNominalTrajectoryTrace(data: Visualizable.ProcessedSimulationResu
     };
 }
 
-function createObstacleTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
+function createObstacleTraces(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace[] {
     return data.obstacles!.x[t].map((ox, i) => {
         const corners = transformCorners(
             ox,
@@ -187,7 +311,11 @@ function createObstacleTraces(data: Visualizable.ProcessedSimulationResult, them
     });
 }
 
-function createForecastTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
+function createForecastTraces(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace[] {
     const forecast = data.obstacles!.forecast!;
     const obstacleCount = forecast.x[t][0].length;
     return Array.from({ length: obstacleCount }, (_, k) => {
@@ -223,7 +351,11 @@ function createForecastTraces(data: Visualizable.ProcessedSimulationResult, them
     });
 }
 
-function createUncertaintyTraces(data: Visualizable.ProcessedSimulationResult, theme: Theme, t: number): Trace[] {
+function createUncertaintyTraces(
+    data: Visualizable.ProcessedSimulationResult,
+    theme: Theme,
+    t: number,
+): Trace[] {
     const traces: Trace[] = [];
     const forecast = data.obstacles!.forecast!;
     const cov = forecast.covariance![t];

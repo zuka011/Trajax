@@ -1,6 +1,21 @@
 export namespace Types {
     export type Vehicle = "triangle" | "car";
     export type Scale = "linear" | "log";
+    export type MarkingType = "solid" | "dashed" | "none";
+}
+
+export namespace Arrays {
+    /** Shape: [T, K] */
+    export type ObstacleCoordinates = number[][];
+
+    /** Shape: [T, H, K] */
+    export type ForecastCoordinates = (number | null)[][][];
+
+    /** Shape: [T, H, 2, 2, K] */
+    export type ForecastCovariances = (number | null)[][][][][];
+
+    /** Shape: [T, H] */
+    export type PlannedCoordinates = number[][];
 }
 
 export namespace Plot {
@@ -35,6 +50,19 @@ export namespace Plot {
     }
 }
 
+export namespace Road {
+    export interface Lane {
+        x: number[];
+        y: number[];
+        boundaries: [number, number];
+        markings: [Types.MarkingType, Types.MarkingType];
+    }
+
+    export interface Network {
+        lanes: Lane[];
+    }
+}
+
 export namespace Visualizable {
     export interface ReferenceTrajectory {
         x: number[];
@@ -63,8 +91,8 @@ export namespace Visualizable {
     }
 
     export interface PlannedTrajectory {
-        x: number[][];
-        y: number[][];
+        x: Arrays.PlannedCoordinates;
+        y: Arrays.PlannedCoordinates;
     }
 
     export interface PlannedTrajectories {
@@ -73,16 +101,16 @@ export namespace Visualizable {
     }
 
     export interface ObstacleForecast {
-        x: (number | null)[][][];
-        y: (number | null)[][][];
-        heading: (number | null)[][][];
-        covariance?: (number | null)[][][][][];
+        x: Arrays.ForecastCoordinates;
+        y: Arrays.ForecastCoordinates;
+        heading: Arrays.ForecastCoordinates;
+        covariance?: Arrays.ForecastCovariances;
     }
 
     export interface Obstacles {
-        x: number[][];
-        y: number[][];
-        heading: number[][];
+        x: Arrays.ObstacleCoordinates;
+        y: Arrays.ObstacleCoordinates;
+        heading: Arrays.ObstacleCoordinates;
         forecast?: ObstacleForecast;
     }
 
@@ -92,6 +120,7 @@ export namespace Visualizable {
         ego: Ego;
         trajectories?: PlannedTrajectories;
         obstacles?: Obstacles;
+        network?: Road.Network;
         additionalPlots?: Plot.Additional[];
     }
 
@@ -104,21 +133,4 @@ export interface EllipseParameters {
     width: number;
     height: number;
     angle: number;
-}
-
-export interface FlatEllipseData {
-    x: number[];
-    y: number[];
-    width: number[];
-    height: number[];
-    angle: number[];
-}
-
-export interface ForecastData {
-    xs: number[][];
-    ys: number[][];
-    headings: number[][];
-    arrowX: number[];
-    arrowY: number[];
-    arrowHeading: number[];
 }

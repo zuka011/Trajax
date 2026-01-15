@@ -5,6 +5,7 @@ from trajax.types import (
     jaxtyped,
     D_R,
     Trajectory,
+    NumPyPathParameters,
     JaxPathParameters,
     JaxReferencePoints,
     JaxPositions,
@@ -25,7 +26,7 @@ type Vector = Float[JaxArray, "2"]
 @dataclass(kw_only=True, frozen=True)
 class JaxLineTrajectory(
     Trajectory[
-        JaxPathParameters,
+        JaxPathParameters | NumPyPathParameters,
         JaxReferencePoints,
         JaxPositions,
         JaxLateralPositions,
@@ -54,11 +55,11 @@ class JaxLineTrajectory(
         )
 
     def query[T: int, M: int](
-        self, parameters: JaxPathParameters[T, M]
+        self, parameters: JaxPathParameters[T, M] | NumPyPathParameters[T, M]
     ) -> JaxReferencePoints[T, M]:
         return JaxReferencePoints(
             query(
-                parameters=parameters.array,
+                parameters=jnp.asarray(parameters.array),
                 start=self.start,
                 direction=self.direction,
                 path_length=self._path_length,

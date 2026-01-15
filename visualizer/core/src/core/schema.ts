@@ -37,6 +37,21 @@ export namespace Plot {
     });
 }
 
+export namespace Road {
+    export const MarkingType = z.enum(["solid", "dashed", "none"]);
+
+    export const Lane = z.object({
+        x: z.array(z.number()),
+        y: z.array(z.number()),
+        boundaries: z.tuple([z.number(), z.number()]),
+        markings: z.tuple([MarkingType, MarkingType]),
+    });
+
+    export const Network = z.object({
+        lanes: z.array(Lane),
+    });
+}
+
 export namespace Visualizable {
     export const ReferenceTrajectory = z.object({
         x: z.array(z.number()),
@@ -94,6 +109,7 @@ export namespace Visualizable {
         ego: Ego,
         trajectories: PlannedTrajectories.optional(),
         obstacles: Obstacles.optional(),
+        network: Road.Network.optional(),
         additionalPlots: z.array(Plot.Additional).optional(),
     });
 }
