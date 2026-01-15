@@ -97,9 +97,9 @@ export namespace Visualizable {
     });
 
     export const Obstacles = z.object({
-        x: z.array(z.array(z.number())),
-        y: z.array(z.array(z.number())),
-        heading: z.array(z.array(z.number())),
+        x: z.array(z.array(z.number().nullable())),
+        y: z.array(z.array(z.number().nullable())),
+        heading: z.array(z.array(z.number().nullable())),
         forecast: ObstacleForecast.optional(),
     });
 

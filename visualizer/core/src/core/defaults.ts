@@ -63,8 +63,8 @@ export const theme: Theme = {
         obstacle: "#7f8c8d",
         obstacleBorder: "#5a6263",
         forecast: "#9b59b6",
-        road: "#4a4a4a16",
-        roadMarking: "#00e5ff0d",
+        road: "#4a4a4a2d",
+        roadMarking: "#00e5ff54",
     },
     sizes: {
         vehicleSize: 15,

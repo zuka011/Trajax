@@ -1,8 +1,20 @@
 {
     "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
-    "assist": { "actions": { "source": { "organizeImports": "on" } } },
+    "assist": {
+        "actions": {
+            "source": {
+                "organizeImports": "on"
+            }
+        }
+    },
     "files": {
-        "includes": ["src/**/*", "package.json", "esbuild.config.js", "!**/*.bundle.js"]
+        "includes": [
+            "src/**/*",
+            "tests/**/*",
+            "package.json",
+            "esbuild.config.js",
+            "!**/*.bundle.js"
+        ]
     },
     "formatter": {
         "enabled": true,
@@ -23,6 +35,9 @@
         }
     },
     "javascript": {
-        "formatter": { "quoteStyle": "double", "semicolons": "always" }
+        "formatter": {
+            "quoteStyle": "double",
+            "semicolons": "always"
+        }
     }
 }

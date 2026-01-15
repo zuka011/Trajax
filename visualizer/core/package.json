@@ -10,7 +10,9 @@
         "build:cli": "node esbuild.config.js cli",
         "build:browser": "node esbuild.config.js browser",
         "typecheck": "tsc --noEmit",
-        "check": "biome check --write ."
+        "check": "biome check --write .",
+        "test": "vitest",
+        "test:run": "vitest run"
     },
     "keywords": [
         "visualization",
@@ -31,6 +33,7 @@
         "@types/node": "^25.0.3",
         "@types/plotly.js": "^3.0.9",
         "esbuild": "^0.27.2",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.17"
     }
 }

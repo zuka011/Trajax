@@ -6,10 +6,10 @@ export namespace Types {
 
 export namespace Arrays {
     /** Shape: [T, K] */
-    export type ObstacleCoordinates = number[][];
+    export type ObstacleStates = (number | null)[][];
 
     /** Shape: [T, H, K] */
-    export type ForecastCoordinates = (number | null)[][][];
+    export type ForecastStates = (number | null)[][][];
 
     /** Shape: [T, H, 2, 2, K] */
     export type ForecastCovariances = (number | null)[][][][][];
@@ -101,16 +101,16 @@ export namespace Visualizable {
     }
 
     export interface ObstacleForecast {
-        x: Arrays.ForecastCoordinates;
-        y: Arrays.ForecastCoordinates;
-        heading: Arrays.ForecastCoordinates;
+        x: Arrays.ForecastStates;
+        y: Arrays.ForecastStates;
+        heading: Arrays.ForecastStates;
         covariance?: Arrays.ForecastCovariances;
     }
 
     export interface Obstacles {
-        x: Arrays.ObstacleCoordinates;
-        y: Arrays.ObstacleCoordinates;
-        heading: Arrays.ObstacleCoordinates;
+        x: Arrays.ObstacleStates;
+        y: Arrays.ObstacleStates;
+        heading: Arrays.ObstacleStates;
         forecast?: ObstacleForecast;
     }
 

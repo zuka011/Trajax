@@ -339,7 +339,10 @@ async def html(*, of: AsyncPath, to: AsyncPath, visualizer: AsyncPath) -> None:
     process = await asyncio.create_subprocess_exec(
         *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
-    _, stderr = await process.communicate()
+    stdout, stderr = await process.communicate()
+
+    if stdout:
+        print(f"[Visualizer output]: {stdout.decode()}")
 
     if process.returncode != 0:
         raise RuntimeError(f"Visualization generation failed: {stderr.decode()}")
