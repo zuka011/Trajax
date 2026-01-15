@@ -168,11 +168,14 @@ class JaxObstacleStates[T: int, K: int](
             f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
         )
 
-        x = jnp.stack([states.x_array for states in obstacle_states], axis=0)
-        y = jnp.stack([states.y_array for states in obstacle_states], axis=0)
-        heading = jnp.stack(
-            [states.heading_array for states in obstacle_states], axis=0
-        )
+        K = max(states.count for states in obstacle_states)
+
+        def pad(array: Float[JaxArray, "L"]) -> Float[JaxArray, "K"]:
+            return jnp.pad(array, (0, K - len(array)), constant_values=jnp.nan)
+
+        x = jnp.stack([pad(states.x_array) for states in obstacle_states])
+        y = jnp.stack([pad(states.y_array) for states in obstacle_states])
+        heading = jnp.stack([pad(states.heading_array) for states in obstacle_states])
 
         return JaxObstacleStates.create(x=x, y=y, heading=heading, horizon=horizon)
 

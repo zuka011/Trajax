@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, cast
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -166,11 +166,23 @@ class NumPyObstacleStates[T: int, K: int](
             f"Expected horizon {horizon}, but got {len(obstacle_states)} obstacle states."
         )
 
-        x = np.stack([states.x() for states in obstacle_states], axis=0)
-        y = np.stack([states.y() for states in obstacle_states], axis=0)
-        heading = np.stack([states.heading() for states in obstacle_states], axis=0)
+        T = len(obstacle_states)
+        K = max(states.count for states in obstacle_states)
 
-        return NumPyObstacleStates.create(x=x, y=y, heading=heading)
+        x = np.full((T, K), np.nan)
+        y = np.full((T, K), np.nan)
+        heading = np.full((T, K), np.nan)
+
+        for t, states in enumerate(obstacle_states):
+            n = states.count
+            x[t, :n] = states.x()
+            y[t, :n] = states.y()
+            heading[t, :n] = states.heading()
+
+        return cast(
+            NumPyObstacleStates[T_, K_],
+            NumPyObstacleStates.create(x=x, y=y, heading=heading),
+        )
 
     @staticmethod
     def for_time_step[K_: int](

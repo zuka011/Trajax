@@ -11,6 +11,8 @@ from trajax import (
     types,
 )
 
+from numtypes import array
+
 import numpy as np
 
 from tests.dsl import stubs, mppi as data
@@ -186,3 +188,91 @@ class test_that_collector_registry_emits_warnings_when_collectors_do_not_collect
 
         with warns(NoCollectedDataWarning):
             registry.data(access.states)
+
+
+class test_that_obstacle_state_collector_works_when_number_of_obstacles_varies:
+    @staticmethod
+    def cases(data, types) -> Sequence[tuple]:
+        obstacle_states = [
+            data.obstacle_states_for_time_step(
+                x=array([0.0, 1.0], shape=(K_0 := 2,)),
+                y=array([1.0, 2.0], shape=(K_0,)),
+                heading=array([0.0, 3.0], shape=(K_0,)),
+            ),
+            data.obstacle_states_for_time_step(
+                x=array([0.0, 1.0, 2.0], shape=(K_1 := 3,)),
+                y=array([1.0, 2.0, 3.0], shape=(K_1,)),
+                heading=array([0.0, 3.0, 6.0], shape=(K_1,)),
+            ),
+            data.obstacle_states_for_time_step(
+                x=array([0.0], shape=(K_2 := 1,)),
+                y=array([1.0], shape=(K_2,)),
+                heading=array([0.0], shape=(K_2,)),
+            ),
+            data.obstacle_states_for_time_step(
+                x=array([], shape=(K_3 := 0,)),
+                y=array([], shape=(K_3,)),
+                heading=array([], shape=(K_3,)),
+            ),
+        ]
+
+        return [
+            (
+                registry := collectors.registry(
+                    observer := collectors.obstacle_states.decorating(
+                        stubs.ObstacleStateObserver.create(),
+                        transformer=types.obstacle_states.of_states,
+                    ),
+                ),
+                observer,
+                horizon := (T := 4),
+                obstacle_states_at := lambda t: obstacle_states[t],
+                expected_obstacle_states := array(
+                    [
+                        [[0.0, 1.0, np.nan], [1.0, 2.0, np.nan], [0.0, 3.0, np.nan]],
+                        [[0.0, 1.0, 2.0], [1.0, 2.0, 3.0], [0.0, 3.0, 6.0]],
+                        [
+                            [0.0, np.nan, np.nan],
+                            [1.0, np.nan, np.nan],
+                            [0.0, np.nan, np.nan],
+                        ],
+                        [
+                            [np.nan, np.nan, np.nan],
+                            [np.nan, np.nan, np.nan],
+                            [np.nan, np.nan, np.nan],
+                        ],
+                    ],
+                    shape=(T, D_o := 3, K := 3),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "observer",
+            "horizon",
+            "obstacle_states_at",
+            "expected_obstacle_states",
+        ],
+        [
+            *cases(data=data.numpy, types=types.numpy),
+            *cases(data=data.jax, types=types.jax),
+        ],
+    )
+    def test[ObstacleStatesForTimeStepT](
+        self,
+        registry: CollectorRegistry,
+        observer: ObstacleStateObserver[ObstacleStatesForTimeStepT],
+        horizon: int,
+        obstacle_states_at: Callable[[int], ObstacleStatesForTimeStepT],
+        expected_obstacle_states: Sequence[ObstacleStatesForTimeStepT],
+    ) -> None:
+        for step in range(horizon):
+            observer.observe(obstacle_states_at(step))
+
+        assert np.allclose(
+            registry.data(access.obstacle_states),
+            expected_obstacle_states,
+            equal_nan=True,
+        )
