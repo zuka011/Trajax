@@ -9,6 +9,8 @@ export interface ThemeColors {
     text: string;
     infoBackground: string;
     infoBorder: string;
+    optimal: string;
+    nominal: string;
     obstacle: string;
     obstacleBorder: string;
     forecast: string;
@@ -60,6 +62,8 @@ export const theme: Theme = {
         text: "#2c3e50",
         infoBackground: "#f8f9fa",
         infoBorder: "#dee2e6",
+        optimal: "#e63946",
+        nominal: "#2a9d8f",
         obstacle: "#7f8c8d",
         obstacleBorder: "#5a6263",
         forecast: "#9b59b6",

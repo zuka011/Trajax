@@ -48,7 +48,13 @@ function initialize(): void {
     );
 
     requestAnimationFrame(() => {
-        createTrajectoryPlot(requireElement("trajectory-plot"), data, state, theme, updateManager);
+        createTrajectoryPlot({
+            container: requireElement("trajectory-plot"),
+            data,
+            state,
+            theme,
+            updateManager,
+        });
         updateManager.notify();
     });
 }
