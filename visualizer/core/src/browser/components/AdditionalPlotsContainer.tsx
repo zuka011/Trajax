@@ -1,5 +1,6 @@
 import type { FunctionalComponent } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { Theme } from "@/core/defaults.js";
 import type { Plot, Visualizable } from "../../core/types.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
@@ -8,6 +9,7 @@ import { createAdditionalPlot, groupPlots, type PlotGroup } from "./additional-p
 interface PlotContainerProps {
     data: Visualizable.ProcessedSimulationResult;
     state: VisualizationState;
+    theme: Theme;
     updateManager: UpdateManager;
 }
 
@@ -41,6 +43,7 @@ interface SinglePlotPanelProps {
     group: PlotGroup;
     data: Visualizable.ProcessedSimulationResult;
     state: VisualizationState;
+    theme: Theme;
     updateManager: UpdateManager;
 }
 
@@ -48,6 +51,7 @@ const SinglePlotPanel: FunctionalComponent<SinglePlotPanelProps> = ({
     group,
     data,
     state,
+    theme,
     updateManager,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -58,7 +62,14 @@ const SinglePlotPanel: FunctionalComponent<SinglePlotPanelProps> = ({
             initializedRef.current = true;
             requestAnimationFrame(() => {
                 if (containerRef.current) {
-                    createAdditionalPlot(containerRef.current, group, data, state, updateManager);
+                    createAdditionalPlot({
+                        container: containerRef.current,
+                        group,
+                        data,
+                        state,
+                        theme,
+                        updateManager,
+                    });
                 }
             });
         }
@@ -70,6 +81,7 @@ const SinglePlotPanel: FunctionalComponent<SinglePlotPanelProps> = ({
 export const AdditionalPlotsContainer: FunctionalComponent<PlotContainerProps> = ({
     data,
     state,
+    theme,
     updateManager,
 }) => {
     const plots: Plot.Additional[] = data.additionalPlots ?? [];
@@ -99,6 +111,7 @@ export const AdditionalPlotsContainer: FunctionalComponent<PlotContainerProps> =
                             group={group}
                             data={data}
                             state={state}
+                            theme={theme}
                             updateManager={updateManager}
                         />
                     </div>

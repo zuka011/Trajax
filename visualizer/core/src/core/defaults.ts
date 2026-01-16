@@ -16,6 +16,8 @@ export interface ThemeColors {
     forecast: string;
     road: string;
     roadMarking: string;
+    bandColor: string;
+    series: string[];
 }
 
 export interface ThemeSizes {
@@ -69,6 +71,17 @@ export const theme: Theme = {
         forecast: "#9b59b6",
         road: "#4a4a4a2d",
         roadMarking: "#00e5ff54",
+        bandColor: "#3498db",
+        series: [
+            "#3498db",
+            "#e74c3c",
+            "#2ecc71",
+            "#9b59b6",
+            "#f39c12",
+            "#1abc9c",
+            "#e91e63",
+            "#795548",
+        ],
     },
     sizes: {
         vehicleSize: 15,

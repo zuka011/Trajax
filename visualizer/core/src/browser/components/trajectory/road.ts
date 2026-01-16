@@ -1,14 +1,15 @@
 import type { Theme } from "@/core/defaults";
 import type { Types } from "@/core/types";
 import { laneEdge, laneSurfacePolygon } from "@/utils/math";
-import type { Trace, TraceUpdateCreator } from "./updater";
+import type { Trace } from "../types";
+import type { TraceUpdateCreator } from "./updater";
 import { noUpdater } from "./updater";
 
-export const roadNetworkUpdater: TraceUpdateCreator = (data, _index) => {
+export const roadNetworkUpdater: TraceUpdateCreator = (data, index) => {
     const network = data.network;
 
     if (!network || network.lanes.length === 0) {
-        return noUpdater(data, _index);
+        return noUpdater(data, index);
     }
 
     return {

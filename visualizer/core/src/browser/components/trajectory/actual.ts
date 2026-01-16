@@ -7,8 +7,8 @@ export const actualPathUpdater: TraceUpdateCreator = (data, index) => {
         y: new Array<number>(source.y.length),
     };
 
-    const updateBuffers = (time_step: number) => {
-        const length = time_step + 1;
+    const updateBuffers = (timeStep: number) => {
+        const length = timeStep + 1;
         for (let i = 0; i < length; i++) {
             buffers.x[i] = source.x[i];
             buffers.y[i] = source.y[i];
@@ -31,8 +31,8 @@ export const actualPathUpdater: TraceUpdateCreator = (data, index) => {
                 },
             ];
         },
-        updateTraces(time_step) {
-            updateBuffers(time_step);
+        updateTraces(timeStep) {
+            updateBuffers(timeStep);
             return {
                 data: [buffers],
                 updateIndices: [index],

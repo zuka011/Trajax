@@ -50,8 +50,8 @@ export const forecastsUpdater: TraceUpdateCreator = (data, index) => {
             }));
         },
 
-        updateTraces(time_step) {
-            updateBuffers(time_step);
+        updateTraces(timeStep) {
+            updateBuffers(timeStep);
             return {
                 data: buffers as { x: number[]; y: number[] }[],
                 updateIndices: buffers.map((_, i) => index + i),

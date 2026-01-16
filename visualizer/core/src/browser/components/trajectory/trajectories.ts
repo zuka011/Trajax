@@ -41,8 +41,8 @@ export const optimalTrajectoryUpdater: TraceUpdateCreator = (data, index) => {
             ];
         },
 
-        updateTraces(time_step: number) {
-            updateBuffers(time_step);
+        updateTraces(timeStep: number) {
+            updateBuffers(timeStep);
             return {
                 data: [buffers],
                 updateIndices: [index],
@@ -92,8 +92,8 @@ export const nominalTrajectoryUpdater: TraceUpdateCreator = (data, index) => {
             ];
         },
 
-        updateTraces(time_step) {
-            updateBuffers(time_step);
+        updateTraces(timeStep) {
+            updateBuffers(timeStep);
             return {
                 data: [buffers],
                 updateIndices: [index],

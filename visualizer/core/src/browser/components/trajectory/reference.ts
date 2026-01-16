@@ -1,6 +1,6 @@
 import type { TraceUpdateCreator } from "./updater";
 
-export const referencePathUpdater: TraceUpdateCreator = (data, _index) => {
+export const referencePathUpdater: TraceUpdateCreator = (data) => {
     return {
         createTemplates(theme) {
             return [

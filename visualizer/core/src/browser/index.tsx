@@ -39,11 +39,16 @@ function initialize(): void {
         requireElement("app-root"),
     );
     render(
-        <ControlsContainer data={data} theme={theme} state={state} updateManager={updateManager} />,
+        <ControlsContainer data={data} state={state} theme={theme} updateManager={updateManager} />,
         requireElement("controls-root"),
     );
     render(
-        <AdditionalPlotsContainer data={data} state={state} updateManager={updateManager} />,
+        <AdditionalPlotsContainer
+            data={data}
+            state={state}
+            theme={theme}
+            updateManager={updateManager}
+        />,
         requireElement("additional-plots-root"),
     );
 

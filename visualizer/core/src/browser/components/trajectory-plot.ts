@@ -1,10 +1,12 @@
 import Plotly from "plotly.js-dist-min";
 import type { Theme } from "@/core/defaults";
 import type { Visualizable } from "@/core/types";
+import { disableAutoRangeFor } from "@/utils/plots.js";
 import type { VisualizationState } from "../state.js";
 import type { UpdateManager } from "../update.js";
-import { updaterCreator } from "./traces/factory.js";
-import type { Trace, TraceUpdateCreator, TraceUpdater } from "./traces/updater.js";
+import { updaterCreator } from "./trajectory/factory.js";
+import type { TraceUpdateCreator, TraceUpdater } from "./trajectory/updater.js";
+import type { Trace } from "./types.js";
 
 const DEFAULT_TRACE_UPDATER_CREATORS: TraceUpdateCreator[] = [
     updaterCreator.roadNetwork,
@@ -63,7 +65,7 @@ export function createTrajectoryPlot(config: PlotConfig): void {
             responsive: true,
             displayModeBar: "hover",
             displaylogo: false,
-        });
+        }).then(() => disableAutoRangeFor(container));
 
         initialized = true;
     }

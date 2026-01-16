@@ -1,7 +1,6 @@
 import type { Theme } from "@/core/defaults";
 import type { Visualizable } from "@/core/types";
-
-export type Trace = Plotly.Data;
+import type { Trace } from "../types";
 
 export interface TraceUpdates {
     /**
@@ -27,10 +26,10 @@ export interface TraceUpdater {
     /**
      * Updates the trace data for the current time step.
      *
-     * @param time_step The current time step index.
+     * @param timeStep The current time step index.
      * @return The updated trace data.
      */
-    updateTraces(time_step: number): TraceUpdates;
+    updateTraces(timeStep: number): TraceUpdates;
 }
 
 export type TraceUpdateCreator = (
@@ -38,7 +37,7 @@ export type TraceUpdateCreator = (
     index: number,
 ) => TraceUpdater;
 
-export const noUpdater: TraceUpdateCreator = (_data, _index) => {
+export const noUpdater: TraceUpdateCreator = () => {
     return {
         createTemplates(_theme) {
             return [];

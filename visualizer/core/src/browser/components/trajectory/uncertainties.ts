@@ -96,8 +96,8 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
             }));
         },
 
-        updateTraces(time_step) {
-            updateBuffers(time_step);
+        updateTraces(timeStep) {
+            updateBuffers(timeStep);
             return {
                 data: buffers,
                 updateIndices: buffers.map((_, i) => index + i),
