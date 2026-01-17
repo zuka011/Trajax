@@ -44,7 +44,7 @@ from trajax.mppi import JaxWeights
 from trajax.mpcc.common import MpccMppiSetup
 
 from numtypes import D
-from jaxtyping import Float, Array as JaxArray, PRNGKeyArray
+from jaxtyping import Float, Array as JaxArray
 from deepmerge import always_merger
 
 import jax.numpy as jnp
@@ -100,13 +100,13 @@ class JaxMpccVirtualStateConfig:
         state_limits: tuple[float, float]
         velocity_limits: tuple[float, float]
         sampling_standard_deviation: float
-        sampling_key: PRNGKeyArray
+        sampling_seed: int
 
     class Partial(TypedDict, total=False):
         state_limits: tuple[float, float]
         velocity_limits: tuple[float, float]
         sampling_standard_deviation: float
-        sampling_key: PRNGKeyArray
+        sampling_seed: int
 
 
 class JaxMpccConfig:
@@ -136,7 +136,7 @@ def fill_defaults(
                     "state_limits": (0.0, reference.path_length),
                     "velocity_limits": (0.0, 15.0),
                     "sampling_standard_deviation": 1.0,
-                    "sampling_key": jrandom.PRNGKey(0),
+                    "sampling_seed": 0,
                 },
             }
         ),
@@ -215,7 +215,7 @@ class JaxMpccMppi:
                     ),
                     rollout_count=sampler.rollout_count,
                     to_batch=JaxSimpleControlInputBatch.create,
-                    key=full_config["virtual"]["sampling_key"],
+                    key=jrandom.key(full_config["virtual"]["sampling_seed"]),
                 ),
             ),
             cost=create_costs.jax.combined(

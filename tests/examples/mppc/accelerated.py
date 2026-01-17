@@ -39,7 +39,6 @@ from jaxtyping import Array as JaxArray, Float
 
 import numpy as np
 import jax.numpy as jnp
-import jax.random as jrandom
 
 
 type PhysicalState = types.bicycle.State
@@ -159,8 +158,8 @@ class JaxSamplingOptions:
     )
     virtual_standard_deviation: float = 1.0
     rollout_count: int = 512
-    physical_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(42))
-    virtual_key: jrandom.PRNGKey = field(default_factory=lambda: jrandom.PRNGKey(43))
+    physical_seed: int = 42
+    virtual_seed: int = 43
     obstacle_seed: int = 44
 
 
@@ -383,13 +382,13 @@ class configure:
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
                     to_batch=types.bicycle.control_input_batch.create,
-                    key=sampling.physical_key,
+                    seed=sampling.physical_seed,
                 ),
                 virtual=sampler.gaussian(
                     standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.simple.control_input_batch.create,
-                    key=sampling.virtual_key,
+                    seed=sampling.virtual_seed,
                 ),
                 batch=types.augmented.control_input_batch,
             ),
@@ -458,13 +457,13 @@ class configure:
                     standard_deviation=sampling.physical_standard_deviation,
                     rollout_count=sampling.rollout_count,
                     to_batch=types.bicycle.control_input_batch.create,
-                    key=sampling.physical_key,
+                    seed=sampling.physical_seed,
                 ),
                 sampler.gaussian(
                     standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.simple.control_input_batch.create,
-                    key=sampling.virtual_key,
+                    seed=sampling.virtual_seed,
                 ),
             ),
             cost=costs.combined(
@@ -635,7 +634,7 @@ class configure:
                 standard_deviation=sampling.physical_standard_deviation,
                 rollout_count=sampling.rollout_count,
                 to_batch=types.bicycle.control_input_batch.create,
-                key=sampling.physical_key,
+                seed=sampling.physical_seed,
             ),
             costs=(
                 costs.comfort.control_smoothing(weights=weights.control_smoothing),
@@ -737,7 +736,7 @@ class configure:
                 "virtual": {
                     "velocity_limits": (0.0, 15.0),
                     "sampling_standard_deviation": sampling.virtual_standard_deviation,
-                    "sampling_key": sampling.virtual_key,
+                    "sampling_seed": sampling.virtual_seed,
                 },
             },
             filter_function=filters.savgol(window_length=11, polynomial_order=3),

@@ -82,7 +82,7 @@ class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = 
                 else cast(D_u_, standard_deviation.shape[0])
             ),
             _rollout_count=rollout_count,
-            key=key if key is not None else jrandom.PRNGKey(seed or 0),
+            key=key if key is not None else jrandom.key(seed or 0),
         )
 
     def __post_init__(self) -> None:
