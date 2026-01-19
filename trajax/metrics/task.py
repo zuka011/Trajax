@@ -75,7 +75,7 @@ class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]])
                 if completion.any()
                 else float("inf")
             ),
-            efficiency=traversed_distance / self.optimal_distance,
+            efficiency=float(traversed_distance / self.optimal_distance),
         )
 
     @property

@@ -154,6 +154,7 @@ class test_that_collision_is_detected_when_distance_is_below_threshold:
             assert np.allclose(results.min_distances, expected_min_distances)
             assert np.allclose(results.collisions, expected_collisions)
             assert results.collision_detected == expected_collision_detected
+            assert isinstance(results.collision_detected, bool)
 
         with subtests.test("by name"):
             results = registry.get(metric.name)
@@ -162,6 +163,7 @@ class test_that_collision_is_detected_when_distance_is_below_threshold:
             assert np.allclose(results.min_distances, expected_min_distances)
             assert np.allclose(results.collisions, expected_collisions)
             assert results.collision_detected == expected_collision_detected
+            assert isinstance(results.collision_detected, bool)
 
 
 class test_that_metrics_are_recomputed_when_new_data_is_collected:
@@ -423,6 +425,8 @@ class test_that_task_completion_is_detected:
             assert results.completion.tolist() == expected[step].completion
             assert results.completed == expected[step].completed
             assert results.completion_time == expected[step].completion_time
+            assert isinstance(results.completed, bool)
+            assert isinstance(results.completion_time, float)
 
 
 class test_that_task_efficiency_is_computed:
@@ -520,3 +524,4 @@ class test_that_task_efficiency_is_computed:
             results = registry.get(metric)
 
             assert np.isclose(results.efficiency, expected_efficiencies[step])
+            assert isinstance(results.efficiency, float)
