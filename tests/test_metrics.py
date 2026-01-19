@@ -3,6 +3,7 @@ from typing import Sequence, Callable, NamedTuple
 from trajax import (
     MetricRegistry,
     CollisionMetric,
+    ComfortMetric,
     ConstraintViolationMetric,
     TaskCompletionMetric,
     Mppi,
@@ -690,3 +691,370 @@ class test_that_constraint_violation_metrics_are_computed:
             assert np.allclose(results.violations, expected[step].violations)
             assert results.violation_detected == expected[step].violation_detected
             assert isinstance(results.violation_detected, bool)
+
+
+class ComfortExpectation(NamedTuple):
+    lateral_acceleration: Sequence[float]
+    lateral_jerk: Sequence[float]
+
+
+class test_that_comfort_metrics_are_computed:
+    @staticmethod
+    def cases(data, types, create_trajectory) -> Sequence[tuple]:
+        reference = create_trajectory.line(
+            start=(0.0, 0.0), end=(100.0, 0.0), path_length=100.0
+        )
+
+        def position_extractor(states):
+            return types.positions(x=states.array[:, 0], y=states.array[:, 1])
+
+        return [
+            (  # Constant lateral deviation should yield zero acceleration and zero jerk.
+                registry := metrics.registry(
+                    metric := metrics.comfort(
+                        reference=reference,
+                        time_step_size=0.1,
+                        position_extractor=position_extractor,
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 5),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                # Constant y = 2.0 (constant lateral offset)
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 2.0], [phi := 0.0]],
+                            [[x := 10.0], [y := 2.0], [phi := 0.0]],
+                            [[x := 20.0], [y := 2.0], [phi := 0.0]],
+                            [[x := 30.0], [y := 2.0], [phi := 0.0]],
+                            [[x := 40.0], [y := 2.0], [phi := 0.0]],
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # Constant lateral → zero acceleration → zero jerk
+                expected := [
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0],
+                        lateral_jerk=[0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0, 0.0, 0.0],
+                    ),
+                ],
+            ),
+            (  # Linearly increasing lateral deviation should yield zero acceleration and zero jerk.
+                registry := metrics.registry(
+                    metric := metrics.comfort(
+                        reference=reference,
+                        time_step_size=0.1,
+                        position_extractor=position_extractor,
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 5),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                # Linear y: y = t (lateral deviation increases linearly)
+                # lateral = [-y] for horizontal line, so lateral = [0, 1, 2, 3, 4] * -1
+                # velocity = constant -> acceleration = 0 -> jerk = 0
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 10.0], [y := 1.0], [phi := 0.0]],
+                            [[x := 20.0], [y := 2.0], [phi := 0.0]],
+                            [[x := 30.0], [y := 3.0], [phi := 0.0]],
+                            [[x := 40.0], [y := 4.0], [phi := 0.0]],
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # Linear lateral → constant velocity → zero acceleration → zero jerk
+                expected := [
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0],
+                        lateral_jerk=[0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0, 0.0],
+                    ),
+                    ComfortExpectation(
+                        lateral_acceleration=[0.0, 0.0, 0.0, 0.0, 0.0],
+                        lateral_jerk=[0.0, 0.0, 0.0, 0.0, 0.0],
+                    ),
+                ],
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected",
+        ],
+        [
+            *cases(
+                data=data.numpy, types=types.numpy, create_trajectory=trajectory.numpy
+            ),
+            *cases(data=data.jax, types=types.jax, create_trajectory=trajectory.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: ComfortMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected: Sequence[ComfortExpectation],
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+            results = registry.get(metric)
+
+            assert np.allclose(
+                results.lateral_acceleration,
+                expected[step].lateral_acceleration,
+                atol=1e-6,
+            )
+            assert np.allclose(
+                results.lateral_jerk, expected[step].lateral_jerk, atol=1e-6
+            )
+
+
+class test_that_comfort_metric_measures_acceleration_when_it_is_constant:
+    @staticmethod
+    def cases(data, types, create_trajectory) -> Sequence[tuple]:
+        reference = create_trajectory.line(
+            start=(0.0, 0.0), end=(100.0, 0.0), path_length=100.0
+        )
+
+        def position_extractor(states):
+            return types.positions(x=states.array[:, 0], y=states.array[:, 1])
+
+        return [
+            (  # Quadratic lateral deviation should yield constant acceleration and zero jerk.
+                registry := metrics.registry(
+                    metric := metrics.comfort(
+                        reference=reference,
+                        time_step_size=(dt := 1e-3),
+                        position_extractor=position_extractor,
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 7),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                # Quadratic y: y = -t^2 → lateral = t^2 = [0, 1, 4, 9, 16, 25, 36]
+                # velocity = 2t → acceleration = 2 (constant) → jerk = 0
+                # Expected acceleration = 2 / dt^2
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 10.0], [y := -1.0], [phi := 0.0]],
+                            [[x := 20.0], [y := -4.0], [phi := 0.0]],
+                            [[x := 30.0], [y := -9.0], [phi := 0.0]],
+                            [[x := 40.0], [y := -16.0], [phi := 0.0]],
+                            [[x := 50.0], [y := -25.0], [phi := 0.0]],
+                            [[x := 60.0], [y := -36.0], [phi := 0.0]],
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_acceleration := 2 / dt**2,
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected_acceleration",
+        ],
+        [
+            *cases(
+                data=data.numpy, types=types.numpy, create_trajectory=trajectory.numpy
+            ),
+            *cases(data=data.jax, types=types.jax, create_trajectory=trajectory.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: ComfortMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected_acceleration: float,
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+        results = registry.get(metric)
+
+        assert np.isclose(  # The middle step should be the most accurate
+            results.lateral_acceleration[horizon // 2], expected_acceleration, rtol=0.1
+        )
+
+
+class test_that_comfort_metric_measures_jerk_when_it_is_constant:
+    @staticmethod
+    def cases(data, types, create_trajectory) -> Sequence[tuple]:
+        reference = create_trajectory.line(
+            start=(0.0, 0.0), end=(100.0, 0.0), path_length=100.0
+        )
+
+        def position_extractor(states):
+            return types.positions(x=states.array[:, 0], y=states.array[:, 1])
+
+        return [
+            (  # Cubic lateral deviation should yield constant jerk.
+                registry := metrics.registry(
+                    metric := metrics.comfort(
+                        reference=reference,
+                        time_step_size=(dt := 1e-2),
+                        position_extractor=position_extractor,
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 8),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                # Cubic y: y = t^3 → lateral = -t^3 = [0, -1, -8, -27, -64, -125, -216, -343]
+                # velocity = -3t^2 → acceleration = -6t → jerk = -6 (constant)
+                # Expected jerk = -6 / dt^3
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 10.0], [y := -1.0], [phi := 0.0]],
+                            [[x := 20.0], [y := -8.0], [phi := 0.0]],
+                            [[x := 30.0], [y := -27.0], [phi := 0.0]],
+                            [[x := 40.0], [y := -64.0], [phi := 0.0]],
+                            [[x := 50.0], [y := -125.0], [phi := 0.0]],
+                            [[x := 60.0], [y := -216.0], [phi := 0.0]],
+                            [[x := 70.0], [y := -343.0], [phi := 0.0]],
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_jerk := 6 / dt**3,
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected_jerk",
+        ],
+        [
+            *cases(
+                data=data.numpy, types=types.numpy, create_trajectory=trajectory.numpy
+            ),
+            *cases(data=data.jax, types=types.jax, create_trajectory=trajectory.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: ComfortMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected_jerk: float,
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+        results = registry.get(metric)
+
+        assert np.isclose(  # The middle step should be the most accurate
+            results.lateral_jerk[horizon // 2], expected_jerk, rtol=0.1
+        )

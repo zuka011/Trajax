@@ -16,3 +16,7 @@ from .constraint import (
     ConstraintViolationMetricResult as ConstraintViolationMetricResult,
     ConstraintViolationMetric as ConstraintViolationMetric,
 )
+from .comfort import (
+    ComfortMetricResult as ComfortMetricResult,
+    ComfortMetric as ComfortMetric,
+)

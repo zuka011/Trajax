@@ -113,4 +113,6 @@ from .metrics import (
     TaskCompletionMetric as TaskCompletionMetric,
     ConstraintViolationMetricResult as ConstraintViolationMetricResult,
     ConstraintViolationMetric as ConstraintViolationMetric,
+    ComfortMetricResult as ComfortMetricResult,
+    ComfortMetric as ComfortMetric,
 )
