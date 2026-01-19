@@ -111,4 +111,6 @@ from .metrics import (
     MpccErrorMetric as MpccErrorMetric,
     TaskCompletionMetricResult as TaskCompletionMetricResult,
     TaskCompletionMetric as TaskCompletionMetric,
+    ConstraintViolationMetricResult as ConstraintViolationMetricResult,
+    ConstraintViolationMetric as ConstraintViolationMetric,
 )

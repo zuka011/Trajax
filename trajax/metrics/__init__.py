@@ -12,3 +12,7 @@ from .task import (
     TaskCompletionMetricResult as TaskCompletionMetricResult,
     TaskCompletionMetric as TaskCompletionMetric,
 )
+from .constraint import (
+    ConstraintViolationMetricResult as ConstraintViolationMetricResult,
+    ConstraintViolationMetric as ConstraintViolationMetric,
+)

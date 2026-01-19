@@ -3,9 +3,11 @@ from typing import Sequence, Callable, NamedTuple
 from trajax import (
     MetricRegistry,
     CollisionMetric,
+    ConstraintViolationMetric,
     TaskCompletionMetric,
     Mppi,
     ObstacleStateObserver,
+    boundary,
     collectors,
     metrics,
     types,
@@ -525,3 +527,166 @@ class test_that_task_efficiency_is_computed:
 
             assert np.isclose(results.efficiency, expected_efficiencies[step])
             assert isinstance(results.efficiency, float)
+
+
+class ConstraintViolationExpectation(NamedTuple):
+    lateral_deviations: Sequence[float]
+    boundary_distances: Sequence[float]
+    violations: Sequence[bool]
+    violation_detected: bool
+
+
+class test_that_constraint_violation_metrics_are_computed:
+    @staticmethod
+    def cases(data, types, create_trajectory, create_boundary) -> Sequence[tuple]:
+        reference = create_trajectory.line(
+            start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+        )
+
+        return [
+            (
+                registry := metrics.registry(
+                    metric := metrics.constraint_violation(
+                        reference=reference,
+                        boundary=create_boundary.fixed_width(
+                            reference=reference,
+                            position_extractor=(
+                                position_extractor := lambda states: types.positions(
+                                    x=states.array[:, 0],
+                                    y=states.array[:, 1],
+                                )
+                            ),
+                            left=2.0,
+                            right=3.0,
+                        ),
+                        position_extractor=position_extractor,
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 6),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 1.0], [y := 0.0], [phi := 0.0]],  # On centerline
+                            [[x := 2.0], [y := 1.0], [phi := 0.0]],  # Left of center
+                            [[x := 3.0], [y := -1.5], [phi := 0.0]],  # Right of center
+                            [[x := 4.0], [y := -0.5], [phi := 0.0]],  # Slightly right
+                            [[x := 5.0], [y := -4.0], [phi := 0.0]],  # Outside right
+                            [[x := 6.0], [y := 0.5], [phi := 0.0]],  # Back inside
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # Lateral deviation: positive = right, negative = left
+                # (perpendicular = [0, -1] for a horizontal line)
+                # Distance to nearest boundary:
+                # t=0: min(2+0, 3-0) = 2.0
+                # t=1: min(2-1, 3+1) = 1.0
+                # t=2: min(2+1.5, 3-1.5) = 1.5
+                # t=3: min(2+0.5, 3-0.5) = 2.5
+                # t=4: min(2-4.0, 3+4.0) = -2.0
+                # t=5: min(2-0.5, 3+0.5) = 1.5
+                expected := [
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0],
+                        boundary_distances=[2.0],
+                        violations=[False],
+                        violation_detected=False,
+                    ),
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0, -1.0],
+                        boundary_distances=[2.0, 1.0],
+                        violations=[False, False],
+                        violation_detected=False,
+                    ),
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0, -1.0, 1.5],
+                        boundary_distances=[2.0, 1.0, 1.5],
+                        violations=[False, False, False],
+                        violation_detected=False,
+                    ),
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0, -1.0, 1.5, 0.5],
+                        boundary_distances=[2.0, 1.0, 1.5, 2.5],
+                        violations=[False, False, False, False],
+                        violation_detected=False,
+                    ),
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0, -1.0, 1.5, 0.5, 4.0],
+                        boundary_distances=[2.0, 1.0, 1.5, 2.5, -1.0],
+                        violations=[False, False, False, False, True],
+                        violation_detected=True,
+                    ),
+                    ConstraintViolationExpectation(
+                        lateral_deviations=[0.0, -1.0, 1.5, 0.5, 4.0, -0.5],
+                        boundary_distances=[2.0, 1.0, 1.5, 2.5, -1.0, 1.5],
+                        violations=[False, False, False, False, True, False],
+                        violation_detected=True,
+                    ),
+                ],
+            )
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected",
+        ],
+        [
+            *cases(
+                data=data.numpy,
+                types=types.numpy,
+                create_trajectory=trajectory.numpy,
+                create_boundary=boundary.numpy,
+            ),
+            *cases(
+                data=data.jax,
+                types=types.jax,
+                create_trajectory=trajectory.jax,
+                create_boundary=boundary.jax,
+            ),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: ConstraintViolationMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected: Sequence[ConstraintViolationExpectation],
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+            results = registry.get(metric)
+
+            assert np.allclose(
+                results.lateral_deviations, expected[step].lateral_deviations
+            )
+            assert np.allclose(
+                results.boundary_distances, expected[step].boundary_distances
+            )
+            assert np.allclose(results.violations, expected[step].violations)
+            assert results.violation_detected == expected[step].violation_detected
+            assert isinstance(results.violation_detected, bool)
