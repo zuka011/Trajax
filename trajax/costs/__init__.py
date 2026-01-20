@@ -3,12 +3,14 @@ from .basic import (
     NumPyLagCost as NumPyLagCost,
     NumPyProgressCost as NumPyProgressCost,
     NumPyControlSmoothingCost as NumPyControlSmoothingCost,
+    NumPyControlEffortCost as NumPyControlEffortCost,
 )
 from .accelerated import (
     JaxContouringCost as JaxContouringCost,
     JaxLagCost as JaxLagCost,
     JaxProgressCost as JaxProgressCost,
     JaxControlSmoothingCost as JaxControlSmoothingCost,
+    JaxControlEffortCost as JaxControlEffortCost,
 )
 from .combined import (
     CombinedCost as CombinedCost,

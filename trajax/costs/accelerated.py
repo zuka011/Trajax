@@ -1,4 +1,4 @@
-from typing import overload, cast
+from typing import Any, overload, cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -280,6 +280,32 @@ class JaxControlSmoothingCost[D_u: int](
         )
 
 
+@dataclass(kw_only=True, frozen=True)
+class JaxControlEffortCost[D_u: int](
+    CostFunction[JaxControlInputBatch[int, D_u, int], Any, JaxCosts]
+):
+    weights: Float[JaxArray, "D_u"]
+
+    @staticmethod
+    def create[D_u_: int](
+        *,
+        weights: Float[JaxArray, "D_u_"] | Array[Dims[D_u_]],
+    ) -> "JaxControlEffortCost[D_u_]":
+        """Creates a control effort cost implemented with JAX.
+
+        Args:
+            weights: The weights for each control input dimension.
+        """
+        return JaxControlEffortCost(weights=jnp.asarray(weights))
+
+    def __call__[T: int, M: int](
+        self, *, inputs: JaxControlInputBatch[T, D_u, M], states: Any
+    ) -> JaxCosts[T, M]:
+        return JaxSimpleCosts(
+            control_effort_cost(inputs=inputs.array, weights=self.weights)
+        )
+
+
 @jax.jit
 @jaxtyped
 def contour_error(
@@ -354,3 +380,11 @@ def control_smoothing_cost(
     weighted_squared_diffs = squared_diffs * weights[jnp.newaxis, :, jnp.newaxis]
     cost_per_time_step = jnp.sum(weighted_squared_diffs, axis=1)
     return cost_per_time_step
+
+
+@jax.jit
+@jaxtyped
+def control_effort_cost(
+    *, inputs: Float[JaxArray, "T D_u M"], weights: Float[JaxArray, "D_u"]
+) -> Float[JaxArray, "T M"]:
+    return jnp.einsum("u,tum->tm", weights, inputs**2)

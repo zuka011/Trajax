@@ -341,8 +341,12 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
 === Comfort Cost
 
 #let smoothing-cost = $#cost-()_s$
+#let effort-cost = $#cost-()_n$
 #let input-change = $Delta #input-single$
 #let input-smooth-weight = $K_u$
+#let control-effort-weight = $K_n$
+#let control-effort-weight-single = $k_n$
+#let control-effort-cost-note = footnote[Although this cost is theoretically necessary for correct importance sampling, in practice the planner can work without it. We use it as a regularization/comfort term. Hence, it is written in the section corresponding to comfort costs.]
 
 #definition(title: [Control Smoothing Cost @Liniger2015])[
   To prevent erratic control behavior a *smoothing cost* #smoothing-cost can be used, which penalizes the rate of change of the control inputs.
@@ -352,6 +356,26 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
   $
     #smoothing-cost = || #input-smooth-weight #input-change _t ||^2
   $ <smoothing-cost-equation>
+]
+
+#definition(
+  title: [Control Effort Cost#control-effort-cost-note @Williams2017],
+)[
+  Penalizing extraneous control effort can also lead to more consistent motion. We can achieve this by adding a *control effort cost* #effort-cost that penalizes the magnitude of the control inputs.
+
+  If the rollouts are sampled from a Gaussian distribution with covariance $Sigma$ @Williams2017, the control effort cost at time step $t$ can be computed as:
+
+  $
+    #effort-cost = #temperature / 2 #input-single _t^top Sigma^(-1) #input-single _t
+  $
+
+  With #control-effort-weight-single being the cost weight, and #temperature - the temperature parameter. However, for flexibility, we define this cost more generally as:
+
+  $
+    #effort-cost = #control-effort-weight #input-single _t^top #input-single _t = #control-effort-weight || #input-single _t ||^2
+  $ <control-effort-cost-equation>
+
+  And the user can decide what the weighting factors #control-effort-weight should be.
 ]
 
 == Motion Prediction

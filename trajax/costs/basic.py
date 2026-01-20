@@ -1,3 +1,4 @@
+from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -200,3 +201,26 @@ class NumPyControlSmoothingCost[D_u: int](
         cost_per_time_step = np.sum(weighted_squared_diffs, axis=1)
 
         return NumPySimpleCosts(cost_per_time_step)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyControlEffortCost[D_u: int](
+    CostFunction[NumPyControlInputBatch[int, D_u, int], Any, NumPyCosts]
+):
+    weights: Array[Dims[D_u]]
+
+    @staticmethod
+    def create[D_u_: int](
+        *, weights: Array[Dims[D_u_]]
+    ) -> "NumPyControlEffortCost[D_u_]":
+        """Creates a control effort cost implemented with NumPy.
+
+        Args:
+            weights: The weights for each control input dimension.
+        """
+        return NumPyControlEffortCost(weights=weights)
+
+    def __call__[T: int, M: int](
+        self, *, inputs: NumPyControlInputBatch[T, D_u, M], states: Any
+    ) -> NumPyCosts[T, M]:
+        return NumPySimpleCosts(np.einsum("u,tum->tm", self.weights, inputs.array**2))

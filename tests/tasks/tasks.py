@@ -31,6 +31,7 @@ class BackgroundTasks:
         await self._wait()
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(timeout=5)
+        self._loop.close()
 
     def schedule(self, task: Coroutine) -> None:
         future = asyncio.run_coroutine_threadsafe(task, self._loop)

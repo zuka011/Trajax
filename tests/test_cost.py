@@ -517,7 +517,7 @@ class test_that_cost_increases_with_weight:
                     np.random.uniform(size=(T := 2, D_u := 2, M := 2))
                 ),
                 states := data.state_batch(np.random.uniform(size=(T, D_x := 4, M))),
-                create_cost := lambda weight: costs.safety.boundary(
+                create_cost := lambda weight, states=states: costs.safety.boundary(
                     distance=stubs.BoundaryDistanceExtractor.returns(
                         data.boundary_distance(
                             np.random.default_rng(0).uniform(size=(T, M))
@@ -528,6 +528,32 @@ class test_that_cost_increases_with_weight:
                     weight=weight,
                 ),
             ),
+            *[
+                (
+                    inputs := data.control_input_batch(
+                        array(
+                            [
+                                [[1.0, 2.0], [1.5, 2.5]],
+                                [[3.0, 4.0], [3.5, 4.5]],
+                            ],
+                            shape=(T := 2, D_u := 2, M := 2),
+                        )
+                    ),
+                    states := data.state_batch(np.zeros((T, D_x := 2, M))),
+                    create_cost := (
+                        lambda weight, i=i, T=T, D_u=D_u: costs.comfort.control_effort(
+                            weights=array(
+                                [  # Increasing either weight should increase cost.
+                                    weight if i == 0 else 1.0,
+                                    weight if i == 1 else 1.0,
+                                ],
+                                shape=(D_u,),
+                            ),
+                        )
+                    ),
+                )
+                for i in range(2)
+            ],
         ]
 
     @mark.parametrize(
@@ -756,6 +782,95 @@ class test_that_control_smoothing_cost_respects_dimension_weights:
         ), (
             f"Cost should be higher for changes in dimensions with higher weights. "
             f"Got costs: {J}"
+        )
+
+
+class test_that_control_effort_cost_increases_with_control_magnitude:
+    @staticmethod
+    def cases(data, costs) -> Sequence[tuple]:
+        return [
+            (
+                cost := costs.comfort.control_effort(
+                    weights=array([1.0, 1.0], shape=(D_u := 2,))
+                ),
+                inputs := data.control_input_batch(
+                    array(
+                        np.array(
+                            [
+                                # M=0: Zero magnitude -> cost should be 0
+                                [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                                # M=1: Small positive deviation -> small cost
+                                [[0.5, 0.5], [1.0, 0.5], [1.0, 1.0]],
+                                # M=2: Large positive deviation -> large cost
+                                [[2.0, 2.0], [2.0, 2.0], [2.0, 2.0]],
+                                # M=3: Negative deviation (same magnitude as rollout 1) -> same cost as rollout 1
+                                [[-0.5, -0.5], [-1.0, -0.5], [-1.0, -1.0]],
+                            ]
+                        )
+                        .transpose(1, 2, 0)
+                        .tolist(),
+                        shape=(T := 3, D_u, M := 4),
+                    )
+                ),
+                states := data.state_batch(np.zeros((T, D_x := 2, M))),
+                # All time steps of rollout 0
+                zero_cost_indices := [(0, 0), (1, 0), (2, 0)],
+                increasing_deviation_indices := [(0, 0), (0, 1), (1, 1), (2, 1)],
+                equal_deviation_indices := [
+                    ((0, 1), (0, 3)),  # T=0: positive vs negative
+                    ((1, 1), (1, 3)),  # T=1: positive vs negative
+                    ((2, 1), (2, 3)),  # T=2: positive vs negative
+                ],
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "cost",
+            "inputs",
+            "states",
+            "zero_cost_indices",
+            "increasing_deviation_indices",
+            "equal_deviation_indices",
+        ],
+        [
+            *cases(data=data.numpy, costs=costs.numpy),
+            *cases(data=data.jax, costs=costs.jax),
+        ],
+    )
+    def test[ControlInputBatchT, StateBatchT, CostsT: Costs](
+        self,
+        cost: CostFunction[ControlInputBatchT, StateBatchT, CostsT],
+        inputs: ControlInputBatchT,
+        states: StateBatchT,
+        zero_cost_indices: list[tuple[int, int]],
+        increasing_deviation_indices: list[tuple[int, int]],
+        equal_deviation_indices: list[tuple[tuple[int, int], tuple[int, int]]],
+    ) -> None:
+        J = np.asarray(cost(inputs=inputs, states=states))
+
+        assert np.all(J >= 0.0), f"Cost values should be non-negative. Got costs: {J}"
+
+        assert all(
+            [J[i, j] == approx(0.0, abs=1e-6) for (i, j) in zero_cost_indices]
+        ), f"Cost should be zero when input equals nominal. Got costs: {J}"
+
+        assert all(
+            [
+                J[low_i, low_j] < J[high_i, high_j]
+                for (low_i, low_j), (high_i, high_j) in zip(
+                    increasing_deviation_indices, increasing_deviation_indices[1:]
+                )
+            ]
+        ), f"Cost should increase with deviation magnitude. Got costs: {J}"
+
+        assert all(
+            [
+                J[i_1, j_1] == approx(J[i_2, j_2], abs=1e-6)
+                for (i_1, j_1), (i_2, j_2) in equal_deviation_indices
+            ]
+        ), (
+            f"Cost should be symmetric for positive and negative deviations. Got costs: {J}"
         )
 
 

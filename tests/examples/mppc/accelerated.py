@@ -115,6 +115,7 @@ class JaxMpccPlannerConfiguration:
     reference: Trajectory
     planner: Planner
     model: DynamicalModel
+    temperature: float
     wheelbase: float
     registry: MetricRegistry
     metrics: tuple[MpccErrorMetric, CollisionMetric | None]
@@ -141,22 +142,25 @@ class JaxMpccPlannerConfiguration:
 
 @dataclass(frozen=True)
 class JaxMpccPlannerWeights:
-    contouring: float = 20.0
-    lag: float = 10.0
-    progress: float = 500.0
+    contouring: float = 50.0
+    lag: float = 100.0
+    progress: float = 1000.0
     control_smoothing: Array[Dim1] = field(
         default_factory=lambda: array([2.0, 5.0, 5.0], shape=(3,))
     )
-    collision: float = 1000.0
-    boundary: float = 500.0
+    control_effort: Array[Dim1] = field(
+        default_factory=lambda: array([0.1, 0.5, 0.1], shape=(3,))
+    )
+    collision: float = 1500.0
+    boundary: float = 1000.0
 
 
 @dataclass(frozen=True)
 class JaxSamplingOptions:
     physical_standard_deviation: Float[JaxArray, "D_u"] = field(
-        default_factory=lambda: jnp.array([1.0, 2.0])
+        default_factory=lambda: jnp.array([2.0, 1.0])
     )
-    virtual_standard_deviation: float = 1.0
+    virtual_standard_deviation: float = 2.0
     rollout_count: int = 512
     physical_seed: int = 42
     virtual_seed: int = 43
@@ -268,7 +272,7 @@ class obstacles:
                     [17.0, 20.0],
                     [8.0, 12.0],
                     [12.0, 4.0],
-                    [32.0, 0.5],
+                    [32.0, 1.5],
                     [42.0, 7.0],
                     [57.0, 3.0],
                 ],
@@ -327,6 +331,7 @@ class configure:
     def planner_from_base(
         *,
         horizon: int = 30,
+        temperature: float = 0.1,
         reference: Trajectory = reference.small_circle,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
@@ -346,7 +351,7 @@ class configure:
                     virtual=model.integrator.dynamical(
                         time_step_size=dt,
                         state_limits=(0, reference.path_length),
-                        velocity_limits=(0, 15),
+                        velocity_limits=(1.0, 15.0),
                     ),
                     state=types.augmented.state,
                     sequence=types.augmented.state_sequence,
@@ -412,6 +417,7 @@ class configure:
 
         return JaxMpccPlannerConfiguration(
             horizon=horizon,
+            temperature=temperature,
             reference=reference,
             planner=planner,
             model=augmented_model,
@@ -431,6 +437,7 @@ class configure:
     def planner_from_augmented(
         *,
         horizon: int = 30,
+        temperature: float = 0.1,
         reference: Trajectory = reference.small_circle,
         obstacles: ObstacleSimulator = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
@@ -449,7 +456,7 @@ class configure:
                 model.integrator.dynamical(
                     time_step_size=dt,
                     state_limits=(0, reference.path_length),
-                    velocity_limits=(0, 15),
+                    velocity_limits=(1.0, 15.0),
                 ),
             ),
             samplers=(
@@ -586,6 +593,7 @@ class configure:
 
         return JaxMpccPlannerConfiguration(
             horizon=horizon,
+            temperature=temperature,
             reference=reference,
             planner=planner,
             model=augmented_model,
@@ -615,6 +623,7 @@ class configure:
     def planner_from_mpcc(
         *,
         horizon: int = 30,
+        temperature: float = 0.1,
         reference: Trajectory = reference.small_circle,
         obstacles: ObstacleSimulator = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
@@ -638,6 +647,7 @@ class configure:
             ),
             costs=(
                 costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.comfort.control_effort(weights=weights.control_effort),
                 costs.safety.collision(
                     obstacle_states=(
                         forecasts_collector := collectors.obstacle_forecasts.decorating(
@@ -715,8 +725,8 @@ class configure:
                         distance=boundary.fixed_width(
                             reference=reference,
                             position_extractor=position_extractor,
-                            left=3.0,
-                            right=3.0,
+                            left=2.5,
+                            right=2.5,
                         ),
                         distance_threshold=0.25,
                         weight=weights.boundary,
@@ -763,6 +773,7 @@ class configure:
 
         return JaxMpccPlannerConfiguration(
             horizon=horizon,
+            temperature=temperature,
             reference=reference,
             planner=planner,
             model=augmented_model,
