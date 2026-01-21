@@ -33,6 +33,39 @@ class risk:
                 name="Mean-Variance",
             )
 
+        @staticmethod
+        def var(*, alpha: float, sample_count: int) -> NumPyRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.numpy.create(),
+                creator=lambda *, cost, backend: rk.risk.var_of(
+                    cost, backend=backend, alpha=alpha
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=NumPyRisk,
+                name="Value at Risk",
+            )
+
+        @staticmethod
+        def cvar(*, alpha: float, sample_count: int) -> NumPyRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.numpy.create(),
+                creator=lambda *, cost, backend: rk.risk.cvar_of(
+                    cost, backend=backend, alpha=alpha
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=NumPyRisk,
+                name="Conditional Value at Risk",
+            )
+
+        @staticmethod
+        def entropic_risk(*, theta: float, sample_count: int) -> NumPyRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.numpy.create(),
+                creator=lambda *, cost, backend: rk.risk.entropic_risk_of(
+                    cost, backend=backend, theta=theta
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=NumPyRisk,
+                name="Entropic Risk",
+            )
+
     class jax:
         none: Final = JaxNoMetric.create
 
@@ -56,4 +89,37 @@ class risk:
                 ).sampled_with(rk.sampler.monte_carlo(sample_count)),
                 to_risk=JaxRisk,
                 name="Mean-Variance",
+            )
+
+        @staticmethod
+        def var(*, alpha: float, sample_count: int) -> JaxRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.jax.create(),
+                creator=lambda *, cost, backend: rk.risk.var_of(
+                    cost, backend=backend, alpha=alpha
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=JaxRisk,
+                name="Value at Risk",
+            )
+
+        @staticmethod
+        def cvar(*, alpha: float, sample_count: int) -> JaxRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.jax.create(),
+                creator=lambda *, cost, backend: rk.risk.cvar_of(
+                    cost, backend=backend, alpha=alpha
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=JaxRisk,
+                name="Conditional Value at Risk",
+            )
+
+        @staticmethod
+        def entropic_risk(*, theta: float, sample_count: int) -> JaxRiskMetric:
+            return RisKitRiskMetric.create(
+                backend=rk.backend.jax.create(),
+                creator=lambda *, cost, backend: rk.risk.entropic_risk_of(
+                    cost, backend=backend, theta=theta
+                ).sampled_with(rk.sampler.monte_carlo(sample_count)),
+                to_risk=JaxRisk,
+                name="Entropic Risk",
             )

@@ -1105,39 +1105,48 @@ class test_that_collision_cost_is_zero_when_no_obstacles_are_present:
                 inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
                 states,
             ),
-            (
-                cost := costs.safety.collision(
-                    obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
-                            x=np.random.uniform(size=(T := 2, K := 0)),
-                            y=np.random.uniform(size=(T, K)),
-                        )
-                    ),
-                    sampler=stubs.ObstacleStateSampler.returns(
-                        obstacle_state_samples := data.obstacle_state_samples(
-                            x=np.random.uniform(size=(T, K, N := 1)),
-                            y=np.random.uniform(size=(T, K, N)),
-                        ),
-                        when_obstacle_states_are=obstacle_states,
-                        and_sample_count_is=N,
-                    ),
-                    distance=stubs.DistanceExtractor.returns(
-                        data.distance(np.full((T, V := 2, M := 3, N), np.inf)),
-                        when_states_are=(
-                            states := data.state_batch(
-                                np.random.uniform(size=(T, D_x := 1, M)),
+            *[
+                (
+                    cost := costs.safety.collision(
+                        obstacle_states=stubs.ObstacleStateProvider.returns(
+                            obstacle_states := data.obstacle_states(
+                                x=np.random.uniform(size=(T := 2, K := 0)),
+                                y=np.random.uniform(size=(T, K)),
                             )
                         ),
-                        and_obstacle_states_are=obstacle_state_samples,
+                        sampler=stubs.ObstacleStateSampler.returns(
+                            obstacle_state_samples := data.obstacle_state_samples(
+                                x=np.random.uniform(size=(T, K, N := 1)),
+                                y=np.random.uniform(size=(T, K, N)),
+                            ),
+                            when_obstacle_states_are=obstacle_states,
+                            and_sample_count_is=N,
+                        ),
+                        distance=stubs.DistanceExtractor.returns(
+                            data.distance(np.full((T, V := 2, M := 3, N), np.inf)),
+                            when_states_are=(
+                                states := data.state_batch(
+                                    np.random.uniform(size=(T, D_x := 1, M)),
+                                )
+                            ),
+                            and_obstacle_states_are=obstacle_state_samples,
+                        ),
+                        distance_threshold=array([0.5, 0.5], shape=(V,)),
+                        weight=10.0,
+                        # Even if a risk metric is specified, cost should be zero as there are no obstacles.
+                        metric=metric,
                     ),
-                    distance_threshold=array([0.5, 0.5], shape=(V,)),
-                    weight=10.0,
-                    # Even if a risk metric is specified, cost should be zero as there are no obstacles.
-                    metric=risk.mean_variance(gamma=2.0, sample_count=100),
-                ),
-                inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
-                states,
-            ),
+                    inputs := data.control_input_batch(np.zeros((T, D_u := 2, M))),
+                    states,
+                )
+                for metric in (
+                    risk.expected_value(sample_count=10),
+                    risk.mean_variance(gamma=2.0, sample_count=10),
+                    risk.var(alpha=0.95, sample_count=10),
+                    risk.cvar(alpha=0.95, sample_count=10),
+                    risk.entropic_risk(theta=0.5, sample_count=10),
+                )
+            ],
         ]
 
     @mark.parametrize(
@@ -1160,7 +1169,187 @@ class test_that_collision_cost_is_zero_when_no_obstacles_are_present:
         )
 
 
-class test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty:
+class test_that_collision_cost_with_uncertainty_is_consistent_with_deterministic_collision_cost:
+    @staticmethod
+    def cases(
+        data,
+        costs,
+        distance_measure,
+        obstacles,
+        risk,
+        types,
+        types_obstacle=types.obstacle,
+    ) -> Sequence[tuple]:
+        return [
+            (
+                inputs := data.control_input_batch(
+                    np.zeros((T := 10, D_u := 2, M := 5))
+                ),
+                states := data.state_batch(
+                    array(
+                        np.tile(
+                            [
+                                [[-1.0], [-2.0], [np.pi / 4]],
+                            ],
+                            (T, 1, M),
+                        ),
+                        shape=(T, D_x := 3, M),
+                    )
+                ),
+                create_cost := lambda metric, variance: costs.safety.collision(
+                    obstacle_states=stubs.ObstacleStateProvider.returns(
+                        obstacle_states := data.obstacle_states(
+                            x=(rng := np.random.default_rng(seed=42)).uniform(
+                                low=-1.0, high=1.0, size=(T := 10, K := 5)
+                            ),
+                            y=rng.uniform(low=0.0, high=2.0, size=(T, K)),
+                            heading=rng.uniform(low=-np.pi, high=np.pi, size=(T, K)),
+                            covariance=array(
+                                (variance * np.eye(D_O := types_obstacle.D_O))[
+                                    None, ..., None
+                                ]
+                                * np.ones((T, D_O, D_O, K)),
+                                shape=(T, D_O, D_O, K),
+                            ),
+                        )
+                    ),
+                    sampler=obstacles.sampler.gaussian(),
+                    distance=distance_measure.circles(
+                        ego=Circles(
+                            origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                            radii=array([2.5], shape=(V,)),
+                        ),
+                        obstacle=Circles(
+                            origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                            radii=array([2.5], shape=(C,)),
+                        ),
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                        heading_extractor=lambda states: types.headings(
+                            heading=states.array[:, 2]
+                        ),
+                    ),
+                    distance_threshold=array([0.5], shape=(V,)),
+                    weight=10.0,
+                    metric=metric,
+                ),
+                no_metric := risk.none(),
+                target_metric := metric,
+            )
+            for metric in (
+                risk.expected_value(sample_count=50),
+                risk.mean_variance(gamma=0.0, sample_count=50),
+                risk.entropic_risk(theta=1e-6, sample_count=50),
+            )
+        ]
+
+    @mark.parametrize(
+        ["inputs", "states", "create_cost", "no_metric", "target_metric"],
+        [
+            *cases(
+                data=data.numpy,
+                costs=costs.numpy,
+                distance_measure=distance_measure.numpy,
+                obstacles=obstacles.numpy,
+                risk=risk.numpy,
+                types=types.numpy,
+            ),
+            *cases(
+                data=data.jax,
+                costs=costs.jax,
+                distance_measure=distance_measure.jax,
+                obstacles=obstacles.jax,
+                risk=risk.jax,
+                types=types.jax,
+            ),
+        ],
+    )
+    def test_that_costs_are_equal_when_variance_is_close_to_zero[
+        ControlInputBatchT,
+        StateBatchT,
+        CostsT: Costs,
+        RiskMetricT,
+    ](
+        self,
+        inputs: ControlInputBatchT,
+        states: StateBatchT,
+        create_cost: Callable[
+            [RiskMetricT, float], CostFunction[ControlInputBatchT, StateBatchT, CostsT]
+        ],
+        no_metric: RiskMetricT,
+        target_metric: RiskMetricT,
+    ) -> None:
+        no_variance = 1e-9
+
+        # NOTE: we sum over time steps, since some metrics have no meaning per time step.
+        J_deterministic = np.asarray(
+            create_cost(no_metric, no_variance)(inputs=inputs, states=states)
+        ).sum(axis=0)
+        J_uncertain = np.asarray(
+            create_cost(target_metric, no_variance)(inputs=inputs, states=states)
+        ).sum(axis=0)
+
+        assert np.allclose(J_deterministic, J_uncertain, atol=1e-2), (
+            f"Collision cost without uncertainty should equal the mean collision cost "
+            f"with uncertainty. Got deterministic costs: {J_deterministic} vs uncertain costs: {J_uncertain}"
+        )
+
+    @mark.parametrize(
+        ["inputs", "states", "create_cost", "no_metric", "target_metric"],
+        [
+            *cases(
+                data=data.numpy,
+                costs=costs.numpy,
+                distance_measure=distance_measure.numpy,
+                obstacles=obstacles.numpy,
+                risk=risk.numpy,
+                types=types.numpy,
+            ),
+            *cases(
+                data=data.jax,
+                costs=costs.jax,
+                distance_measure=distance_measure.jax,
+                obstacles=obstacles.jax,
+                risk=risk.jax,
+                types=types.jax,
+            ),
+        ],
+    )
+    def test_that_jensen_inequality_is_satisfied_when_variance_is_not_zero[
+        ControlInputBatchT,
+        StateBatchT,
+        CostsT: Costs,
+        RiskMetricT,
+    ](
+        self,
+        inputs: ControlInputBatchT,
+        states: StateBatchT,
+        create_cost: Callable[
+            [RiskMetricT, float], CostFunction[ControlInputBatchT, StateBatchT, CostsT]
+        ],
+        no_metric: RiskMetricT,
+        target_metric: RiskMetricT,
+    ) -> None:
+        non_zero_variance = 0.1
+
+        # NOTE: we sum over time steps, since some metrics have no meaning per time step.
+        J_deterministic = np.asarray(
+            create_cost(no_metric, non_zero_variance)(inputs=inputs, states=states)
+        ).sum(axis=0)
+        J_uncertain = np.asarray(
+            create_cost(target_metric, non_zero_variance)(inputs=inputs, states=states)
+        ).sum(axis=0)
+
+        # We add some tolerance due to sampling noise.
+        assert np.all(J_uncertain <= J_deterministic * 1.01), (
+            f"E[J(xi)] <= J(E[xi]) should hold for concave cost functions (Jensen's inequality). "
+            f"Got deterministic costs: {J_deterministic} vs uncertain costs: {J_uncertain}"
+        )
+
+
+class test_that_collision_cost_increases_with_higher_variance_in_obstacle_state_uncertainty:
     @staticmethod
     def cases(
         data,
@@ -1225,9 +1414,15 @@ class test_that_collision_cost_increases_with_higher_obstacle_state_uncertainty:
                     ),
                     distance_threshold=array([0.5], shape=(V,)),
                     weight=10.0,
-                    metric=risk.mean_variance(gamma=2.0, sample_count=100),
+                    metric=metric,
                 ),
-            ),
+            )
+            for metric in (
+                risk.mean_variance(gamma=2.0, sample_count=50),
+                risk.var(alpha=0.95, sample_count=50),
+                risk.cvar(alpha=0.95, sample_count=50),
+                risk.entropic_risk(theta=0.5, sample_count=50),
+            )
         ]
 
     @mark.parametrize(

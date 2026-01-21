@@ -665,14 +665,14 @@ wheels = [
 
 [[package]]
 name = "riskit"
-version = "0.2.2"
+version = "0.2.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numtypes" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/d4/5f92e076615217f800e3a6d9ab7199c36b21c85025a19ed9d84a38072569/riskit-0.2.2.tar.gz", hash = "sha256:b6bbdb3078bf01146ad92de98444f3c9ec13ddb9c9a737ee7dd92c767fdb5b59", size = 41555, upload-time = "2025-12-31T11:58:24.066Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/1c/fe3b9ff63b9f7a75879cbfb13e1281d019749396cb93f69628217a18021a/riskit-0.2.5.tar.gz", hash = "sha256:0bab7bfedebc75df2a973b2ea5b706f6f2001642569780d39ead46775dbe5c66", size = 56879, upload-time = "2026-01-21T01:11:07.549Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/38/41/aa8209548b8311e8595f02bfc090d9965c88f17654d06592305a74fc497b/riskit-0.2.2-py3-none-any.whl", hash = "sha256:190676eed8ce6341f4c689c6d8f552d33a7dbd0750c053305b56ef4d7651fb27", size = 15970, upload-time = "2025-12-31T11:58:22.906Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/57/4959ee54230e67514753dc3df138c7cb69f50f042c4d6316504a10405f82/riskit-0.2.5-py3-none-any.whl", hash = "sha256:ab511214d79c49df4c752dbaa6568832e89e18359c1eeb87f3492189ba5f68e4", size = 19047, upload-time = "2026-01-21T01:11:06.651Z" },
 ]
 
 [[package]]
@@ -805,7 +805,7 @@ requires-dist = [
     { name = "jax", specifier = ">=0.8.2" },
     { name = "jaxtyping", specifier = ">=0.3.5" },
     { name = "numtypes", specifier = ">=0.5.1" },
-    { name = "riskit", specifier = ">=0.2.2" },
+    { name = "riskit", specifier = ">=0.2.5" },
     { name = "scipy", specifier = ">=1.17.0" },
 ]
 
