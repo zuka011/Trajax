@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Any
 
 from trajax import (
     Trajectory,
@@ -7,6 +7,7 @@ from trajax import (
     Positions,
     LateralPositions,
     LongitudinalPositions,
+    Normals,
     trajectory,
     types,
 )
@@ -799,4 +800,184 @@ class test_that_longitudinal_position_is_distance_along_trajectory:
         assert np.allclose(actual, expected, atol=1e-5)
 
 
-# TODO: Add tests for optimal behavior when following looped trajectories.
+class test_that_normal_is_perpendicular_to_trajectory_direction:
+    @staticmethod
+    def cases(trajectory, types) -> Sequence[tuple]:
+        return [
+            *[
+                (  # Horizontal line (heading = 0) → normal = (0, 1)
+                    horizontal_line,
+                    path_parameters := types.path_parameters(
+                        array([[0.0], [5.0], [10.0]], shape=(T := 3, M := 1))
+                    ),
+                    expected := types.normals(
+                        x=array([[0.0], [0.0], [0.0]], shape=(T, M)),
+                        y=array([[-1.0], [-1.0], [-1.0]], shape=(T, M)),
+                    ),
+                )
+                for horizontal_line in (
+                    trajectory.line(
+                        start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0
+                    ),
+                    trajectory.waypoints(
+                        points=array([[0.0, 0.0], [10.0, 0.0]], shape=(2, 2)),
+                        path_length=10.0,
+                    ),
+                )
+            ],
+            *[
+                (  # Vertical line (heading = π/2) → normal = (-1, 0)
+                    vertical_line,
+                    path_parameters := types.path_parameters(
+                        array([[0.0], [5.0], [10.0]], shape=(T := 3, M := 1))
+                    ),
+                    expected := types.normals(
+                        x=array([[1.0], [1.0], [1.0]], shape=(T, M)),
+                        y=array([[0.0], [0.0], [0.0]], shape=(T, M)),
+                    ),
+                )
+                for vertical_line in (
+                    trajectory.line(
+                        start=(0.0, 0.0), end=(0.0, 10.0), path_length=10.0
+                    ),
+                    trajectory.waypoints(
+                        points=array(
+                            [[0.0, 0.0], [0.0, 5.0], [0.0, 10.0]], shape=(3, 2)
+                        ),
+                        path_length=10.0,
+                    ),
+                )
+            ],
+            *[
+                (  # Diagonal line at 45 degrees → normal = (-√2/2, √2/2)
+                    diagonal_line,
+                    path_parameters := types.path_parameters(
+                        array([[0.0], [5.0], [10.0]], shape=(T := 3, M := 1))
+                    ),
+                    expected := types.normals(
+                        x=array([[np.sqrt(2) / 2]] * 3, shape=(T, M)),
+                        y=array([[-np.sqrt(2) / 2]] * 3, shape=(T, M)),
+                    ),
+                )
+                for diagonal_line in (
+                    trajectory.line(
+                        start=(0.0, 0.0), end=(10.0, 10.0), path_length=10.0
+                    ),
+                    trajectory.waypoints(
+                        points=array([[0.0, 0.0], [10.0, 10.0]], shape=(2, 2)),
+                        path_length=10.0,
+                    ),
+                )
+            ],
+        ]
+
+    @mark.parametrize(
+        ["trajectory", "path_parameters", "expected"],
+        [
+            *cases(trajectory=trajectory.numpy, types=types.numpy),
+            *cases(trajectory=trajectory.jax, types=types.jax),
+        ],
+    )
+    def test[PathParametersT: PathParameters, NormalT: Normals](
+        self,
+        trajectory: Trajectory[
+            PathParametersT, ReferencePoints, Any, Any, Any, NormalT
+        ],
+        path_parameters: PathParametersT,
+        expected: NormalT,
+    ) -> None:
+        actual = trajectory.normal(path_parameters)
+
+        assert np.allclose(actual, expected, atol=1e-6)
+
+
+class test_that_normal_has_unit_length:
+    @staticmethod
+    def cases(trajectory, types) -> Sequence[tuple]:
+        return [
+            (
+                trajectory.line(start=(0.0, 0.0), end=(3.0, 4.0), path_length=5.0),
+                path_parameters := types.path_parameters(
+                    array([[0.0], [2.5], [5.0]], shape=(T := 3, M := 1))
+                ),
+            ),
+            (
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [5.0, 5.0], [10.0, 0.0]], shape=(3, 2)),
+                    path_length=10.0,
+                ),
+                path_parameters := types.path_parameters(
+                    array([[0.0], [5.0], [10.0]], shape=(T := 3, M := 1))
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["trajectory", "path_parameters"],
+        [
+            *cases(trajectory=trajectory.numpy, types=types.numpy),
+            *cases(trajectory=trajectory.jax, types=types.jax),
+        ],
+    )
+    def test[PathParametersT: PathParameters](
+        self,
+        trajectory: Trajectory[
+            PathParametersT, ReferencePoints, Any, Any, Any, Normals
+        ],
+        path_parameters: PathParametersT,
+    ) -> None:
+        actual = trajectory.normal(path_parameters)
+        magnitude = np.sqrt(actual.x() ** 2 + actual.y() ** 2)
+
+        assert np.allclose(magnitude, 1.0, atol=1e-6)
+
+
+class test_that_normal_changes_direction_when_trajectory_is_curved:
+    @staticmethod
+    def cases(trajectory, types) -> Sequence[tuple]:
+        return [
+            (  # L-shaped trajectory: starts heading east, ends heading north
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]], shape=(3, 2)),
+                    path_length=20.0,
+                ),
+                start_params := types.path_parameters(array([[0.0]], shape=(1, 1))),
+                end_params := types.path_parameters(array([[20.0]], shape=(1, 1))),
+                expected_start_normal := (0.0, -1.0),  # perpendicular to east
+                expected_end_normal := (1.0, 0.0),  # perpendicular to north
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "trajectory",
+            "start_params",
+            "end_params",
+            "expected_start_normal",
+            "expected_end_normal",
+        ],
+        [
+            *cases(trajectory=trajectory.numpy, types=types.numpy),
+            *cases(trajectory=trajectory.jax, types=types.jax),
+        ],
+    )
+    def test[PathParametersT: PathParameters](
+        self,
+        trajectory: Trajectory[
+            PathParametersT, ReferencePoints, Any, Any, Any, Normals
+        ],
+        start_params: PathParametersT,
+        end_params: PathParametersT,
+        expected_start_normal: tuple[float, float],
+        expected_end_normal: tuple[float, float],
+    ) -> None:
+        start_normal = trajectory.normal(start_params)
+        end_normal = trajectory.normal(end_params)
+
+        assert np.allclose(start_normal.x(), expected_start_normal[0], atol=0.2)
+        assert np.allclose(start_normal.y(), expected_start_normal[1], atol=0.2)
+        assert np.allclose(end_normal.x(), expected_end_normal[0], atol=0.2)
+        assert np.allclose(end_normal.y(), expected_end_normal[1], atol=0.2)
+
+
+# # TODO: Add tests for optimal behavior when following looped trajectories.

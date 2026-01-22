@@ -9,6 +9,7 @@ from trajax.types import (
     NumPyPositions,
     NumPyLateralPositions,
     NumPyLongitudinalPositions,
+    NumPyNormals,
 )
 
 from numtypes import Array, Dims, Dim1, D, shape_of
@@ -126,6 +127,24 @@ class NumPyWaypointsTrajectory(
         lateral = (diff_x * dy_ds - diff_y * dx_ds) / tangent_norm
 
         return NumPyLateralPositions.create(np.asarray(lateral, dtype=np.float64))
+
+    def normal[T: int, M: int](
+        self, parameters: NumPyPathParameters[T, M]
+    ) -> NumPyNormals[T, M]:
+        T, M = parameters.horizon, parameters.rollout_count
+        s = np.asarray(parameters)
+
+        dx_ds = self.spline_x(s, 1)
+        dy_ds = self.spline_y(s, 1)
+        norm = np.sqrt(dx_ds**2 + dy_ds**2)
+
+        x = dy_ds / norm
+        y = -dx_ds / norm
+
+        assert shape_of(x, matches=(T, M), name="normal x")
+        assert shape_of(y, matches=(T, M), name="normal y")
+
+        return NumPyNormals.create(x=x, y=y)
 
     @property
     def end(self) -> tuple[float, float]:

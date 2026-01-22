@@ -1,18 +1,21 @@
-from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
     CostFunction,
     ControlInputBatch,
     Trajectory,
+    BoundaryPoints,
+    NumPyReferencePoints,
     NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor,
     NumPyCosts,
+    NumPyPathParameters,
     NumPyPositions,
     NumPyLateralPositions,
     NumPyPositionExtractor,
 )
 from trajax.states import NumPySimpleCosts
+
 
 import numpy as np
 
@@ -46,15 +49,22 @@ class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCos
 class NumPyFixedWidthBoundary[StateT](
     NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
 ):
-    reference: Trajectory[Any, Any, NumPyPositions, NumPyLateralPositions]
+    reference: Trajectory[
+        NumPyPathParameters, NumPyReferencePoints, NumPyPositions, NumPyLateralPositions
+    ]
     position_extractor: NumPyPositionExtractor[StateT]
-    left: float
-    right: float
+    _left: float
+    _right: float
 
     @staticmethod
     def create[S](
         *,
-        reference: Trajectory[Any, Any, NumPyPositions, NumPyLateralPositions],
+        reference: Trajectory[
+            NumPyPathParameters,
+            NumPyReferencePoints,
+            NumPyPositions,
+            NumPyLateralPositions,
+        ],
         position_extractor: NumPyPositionExtractor[S],
         left: float,
         right: float,
@@ -78,15 +88,35 @@ class NumPyFixedWidthBoundary[StateT](
         return NumPyFixedWidthBoundary(
             reference=reference,
             position_extractor=position_extractor,
-            left=left,
-            right=right,
+            _left=left,
+            _right=right,
         )
 
     def __call__(self, *, states: StateT) -> NumPyBoundaryDistance:
         positions = self.position_extractor(states)
         lateral = self.reference.lateral(positions)
 
-        distance_to_left = self.left + lateral.array
-        distance_to_right = self.right - lateral.array
+        distance_to_left = self._left + lateral.array
+        distance_to_right = self._right - lateral.array
 
         return NumPyBoundaryDistance(np.minimum(distance_to_left, distance_to_right))
+
+    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s = NumPyPathParameters(
+            np.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
+        )
+
+        return (
+            self.reference.query(s).positions
+            - self._left * self.reference.normal(s).array
+        )[..., 0]
+
+    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s = NumPyPathParameters(
+            np.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
+        )
+
+        return (
+            self.reference.query(s).positions
+            + self._right * self.reference.normal(s).array
+        )[..., 0]

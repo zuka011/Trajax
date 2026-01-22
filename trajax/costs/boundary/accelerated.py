@@ -1,4 +1,3 @@
-from typing import Any
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -6,9 +5,12 @@ from trajax.types import (
     CostFunction,
     ControlInputBatch,
     Trajectory,
+    BoundaryPoints,
+    JaxReferencePoints,
     JaxBoundaryDistance,
     JaxBoundaryDistanceExtractor,
     JaxCosts,
+    JaxPathParameters,
     JaxPositions,
     JaxLateralPositions,
     JaxPositionExtractor,
@@ -19,6 +21,7 @@ from jaxtyping import Float, Array as JaxArray, Scalar
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 
 @dataclass(frozen=True)
@@ -56,15 +59,19 @@ class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts])
 class JaxFixedWidthBoundary[StateT](
     JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
 ):
-    reference: Trajectory[Any, Any, JaxPositions, JaxLateralPositions]
+    reference: Trajectory[
+        JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
+    ]
     position_extractor: JaxPositionExtractor[StateT]
-    left: Scalar
-    right: Scalar
+    _left: Scalar
+    _right: Scalar
 
     @staticmethod
     def create[S](
         *,
-        reference: Trajectory[Any, Any, JaxPositions, JaxLateralPositions],
+        reference: Trajectory[
+            JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
+        ],
         position_extractor: JaxPositionExtractor[S],
         left: float,
         right: float,
@@ -88,8 +95,8 @@ class JaxFixedWidthBoundary[StateT](
         return JaxFixedWidthBoundary(
             reference=reference,
             position_extractor=position_extractor,
-            left=jnp.array(left),
-            right=jnp.array(right),
+            _left=jnp.array(left),
+            _right=jnp.array(right),
         )
 
     def __call__(self, *, states: StateT) -> JaxBoundaryDistance:
@@ -97,7 +104,31 @@ class JaxFixedWidthBoundary[StateT](
         lateral = self.reference.lateral(positions)
 
         return JaxBoundaryDistance(
-            boundary_distance(lateral=lateral.array, left=self.left, right=self.right)
+            boundary_distance(lateral=lateral.array, left=self._left, right=self._right)
+        )
+
+    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s = JaxPathParameters(
+            jnp.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
+        )
+
+        return np.asarray(
+            (
+                self.reference.query(s).positions_array
+                - self._left * self.reference.normal(s).array
+            )[..., 0]
+        )
+
+    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s = JaxPathParameters(
+            jnp.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
+        )
+
+        return np.asarray(
+            (
+                self.reference.query(s).positions_array
+                + self._right * self.reference.normal(s).array
+            )[..., 0]
         )
 
 

@@ -97,6 +97,40 @@ class ReferencePoints[T: int, M: int](Protocol):
         """Returns the heading angles of the reference points."""
         ...
 
+    @property
+    def horizon(self) -> T:
+        """Returns the time horizon of the reference points."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Returns the rollout count of the reference points."""
+        ...
+
+
+class Normals[T: int, M: int](Protocol):
+    def __array__(self) -> Array[Dims[T, D[2], M]]:
+        """Returns the normal vectors as a NumPy array."""
+        ...
+
+    def x(self) -> Array[Dims[T, M]]:
+        """Returns the x components of the normal vectors."""
+        ...
+
+    def y(self) -> Array[Dims[T, M]]:
+        """Returns the y components of the normal vectors."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """Returns the time horizon of the normal vectors."""
+        ...
+
+    @property
+    def rollout_count(self) -> M:
+        """Returns the rollout count of the normal vectors."""
+        ...
+
 
 class Trajectory[
     PathParametersT,
@@ -104,6 +138,7 @@ class Trajectory[
     PositionsT = Any,
     LateralT = Any,
     LongitudinalT = Any,
+    NormalT = Any,
 ](Protocol):
     def query(self, parameters: PathParametersT) -> ReferencePointsT:
         """Queries the trajectory at the given path parameters, returning the reference points."""
@@ -115,6 +150,10 @@ class Trajectory[
 
     def longitudinal(self, positions: PositionsT) -> LongitudinalT:
         """Computes the longitudinal coordinate along the trajectory for each position."""
+        ...
+
+    def normal(self, parameters: PathParametersT) -> NormalT:
+        """Computes the normal vectors of the trajectory at the given path parameters."""
         ...
 
     @property

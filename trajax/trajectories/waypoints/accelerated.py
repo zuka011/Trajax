@@ -11,6 +11,7 @@ from trajax.types import (
     JaxPositions,
     JaxLateralPositions,
     JaxLongitudinalPositions,
+    JaxNormals,
 )
 from trajax.trajectories.waypoints.basic import NumPyWaypointsTrajectory
 
@@ -158,6 +159,18 @@ class JaxWaypointsTrajectory(
                 refining_iterations=self.refining_iterations,
             )
         )
+
+    def normal[T: int, M: int](
+        self, parameters: JaxPathParameters[T, M] | NumPyPathParameters[T, M]
+    ) -> JaxNormals[T, M]:
+        x, y = compute_normal(
+            parameters=jnp.asarray(parameters.array),
+            reference_points=self.reference_points,
+            coefficients_x=self.coefficients_x,
+            coefficients_y=self.coefficients_y,
+        )
+
+        return JaxNormals.create(x=x, y=y)
 
     @property
     def end(self) -> tuple[float, float]:
@@ -418,3 +431,22 @@ def compute_lateral(
     lateral = (diff_x * dy_ds - diff_y * dx_ds) / tangent_norm
 
     return lateral
+
+
+@jax.jit
+@jaxtyped
+def compute_normal(
+    parameters: Float[JaxArray, "T M"],
+    *,
+    reference_points: Float[JaxArray, "N"],
+    coefficients_x: Float[JaxArray, "S 4"],
+    coefficients_y: Float[JaxArray, "S 4"],
+) -> tuple[Float[JaxArray, "T M"], Float[JaxArray, "T M"]]:
+    dx_ds = evaluate_derivative(parameters, reference_points, coefficients_x)
+    dy_ds = evaluate_derivative(parameters, reference_points, coefficients_y)
+    norm = jnp.sqrt(dx_ds**2 + dy_ds**2)
+
+    normal_x = dy_ds / norm
+    normal_y = -dx_ds / norm
+
+    return normal_x, normal_y

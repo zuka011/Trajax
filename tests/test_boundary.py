@@ -1,6 +1,12 @@
 from typing import Sequence
 
-from trajax import BoundaryDistanceExtractor, types, trajectory, boundary
+from trajax import (
+    BoundaryDistanceExtractor,
+    ExplicitBoundary,
+    types,
+    trajectory,
+    boundary,
+)
 
 from numtypes import array
 
@@ -223,4 +229,70 @@ class test_that_extractor_returns_negative_distance_inside_boundary:
         assert np.allclose(distances, expected_distance, atol=1e-6), (
             f"Boundary distance should be {expected_distance} when outside corridor. "
             f"Got: {distances}"
+        )
+
+
+class test_that_distance_between_edges_of_explicit_boundary_is_constant_when_width_is_fixed:
+    @staticmethod
+    def cases(trajectory, types, create_boundary) -> Sequence[tuple]:
+        return [
+            (
+                boundary := create_boundary.fixed_width(
+                    reference=reference,
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0],
+                        y=states.array[:, 1],
+                    ),
+                    left=(left_width := 3.0),
+                    right=(right_width := 4.0),
+                ),
+                left_width,
+                right_width,
+            )
+            for reference in (
+                trajectory.line(
+                    start=(0.0, 0.0),
+                    end=(10.0, 0.0),
+                    path_length=10.0,
+                ),
+                trajectory.line(
+                    start=(5.0, 5.0),
+                    end=(5.0, -5.0),
+                    path_length=10.0,
+                ),
+                trajectory.waypoints(
+                    points=array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0]], shape=(3, 2)),
+                    path_length=20.0,
+                ),
+            )
+        ]
+
+    @mark.parametrize(
+        ["boundary", "left_width", "right_width"],
+        [
+            *cases(
+                trajectory=trajectory.numpy,
+                types=types.numpy,
+                create_boundary=boundary.numpy,
+            ),
+            *cases(
+                trajectory=trajectory.jax, types=types.jax, create_boundary=boundary.jax
+            ),
+        ],
+    )
+    def test(
+        self, boundary: ExplicitBoundary, left_width: float, right_width: float
+    ) -> None:
+        left_boundary_points = boundary.left(sample_count=(N := 100))
+        right_boundary_points = boundary.right(sample_count=N)
+
+        distances = np.linalg.norm(left_boundary_points - right_boundary_points, axis=1)
+
+        assert len(distances) == N
+        assert np.allclose(
+            distances, expected := left_width + right_width, atol=1e-6
+        ), (
+            f"Distance between left and right boundary points should be constant "
+            f"and equal to the total width {expected}. "
+            f"Got distances: {distances}"
         )

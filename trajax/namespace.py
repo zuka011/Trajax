@@ -38,6 +38,7 @@ from trajax.types import (
     NumPyHeadings,
     NumPyLateralPositions,
     NumPyLongitudinalPositions,
+    NumPyNormals,
     NumPyRisk,
     JaxPathParameters,
     JaxReferencePoints,
@@ -45,6 +46,7 @@ from trajax.types import (
     JaxHeadings,
     JaxLateralPositions,
     JaxLongitudinalPositions,
+    JaxNormals,
     JaxRisk,
     D_o as D_o_,
     D_O as D_O_,
@@ -276,6 +278,7 @@ class types:
         headings: Final = NumPyHeadings.create
         lateral_positions: Final = NumPyLateralPositions.create
         longitudinal_positions: Final = NumPyLongitudinalPositions.create
+        normals: Final = NumPyNormals.create
         distance: Final = NumPyDistance
         boundary_distance: Final = NumPyBoundaryDistance
         obstacle_ids: Final = NumPyObstacleIds
@@ -430,6 +433,7 @@ class types:
         headings: Final = JaxHeadings.create
         lateral_positions: Final = JaxLateralPositions.create
         longitudinal_positions: Final = JaxLongitudinalPositions.create
+        normals: Final = JaxNormals.create
         distance: Final = JaxDistance
         boundary_distance: Final = JaxBoundaryDistance
         obstacle_ids: Final = JaxObstacleIds

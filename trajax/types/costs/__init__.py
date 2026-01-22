@@ -44,8 +44,10 @@ from .collision import (
     JaxRiskMetric as JaxRiskMetric,
 )
 from .boundary import (
+    BoundaryPoints as BoundaryPoints,
     BoundaryDistance as BoundaryDistance,
     BoundaryDistanceExtractor as BoundaryDistanceExtractor,
+    ExplicitBoundary as ExplicitBoundary,
     NumPyBoundaryDistance as NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor as NumPyBoundaryDistanceExtractor,
     JaxBoundaryDistance as JaxBoundaryDistance,

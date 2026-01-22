@@ -9,6 +9,7 @@ from trajax.types.trajectories.common import (
     Positions,
     LateralPositions,
     LongitudinalPositions,
+    Normals,
 )
 
 from numtypes import array, Array, Dims, D
@@ -114,6 +115,18 @@ class NumPyReferencePoints[T: int, M: int](ReferencePoints[T, M]):
     def heading(self) -> Array[Dims[T, M]]:
         return self.array[:, 2]
 
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def rollout_count(self) -> M:
+        return self.array.shape[2]
+
+    @property
+    def positions(self) -> Array[Dims[T, D[2], M]]:
+        return self.array[:, :2]
+
 
 @dataclass(frozen=True)
 class NumPyLateralPositions[T: int, M: int](LateralPositions[T, M]):
@@ -166,4 +179,39 @@ class NumPyLongitudinalPositions[T: int, M: int](LongitudinalPositions[T, M]):
 
     @property
     def array(self) -> Array[Dims[T, M]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPyNormals[T: int, M: int](Normals[T, M]):
+    _array: Array[Dims[T, D[2], M]]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        *,
+        x: Array[Dims[T_, M_]],
+        y: Array[Dims[T_, M_]],
+    ) -> "NumPyNormals[T_, M_]":
+        """Creates a NumPy normals instance from x and y coordinate arrays."""
+        return NumPyNormals(np.stack([x, y], axis=1))
+
+    def __array__(self) -> Array[Dims[T, D[2], M]]:
+        return self.array
+
+    def x(self) -> Array[Dims[T, M]]:
+        return self.array[:, 0]
+
+    def y(self) -> Array[Dims[T, M]]:
+        return self.array[:, 1]
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def rollout_count(self) -> M:
+        return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D[2], M]]:
         return self._array

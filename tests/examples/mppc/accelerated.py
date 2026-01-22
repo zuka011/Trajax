@@ -7,6 +7,7 @@ from trajax import (
     DynamicalModel,
     AugmentedSampler,
     Trajectory,
+    ExplicitBoundary,
     Circles,
     ObstaclePositionExtractor,
     ObstacleStateObserver,
@@ -122,6 +123,7 @@ class JaxMpccPlannerConfiguration:
 
     obstacle_simulator: ObstacleSimulator | None = None
     obstacle_state_observer: ObstacleStateObserver | None = None
+    boundary: ExplicitBoundary | None = None
 
     @property
     def initial_state(self) -> MpccState:
@@ -631,6 +633,14 @@ class configure:
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
     ) -> JaxMpccPlannerConfiguration:
+        position_extractor = extract.from_physical(position)
+        fixed_boundary = boundary.fixed_width(
+            reference=reference,
+            position_extractor=position_extractor,
+            left=2.5,
+            right=2.5,
+        )
+
         planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
             model=model.bicycle.dynamical(
                 time_step_size=(dt := 0.1),
@@ -700,9 +710,7 @@ class configure:
                                 ),
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
-                            position_extractor=(
-                                position_extractor := extract.from_physical(position)
-                            ),
+                            position_extractor=position_extractor,
                             heading_extractor=extract.from_physical(heading),
                         )
                     ),
@@ -722,12 +730,7 @@ class configure:
             + (
                 (
                     costs.safety.boundary(
-                        distance=boundary.fixed_width(
-                            reference=reference,
-                            position_extractor=position_extractor,
-                            left=2.5,
-                            right=2.5,
-                        ),
+                        distance=fixed_boundary,
                         distance_threshold=0.25,
                         weight=weights.boundary,
                     ),
@@ -797,4 +800,5 @@ class configure:
             metrics=(mpcc_error_metrics, collision_metrics),
             obstacle_simulator=obstacles.with_time_step_size(dt),
             obstacle_state_observer=obstacle_collector,
+            boundary=fixed_boundary if use_boundary else None,
         )

@@ -11,6 +11,7 @@ from trajax.types.trajectories.common import (
     Positions,
     LateralPositions,
     LongitudinalPositions,
+    Normals,
 )
 
 from jaxtyping import Array as JaxArray, Float
@@ -201,6 +202,14 @@ class JaxReferencePoints[T: int, M: int](ReferencePoints[T, M]):
         return np.asarray(self.array[:, 2])
 
     @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self.array.shape[2])
+
+    @property
     def x_array(self) -> Float[JaxArray, "T M"]:
         return self.array[:, 0]
 
@@ -211,6 +220,10 @@ class JaxReferencePoints[T: int, M: int](ReferencePoints[T, M]):
     @property
     def heading_array(self) -> Float[JaxArray, "T M"]:
         return self.array[:, 2]
+
+    @property
+    def positions_array(self) -> Float[JaxArray, "T 2 M"]:
+        return self.array[:, :2]
 
 
 @jaxtyped
@@ -274,4 +287,58 @@ class JaxLongitudinalPositions[T: int, M: int](LongitudinalPositions[T, M]):
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxNormals[T: int, M: int](Normals[T, M]):
+    _array: Float[JaxArray, "T 2 M"]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        *,
+        x: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
+        y: Float[JaxArray, "T M"] | Array[Dims[T_, M_]],
+        horizon: T_ | None = None,
+        rollout_count: M_ | None = None,
+    ) -> "JaxNormals[T_, M_]":
+        """Creates a JAX normals instance from x and y coordinate arrays."""
+        x = jnp.asarray(x)
+        y = jnp.asarray(y)
+        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
+        rollout_count = (
+            rollout_count if rollout_count is not None else cast(M_, x.shape[1])
+        )
+
+        assert x.shape == y.shape == (horizon, rollout_count), (
+            f"Expected x and y to have shape {(horizon, rollout_count)}, "
+            f"but got {x.shape} and {y.shape}."
+        )
+
+        return JaxNormals(_array=jnp.stack([x, y], axis=1))
+
+    def __array__(self) -> Array[Dims[T, D[2], M]]:
+        return self._numpy_array
+
+    def x(self) -> Array[Dims[T, M]]:
+        return np.asarray(self._array[:, 0])
+
+    def y(self) -> Array[Dims[T, M]]:
+        return np.asarray(self._array[:, 1])
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._array.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self._array.shape[2])
+
+    @property
+    def array(self) -> Float[JaxArray, "T 2 M"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D[2], M]]:
         return np.asarray(self.array)

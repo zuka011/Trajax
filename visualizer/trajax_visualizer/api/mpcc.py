@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from trajax import (
     Trajectory,
+    ExplicitBoundary,
+    BoundaryPoints,
     ReferencePoints,
     ObstacleStates,
     ControlInputSequence,
@@ -54,27 +56,31 @@ class MpccSimulationResult:
     controls: Sequence[Control[ControlInputSequence, Weights]] | None = None
     risks: Sequence[Risk] | None = None
     network: Road.Network | None = None
+    boundary: ExplicitBoundary | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(kw_only=True, frozen=True)
 class MpccVisualizer:
     """Visualizer for MPCC simulation results."""
 
     inner: SimulationVisualizer
     reference_sample_count: int
+    boundary_sample_count: int
 
     @staticmethod
     def create(
         *,
         output: str = "mpcc-simulation",
         reference_sample_count: int = 200,
+        boundary_sample_count: int = 100,
         output_directory: str | None = None,
     ) -> "MpccVisualizer":
         return MpccVisualizer(
-            SimulationVisualizer.create(
+            inner=SimulationVisualizer.create(
                 output=output, output_directory=output_directory
             ),
-            reference_sample_count,
+            reference_sample_count=reference_sample_count,
+            boundary_sample_count=boundary_sample_count,
         )
 
     async def __call__(self, data: MpccSimulationResult, *, key: str) -> None:
@@ -92,6 +98,7 @@ class MpccVisualizer:
             obstacles=self.obstacles_from(result),
             network=result.network,
             additional_plots=self.additional_plots_from(result),
+            boundaries=self.boundaries_from(result),
         )
 
     def info_from(self, result: MpccSimulationResult) -> Visualizable.SimulationInfo:
@@ -222,6 +229,24 @@ class MpccVisualizer:
     ) -> Array[Dims[T, D[2], D[2], K]]:
         # NOTE: We assume first two dimensions correspond to covariance of (x, y).
         return covariance[:, :2, :2, :]
+
+    def boundaries_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.Boundaries | None:
+        if result.boundary is None:
+            return
+
+        return Visualizable.Boundaries(
+            left=self.boundary_from(
+                result.boundary.left(sample_count=self.boundary_sample_count)
+            ),
+            right=self.boundary_from(
+                result.boundary.right(sample_count=self.boundary_sample_count)
+            ),
+        )
+
+    def boundary_from(self, points: BoundaryPoints) -> Visualizable.Boundary:
+        return Visualizable.Boundary(x=points[:, 0], y=points[:, 1])
 
     def additional_plots_from(
         self, result: MpccSimulationResult

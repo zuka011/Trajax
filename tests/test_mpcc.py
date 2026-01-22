@@ -8,6 +8,7 @@ from trajax import (
     ControlInputBatch,
     DynamicalModel,
     Trajectory,
+    ExplicitBoundary,
     ObstacleStates,
     ObstacleStateObserver,
     ObstacleSimulator,
@@ -36,6 +37,11 @@ class MpccPlannerConfiguration[
     @property
     def reference(self) -> Trajectory:
         """Returns the reference trajectory."""
+        ...
+
+    @property
+    def boundary(self) -> ExplicitBoundary | None:
+        """Returns the explicit boundary, if any."""
         ...
 
     @property
@@ -179,6 +185,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             wheelbase=wheelbase,
             max_contouring_error=(max_contouring_error := 2.5),
             max_lag_error=(max_lag_error := 5.0),
+            boundary=configuration.boundary,
         )
     ).seed_is(configuration_name)
 
@@ -336,6 +343,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             obstacle_forecasts=registry.data(access.obstacle_forecasts.require()),
             controls=registry.data(access.controls.require()),
             risks=registry.data(access.risks),
+            boundary=configuration.boundary,
         )
     ).seed_is(configuration_name)
 

@@ -8,6 +8,7 @@ from trajax.types import (
     NumPyPositions,
     NumPyLateralPositions,
     NumPyLongitudinalPositions,
+    NumPyNormals,
 )
 
 from numtypes import Array, Dims, D, shape_of
@@ -95,6 +96,19 @@ class NumPyLineTrajectory(
         assert shape_of(longitudinal, matches=(T, M), name="longitudinal")
 
         return NumPyLongitudinalPositions.create(longitudinal)
+
+    def normal[T: int, M: int](
+        self, parameters: NumPyPathParameters[T, M]
+    ) -> NumPyNormals[T, M]:
+        T, M = parameters.horizon, parameters.rollout_count
+
+        x = np.full((T, M), self.perpendicular[0])
+        y = np.full((T, M), self.perpendicular[1])
+
+        assert shape_of(x, matches=(T, M), name="normal x")
+        assert shape_of(y, matches=(T, M), name="normal y")
+
+        return NumPyNormals.create(x=x, y=y)
 
     @property
     def end(self) -> tuple[float, float]:

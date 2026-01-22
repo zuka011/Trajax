@@ -30,6 +30,10 @@ def default_output_directory() -> Path:
     return config.output_directory
 
 
+class Struct(msgspec.Struct, rename="camel", omit_defaults=True):
+    pass
+
+
 class Types:
     type Vehicle = Literal["triangle", "car"]
     type Scale = Literal["linear", "log"]
@@ -48,7 +52,7 @@ class Arrays:
 
 
 class Plot:
-    class Series(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Series(Struct):
         label: str
         values: Array[Dim1]
         color: str | None = None
@@ -57,11 +61,11 @@ class Plot:
         def time_step_count(self) -> int:
             return len(self.values)
 
-    class Bound(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Bound(Struct):
         values: Array[Dim1] | float
         label: str | None = None
 
-    class Band(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Band(Struct):
         lower: Array[Dim1]
         upper: Array[Dim1]
         color: str | None = None
@@ -76,7 +80,7 @@ class Plot:
         def time_step_count(self) -> int:
             return len(self.lower)
 
-    class Additional(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Additional(Struct):
         id: str
         name: str
         series: Sequence["Plot.Series"]
@@ -104,7 +108,7 @@ class Plot:
 
 
 class Road:
-    class Lane(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Lane(Struct):
         x: Array[Dim1]
         y: Array[Dim1]
         boundaries: tuple[float, float]
@@ -121,7 +125,7 @@ class Road:
                 f"The width of the lane must be positive. Got {left} (left) + {right} (right) <= {width} (width)."
             )
 
-    class Network(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Network(Struct):
         lanes: Sequence["Road.Lane"]
 
         @staticmethod
@@ -130,18 +134,18 @@ class Road:
 
 
 class Visualizable:
-    class ReferenceTrajectory(msgspec.Struct, rename="camel", omit_defaults=True):
+    class ReferenceTrajectory(Struct):
         x: Array[Dim1]
         y: Array[Dim1]
 
-    class SimulationInfo(msgspec.Struct, rename="camel", omit_defaults=True):
+    class SimulationInfo(Struct):
         path_length: float
         time_step: float
         wheelbase: float | None = None
         vehicle_width: float | None = None
         vehicle_type: Types.Vehicle | None = None
 
-    class EgoGhost(msgspec.Struct, rename="camel", omit_defaults=True):
+    class EgoGhost(Struct):
         x: Array[Dim1]
         y: Array[Dim1]
 
@@ -154,7 +158,7 @@ class Visualizable:
         def time_step_count(self) -> int:
             return len(self.x)
 
-    class Ego(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Ego(Struct):
         x: Array[Dim1]
         y: Array[Dim1]
         heading: Array[Dim1]
@@ -183,7 +187,7 @@ class Visualizable:
         def time_step_count(self) -> int:
             return len(self.x)
 
-    class PlannedTrajectory(msgspec.Struct, rename="camel", omit_defaults=True):
+    class PlannedTrajectory(Struct):
         x: Arrays.PlannedTrajectoryCoordinates
         y: Arrays.PlannedTrajectoryCoordinates
 
@@ -196,7 +200,7 @@ class Visualizable:
         def time_step_count(self) -> int:
             return len(self.x)
 
-    class PlannedTrajectories(msgspec.Struct, rename="camel", omit_defaults=True):
+    class PlannedTrajectories(Struct):
         optimal: "Visualizable.PlannedTrajectory | None" = None
         nominal: "Visualizable.PlannedTrajectory | None" = None
 
@@ -218,7 +222,7 @@ class Visualizable:
             if self.nominal is not None:
                 return self.nominal.time_step_count
 
-    class ObstacleForecast(msgspec.Struct, rename="camel", omit_defaults=True):
+    class ObstacleForecast(Struct):
         x: Arrays.ObstacleForecastCoordinates
         y: Arrays.ObstacleForecastCoordinates
         heading: Arrays.ObstacleForecastCoordinates
@@ -241,7 +245,7 @@ class Visualizable:
         def time_step_count(self) -> int:
             return self.x.shape[0]
 
-    class Obstacles(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Obstacles(Struct):
         x: Arrays.ObstacleCoordinates
         y: Arrays.ObstacleCoordinates
         heading: Arrays.ObstacleCoordinates
@@ -265,13 +269,28 @@ class Visualizable:
         def time_step_count(self) -> int:
             return self.x.shape[0]
 
-    class SimulationResult(msgspec.Struct, rename="camel", omit_defaults=True):
+    class Boundary(Struct):
+        x: Array[Dim1]
+        y: Array[Dim1]
+
+        def __post_init__(self) -> None:
+            assert self.x.shape == self.y.shape, (
+                f"Boundary x and y must have the same shape. "
+                f"Got {self.x.shape} (x) and {self.y.shape} (y)."
+            )
+
+    class Boundaries(Struct):
+        left: "Visualizable.Boundary"
+        right: "Visualizable.Boundary"
+
+    class SimulationResult(Struct):
         info: "Visualizable.SimulationInfo"
         reference: "Visualizable.ReferenceTrajectory"
         ego: "Visualizable.Ego"
         trajectories: "Visualizable.PlannedTrajectories | None" = None
         obstacles: "Visualizable.Obstacles | None" = None
         network: "Road.Network | None" = None
+        boundaries: "Visualizable.Boundary | None" = None
         additional_plots: Sequence[Plot.Additional] | None = None
 
         @staticmethod
@@ -283,6 +302,7 @@ class Visualizable:
             trajectories: "Visualizable.PlannedTrajectories | None" = None,
             obstacles: "Visualizable.Obstacles | None" = None,
             network: "Road.Network | None" = None,
+            boundaries: "Visualizable.Boundary | None" = None,
             additional_plots: Sequence[Plot.Additional] | None = None,
         ) -> "Visualizable.SimulationResult":
             return Visualizable.SimulationResult(
@@ -292,6 +312,7 @@ class Visualizable:
                 trajectories=trajectories,
                 obstacles=obstacles,
                 network=network,
+                boundaries=boundaries,
                 additional_plots=additional_plots,
             )
 

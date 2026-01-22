@@ -7,6 +7,7 @@ from .common import (
     Positions as Positions,
     LateralPositions as LateralPositions,
     LongitudinalPositions as LongitudinalPositions,
+    Normals as Normals,
 )
 from .basic import (
     NumPyPositions as NumPyPositions,
@@ -15,6 +16,7 @@ from .basic import (
     NumPyReferencePoints as NumPyReferencePoints,
     NumPyLateralPositions as NumPyLateralPositions,
     NumPyLongitudinalPositions as NumPyLongitudinalPositions,
+    NumPyNormals as NumPyNormals,
 )
 from .accelerated import (
     JaxPositions as JaxPositions,
@@ -23,4 +25,5 @@ from .accelerated import (
     JaxReferencePoints as JaxReferencePoints,
     JaxLateralPositions as JaxLateralPositions,
     JaxLongitudinalPositions as JaxLongitudinalPositions,
+    JaxNormals as JaxNormals,
 )

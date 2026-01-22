@@ -11,6 +11,7 @@ from trajax.types import (
     JaxPositions,
     JaxLateralPositions,
     JaxLongitudinalPositions,
+    JaxNormals,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -90,6 +91,16 @@ class JaxLineTrajectory(
                 line_length=self.line_length,
             )
         )
+
+    def normal[T: int, M: int](
+        self, parameters: JaxPathParameters[T, M] | NumPyPathParameters[T, M]
+    ) -> JaxNormals[T, M]:
+        T, M = parameters.horizon, parameters.rollout_count
+
+        x = jnp.full((T, M), self.perpendicular[0])
+        y = jnp.full((T, M), self.perpendicular[1])
+
+        return JaxNormals.create(x=x, y=y)
 
     @property
     def end(self) -> tuple[float, float]:
