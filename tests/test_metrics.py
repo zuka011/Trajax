@@ -432,7 +432,7 @@ class test_that_task_completion_is_detected:
             assert isinstance(results.completion_time, float)
 
 
-class test_that_task_efficiency_is_computed:
+class test_that_task_stretch_is_computed:
     @staticmethod
     def cases(data, types, trajectory) -> Sequence[tuple]:
         return [
@@ -479,10 +479,10 @@ class test_that_task_efficiency_is_computed:
                         shape=(T, D_x := 3, M := 1),
                     )
                 ).at(time_step=t, rollout=0),
-                # Efficiency is independent of whether the task was actually completed and when.
+                # Stretch is independent of whether the task was actually completed and when.
                 # This just measures how the actual traveled distance compares to the optimal distance.
-                expected_efficiencies := [
-                    0.0,  # Super efficient!
+                expected_stretches := [
+                    0.0,  # No stretch.
                     0.6,  # 3.0 / 5.0
                     1.6,  # 8.0 / 5.0
                     2.2,  # 11.0 / 5.0
@@ -500,7 +500,7 @@ class test_that_task_efficiency_is_computed:
             "horizon",
             "nominal_input",
             "states_at",
-            "expected_efficiencies",
+            "expected_stretches",
         ],
         [
             *cases(data=data.numpy, types=types.numpy, trajectory=trajectory.numpy),
@@ -515,7 +515,7 @@ class test_that_task_efficiency_is_computed:
         horizon: int,
         nominal_input: InputSequenceT,
         states_at: Callable[[int], StateT],
-        expected_efficiencies: Sequence[float],
+        expected_stretches: Sequence[float],
     ) -> None:
         for step in range(horizon):
             mppi.step(
@@ -526,8 +526,8 @@ class test_that_task_efficiency_is_computed:
 
             results = registry.get(metric)
 
-            assert np.isclose(results.efficiency, expected_efficiencies[step])
-            assert isinstance(results.efficiency, float)
+            assert np.isclose(results.stretch, expected_stretches[step])
+            assert isinstance(results.stretch, float)
 
 
 class ConstraintViolationExpectation(NamedTuple):

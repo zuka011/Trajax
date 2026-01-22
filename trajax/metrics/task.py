@@ -21,7 +21,7 @@ import numpy as np
 class TaskCompletionMetricResult[T: int = int]:
     completion: BoolArray[Dims[T]]
     completion_time: float
-    efficiency: float
+    stretch: float
 
     @cached_property
     def completed(self) -> bool:
@@ -75,7 +75,7 @@ class TaskCompletionMetric[StateBatchT](Metric[TaskCompletionMetricResult[Any]])
                 if completion.any()
                 else float("inf")
             ),
-            efficiency=float(traversed_distance / self.optimal_distance),
+            stretch=float(traversed_distance / self.optimal_distance),
         )
 
     @property
