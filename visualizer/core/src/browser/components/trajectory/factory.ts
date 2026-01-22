@@ -1,4 +1,5 @@
 import { actualPathUpdater } from "./actual";
+import { boundariesUpdater } from "./boundary";
 import { forecastsUpdater } from "./forecasts";
 import { ghostUpdater } from "./ghost";
 import { obstaclesUpdater } from "./obstacles";
@@ -12,6 +13,7 @@ import { vehicleUpdater } from "./vehicle";
 export namespace updaterCreator {
     export const roadNetwork: TraceUpdateCreator = roadNetworkUpdater;
     export const referencePath: TraceUpdateCreator = referencePathUpdater;
+    export const boundaries: TraceUpdateCreator = boundariesUpdater;
     export const actualPath: TraceUpdateCreator = actualPathUpdater;
     export const vehicle: TraceUpdateCreator = vehicleUpdater;
     export const ghost: TraceUpdateCreator = ghostUpdater;

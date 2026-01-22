@@ -4,6 +4,7 @@ export interface ThemeColors {
     accent: string;
     accentDark: string;
     reference: string;
+    boundary: string;
     background: string;
     border: string;
     text: string;
@@ -59,6 +60,7 @@ export const theme: Theme = {
         accent: "#e74c3c",
         accentDark: "#c0392b",
         reference: "#bdc3c7",
+        boundary: "#ffa200",
         background: "#fafafa",
         border: "#ffffff",
         text: "#2c3e50",

@@ -114,6 +114,16 @@ export namespace Visualizable {
         forecast?: ObstacleForecast;
     }
 
+    export interface Boundary {
+        x: number[];
+        y: number[];
+    }
+
+    export interface Boundaries {
+        left: Boundary;
+        right: Boundary;
+    }
+
     export interface SimulationResult {
         info: SimulationInfo;
         reference: ReferenceTrajectory;
@@ -121,6 +131,7 @@ export namespace Visualizable {
         trajectories?: PlannedTrajectories;
         obstacles?: Obstacles;
         network?: Road.Network;
+        boundaries?: Boundaries;
         additionalPlots?: Plot.Additional[];
     }
 

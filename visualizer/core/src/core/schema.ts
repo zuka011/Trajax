@@ -103,6 +103,16 @@ export namespace Visualizable {
         forecast: ObstacleForecast.optional(),
     });
 
+    export const Boundary = z.object({
+        x: z.array(z.number()),
+        y: z.array(z.number()),
+    });
+
+    export const Boundaries = z.object({
+        left: Boundary,
+        right: Boundary,
+    });
+
     export const SimulationResult = z.object({
         info: SimulationInfo,
         reference: ReferenceTrajectory,
@@ -110,6 +120,7 @@ export namespace Visualizable {
         trajectories: PlannedTrajectories.optional(),
         obstacles: Obstacles.optional(),
         network: Road.Network.optional(),
+        boundaries: Boundaries.optional(),
         additionalPlots: z.array(Plot.Additional).optional(),
     });
 }

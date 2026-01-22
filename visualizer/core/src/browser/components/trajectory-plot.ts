@@ -11,6 +11,7 @@ import type { Trace } from "./types.js";
 const DEFAULT_TRACE_UPDATER_CREATORS: TraceUpdateCreator[] = [
     updaterCreator.roadNetwork,
     updaterCreator.referencePath,
+    updaterCreator.boundaries,
     updaterCreator.actualPath,
     updaterCreator.vehicle,
     updaterCreator.ghost,

@@ -64,6 +64,7 @@ export const roadNetworkUpdater: TraceUpdateCreator = (data, index) => {
                     mode: "lines",
                     line: { color: theme.colors.roadMarking, width: 2 },
                     name: "Lane Marking",
+                    legendgroup: "Lane Marking",
                     hoverinfo: "skip",
                 });
             }
@@ -76,6 +77,7 @@ export const roadNetworkUpdater: TraceUpdateCreator = (data, index) => {
                     line: { color: theme.colors.roadMarking, width: 2, dash: "dash" },
                     name: "Lane Marking",
                     showlegend: solidMarkingsX.length === 0,
+                    legendgroup: "Lane Marking",
                     hoverinfo: "skip",
                 });
             }
