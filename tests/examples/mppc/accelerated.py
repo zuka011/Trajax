@@ -148,7 +148,7 @@ class JaxMpccPlannerWeights:
     lag: float = 100.0
     progress: float = 1000.0
     control_smoothing: Array[Dim1] = field(
-        default_factory=lambda: array([2.0, 5.0, 5.0], shape=(3,))
+        default_factory=lambda: array([5.0, 20.0, 5.0], shape=(3,))
     )
     control_effort: Array[Dim1] = field(
         default_factory=lambda: array([0.1, 0.5, 0.1], shape=(3,))
@@ -160,7 +160,7 @@ class JaxMpccPlannerWeights:
 @dataclass(frozen=True)
 class JaxSamplingOptions:
     physical_standard_deviation: Float[JaxArray, "D_u"] = field(
-        default_factory=lambda: jnp.array([2.0, 1.0])
+        default_factory=lambda: array([0.5, 0.2], shape=(2,))
     )
     virtual_standard_deviation: float = 2.0
     rollout_count: int = 512
@@ -333,7 +333,7 @@ class configure:
     def planner_from_base(
         *,
         horizon: int = 30,
-        temperature: float = 0.1,
+        temperature: float = 50.0,
         reference: Trajectory = reference.small_circle,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
@@ -439,7 +439,7 @@ class configure:
     def planner_from_augmented(
         *,
         horizon: int = 30,
-        temperature: float = 0.1,
+        temperature: float = 50.0,
         reference: Trajectory = reference.small_circle,
         obstacles: ObstacleSimulator = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
@@ -625,13 +625,14 @@ class configure:
     def planner_from_mpcc(
         *,
         horizon: int = 30,
-        temperature: float = 0.1,
+        temperature: float = 50.0,
         reference: Trajectory = reference.small_circle,
         obstacles: ObstacleSimulator = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
+        use_halton: bool = False,
     ) -> JaxMpccPlannerConfiguration:
         position_extractor = extract.from_physical(position)
         fixed_boundary = boundary.fixed_width(
@@ -649,7 +650,15 @@ class configure:
                 steering_limits=(-0.5, 0.5),
                 acceleration_limits=(-3.0, 3.0),
             ),
-            sampler=sampler.gaussian(
+            sampler=sampler.halton(
+                standard_deviation=sampling.physical_standard_deviation,
+                rollout_count=sampling.rollout_count,
+                knot_count=horizon // 5,
+                to_batch=types.bicycle.control_input_batch.create,
+                seed=sampling.physical_seed,
+            )
+            if use_halton
+            else sampler.gaussian(
                 standard_deviation=sampling.physical_standard_deviation,
                 rollout_count=sampling.rollout_count,
                 to_batch=types.bicycle.control_input_batch.create,

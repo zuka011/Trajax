@@ -226,6 +226,14 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
         ),
         (
             mpcc.numpy.planner_from_mpcc(
+                reference=reference.numpy.loop,
+                obstacles=obstacles.numpy.static.loop,
+                use_halton=True,
+            ),
+            "numpy-from-mpcc-halton-static",
+        ),
+        (
+            mpcc.numpy.planner_from_mpcc(
                 reference=reference.numpy.slalom,
                 obstacles=obstacles.numpy.dynamic.slalom,
             ),
@@ -250,6 +258,14 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
                 reference=reference.jax.loop, obstacles=obstacles.jax.static.loop
             ),
             "jax-from-mpcc-static",
+        ),
+        (
+            mpcc.jax.planner_from_mpcc(
+                reference=reference.jax.loop,
+                obstacles=obstacles.jax.static.loop,
+                use_halton=True,
+            ),
+            "jax-from-mpcc-halton-static",
         ),
         (
             mpcc.jax.planner_from_mpcc(
