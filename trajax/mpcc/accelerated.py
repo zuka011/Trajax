@@ -101,12 +101,14 @@ class JaxMpccVirtualStateConfig:
         velocity_limits: tuple[float, float]
         sampling_standard_deviation: float
         sampling_seed: int
+        periodic: bool
 
     class Partial(TypedDict, total=False):
         state_limits: tuple[float, float]
         velocity_limits: tuple[float, float]
         sampling_standard_deviation: float
         sampling_seed: int
+        periodic: bool
 
 
 class JaxMpccConfig:
@@ -137,6 +139,7 @@ def fill_defaults(
                     "velocity_limits": (0.0, 15.0),
                     "sampling_standard_deviation": 1.0,
                     "sampling_seed": 0,
+                    "periodic": False,
                 },
             }
         ),
@@ -205,6 +208,7 @@ class JaxMpccMppi:
                     time_step_size=model.time_step_size,
                     state_limits=full_config["virtual"]["state_limits"],
                     velocity_limits=full_config["virtual"]["velocity_limits"],
+                    periodic=full_config["virtual"]["periodic"],
                 ),
             ),
             samplers=(

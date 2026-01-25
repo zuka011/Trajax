@@ -264,6 +264,26 @@ class reference:
         path_length=35.0,
     )
 
+    cyclic: Final = trajectory.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [20.0, 0.0],
+                [28.0, 8.0],
+                [28.0, 20.0],
+                [20.0, 28.0],
+                [10.0, 28.0],
+                [0.0, 28.0],
+                [-8.0, 20.0],
+                [-8.0, 8.0],
+                [0.0, 0.0],
+            ],
+            shape=(11, 2),
+        ),
+        path_length=100.0,
+    )
+
 
 class obstacles:
     none: Final = create_obstacles.empty()
@@ -293,6 +313,27 @@ class obstacles:
                     np.pi / 2,
                 ],
                 shape=(7,),
+            ),
+        )
+
+        cyclic: Final = create_obstacles.static(
+            positions=array(
+                [
+                    [15.0, 0.5],
+                    [28.0, 14.0],
+                    [10.0, 27.5],
+                    [-7.5, 14.0],
+                ],
+                shape=(4, 2),
+            ),
+            headings=array(
+                [
+                    0.0,
+                    np.pi / 2,
+                    0.0,
+                    np.pi / 2,
+                ],
+                shape=(4,),
             ),
         )
 
@@ -637,6 +678,7 @@ class configure:
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
+        cyclic_reference: bool = False,
     ) -> JaxMpccPlannerConfiguration:
         position_extractor = extract.from_physical(position)
         fixed_boundary = boundary.fixed_width(
@@ -763,6 +805,7 @@ class configure:
                     "velocity_limits": (0.0, 15.0),
                     "sampling_standard_deviation": sampling.virtual_standard_deviation,
                     "sampling_seed": sampling.virtual_seed,
+                    "periodic": cyclic_reference,
                 },
             },
             filter_function=filters.savgol(window_length=11, polynomial_order=3),

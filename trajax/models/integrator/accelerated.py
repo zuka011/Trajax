@@ -131,6 +131,8 @@ class JaxIntegratorModel(
             velocity_limits: Optional tuple of (min, max) limits for the velocity inputs.
             periodic: Whether to apply periodic boundary conditions based on state_limits.
         """
+        if periodic:
+            validate_periodic_state_limits(state_limits)
 
         return JaxIntegratorModel(
             _time_step_size=time_step_size,
@@ -141,10 +143,6 @@ class JaxIntegratorModel(
             else NO_LIMITS,
             periodic=periodic,
         )
-
-    def __post_init__(self) -> None:
-        if self.periodic:
-            validate_periodic_state_limits(self.state_limits)
 
     def simulate[T: int, D_u: int, D_x: int, M: int](
         self,

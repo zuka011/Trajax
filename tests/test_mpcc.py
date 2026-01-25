@@ -391,3 +391,134 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     assert len(trajectories) == t + 1, (
         f"Expected {t + 1} collected trajectories, but found {len(trajectories)}."
     )
+
+
+@mark.parametrize(
+    ["configuration", "configuration_name"],
+    [
+        (
+            mpcc.numpy.planner_from_mpcc(
+                reference=reference.numpy.cyclic,
+                obstacles=obstacles.numpy.static.cyclic,
+                cyclic_reference=True,
+            ),
+            "numpy-from-mpcc",
+        ),
+        (
+            mpcc.jax.planner_from_mpcc(
+                reference=reference.jax.cyclic,
+                obstacles=obstacles.jax.static.cyclic,
+                cyclic_reference=True,
+            ),
+            "jax-from-mpcc",
+        ),
+    ],
+)
+@mark.visualize.with_args(visualizer.mpcc(), lambda seed: f"{seed}-three-laps")
+@mark.filterwarnings("error")
+@mark.integration
+def test_that_mpcc_planner_completes_three_laps_without_collision[
+    StateT: AugmentedState,
+    StateBatchT: StateBatch,
+    InputSequenceT: ControlInputSequence,
+    InputBatchT: ControlInputBatch,
+    ObstacleStatesT: ObstacleStates,
+](
+    visualization: VisualizationData[MpccSimulationResult],
+    configuration: MpccPlannerConfiguration[
+        StateT, StateBatchT, InputSequenceT, InputBatchT, ObstacleStatesT
+    ],
+    configuration_name: str,
+) -> None:
+    reference = configuration.reference
+    planner = configuration.planner
+    model = configuration.model
+    temperature = configuration.temperature
+    registry = configuration.registry
+    error_metric, collision_metric = configuration.metrics
+    obstacle_simulator = configuration.obstacle_simulator
+    obstacle_state_observer = configuration.obstacle_state_observer
+
+    current_state = configuration.initial_state
+    nominal_input = configuration.nominal_input
+
+    assert collision_metric is not None, "Collision metric must be provided."
+    assert obstacle_simulator is not None, "Obstacle simulator must be provided."
+    assert obstacle_state_observer is not None, (
+        "Obstacle state observer must be provided."
+    )
+
+    target_laps = 3
+    path_length = reference.path_length
+    previous_progress = float(current_state.virtual.array[0])
+    completed_laps = 0
+
+    for t in range(max_steps := 450):
+        control = planner.step(
+            temperature=temperature,
+            nominal_input=nominal_input,
+            initial_state=current_state,
+        )
+
+        nominal_input = control.nominal
+        current_state = model.step(inputs=control.optimal, state=current_state)
+        obstacle_state_observer.observe(obstacle_simulator.step())
+
+        progress = float(current_state.virtual.array[0])
+
+        if (progress - previous_progress) < (-0.5 * path_length):
+            completed_laps += 1
+
+        previous_progress = progress
+
+        if completed_laps >= target_laps:
+            break
+
+    trajectories = registry.data(access.trajectories.require())
+    errors = registry.get(error_metric)
+    collision = registry.get(collision_metric)
+
+    visualization.data_is(
+        MpccSimulationResult(
+            reference=reference,
+            states=registry.data(access.states.require()),
+            optimal_trajectories=[it.optimal for it in trajectories],
+            nominal_trajectories=[it.nominal for it in trajectories],
+            contouring_errors=errors.contouring,
+            lag_errors=errors.lag,
+            time_step_size=model.time_step_size,
+            wheelbase=configuration.wheelbase,
+            vehicle_width=configuration.vehicle_width,
+            max_contouring_error=(max_contouring_error := 5.0),
+            max_lag_error=(max_lag_error := 7.0),
+            obstacles=registry.data(access.obstacle_states.require()),
+            obstacle_forecasts=registry.data(access.obstacle_forecasts.require()),
+            controls=registry.data(access.controls.require()),
+            risks=registry.data(access.risks),
+            boundary=configuration.boundary,
+        )
+    ).seed_is(configuration_name)
+
+    assert completed_laps == target_laps, (
+        f"Vehicle did not complete the required number of laps in {max_steps} steps. "
+        f"Completed: {completed_laps}, expected: {target_laps}"
+    )
+
+    assert (max_contouring := errors.max_contouring) < max_contouring_error, (
+        f"Vehicle deviated too far from the reference trajectory. "
+        f"Max contouring error: {max_contouring:.2f} m, expected < {max_contouring_error:.2f} m"
+    )
+
+    assert (max_lag := errors.max_lag) < max_lag_error, (
+        f"Vehicle had excessive lag error along the reference trajectory. "
+        f"Max lag error: {max_lag:.2f} m, expected < {max_lag_error:.2f} m"
+    )
+
+    assert (min_distance := collision.min_distances.min()) > (safe_distance := 0.0), (
+        f"Vehicle came too close to obstacles. "
+        f"Min distance to obstacles: {min_distance:.2f} m, expected > {safe_distance:.2f} m"
+    )
+
+    assert len(trajectories) == t + 1, (
+        f"Expected {t + 1} collected trajectories, but found {len(trajectories)}."
+    )
