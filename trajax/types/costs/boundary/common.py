@@ -1,4 +1,4 @@
-from typing import Protocol, TypedDict
+from typing import Protocol, TypedDict, Mapping
 
 from trajax.types.array import DataType
 
@@ -6,7 +6,8 @@ from numtypes import Array, Dims, D
 
 
 type BoundaryPoints[L: int = int] = Array[Dims[L, D[2]]]
-type WidthsMapping = dict[float, "WidthDescription"]
+type Breakpoint = float
+type BoundaryWidthsDescription = Mapping[Breakpoint, "BoundaryWidths"]
 """A mapping describing the widths of the boundary at various segments
 along a reference trajectory.
 
@@ -21,7 +22,7 @@ Example:
 """
 
 
-class WidthDescription(TypedDict):
+class BoundaryWidths(TypedDict):
     left: float
     """Distance to the left boundary at a breakpoint."""
 

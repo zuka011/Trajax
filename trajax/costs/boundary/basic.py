@@ -5,7 +5,7 @@ from trajax.types import (
     ControlInputBatch,
     Trajectory,
     BoundaryPoints,
-    WidthsMapping,
+    BoundaryWidthsDescription,
     NumPyReferencePoints,
     NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor,
@@ -146,7 +146,7 @@ class NumPyPiecewiseFixedWidthBoundary[StateT, B: int = int](
             NumPyLateralPositions,
         ],
         position_extractor: NumPyPositionExtractor[S],
-        widths: WidthsMapping,
+        widths: BoundaryWidthsDescription,
     ) -> "NumPyPiecewiseFixedWidthBoundary[S]":
         """Creates a piecewise fixed-width boundary distance extractor.
 

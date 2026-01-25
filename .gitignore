@@ -24,3 +24,6 @@ tests/visualizations/
 # JS Files
 node_modules/
 *.bundle.js
+
+# Documentation build
+site/

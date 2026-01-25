@@ -6,7 +6,7 @@ from trajax.types import (
     ControlInputBatch,
     Trajectory,
     BoundaryPoints,
-    WidthsMapping,
+    BoundaryWidthsDescription,
     JaxReferencePoints,
     JaxBoundaryDistance,
     JaxBoundaryDistanceExtractor,
@@ -152,7 +152,7 @@ class JaxPiecewiseFixedWidthBoundary[StateT](
             JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
         ],
         position_extractor: JaxPositionExtractor[S],
-        widths: WidthsMapping,
+        widths: BoundaryWidthsDescription,
     ) -> "JaxPiecewiseFixedWidthBoundary[S]":
         """Creates a piecewise fixed-width boundary distance extractor.
 
