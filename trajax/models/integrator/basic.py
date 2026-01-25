@@ -1,3 +1,4 @@
+import math
 from typing import Final
 from dataclasses import dataclass
 
@@ -60,6 +61,7 @@ class NumPyIntegratorModel(
     _time_step_size: float
     state_limits: tuple[float, float]
     velocity_limits: tuple[float, float]
+    periodic: bool
 
     @staticmethod
     def create(
@@ -67,6 +69,7 @@ class NumPyIntegratorModel(
         time_step_size: float,
         state_limits: tuple[float, float] | None = None,
         velocity_limits: tuple[float, float] | None = None,
+        periodic: bool = False,
     ) -> "NumPyIntegratorModel":
         """A NumPy integrator model where state = cumulative sum of controls.
 
@@ -79,6 +82,7 @@ class NumPyIntegratorModel(
             time_step_size: The time step size for the integrator.
             state_limits: Optional tuple of (min, max) limits for the state values.
             velocity_limits: Optional tuple of (min, max) limits for the velocity inputs.
+            periodic: Whether to apply periodic boundary conditions based on state_limits.
         """
         return NumPyIntegratorModel(
             _time_step_size=time_step_size,
@@ -86,7 +90,12 @@ class NumPyIntegratorModel(
             velocity_limits=velocity_limits
             if velocity_limits is not None
             else NO_LIMITS,
+            periodic=periodic,
         )
+
+    def __post_init__(self) -> None:
+        if self.periodic:
+            validate_periodic_state_limits(self.state_limits)
 
     def simulate[T: int, D_x: int, M: int](
         self,
@@ -96,7 +105,16 @@ class NumPyIntegratorModel(
         clipped_inputs = np.clip(inputs.array, *self.velocity_limits)
 
         return SimpleStateBatch(
-            simulate_with_state_limits(
+            wrap_periodic_batch(
+                states=simulate(
+                    inputs=clipped_inputs,
+                    initial_states=initial_state.array[:, np.newaxis],
+                    time_step=self.time_step_size,
+                ),
+                state_limits=self.state_limits,
+            )
+            if self.periodic
+            else simulate_with_state_limits(
                 inputs=clipped_inputs,
                 initial_state=initial_state.array,
                 time_step=self.time_step_size,
@@ -116,8 +134,11 @@ class NumPyIntegratorModel(
         state: NumPyIntegratorState[D_x],
     ) -> SimpleState[D_x]:
         clipped_control = np.clip(inputs.array[0], *self.velocity_limits)
-        new_state = np.clip(
-            state.array + clipped_control * self.time_step_size, *self.state_limits
+        unbounded = state.array + clipped_control * self.time_step_size
+        new_state = (
+            wrap_periodic_state(state=unbounded, state_limits=self.state_limits)
+            if self.periodic
+            else np.clip(unbounded, *self.state_limits)
         )
 
         return SimpleState(new_state)
@@ -205,6 +226,21 @@ class NumPyIntegratorObstacleModel(
         return NumPyIntegratorObstacleStateSequences(result)
 
 
+def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
+    assert state_limits is not None, (
+        "Periodic boundaries require explicit state limits."
+    )
+
+    lower, upper = state_limits
+    assert math.isfinite(lower) and math.isfinite(upper), (
+        "Periodic boundaries must be finite."
+    )
+
+    assert upper > lower, (
+        "Periodic boundaries require upper limit to be greater than lower limit."
+    )
+
+
 def simulate_with_state_limits[T: int, D_x: int, M: int](
     *,
     inputs: Array[Dims[T, D_x, M]],
@@ -221,6 +257,28 @@ def simulate_with_state_limits[T: int, D_x: int, M: int](
         states[t] = np.clip(states[t - 1] + deltas[t], *state_limits)
 
     return states
+
+
+def wrap_periodic_state[D_x: int](
+    *,
+    state: Array[Dims[D_x]],
+    state_limits: tuple[float, float],
+) -> Array[Dims[D_x]]:
+    lower, upper = state_limits
+    period = upper - lower
+    wrapped = lower + np.mod(state - lower, period)
+    return np.where(state == upper, upper, wrapped)
+
+
+def wrap_periodic_batch[T: int, D_x: int, M: int](
+    *,
+    states: Array[Dims[T, D_x, M]],
+    state_limits: tuple[float, float],
+) -> Array[Dims[T, D_x, M]]:
+    lower, upper = state_limits
+    period = upper - lower
+    wrapped = lower + np.mod(states - lower, period)
+    return np.where(states == upper, upper, wrapped)
 
 
 def simulate[T: int, D_x: int, N: int](

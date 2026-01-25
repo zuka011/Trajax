@@ -1,3 +1,4 @@
+import math
 from typing import Final, cast
 from dataclasses import dataclass
 
@@ -107,6 +108,7 @@ class JaxIntegratorModel(
     time_step_size_scalar: Scalar
     state_limits: tuple[Scalar, Scalar]
     velocity_limits: tuple[Scalar, Scalar]
+    periodic: bool
 
     @staticmethod
     def create(
@@ -114,6 +116,7 @@ class JaxIntegratorModel(
         time_step_size: float,
         state_limits: tuple[float, float] | None = None,
         velocity_limits: tuple[float, float] | None = None,
+        periodic: bool = False,
     ) -> "JaxIntegratorModel":
         """A JAX integrator model where state = cumulative sum of controls.
 
@@ -126,6 +129,7 @@ class JaxIntegratorModel(
             time_step_size: The time step size for the integrator.
             state_limits: Optional tuple of (min, max) limits for the state values.
             velocity_limits: Optional tuple of (min, max) limits for the velocity inputs.
+            periodic: Whether to apply periodic boundary conditions based on state_limits.
         """
 
         return JaxIntegratorModel(
@@ -135,7 +139,12 @@ class JaxIntegratorModel(
             velocity_limits=wrap(velocity_limits)
             if velocity_limits is not None
             else NO_LIMITS,
+            periodic=periodic,
         )
+
+    def __post_init__(self) -> None:
+        if self.periodic:
+            validate_periodic_state_limits(self.state_limits)
 
     def simulate[T: int, D_u: int, D_x: int, M: int](
         self,
@@ -148,7 +157,15 @@ class JaxIntegratorModel(
         )
 
         return SimpleStateBatch(
-            simulate(
+            simulate_periodic(
+                controls=inputs.array,
+                initial_state=initial,
+                time_step=self.time_step_size_scalar,
+                state_limits=self.state_limits,
+                velocity_limits=self.velocity_limits,
+            )
+            if self.periodic
+            else simulate(
                 controls=inputs.array,
                 initial_state=initial,
                 time_step=self.time_step_size_scalar,
@@ -163,7 +180,15 @@ class JaxIntegratorModel(
         state: JaxIntegratorState[D_x],
     ) -> SimpleState[D_x]:
         return SimpleState(
-            step(
+            step_periodic(
+                control=inputs.array,
+                state=state.array,
+                time_step=self.time_step_size_scalar,
+                state_limits=self.state_limits,
+                velocity_limits=self.velocity_limits,
+            )
+            if self.periodic
+            else step(
                 control=inputs.array,
                 state=state.array,
                 time_step=self.time_step_size_scalar,
@@ -249,8 +274,49 @@ class JaxIntegratorObstacleModel(
         return JaxIntegratorObstacleStateSequences(result)
 
 
+def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
+    assert state_limits is not None, (
+        "Periodic boundaries require explicit state limits."
+    )
+
+    lower, upper = state_limits
+    assert math.isfinite(lower) and math.isfinite(upper), (
+        "Periodic boundaries must be finite."
+    )
+
+    assert upper > lower, (
+        "Periodic boundaries require upper limit to be greater than lower limit."
+    )
+
+
 def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
     return (jnp.asarray(limits[0]), jnp.asarray(limits[1]))
+
+
+@jax.jit
+@jaxtyped
+def wrap_periodic_batch(
+    *,
+    states: Float[JaxArray, "T D_u N"],
+    state_limits: tuple[Scalar, Scalar],
+) -> Float[JaxArray, "T D_u N"]:
+    lower, upper = state_limits
+    period = upper - lower
+    wrapped = lower + jnp.mod(states - lower, period)
+    return jnp.where(states == upper, upper, wrapped)
+
+
+@jax.jit
+@jaxtyped
+def wrap_periodic_state(
+    *,
+    state: Float[JaxArray, "D_u"],
+    state_limits: tuple[Scalar, Scalar],
+) -> Float[JaxArray, "D_u"]:
+    lower, upper = state_limits
+    period = upper - lower
+    wrapped = lower + jnp.mod(state - lower, period)
+    return jnp.where(state == upper, upper, wrapped)
 
 
 @jax.jit
@@ -278,6 +344,21 @@ def simulate(
 
 @jax.jit
 @jaxtyped
+def simulate_periodic(
+    *,
+    controls: Float[JaxArray, "T D_u N"],
+    initial_state: Float[JaxArray, "D_u N"],
+    time_step: Scalar,
+    state_limits: tuple[Scalar, Scalar],
+    velocity_limits: tuple[Scalar, Scalar],
+) -> Float[JaxArray, "T D_u N"]:
+    clipped_controls = jnp.clip(controls, *velocity_limits)
+    unbounded = initial_state + jnp.cumsum(clipped_controls * time_step, axis=0)
+    return wrap_periodic_batch(states=unbounded, state_limits=state_limits)
+
+
+@jax.jit
+@jaxtyped
 def step(
     *,
     control: Float[JaxArray, "T D_u"],
@@ -288,6 +369,21 @@ def step(
 ) -> Float[JaxArray, "D_u"]:
     clipped_control = jnp.clip(control[0], *velocity_limits)
     return jnp.clip(state + clipped_control * time_step, *state_limits)
+
+
+@jax.jit
+@jaxtyped
+def step_periodic(
+    *,
+    control: Float[JaxArray, "T D_u"],
+    state: Float[JaxArray, "D_u"],
+    time_step: Scalar,
+    state_limits: tuple[Scalar, Scalar],
+    velocity_limits: tuple[Scalar, Scalar],
+) -> Float[JaxArray, "D_u"]:
+    clipped_control = jnp.clip(control[0], *velocity_limits)
+    unbounded = state + clipped_control * time_step
+    return wrap_periodic_state(state=unbounded, state_limits=state_limits)
 
 
 @jax.jit
