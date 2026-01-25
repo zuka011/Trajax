@@ -9,6 +9,7 @@ from trajax import (
     Trajectory,
     ExplicitBoundary,
     Circles,
+    ConvexPolygon,
     ObstaclePositionExtractor,
     ObstacleStateObserver,
     ObstacleSimulator,
@@ -118,6 +119,7 @@ class JaxMpccPlannerConfiguration:
     model: DynamicalModel
     temperature: float
     wheelbase: float
+    vehicle_width: float
     registry: MetricRegistry
     metrics: tuple[MpccErrorMetric, CollisionMetric | None]
 
@@ -424,6 +426,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             wheelbase=L,
+            vehicle_width=1.2,
             registry=metrics.registry(
                 mpcc_error_metrics := metrics.mpcc_error(
                     contouring=contouring_cost, lag=lag_cost
@@ -600,6 +603,7 @@ class configure:
             planner=planner,
             model=augmented_model,
             wheelbase=L,
+            vehicle_width=1.2,
             registry=metrics.registry(
                 mpcc_error_metrics := metrics.mpcc_error(
                     contouring=contouring_cost, lag=lag_cost
@@ -790,12 +794,19 @@ class configure:
             planner=planner,
             model=augmented_model,
             wheelbase=L,
+            vehicle_width=(W := 1.2),
             registry=metrics.registry(
                 mpcc_error_metrics := metrics.mpcc_error(
                     contouring=contouring_cost, lag=lag_cost
                 ),
                 collision_metrics := metrics.collision(
-                    distance_threshold=0.0, distance=circles_distance
+                    distance_threshold=0.0,
+                    distance=distance.sat(
+                        ego=ConvexPolygon.rectangle(length=L, width=W),
+                        obstacle=ConvexPolygon.rectangle(length=L, width=W),
+                        position_extractor=position_extractor,
+                        heading_extractor=extract.from_physical(heading),
+                    ),
                 ),
                 collectors=collectors.registry(
                     state_collector,

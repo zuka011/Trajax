@@ -69,6 +69,11 @@ class MpccPlannerConfiguration[
         ...
 
     @property
+    def vehicle_width(self) -> float:
+        """Returns the vehicle width (to be used in the visualization)."""
+        ...
+
+    @property
     def registry(self) -> MetricRegistry:
         """Returns the metric registry used by the planner."""
         ...
@@ -147,7 +152,6 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
     planner = configuration.planner
     model = configuration.model
     temperature = configuration.temperature
-    wheelbase = configuration.wheelbase
     registry = configuration.registry
     error_metric, _ = configuration.metrics
 
@@ -182,7 +186,8 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             contouring_errors=errors.contouring,
             lag_errors=errors.lag,
             time_step_size=model.time_step_size,
-            wheelbase=wheelbase,
+            wheelbase=configuration.wheelbase,
+            vehicle_width=configuration.vehicle_width,
             max_contouring_error=(max_contouring_error := 2.5),
             max_lag_error=(max_lag_error := 5.0),
             boundary=configuration.boundary,
@@ -303,7 +308,6 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
     planner = configuration.planner
     model = configuration.model
     temperature = configuration.temperature
-    wheelbase = configuration.wheelbase
     registry = configuration.registry
     error_metric, collision_metric = configuration.metrics
     obstacle_simulator = configuration.obstacle_simulator
@@ -352,7 +356,8 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             contouring_errors=errors.contouring,
             lag_errors=errors.lag,
             time_step_size=model.time_step_size,
-            wheelbase=wheelbase,
+            wheelbase=configuration.wheelbase,
+            vehicle_width=configuration.vehicle_width,
             max_contouring_error=(max_contouring_error := 5.0),
             max_lag_error=(max_lag_error := 7.5),
             obstacles=registry.data(access.obstacle_states.require()),
