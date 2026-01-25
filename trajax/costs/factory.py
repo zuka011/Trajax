@@ -32,8 +32,10 @@ from trajax.costs.distance import (
 from trajax.costs.boundary import (
     NumPyBoundaryCost,
     NumPyFixedWidthBoundary,
+    NumPyPiecewiseFixedWidthBoundary,
     JaxBoundaryCost,
     JaxFixedWidthBoundary,
+    JaxPiecewiseFixedWidthBoundary,
 )
 
 
@@ -102,6 +104,8 @@ class distance:
 class boundary:
     class numpy:
         fixed_width: Final = NumPyFixedWidthBoundary.create
+        piecewise_fixed_width: Final = NumPyPiecewiseFixedWidthBoundary.create
 
     class jax:
         fixed_width: Final = JaxFixedWidthBoundary.create
+        piecewise_fixed_width: Final = JaxPiecewiseFixedWidthBoundary.create

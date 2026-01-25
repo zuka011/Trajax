@@ -48,6 +48,8 @@ from .boundary import (
     BoundaryDistance as BoundaryDistance,
     BoundaryDistanceExtractor as BoundaryDistanceExtractor,
     ExplicitBoundary as ExplicitBoundary,
+    WidthsMapping as WidthsMapping,
+    WidthDescription as WidthDescription,
     NumPyBoundaryDistance as NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor as NumPyBoundaryDistanceExtractor,
     JaxBoundaryDistance as JaxBoundaryDistance,

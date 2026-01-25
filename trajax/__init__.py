@@ -86,6 +86,8 @@ from .types import (
     BoundaryDistance as BoundaryDistance,
     BoundaryDistanceExtractor as BoundaryDistanceExtractor,
     ExplicitBoundary as ExplicitBoundary,
+    WidthsMapping as WidthsMapping,
+    WidthDescription as WidthDescription,
     ObstacleSimulator as ObstacleSimulator,
     SimulationDataAccessor as SimulationDataAccessor,
     SimulationData as SimulationData,

@@ -6,6 +6,7 @@ from trajax.types import (
     ControlInputBatch,
     Trajectory,
     BoundaryPoints,
+    WidthsMapping,
     JaxReferencePoints,
     JaxBoundaryDistance,
     JaxBoundaryDistanceExtractor,
@@ -132,6 +133,92 @@ class JaxFixedWidthBoundary[StateT](
         )
 
 
+@dataclass(kw_only=True, frozen=True)
+class JaxPiecewiseFixedWidthBoundary[StateT](
+    JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
+):
+    reference: Trajectory[
+        JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
+    ]
+    position_extractor: JaxPositionExtractor[StateT]
+    breakpoints: Float[JaxArray, "B"]
+    left_widths: Float[JaxArray, "B"]
+    right_widths: Float[JaxArray, "B"]
+
+    @staticmethod
+    def create[S](
+        *,
+        reference: Trajectory[
+            JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
+        ],
+        position_extractor: JaxPositionExtractor[S],
+        widths: WidthsMapping,
+    ) -> "JaxPiecewiseFixedWidthBoundary[S]":
+        """Creates a piecewise fixed-width boundary distance extractor.
+
+        This component assumes a piecewise constant corridor width around a reference trajectory.
+        Different segments of the trajectory can have different left and right widths.
+
+        Args:
+            reference: The reference trajectory defining the center of the corridor.
+            position_extractor: Function to extract positions from states.
+            widths: A mapping from longitudinal breakpoints to {"left": float, "right": float}
+                   dictionaries defining the corridor widths for each segment.
+        """
+        sorted_breakpoints = sorted(widths.keys())
+
+        return JaxPiecewiseFixedWidthBoundary(
+            reference=reference,
+            position_extractor=position_extractor,
+            breakpoints=jnp.array(sorted_breakpoints),
+            left_widths=jnp.array([widths[s]["left"] for s in sorted_breakpoints]),
+            right_widths=jnp.array([widths[s]["right"] for s in sorted_breakpoints]),
+        )
+
+    def __call__(self, *, states: StateT) -> JaxBoundaryDistance:
+        positions = self.position_extractor(states)
+        lateral = self.reference.lateral(positions)
+        longitudinal = self.reference.longitudinal(positions)
+
+        return JaxBoundaryDistance(
+            piecewise_boundary_distance(
+                lateral=lateral.array,
+                longitudinal=longitudinal.array,
+                breakpoints=self.breakpoints,
+                left_widths=self.left_widths,
+                right_widths=self.right_widths,
+            )
+        )
+
+    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s_values = jnp.linspace(0, self.reference.path_length, sample_count)
+        s = JaxPathParameters(s_values.reshape(-1, 1))
+
+        return np.asarray(
+            piecewise_left_boundary_points(
+                positions=self.reference.query(s).positions_array,
+                normals=self.reference.normal(s).array,
+                s_values=s_values,
+                breakpoints=self.breakpoints,
+                left_widths=self.left_widths,
+            )
+        )
+
+    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s_values = jnp.linspace(0, self.reference.path_length, sample_count)
+        s = JaxPathParameters(s_values.reshape(-1, 1))
+
+        return np.asarray(
+            piecewise_right_boundary_points(
+                positions=self.reference.query(s).positions_array,
+                normals=self.reference.normal(s).array,
+                s_values=s_values,
+                breakpoints=self.breakpoints,
+                right_widths=self.right_widths,
+            )
+        )
+
+
 @jax.jit
 @jaxtyped
 def boundary_cost(
@@ -149,3 +236,59 @@ def boundary_distance(
     distance_to_left = left + lateral
     distance_to_right = right - lateral
     return jnp.minimum(distance_to_left, distance_to_right)
+
+
+@jax.jit
+@jaxtyped
+def piecewise_boundary_distance(
+    *,
+    lateral: Float[JaxArray, "T M"],
+    longitudinal: Float[JaxArray, "T M"],
+    breakpoints: Float[JaxArray, "N"],
+    left_widths: Float[JaxArray, "N"],
+    right_widths: Float[JaxArray, "N"],
+) -> Float[JaxArray, "T M"]:
+    segment_indices = jnp.searchsorted(breakpoints, longitudinal, side="right") - 1
+    segment_indices = jnp.clip(segment_indices, 0, len(breakpoints) - 1)
+
+    left = left_widths[segment_indices]
+    right = right_widths[segment_indices]
+
+    distance_to_left = left + lateral
+    distance_to_right = right - lateral
+
+    return jnp.minimum(distance_to_left, distance_to_right)
+
+
+@jax.jit
+@jaxtyped
+def piecewise_left_boundary_points(
+    *,
+    positions: Float[JaxArray, "N 2 1"],
+    normals: Float[JaxArray, "N 2 1"],
+    s_values: Float[JaxArray, "N"],
+    breakpoints: Float[JaxArray, "K"],
+    left_widths: Float[JaxArray, "K"],
+) -> Float[JaxArray, "N 2"]:
+    segment_indices = jnp.searchsorted(breakpoints, s_values, side="right") - 1
+    segment_indices = jnp.clip(segment_indices, 0, len(breakpoints) - 1)
+    left = left_widths[segment_indices]
+
+    return (positions - left[:, jnp.newaxis, jnp.newaxis] * normals)[..., 0]
+
+
+@jax.jit
+@jaxtyped
+def piecewise_right_boundary_points(
+    *,
+    positions: Float[JaxArray, "N 2 1"],
+    normals: Float[JaxArray, "N 2 1"],
+    s_values: Float[JaxArray, "N"],
+    breakpoints: Float[JaxArray, "K"],
+    right_widths: Float[JaxArray, "K"],
+) -> Float[JaxArray, "N 2"]:
+    segment_indices = jnp.searchsorted(breakpoints, s_values, side="right") - 1
+    segment_indices = jnp.clip(segment_indices, 0, len(breakpoints) - 1)
+    right = right_widths[segment_indices]
+
+    return (positions + right[:, jnp.newaxis, jnp.newaxis] * normals)[..., 0]

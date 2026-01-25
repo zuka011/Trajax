@@ -5,6 +5,7 @@ from trajax.types import (
     ControlInputBatch,
     Trajectory,
     BoundaryPoints,
+    WidthsMapping,
     NumPyReferencePoints,
     NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor,
@@ -16,6 +17,7 @@ from trajax.types import (
 )
 from trajax.states import NumPySimpleCosts
 
+from numtypes import Array, Dims
 
 import numpy as np
 
@@ -119,4 +121,94 @@ class NumPyFixedWidthBoundary[StateT](
         return (
             self.reference.query(s).positions
             + self._right * self.reference.normal(s).array
+        )[..., 0]
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyPiecewiseFixedWidthBoundary[StateT, B: int = int](
+    NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
+):
+    reference: Trajectory[
+        NumPyPathParameters, NumPyReferencePoints, NumPyPositions, NumPyLateralPositions
+    ]
+    position_extractor: NumPyPositionExtractor[StateT]
+    breakpoints: Array[Dims[B]]
+    left_widths: Array[Dims[B]]
+    right_widths: Array[Dims[B]]
+
+    @staticmethod
+    def create[S](
+        *,
+        reference: Trajectory[
+            NumPyPathParameters,
+            NumPyReferencePoints,
+            NumPyPositions,
+            NumPyLateralPositions,
+        ],
+        position_extractor: NumPyPositionExtractor[S],
+        widths: WidthsMapping,
+    ) -> "NumPyPiecewiseFixedWidthBoundary[S]":
+        """Creates a piecewise fixed-width boundary distance extractor.
+
+        This component assumes a piecewise constant corridor width around a reference trajectory.
+        Different segments of the trajectory can have different left and right widths.
+
+        Args:
+            reference: The reference trajectory defining the center of the corridor.
+            position_extractor: Function to extract positions from states.
+            widths: A mapping from longitudinal breakpoints to {"left": float, "right": float}
+                   dictionaries defining the corridor widths for each segment.
+        """
+        sorted_breakpoints = sorted(widths.keys())
+
+        return NumPyPiecewiseFixedWidthBoundary(
+            reference=reference,
+            position_extractor=position_extractor,
+            breakpoints=np.array(sorted_breakpoints),
+            left_widths=np.array([widths[s]["left"] for s in sorted_breakpoints]),
+            right_widths=np.array([widths[s]["right"] for s in sorted_breakpoints]),
+        )
+
+    def __call__(self, *, states: StateT) -> NumPyBoundaryDistance:
+        positions = self.position_extractor(states)
+        lateral = self.reference.lateral(positions)
+        longitudinal = self.reference.longitudinal(positions)
+
+        segment_indices = (
+            np.searchsorted(self.breakpoints, longitudinal.array, side="right") - 1
+        )
+        segment_indices = np.clip(segment_indices, 0, len(self.breakpoints) - 1)
+
+        left = self.left_widths[segment_indices]
+        right = self.right_widths[segment_indices]
+
+        distance_to_left = left + lateral.array
+        distance_to_right = right - lateral.array
+
+        return NumPyBoundaryDistance(np.minimum(distance_to_left, distance_to_right))
+
+    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s_values = np.linspace(0, self.reference.path_length, sample_count)
+        s = NumPyPathParameters(s_values.reshape(-1, 1))
+
+        segment_indices = np.searchsorted(self.breakpoints, s_values, side="right") - 1
+        segment_indices = np.clip(segment_indices, 0, len(self.breakpoints) - 1)
+        left = self.left_widths[segment_indices]
+
+        return (
+            self.reference.query(s).positions
+            - left[:, np.newaxis, np.newaxis] * self.reference.normal(s).array
+        )[..., 0]
+
+    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+        s_values = np.linspace(0, self.reference.path_length, sample_count)
+        s = NumPyPathParameters(s_values.reshape(-1, 1))
+
+        segment_indices = np.searchsorted(self.breakpoints, s_values, side="right") - 1
+        segment_indices = np.clip(segment_indices, 0, len(self.breakpoints) - 1)
+        right = self.right_widths[segment_indices]
+
+        return (
+            self.reference.query(s).positions
+            + right[:, np.newaxis, np.newaxis] * self.reference.normal(s).array
         )[..., 0]
