@@ -1,7 +1,10 @@
-from .basic import (
+from .circles import (
+    Circles as Circles,
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
-)
-from .accelerated import (
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
 )
-from .common import Circles as Circles
+from .sat import (
+    NumPySatDistanceExtractor as NumPySatDistanceExtractor,
+    JaxSatDistanceExtractor as JaxSatDistanceExtractor,
+    ConvexPolygon as ConvexPolygon,
+)

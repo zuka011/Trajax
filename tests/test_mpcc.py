@@ -22,7 +22,7 @@ from trajax import (
 from trajax_visualizer import visualizer, MpccSimulationResult
 
 
-from tests.visualize import VisualizationData
+from tests.utilities import VisualizationData
 from tests.examples import mpcc, reference, obstacles
 from pytest import mark
 

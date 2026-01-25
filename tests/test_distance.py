@@ -3,6 +3,7 @@ from typing import Sequence
 from trajax import (
     types,
     Circles,
+    ConvexPolygon,
     Distance,
     DistanceExtractor,
     StateBatch,
@@ -513,6 +514,39 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                     [[[[1.0], [3.0], [0.0]]]], shape=(T, V := 1, M, N)
                 ),  # 3-2, 5-2, 2-2
             ),
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [
+                            [
+                                [2.0, 4.0, 1.5],
+                                [0.0, 0.0, 0.0],
+                                [0.0, 0.0, 0.0],
+                            ]
+                        ],
+                        shape=(T := 1, D_x := 3, M := 3),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array(
+                    [[[[1.0], [3.0], [0.5]]]], shape=(T, V := 1, M, N)
+                ),
+            ),
         ]
 
     @mark.parametrize(
@@ -580,6 +614,37 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                 expected_distances := array(
                     [[[[3.0]]], [[[2.0]]], [[[1.0]]]], shape=(T, V := 1, M, N)
                 ),  # 5-2, 4-2, 3-2
+            ),
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [
+                            [[0.0], [0.0], [0.0]],
+                            [[0.0], [0.0], [0.0]],
+                            [[0.0], [0.0], [0.0]],
+                        ],
+                        shape=(T := 3, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[4.0]], [[3.0]], [[2.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array(
+                    [[[[3.0]]], [[[2.0]]], [[[1.0]]]], shape=(T, V := 1, M, N)
+                ),
             ),
         ]
 
@@ -719,6 +784,60 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                     ),
                 )
             ],
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=np.empty((T, K := 0, N := 1)),
+                    y=np.empty((T, K, N)),
+                    heading=np.empty((T, K, N)),
+                ),
+                expected_distances := array(
+                    [[[[np.inf]]]], shape=(T, V := 1, M, N := 1)
+                ),
+            ),
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=np.full((T, K := 3, N := 2), np.nan),
+                    y=np.full((T, K, N), np.nan),
+                    heading=np.full((T, K, N), np.nan),
+                ),
+                expected_distances := array(
+                    [[[[np.inf, np.inf]]]], shape=(T, V := 1, M, N := 2)
+                ),
+            ),
         ]
 
     @mark.parametrize(
@@ -823,6 +942,31 @@ class test_that_distance_accounts_for_obstacle_heading:
                     ],
                     shape=(T, V := 1, M, N),
                 ),
+            ),
+            (  # Obstacle rotated 90 degrees (SAT)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.rectangle(length=2.0, width=1.0),
+                    obstacle=ConvexPolygon.rectangle(length=2.0, width=1.0),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[np.pi / 2]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[1.5]]]], shape=(T, V := 1, M, N)),
             ),
         ]
 
@@ -945,6 +1089,31 @@ class test_that_distance_accounts_for_ego_heading:
                     ],
                     shape=(T, V := 2, M, N),
                 ),
+            ),
+            (  # Ego rotated 90 degrees (SAT)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.rectangle(length=2.0, width=1.0),
+                    obstacle=ConvexPolygon.rectangle(length=2.0, width=1.0),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [np.pi / 2]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[1.5]]]], shape=(T, V := 1, M, N)),
             ),
         ]
 
@@ -1080,6 +1249,58 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                 ),
                 expected_distances := np.full((T, V := 2, M, N), np.inf),
             ),
+            (  # Single timestep, single obstacle, multiple samples (SAT)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0, 5.0]]], shape=(T, K := 1, N := 2)),
+                    y=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0, 4.0]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Multiple rollouts, multiple samples (SAT)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0, 2.0], [0.0, 0.0], [0.0, 0.0]]],
+                        shape=(T := 1, D_x := 3, M := 2),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[4.0, 6.0]]], shape=(T, K := 1, N := 2)),
+                    y=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array(
+                    [[[[3.0, 5.0], [1.0, 3.0]]]], shape=(T, V := 1, M, N)
+                ),
+            ),
         ]
 
     @mark.parametrize(
@@ -1179,6 +1400,62 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                 ],
                 finite_distance_indices := [(2, 0)],
             ),
+            (  # SAT with missing obstacle states
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [
+                            [[0.0], [0.0], [0.0]],
+                            [[0.0], [0.0], [0.0]],
+                            [[0.0], [0.0], [0.0]],
+                        ],
+                        shape=(T := 3, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array(
+                        [
+                            [[np.nan, np.nan], [np.nan, np.nan]],
+                            [[np.nan, 5.0], [np.nan, np.nan]],
+                            [[3.0, np.nan], [np.nan, np.nan]],
+                        ],
+                        shape=(T, K := 2, N := 2),
+                    ),
+                    y=array(
+                        [
+                            [[np.nan, np.nan], [np.nan, np.nan]],
+                            [[np.nan, 0.0], [np.nan, np.nan]],
+                            [[0.0, np.nan], [np.nan, np.nan]],
+                        ],
+                        shape=(T, K, N),
+                    ),
+                    heading=array(
+                        [
+                            [[np.nan, np.nan], [np.nan, np.nan]],
+                            [[np.nan, 0.0], [np.nan, np.nan]],
+                            [[0.0, np.nan], [np.nan, np.nan]],
+                        ],
+                        shape=(T, K, N),
+                    ),
+                ),
+                infinite_distance_indices := [
+                    (0, 0),
+                    (0, 1),
+                    (1, 0),
+                    (2, 1),
+                ],
+                finite_distance_indices := [(1, 1), (2, 0)],
+            ),
         ]
 
     @mark.parametrize(
@@ -1212,3 +1489,646 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
         assert all(
             np.isfinite(distances[t, :, :, n]).all() for t, n in finite_distance_indices
         )
+
+
+class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (  # Separation along x-axis
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[x_o := 3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[y_o := 0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Separation along y-axis
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[x := 0.0], [y := 0.0], [theta := 0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[4.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[3.0]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Diagonal separation
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[3.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Obstacle at origin
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[3.0], [3.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0]]]], shape=(T, V := 1, M, N)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states", "expected_distances"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+        expected_distances: Array,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            expected_distances,
+            atol=1e-6,
+        ), (
+            f"SAT distance should be computed correctly. "
+            f"Expected: {expected_distances}, Got: {computed}"
+        )
+
+
+class test_that_sat_distance_is_computed_correctly_for_rotated_polygons:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (  # Both polygons rotated 45 degrees
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [np.pi / 4]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[np.pi / 4]]], shape=(T, K, N)),
+                ),
+                expected_distances := array(
+                    [[[[3.0 * np.sqrt(2) / 2 - 1.0]]]],
+                    shape=(T, V := 1, M, N),
+                ),
+            ),
+            (  # Ego rotated 180 degrees (should be same as 0 for square)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [np.pi]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0]]]], shape=(T, V := 1, M, N)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states", "expected_distances"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+        expected_distances: Array,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            expected_distances,
+            atol=1e-6,
+        ), (
+            f"SAT with rotated polygons should compute correct distance. "
+            f"Expected: {expected_distances}, Got: {computed}"
+        )
+
+
+class test_that_sat_distance_is_positive_when_separation_exists:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (  # Arbitrary angle (30 degrees)
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [np.pi / 6]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+    ) -> None:
+        distances = extractor(states=states, obstacle_states=obstacle_states)
+        assert np.all(np.isfinite(distances.array))
+        assert np.all(distances.array > 0)
+
+
+class test_that_sat_distance_is_zero_when_polygons_are_touching_edge_to_edge:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[1.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            0.0,
+            atol=1e-6,
+        ), f"Touching polygons should have distance 0. Expected: 0.0, Got: {computed}"
+
+
+class test_that_sat_distance_is_negative_when_polygons_are_penetrating:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[0.5]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[-0.5]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Full overlap
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[-1.0]]]], shape=(T, V := 1, M, N)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states", "expected_distances"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+        expected_distances: Array,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            expected_distances,
+            atol=1e-6,
+        ), (
+            f"Penetrating polygons should have negative distance. "
+            f"Expected: {expected_distances}, Got: {computed}"
+        )
+
+
+class test_that_sat_works_with_non_rectangular_convex_polygons:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        triangle = array(
+            [[0.0, 0.5], [0.5, -0.5], [-0.5, -0.5]],
+            shape=(3, 2),
+        )
+
+        return [
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon(vertices=triangle),
+                    obstacle=ConvexPolygon(vertices=triangle),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+    ) -> None:
+        distances = extractor(states=states, obstacle_states=obstacle_states)
+        assert distances.array.shape == (1, 1, 1, 1)
+        assert np.all(np.isfinite(distances.array))
+        assert np.all(distances.array > 0)
+
+
+class test_that_sat_uses_closest_obstacle_when_multiple_obstacles_exist:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        return [
+            (
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[10.0], [3.0]]], shape=(T, K := 2, N := 1)),
+                    y=array([[[0.0], [0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0], [0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[2.0]]]], shape=(T, V := 1, M, N)),
+            ),
+            (  # Three obstacles at different positions
+                extractor := distance.sat(
+                    ego=ConvexPolygon.square(),
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[5.0], [10.0], [2.0]]], shape=(T, K := 3, N := 1)),
+                    y=array([[[0.0], [0.0], [0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0], [0.0], [0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[1.0]]]], shape=(T, V := 1, M, N)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states", "expected_distances"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+        expected_distances: Array,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            expected_distances,
+            atol=1e-6,
+        ), (
+            f"SAT should use closest obstacle. "
+            f"Expected: {expected_distances}, Got: {computed}"
+        )
+
+
+class test_that_sat_works_with_asymmetric_polygons:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        rectangle = ConvexPolygon.rectangle(length=4.0, width=1.0)
+
+        return [
+            (  # Rectangle ego vs square obstacle
+                extractor := distance.sat(
+                    ego=rectangle,
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[4.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+                expected_distances := array([[[[1.5]]]], shape=(T, V := 1, M, N)),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states", "expected_distances"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+        expected_distances: Array,
+    ) -> None:
+        assert np.allclose(
+            computed := extractor(states=states, obstacle_states=obstacle_states),
+            expected_distances,
+            atol=1e-6,
+        ), (
+            f"SAT with asymmetric polygons should compute correct distance. "
+            f"Expected: {expected_distances}, Got: {computed}"
+        )
+
+
+class test_that_sat_works_with_complex_convex_polygons:
+    @staticmethod
+    def cases(distance, types, data) -> Sequence[tuple]:
+        pentagon = ConvexPolygon(
+            vertices=array(
+                [
+                    [0.0, 1.0],
+                    [0.951, 0.309],
+                    [0.588, -0.809],
+                    [-0.588, -0.809],
+                    [-0.951, 0.309],
+                ],
+                shape=(5, 2),
+            )
+        )
+
+        return [
+            (  # Pentagon ego vs square obstacle
+                extractor := distance.sat(
+                    ego=pentagon,
+                    obstacle=ConvexPolygon.square(),
+                    position_extractor=lambda states: types.positions(
+                        x=states.array[:, 0, :],
+                        y=states.array[:, 1, :],
+                    ),
+                    heading_extractor=lambda states: types.headings(
+                        heading=states.array[:, 2, :],
+                    ),
+                ),
+                states := data.state_batch(
+                    array(
+                        [[[0.0], [0.0], [0.0]]],
+                        shape=(T := 1, D_x := 3, M := 1),
+                    )
+                ),
+                obstacle_states := data.obstacle_state_samples(
+                    x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
+                    y=array([[[0.0]]], shape=(T, K, N)),
+                    heading=array([[[0.0]]], shape=(T, K, N)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["extractor", "states", "obstacle_states"],
+        [
+            *cases(distance=distance.numpy, types=types.numpy, data=data.numpy),
+            *cases(distance=distance.jax, types=types.jax, data=data.jax),
+        ],
+    )
+    def test[DistanceT: Distance, ObstacleStatesT: ObstacleStates, StateT: StateBatch](
+        self,
+        extractor: DistanceExtractor[StateT, ObstacleStatesT, DistanceT],
+        states: StateT,
+        obstacle_states: ObstacleStatesT,
+    ) -> None:
+        distances = extractor(states=states, obstacle_states=obstacle_states)
+        assert np.all(np.isfinite(distances.array))
+        assert np.all(distances.array > 0)

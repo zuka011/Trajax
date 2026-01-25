@@ -197,7 +197,7 @@ def radical_inverse(
         factor = factor / base
         return (current_index, result, factor), None
 
-    initial_state: RadicalInverseCarry = (index, 0.0, 1.0 / base)
+    initial_state: RadicalInverseCarry = (index, jnp.array(0.0), 1.0 / base)
     (_, result, _), _ = jax.lax.scan(
         body_fn, initial_state, None, length=MAX_RADICAL_INVERSE_ITERATIONS
     )

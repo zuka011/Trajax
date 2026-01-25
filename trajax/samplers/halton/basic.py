@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Final, cast
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -82,7 +82,7 @@ class NumPyHaltonSplineSampler[
 
     def _generate_halton_samples[N_knot: int = int](self) -> Array[Dims[M, N_knot]]:
         halton_dimensions = self.knot_count * self.dimension
-        halton_sequence = Halton(d=halton_dimensions, scramble=True, seed=self.seed)
+        halton_sequence = Halton(d=halton_dimensions, scramble=True, seed=self.seed)  # type: ignore
         halton_sequence.fast_forward(self.halton_start_index)
 
         uniform_samples = halton_sequence.random(n=self.rollout_count)
@@ -99,7 +99,10 @@ class NumPyHaltonSplineSampler[
         clipped = np.clip(halton_samples, 1e-10, 1 - 1e-10)
         gaussian_samples = norm.ppf(clipped)
 
-        return gaussian_samples.reshape(rollout_count, self.knot_count, self.dimension)
+        return cast(
+            Array[Dims[M, N_knot, D_u]],
+            gaussian_samples.reshape(rollout_count, self.knot_count, self.dimension),
+        )
 
     def _interpolate_knots[T: int, N_knot: int = int](
         self, *, gaussian_knots: Array[Dims[M, N_knot, D_u]], time_horizon: T

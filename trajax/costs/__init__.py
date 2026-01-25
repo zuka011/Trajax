@@ -25,8 +25,11 @@ from .collision import (
 )
 from .distance import (
     Circles as Circles,
+    ConvexPolygon as ConvexPolygon,
     NumPyCircleDistanceExtractor as NumPyCircleDistanceExtractor,
     JaxCircleDistanceExtractor as JaxCircleDistanceExtractor,
+    NumPySatDistanceExtractor as NumPySatDistanceExtractor,
+    JaxSatDistanceExtractor as JaxSatDistanceExtractor,
 )
 from .boundary import (
     NumPyFixedWidthBoundary as NumPyFixedWidthBoundary,

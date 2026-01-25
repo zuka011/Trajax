@@ -97,7 +97,7 @@ markers = [
 addopts = "-m 'not integration and not benchmark'"
 
 [tool.pyright]
-include = ["trajax", "tests/tasks", "tests/visualize", "tests/benchmarks"]
+include = ["trajax", "tests/tasks", "tests/utilities", "tests/benchmarks"]
 exclude = ["**/__pycache__"]
 
 [tool.ruff.lint]

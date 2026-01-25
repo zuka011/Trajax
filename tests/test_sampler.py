@@ -290,12 +290,15 @@ class test_that_sampled_control_inputs_have_correct_marginal_statistics:
                 sampler.halton(
                     standard_deviation=(std := array([0.5, 0.3], shape=(D_u := 2,))),
                     rollout_count=(M := 1000),
-                    knot_count=5,
+                    knot_count=4,
                     to_batch=types.simple.control_input_batch.create,
                     seed=42,
                 ),
                 input_sequence := data.control_input_sequence(
-                    array([[1.0, 2.0], [0.5, -0.5], [0.0, 1.0]], shape=(T := 3, D_u))
+                    array(
+                        [[1.0, 2.0], [0.5, -0.5], [0.0, 1.0], [0.5, 0.25]],
+                        shape=(T := 4, D_u),
+                    )
                 ),
                 expected_std := std,
             ),

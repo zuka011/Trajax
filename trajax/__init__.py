@@ -9,6 +9,7 @@ from .costs import (
     risk as risk,
     CombinedCost as CombinedCost,
     Circles as Circles,
+    ConvexPolygon as ConvexPolygon,
 )
 from .samplers import sampler as sampler
 from .states import (
