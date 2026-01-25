@@ -1,8 +1,8 @@
 site_name: trajax
 site_description: A library providing performant NumPy & JAX implementations of an MPPI planner
 site_author: Zurab Mujirishvili
-repo_url: https://github.com/fau-is/trajax
-repo_name: fau-is/trajax
+repo_url: https://gitlab.com/risk-metrics/trajax
+repo_name: risk-metrics/trajax
 
 theme:
   name: material
@@ -79,6 +79,8 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.arithmatex:
+      generic: true
   - admonition
   - pymdownx.details
   - attr_list
@@ -86,11 +88,20 @@ markdown_extensions:
   - toc:
       permalink: true
 
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
+
 nav:
   - Home: index.md
   - User Guide:
       - Getting Started: guide/getting-started.md
       - Core Concepts: guide/concepts.md
+      - Notation and Conventions: guide/conventions.md
       - MPPI Planning: guide/mppi.md
       - Obstacle Handling: guide/obstacles.md
       - Cost Function Design: guide/costs.md
