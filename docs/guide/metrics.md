@@ -49,7 +49,7 @@ results.collision_detected  # bool
 
 ## Task Completion Metric
 
-Determines when the vehicle reaches its goal:
+Determines when the vehicle reaches its goal and tracks progress along the reference trajectory:
 
 ```python
 from trajax.numpy import trajectory, types
@@ -69,10 +69,25 @@ task_metric = metrics.task_completion(
 )
 
 results = registry.get(task_metric)
-results.completion       # List[bool]
-results.completed        # bool
+results.completion       # List[bool] - completion status at each time step
+results.completed        # bool - True if goal reached
 results.completion_time  # float (inf if not completed)
+results.stretch          # float - ratio of traveled distance to optimal
+results.completed_part   # float - proportion of trajectory completed (see below)
 ```
+
+### Completed Part
+
+The `completed_part` property tracks how much of the reference trajectory has been completed:
+
+- **0.0** → at start
+- **0.5** → halfway along trajectory
+- **1.0** → at end of trajectory
+- **1.5** → halfway through second lap (for looped trajectories)
+
+Progress is clamped to [0, 1] within each lap. Laps are counted when the vehicle's
+longitudinal position wraps around (drops by more than X% of the path length, with X=50 by default),
+indicating a transition from the end back to the start of a looped trajectory.
 
 ## Querying Metrics
 

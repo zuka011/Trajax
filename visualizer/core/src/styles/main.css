@@ -26,11 +26,40 @@ body {
 
 .header {
     flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .title {
     font-size: 20px;
     font-weight: 600;
+}
+
+.sidebar-toggle {
+    display: none;
+    border: none;
+    background: #ecf0f1;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #2c3e50;
+    transition: background 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: #bdc3c7;
+}
+
+.sidebar-toggle.active {
+    background: #3498db;
+    color: white;
+}
+
+.sidebar-toggle-icon {
+    display: block;
+    line-height: 1;
 }
 
 .main-content {
@@ -266,31 +295,47 @@ body {
 }
 
 @media (max-width: 1000px) {
+    .sidebar-toggle {
+        display: block;
+    }
+
     .main-content {
-        flex-direction: column;
+        position: relative;
     }
 
     .right-panel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 320px;
+        height: 100%;
+        background: #fafafa;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        transition: transform 0.3s ease;
+        overflow-y: auto;
+        flex-direction: column;
+        flex-wrap: nowrap;
+    }
+
+    .right-panel.collapsed {
+        transform: translateX(100%);
+    }
+
+    .trajectory-container {
         width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        flex: 1;
-        min-height: 0;
     }
 
     .info-panel {
-        flex: 1;
-        min-width: 180px;
+        min-width: auto;
     }
 
     .plot-container {
-        flex: 1;
-        min-width: 280px;
-        min-height: 150px;
+        min-width: auto;
+        min-height: 200px;
     }
 
     .additional-plots-container {
-        flex: 1;
-        min-width: 280px;
+        min-width: auto;
     }
 }

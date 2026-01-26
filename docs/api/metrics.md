@@ -62,7 +62,7 @@ Evaluates path-following error for MPCC controllers:
 
 ### Task Completion Metric
 
-Evaluates goal reaching:
+Evaluates goal reaching and trajectory progress:
 
 ::: trajax.metrics.task.TaskCompletionMetric
     options:

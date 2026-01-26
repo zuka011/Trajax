@@ -4,6 +4,7 @@ import type { Visualizable } from "../core/types.js";
 import { AdditionalPlotsContainer } from "./components/AdditionalPlotsContainer.js";
 import { App } from "./components/App.js";
 import { ControlsContainer } from "./components/ControlsContainer.js";
+import { SidebarToggle } from "./components/SidebarToggle.js";
 import { createTrajectoryPlot } from "./components/trajectory-plot.js";
 import { createInitialState } from "./state.js";
 import { createUpdateManager } from "./update.js";
@@ -34,6 +35,7 @@ function initialize(): void {
     const theme = defaultTheme;
     const updateManager = createUpdateManager();
 
+    render(<SidebarToggle />, requireElement("sidebar-toggle-root"));
     render(
         <App data={data} state={state} updateManager={updateManager} />,
         requireElement("app-root"),
