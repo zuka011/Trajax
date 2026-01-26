@@ -530,6 +530,314 @@ class test_that_task_stretch_is_computed:
             assert isinstance(results.stretch, float)
 
 
+class test_that_completed_part_is_computed:
+    """Tests that `completed_part` represents the proportion of the trajectory completed.
+
+    `completed_part` is computed by projecting the ego position onto the trajectory
+    to get the longitudinal arc-length coordinate and dividing by `path_length`.
+    Laps are counted when the longitudinal position wraps around (drops from near end to near start).
+
+    Edge case decisions:
+    - Ego behind start: `completed_part` is clamped to 0.0
+    - Ego past end without wrap: `completed_part` is clamped to 1.0
+    - Wrap-around (lap): When longitudinal drops significantly, a lap is counted
+    - Lateral deviation does not affect `completed_part` (only longitudinal progress matters)
+    """
+
+    @staticmethod
+    def cases(data, types, trajectory) -> Sequence[tuple]:
+        return [
+            (  # Simple linear progress along horizontal line.
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(10.0, 0.0),
+                            path_length=10.0,
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 5),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],  # At start
+                            [[x := 2.5], [y := 0.0], [phi := 0.0]],  # 25% progress
+                            [[x := 5.0], [y := 0.0], [phi := 0.0]],  # 50% progress
+                            [[x := 7.5], [y := 0.0], [phi := 0.0]],  # 75% progress
+                            [[x := 10.0], [y := 0.0], [phi := 0.0]],  # At end
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_completed_parts := [0.0, 0.25, 0.5, 0.75, 1.0],
+            ),
+            (  # Lateral deviation should not affect completed_part.
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(10.0, 0.0),
+                            path_length=10.0,
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 4),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 5.0], [y := 0.0], [phi := 0.0]],  # On path
+                            [[x := 5.0], [y := 3.0], [phi := 0.0]],  # 3m left of path
+                            [[x := 5.0], [y := -5.0], [phi := 0.0]],  # 5m right of path
+                            [[x := 5.0], [y := 100.0], [phi := 0.0]],  # Far away
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # All have same longitudinal progress = 50%
+                expected_completed_parts := [0.5, 0.5, 0.5, 0.5],
+            ),
+            (  # Progress is clamped to 0.0 when ego is behind start.
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(10.0, 0.0),
+                            path_length=10.0,
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 3),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := -5.0], [y := 0.0], [phi := 0.0]],  # Behind start
+                            [[x := -2.0], [y := 0.0], [phi := 0.0]],  # Still behind
+                            [[x := 2.0], [y := 0.0], [phi := 0.0]],  # Now at 20%
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_completed_parts := [0.0, 0.0, 0.2],
+            ),
+            (  # Progress is clamped to 1.0 when past end without wrap-around.
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(10.0, 0.0),
+                            path_length=10.0,
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 3),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 10.0], [y := 0.0], [phi := 0.0]],  # At end
+                            [[x := 15.0], [y := 0.0], [phi := 0.0]],  # Past end
+                            [[x := 20.0], [y := 0.0], [phi := 0.0]],  # Further past
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                # All clamped to 1.0 since no wrap-around
+                expected_completed_parts := [1.0, 1.0, 1.0],
+            ),
+            (  # Diagonal trajectory (3-4-5 triangle).
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(3.0, 4.0),
+                            path_length=5.0,  # natural length = 5.0
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 3),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 0.0], [y := 0.0], [phi := 0.0]],  # At start
+                            [[x := 1.5], [y := 2.0], [phi := 0.0]],  # Halfway
+                            [[x := 3.0], [y := 4.0], [phi := 0.0]],  # At end
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_completed_parts := [0.0, 0.5, 1.0],
+            ),
+            (  # Lap counted when longitudinal wraps around.
+                registry := metrics.registry(
+                    metric := metrics.task_completion(
+                        reference=trajectory.line(
+                            start=(0.0, 0.0),
+                            end=(10.0, 0.0),
+                            path_length=10.0,
+                        ),
+                        distance_threshold=1.0,
+                        time_step_size=0.1,
+                        position_extractor=lambda states: types.positions(
+                            x=states.array[:, 0],
+                            y=states.array[:, 1],
+                        ),
+                    ),
+                    collectors=collectors.registry(
+                        mppi := collectors.states.decorating(
+                            stubs.Mppi.create(),
+                            transformer=types.simple.state_sequence.of_states,
+                        ),
+                    ),
+                ),
+                metric,
+                mppi,
+                horizon := (T := 6),
+                nominal_input := data.control_input_sequence(
+                    np.random.rand(T, D_u := 2)
+                ),
+                # Ego goes to end, wraps back to start, and continues
+                states_at := lambda t, T=T: data.state_batch(
+                    array(
+                        [
+                            [[x := 5.0], [y := 0.0], [phi := 0.0]],  # 50% of lap 1
+                            [[x := 9.0], [y := 0.0], [phi := 0.0]],  # 90% of lap 1
+                            # Wrapped! 10% of lap 2
+                            [[x := 1.0], [y := 0.0], [phi := 0.0]],
+                            [[x := 5.0], [y := 0.0], [phi := 0.0]],  # 50% of lap 2
+                            [[x := 9.0], [y := 0.0], [phi := 0.0]],  # 90% of lap 2
+                            # Wrapped! 20% of lap 3
+                            [[x := 2.0], [y := 0.0], [phi := 0.0]],
+                        ],
+                        shape=(T, D_x := 3, M := 1),
+                    )
+                ).at(time_step=t, rollout=0),
+                expected_completed_parts := [0.5, 0.9, 1.1, 1.5, 1.9, 2.2],
+            ),
+        ]
+
+    @mark.parametrize(
+        [
+            "registry",
+            "metric",
+            "mppi",
+            "horizon",
+            "nominal_input",
+            "states_at",
+            "expected_completed_parts",
+        ],
+        [
+            *cases(data=data.numpy, types=types.numpy, trajectory=trajectory.numpy),
+            *cases(data=data.jax, types=types.jax, trajectory=trajectory.jax),
+        ],
+    )
+    def test[StateT, InputSequenceT](
+        self,
+        registry: MetricRegistry,
+        metric: TaskCompletionMetric,
+        mppi: Mppi[StateT, InputSequenceT],
+        horizon: int,
+        nominal_input: InputSequenceT,
+        states_at: Callable[[int], StateT],
+        expected_completed_parts: Sequence[float],
+    ) -> None:
+        for step in range(horizon):
+            mppi.step(
+                temperature=1.0,
+                nominal_input=nominal_input,
+                initial_state=states_at(step),
+            )
+
+            results = registry.get(metric)
+
+            assert np.isclose(results.completed_part, expected_completed_parts[step])
+            assert isinstance(results.completed_part, float)
+
+
 class ConstraintViolationExpectation(NamedTuple):
     lateral_deviations: Sequence[float]
     boundary_distances: Sequence[float]
