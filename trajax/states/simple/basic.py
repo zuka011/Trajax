@@ -162,9 +162,11 @@ class NumPySimpleControlInputSequence[T: int, D_u: int](
         horizon: T_, dimension: D_u_
     ) -> "NumPySimpleControlInputSequence[T_, D_u_]":
         """Creates a zeroed control input sequence for the given horizon."""
-        return NumPySimpleControlInputSequence.constant(
-            np.zeros((dimension,)), horizon=horizon
-        )
+        zeros = np.zeros((dimension,))
+
+        assert shape_of(zeros, matches=(dimension,))
+
+        return NumPySimpleControlInputSequence.constant(zeros, horizon=horizon)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return self.array

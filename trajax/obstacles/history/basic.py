@@ -153,7 +153,6 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
             recent_ids=ids.recent,
             history=self.history,
             horizon=self._full_horizon,
-            dimension=self.history[0].states.dimension,
             obstacle_count=self.count,
         )
 
@@ -196,11 +195,11 @@ def combine_history[H: int, K: int](
     recent_ids: NumPyObstacleIds[K],
     history: Sequence[NumPyObstacleStatesRunningHistory.Entry],
     horizon: H,
-    dimension: int,
     obstacle_count: K,
 ) -> NumPyObstacleStates[H, K]:
     recent_id_count = recent_ids.count
     time_padding = horizon - len(history)
+    dimension = history[0].states.dimension
     output = np.full((output_shape := (horizon, dimension, obstacle_count)), np.nan)
 
     for t, entry in enumerate(history):

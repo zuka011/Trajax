@@ -1033,14 +1033,16 @@ wheels = [
 
 [[package]]
 name = "riskit"
-version = "0.2.5"
+version = "0.2.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "jax" },
+    { name = "jaxtyping" },
     { name = "numtypes" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/1c/fe3b9ff63b9f7a75879cbfb13e1281d019749396cb93f69628217a18021a/riskit-0.2.5.tar.gz", hash = "sha256:0bab7bfedebc75df2a973b2ea5b706f6f2001642569780d39ead46775dbe5c66", size = 56879, upload-time = "2026-01-21T01:11:07.549Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/14/10d273b2f0b01a052ea0b81118a4c40df1970165bba71798f4ebcdf8812d/riskit-0.2.6.tar.gz", hash = "sha256:79a2d2b9618739ddb96af7f13162677bfc2957d94d5b5a0a6381c7aded9abbd2", size = 60139, upload-time = "2026-01-26T21:42:06.525Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/57/4959ee54230e67514753dc3df138c7cb69f50f042c4d6316504a10405f82/riskit-0.2.5-py3-none-any.whl", hash = "sha256:ab511214d79c49df4c752dbaa6568832e89e18359c1eeb87f3492189ba5f68e4", size = 19047, upload-time = "2026-01-21T01:11:06.651Z" },
+    { url = "https://files.pythonhosted.org/packages/29/58/6dfbdbe3706506cfbb9158ae7faa4f83af2250d02d20e991706722ebf66b/riskit-0.2.6-py3-none-any.whl", hash = "sha256:bbefa059fed959deb0ccfd34baebbfd2d628d4875d84b3fc7632bdf11cae5e9e", size = 20459, upload-time = "2026-01-26T21:42:05.654Z" },
 ]
 
 [[package]]
@@ -1185,7 +1187,7 @@ requires-dist = [
     { name = "jax", specifier = ">=0.9.0" },
     { name = "jaxtyping", specifier = ">=0.3.6" },
     { name = "numtypes", specifier = ">=0.5.1" },
-    { name = "riskit", specifier = ">=0.2.5" },
+    { name = "riskit", specifier = ">=0.2.6" },
     { name = "scipy", specifier = ">=1.17.0" },
 ]
 
@@ -1202,9 +1204,9 @@ dev = [
     { name = "ruff", specifier = ">=0.14.14" },
 ]
 doc = [
-    { name = "mkdocs", specifier = ">=1.6.0" },
-    { name = "mkdocs-material", specifier = ">=9.5.0" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.26.0" },
+    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "mkdocs-material", specifier = ">=9.7.1" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.2" },
     { name = "typi", specifier = ">=0.1.1" },
 ]
 test = [

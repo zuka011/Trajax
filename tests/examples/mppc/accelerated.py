@@ -40,7 +40,6 @@ from numtypes import array, Array, Dim1
 from jaxtyping import Array as JaxArray, Float
 
 import numpy as np
-import jax.numpy as jnp
 
 
 type PhysicalState = types.bicycle.State
@@ -64,6 +63,7 @@ type ObstacleStates = types.ObstacleStates
 type ObstacleStatesForTimeStep = types.ObstacleStatesForTimeStep
 type ObstaclePositions = types.Obstacle2dPositions
 type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
+type ObstacleSimulatorProvider = Callable[[], ObstacleSimulator]
 
 
 class JaxObstaclePositionExtractor(
@@ -161,7 +161,7 @@ class JaxMpccPlannerWeights:
 
 @dataclass(frozen=True)
 class JaxSamplingOptions:
-    physical_standard_deviation: Float[JaxArray, "D_u"] = field(
+    physical_standard_deviation: Array[Dim1] = field(
         default_factory=lambda: array([0.5, 0.2], shape=(2,))
     )
     virtual_standard_deviation: float = 2.0
@@ -286,89 +286,99 @@ class reference:
 
 
 class obstacles:
-    none: Final = create_obstacles.empty()
+    @staticmethod
+    def none() -> ObstacleSimulator:
+        return create_obstacles.empty()
 
     class static:
-        loop: Final = create_obstacles.static(
-            positions=array(
-                [
-                    [15.0, 2.5],
-                    [17.0, 20.0],
-                    [8.0, 12.0],
-                    [12.0, 4.0],
-                    [32.0, 1.5],
-                    [42.0, 7.0],
-                    [57.0, 3.0],
-                ],
-                shape=(7, 2),
-            ),
-            headings=array(
-                [
-                    np.pi / 6,
-                    -np.pi / 4,
-                    np.pi / 3,
-                    0.0,
-                    np.pi / 8,
-                    -np.pi / 6,
-                    np.pi / 2,
-                ],
-                shape=(7,),
-            ),
-        )
+        @staticmethod
+        def loop() -> ObstacleSimulator:
+            return create_obstacles.static(
+                positions=array(
+                    [
+                        [15.0, 2.5],
+                        [17.0, 20.0],
+                        [8.0, 12.0],
+                        [12.0, 4.0],
+                        [32.0, 1.5],
+                        [42.0, 7.0],
+                        [57.0, 3.0],
+                    ],
+                    shape=(7, 2),
+                ),
+                headings=array(
+                    [
+                        np.pi / 6,
+                        -np.pi / 4,
+                        np.pi / 3,
+                        0.0,
+                        np.pi / 8,
+                        -np.pi / 6,
+                        np.pi / 2,
+                    ],
+                    shape=(7,),
+                ),
+            )
 
-        cyclic: Final = create_obstacles.static(
-            positions=array(
-                [
-                    [15.0, 0.5],
-                    [28.0, 14.0],
-                    [10.0, 27.5],
-                    [-7.5, 14.0],
-                ],
-                shape=(4, 2),
-            ),
-            headings=array(
-                [
-                    0.0,
-                    np.pi / 2,
-                    0.0,
-                    np.pi / 2,
-                ],
-                shape=(4,),
-            ),
-        )
+        @staticmethod
+        def cyclic() -> ObstacleSimulator:
+            return create_obstacles.static(
+                positions=array(
+                    [
+                        [15.0, 0.5],
+                        [28.0, 14.0],
+                        [10.0, 27.5],
+                        [-7.5, 14.0],
+                    ],
+                    shape=(4, 2),
+                ),
+                headings=array(
+                    [
+                        0.0,
+                        np.pi / 2,
+                        0.0,
+                        np.pi / 2,
+                    ],
+                    shape=(4,),
+                ),
+            )
 
     class dynamic:
-        slalom: Final = create_obstacles.dynamic(
-            positions=array(
-                [
-                    [25.0, 22.5],
-                    [55.0, 0.0],
-                    [15.0, -5.0],
-                    [42.0, 4.0],
-                ],
-                shape=(4, 2),
-            ),
-            velocities=array(
-                [
-                    [0.0, -1.5],
-                    [-2.5, 0.0],
-                    [0.5, 1.5],
-                    [0.0, 0.0],
-                ],
-                shape=(4, 2),
-            ),
-        )
+        @staticmethod
+        def slalom() -> ObstacleSimulator:
+            return create_obstacles.dynamic(
+                positions=array(
+                    [
+                        [25.0, 22.5],
+                        [55.0, 0.0],
+                        [15.0, -5.0],
+                        [42.0, 4.0],
+                    ],
+                    shape=(4, 2),
+                ),
+                velocities=array(
+                    [
+                        [0.0, -1.5],
+                        [-2.5, 0.0],
+                        [0.5, 1.5],
+                        [0.0, 0.0],
+                    ],
+                    shape=(4, 2),
+                ),
+            )
 
-        short: Final = create_obstacles.dynamic(
-            positions=array(
-                [[15.0, 10.0]],
-                shape=(1, 2),
-            ),
-            velocities=array(
-                [[0.0, -1.5]],
-                shape=(1, 2),
-            ),
-        )
+        @staticmethod
+        def short() -> ObstacleSimulator:
+            return create_obstacles.dynamic(
+                positions=array(
+                    [[15.0, 10.0]],
+                    shape=(1, 2),
+                ),
+                velocities=array(
+                    [[0.0, -1.5]],
+                    shape=(1, 2),
+                ),
+            )
 
 
 class configure:
@@ -435,7 +445,9 @@ class configure:
                     seed=sampling.physical_seed,
                 ),
                 virtual=sampler.gaussian(
-                    standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
+                    standard_deviation=array(
+                        [sampling.virtual_standard_deviation], shape=(1,)
+                    ),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
@@ -485,11 +497,13 @@ class configure:
         horizon: int = 30,
         temperature: float = 50.0,
         reference: Trajectory = reference.small_circle,
-        obstacles: ObstacleSimulator = obstacles.none,
+        obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
         use_covariance_propagation: bool = False,
     ) -> JaxMpccPlannerConfiguration:
+        obstacle_simulator = obstacles()
+
         planner, augmented_model = mppi.augmented(
             models=(
                 model.bicycle.dynamical(
@@ -513,7 +527,9 @@ class configure:
                     seed=sampling.physical_seed,
                 ),
                 sampler.gaussian(
-                    standard_deviation=jnp.array([sampling.virtual_standard_deviation]),
+                    standard_deviation=array(
+                        [sampling.virtual_standard_deviation], shape=(1,)
+                    ),
                     rollout_count=sampling.rollout_count,
                     to_batch=types.simple.control_input_batch.create,
                     seed=sampling.virtual_seed,
@@ -566,7 +582,8 @@ class configure:
                                     else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
-                                    horizon=2, obstacle_count=obstacles.obstacle_count
+                                    horizon=2,
+                                    obstacle_count=obstacle_simulator.obstacle_count,
                                 ),
                                 id_assignment=create_obstacles.id_assignment.hungarian(
                                     position_extractor=JaxObstaclePositionExtractor(),
@@ -662,7 +679,7 @@ class configure:
                 ),
             ),
             metrics=(mpcc_error_metrics, collision_metrics),
-            obstacle_simulator=obstacles.with_time_step_size(dt),
+            obstacle_simulator=obstacle_simulator.with_time_step_size(dt),
             obstacle_state_observer=obstacle_collector,
         )
 
@@ -672,7 +689,7 @@ class configure:
         horizon: int = 30,
         temperature: float = 50.0,
         reference: Trajectory = reference.small_circle,
-        obstacles: ObstacleSimulator = obstacles.none,
+        obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
         use_covariance_propagation: bool = False,
@@ -680,6 +697,7 @@ class configure:
         use_halton: bool = False,
         cyclic_reference: bool = False,
     ) -> JaxMpccPlannerConfiguration:
+        obstacle_simulator = obstacles()
         position_extractor = extract.from_physical(position)
         fixed_boundary = boundary.fixed_width(
             reference=reference,
@@ -737,7 +755,8 @@ class configure:
                                     else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
-                                    horizon=2, obstacle_count=obstacles.obstacle_count
+                                    horizon=2,
+                                    obstacle_count=obstacle_simulator.obstacle_count,
                                 ),
                                 id_assignment=create_obstacles.id_assignment.hungarian(
                                     position_extractor=JaxObstaclePositionExtractor(),
@@ -861,7 +880,7 @@ class configure:
                 ),
             ),
             metrics=(mpcc_error_metrics, collision_metrics),
-            obstacle_simulator=obstacles.with_time_step_size(dt),
+            obstacle_simulator=obstacle_simulator.with_time_step_size(dt),
             obstacle_state_observer=obstacle_collector,
             boundary=fixed_boundary if use_boundary else None,
         )
