@@ -214,6 +214,25 @@ class test_that_ids_are_assigned_to_obstacles:
                 ids := data.obstacle_ids([3, 7]),
                 expected := data.obstacle_ids([3, 7]),
             ),
+            (  # Far obstacle disappears, new far obstacle appears - nearby IDs should NOT swap
+                assignment := id_assignment.hungarian(
+                    position_extractor=position_extractor(),
+                    cutoff=10.0,  # Large enough for nearby obstacles
+                    start_id=1,
+                ),
+                states := data.obstacle_states_for_time_step(
+                    x=array([0.1, 5.1, -50.0], shape=(K := 3,)),  # At t+1: A, B, D
+                    y=array([0.1, 0.1, 0.0], shape=(K,)),
+                    heading=array([0.0, 0.0, 0.0], shape=(K,)),
+                ),
+                history := data.obstacle_states(
+                    x=array([[0.0, 5.0, 50.0]], shape=(1, 3)),  # At t: A, B, C
+                    y=array([[0.0, 0.0, 0.0]], shape=(1, 3)),
+                    heading=array([[0.0, 0.0, 0.0]], shape=(1, 3)),
+                ),
+                ids := data.obstacle_ids([3, 7, 9]),  # IDs for A, B, C
+                expected := data.obstacle_ids([3, 7, 1]),  # A->3, B->7, D->NEW
+            ),
         ]
 
     @mark.parametrize(

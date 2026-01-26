@@ -1,7 +1,14 @@
 from typing import Any, Sequence
 from functools import partial
 
-from trajax import PredictingObstacleStateProvider, ObstacleStates, types, obstacles
+from trajax import (
+    PredictingObstacleStateProvider,
+    ObstacleStates,
+    ObstacleStatesRunningHistory,
+    ObstacleIds,
+    types,
+    obstacles,
+)
 
 from numtypes import array
 
@@ -965,3 +972,95 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             provider.observe(states)
 
         assert np.allclose(provider(), expected)
+
+
+class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceeded:
+    @staticmethod
+    def cases(types, data) -> Sequence[tuple]:
+        return [
+            (  # Single persistent obstacle among many transient ones
+                history := types.obstacle_states_running_history.empty(
+                    obstacle_count=2,
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([5.0, 100.0], shape=(2,)),
+                        y=array([5.0, 0.0], shape=(2,)),
+                        heading=array([0.0, 0.0], shape=(2,)),
+                    ),
+                    ids=data.obstacle_ids([10, 20]),
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([5.1, 200.0], shape=(2,)),
+                        y=array([5.1, 0.0], shape=(2,)),
+                        heading=array([0.0, 0.0], shape=(2,)),
+                    ),
+                    ids=data.obstacle_ids([10, 30]),  # 20 disappears, 30 appears
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([5.2, 300.0], shape=(2,)),
+                        y=array([5.2, 0.0], shape=(2,)),
+                        heading=array([0.0, 0.0], shape=(2,)),
+                    ),
+                    ids=data.obstacle_ids([10, 40]),  # 30 disappears, 40 appears
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([5.3, 400.0], shape=(2,)),
+                        y=array([5.3, 0.0], shape=(2,)),
+                        heading=array([0.0, 0.0], shape=(2,)),
+                    ),
+                    ids=data.obstacle_ids([10, 50]),  # 40 disappears, 50 appears
+                ),
+                # ID 10 present in all 4 frames, should be retained
+                expected_ids := data.obstacle_ids([10, 50]),
+            ),
+            (  # Multiple persistent IDs among transient ones
+                history := types.obstacle_states_running_history.empty(
+                    obstacle_count=3,
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([0.0, 10.0, 20.0], shape=(3,)),
+                        y=array([0.0, 0.0, 0.0], shape=(3,)),
+                        heading=array([0.0, 0.0, 0.0], shape=(3,)),
+                    ),
+                    ids=data.obstacle_ids([1, 2, 3]),
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([0.1, 10.1, 30.0], shape=(3,)),
+                        y=array([0.0, 0.0, 0.0], shape=(3,)),
+                        heading=array([0.0, 0.0, 0.0], shape=(3,)),
+                    ),
+                    ids=data.obstacle_ids([1, 2, 4]),  # 3 disappears, 4 appears
+                )
+                .append(
+                    data.obstacle_states_for_time_step(
+                        x=array([0.2, 10.2, 40.0], shape=(3,)),
+                        y=array([0.0, 0.0, 0.0], shape=(3,)),
+                        heading=array([0.0, 0.0, 0.0], shape=(3,)),
+                    ),
+                    ids=data.obstacle_ids([1, 2, 5]),  # 4 disappears, 5 appears
+                ),
+                # IDs 1 and 2 present in all frames, 5 is newest
+                expected_ids := data.obstacle_ids([1, 2, 5]),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["history", "expected_ids"],
+        [
+            *cases(types=types.numpy, data=data.numpy),
+            *cases(types=types.jax, data=data.jax),
+        ],
+    )
+    def test(
+        self,
+        history: ObstacleStatesRunningHistory[Any, ObstacleIds, Any],
+        expected_ids: ObstacleIds,
+    ) -> None:
+        actual_ids = history.ids()
+        assert np.allclose(actual_ids, expected_ids)

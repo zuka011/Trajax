@@ -61,6 +61,7 @@ from .types import (
     Normals as Normals,
     AugmentedState as AugmentedState,
     ObstacleStatesHistory as ObstacleStatesHistory,
+    ObstacleStatesRunningHistory as ObstacleStatesRunningHistory,
     ObstacleStatesForTimeStep as ObstacleStatesForTimeStep,
     ObstacleStates as ObstacleStates,
     ObstacleIds as ObstacleIds,

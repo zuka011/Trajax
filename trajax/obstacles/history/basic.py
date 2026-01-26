@@ -158,23 +158,27 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         )
 
     @cached_property
-    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds[K]  | None":
+    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds[K] | None":
         if all(entry.ids is None for entry in self.history):
-            return
+            return None
 
         # NOTE: A dict is used here to maintain insertion order while ensuring uniqueness.
         seen_ids: dict[int, None] = {}
 
-        for entry in self.history:
+        # NOTE: We iterate in reverse to get most recent IDs first.
+        for entry in reversed(self.history):
             assert entry.ids is not None, (
                 f"Missing IDs in history entry {entry} while others have IDs."
             )
 
-            seen_ids.update({int(id_): None for id_ in entry.ids.array})
+            for obstacle_id in entry.ids.array:
+                # NOTE: We do not overwrite existing IDs to maintain most recent occurrence.
+                if (typed_id := int(obstacle_id)) not in seen_ids:
+                    seen_ids[typed_id] = None
 
         all_ids = list(seen_ids.keys())
         recent_ids = (
-            all_ids[-self.fixed_obstacle_count :]
+            all_ids[: self.fixed_obstacle_count]
             if self.fixed_obstacle_count is not None
             else all_ids
         )
@@ -219,4 +223,4 @@ def combine_history[H: int, K: int](
 
     assert shape_of(output, matches=output_shape)
 
-    return NumPyObstacleStates.wrap(output)  # type: ignore # TODO: Refactor this!
+    return NumPyObstacleStates.wrap(output)

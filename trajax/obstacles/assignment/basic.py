@@ -94,7 +94,13 @@ class NumPyHungarianObstacleIdAssignment[
         last_positions: Array[Dims[D_p, K_h]],
     ) -> tuple[IndexArray[Dims[M]], IndexArray[Dims[M]], BoolArray[Dims[M]]]:
         distances = cdist(current_positions.T, last_positions.T)
-        current_indices, history_indices = linear_sum_assignment(distances)
+
+        # NOTE: We add a large value to distances beyond the cutoff
+        # to prevent them from being matched.
+        gated_distances = distances.copy()
+        gated_distances[gated_distances > self.cutoff] = self.cutoff + 1e9
+
+        current_indices, history_indices = linear_sum_assignment(gated_distances)
         matched = distances[current_indices, history_indices] <= self.cutoff
 
         return current_indices, history_indices, matched
