@@ -817,7 +817,7 @@ class configure:
                     "progress": weights.progress,
                 },
                 "virtual": {
-                    "velocity_limits": (0.0, 15.0),
+                    "velocity_limits": (1.0, 15.0),
                     "sampling_standard_deviation": sampling.virtual_standard_deviation,
                     "sampling_seed": sampling.virtual_seed,
                     "periodic": cyclic_reference,
