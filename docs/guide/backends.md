@@ -38,7 +38,7 @@ corridor = boundary.jax.fixed_width(reference=reference, ...)
 
 ## Converting Outputs
 
-JAX arrays convert to NumPy with `np.asarray()`:
+Regardless of the backend used, outputs can be converted to NumPy arrays:
 
 ```python
 import numpy as np
@@ -57,22 +57,3 @@ To switch a codebase from NumPy to JAX:
 4. Convert outputs to NumPy if needed downstream
 
 The identical APIs make this a straightforward find-and-replace operation.
-```
-
-## Checking Backend Availability
-
-```python
-try:
-    import jax
-    JAX_AVAILABLE = True
-except ImportError:
-    JAX_AVAILABLE = False
-
-# Choose backend based on availability
-if JAX_AVAILABLE:
-    from trajax import trajectory
-    reference = trajectory.jax.line(...)
-else:
-    from trajax import trajectory
-    reference = trajectory.numpy.line(...)
-```

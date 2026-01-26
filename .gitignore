@@ -16,7 +16,7 @@ wheels/
 benchmark.json
 
 # Test visualizations
-tests/visualizations/
+**/visualizations/
 
 # Chat sessions
 .chats

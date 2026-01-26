@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from tests.tasks import BackgroundTasks
 
-from pytest import Parser, FixtureRequest
+from pytest import Parser, FixtureRequest, param, mark
 from pytest_asyncio import fixture as async_fixture
 
 
@@ -130,3 +130,8 @@ async def visualization[T = object](
         return
 
     background_tasks.schedule(args.visualizer(capture.data, key=args.key))
+
+
+def doc_example[*Args](*case: Args) -> tuple[*Args]:
+    """Marks a parameterized test case as a documentation example."""
+    return param(*case, marks=mark.docs)

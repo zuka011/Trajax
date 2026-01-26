@@ -19,10 +19,10 @@ from trajax import (
     MpccErrorMetric,
     access,
 )
-from trajax_visualizer import visualizer, MpccSimulationResult
+from trajax_visualizer import MpccSimulationResult, visualizer
 
 
-from tests.utilities import VisualizationData
+from tests.utilities import VisualizationData, doc_example
 from tests.examples import mpcc, reference, obstacles
 from pytest import mark
 
@@ -122,8 +122,8 @@ class MpccPlannerConfiguration[
         ),
         (mpcc.jax.planner_from_base(), "jax-from-base"),
         (mpcc.jax.planner_from_augmented(), "jax-from-augmented"),
-        (mpcc.jax.planner_from_mpcc(), "jax-from-mpcc"),
-        (
+        doc_example(mpcc.jax.planner_from_mpcc(), "jax-from-mpcc"),
+        doc_example(
             mpcc.jax.planner_from_mpcc(
                 reference=reference.jax.short_loop, use_boundary=True
             ),
@@ -272,13 +272,13 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             ),
             "jax-from-mpcc-halton-static",
         ),
-        (
+        doc_example(
             mpcc.jax.planner_from_mpcc(
                 reference=reference.jax.slalom, obstacles=obstacles.jax.dynamic.slalom
             ),
             "jax-from-mpcc-dynamic",
         ),
-        (
+        doc_example(
             mpcc.jax.planner_from_mpcc(
                 reference=reference.jax.short,
                 obstacles=obstacles.jax.dynamic.short,
@@ -404,7 +404,7 @@ def test_that_mpcc_planner_follows_trajectory_without_collision_when_obstacles_a
             ),
             "numpy-from-mpcc",
         ),
-        (
+        doc_example(
             mpcc.jax.planner_from_mpcc(
                 reference=reference.jax.cyclic,
                 obstacles=obstacles.jax.static.cyclic,

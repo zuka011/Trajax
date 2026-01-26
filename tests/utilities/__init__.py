@@ -1,10 +1,12 @@
 from .visualize import (
-    add_visualizer_option as add_visualizer_option,
-    visualization as visualization,
     VisualizationData as VisualizationData,
+    add_visualizer_option as add_visualizer_option,
+    doc_example as doc_example,
+    visualization as visualization,
 )
 from .profile import (
     add_compilation_tracker_option as add_compilation_tracker_option,
     is_compilation_tracker_enabled as is_compilation_tracker_enabled,
     compilation_tracker as compilation_tracker,
 )
+from .root import project_root as project_root

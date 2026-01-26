@@ -97,6 +97,7 @@ python_functions = ["test_*", "bench_*", "test"]
 markers = [
     "integration: Mark the test as an integration test.",
     "visualize: Mark the test to produce visualization data using the given visualizer.",
+    "docs: Mark the test as one generating documentation examples.",
     "benchmark: Performance benchmarks (deselected by default, use --benchmark-enable)",
 ]
 addopts = "-m 'not integration and not benchmark'"

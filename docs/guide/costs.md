@@ -170,3 +170,4 @@ cost = costs.combined(
     costs.tracking.contouring(...),
     speed_limit_cost,
 )
+```

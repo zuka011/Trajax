@@ -110,6 +110,7 @@ nav:
       - Working with Boundaries: guide/boundaries.md
       - Backend Selection: guide/backends.md
       - Visualizer: guide/visualizer.md
+      - Examples: guide/examples.md
   - API Reference:
       - Overview: api/index.md
       - mppi: api/mppi.md
