@@ -147,15 +147,24 @@ class NumPySimpleControlInputSequence[T: int, D_u: int](
     _array: Array[Dims[T, D_u]]
 
     @staticmethod
+    def constant[T_: int, D_u_: int](
+        value: Array[Dims[D_u_]], *, horizon: T_
+    ) -> "NumPySimpleControlInputSequence[T_, D_u_]":
+        """Creates a constant control input sequence for the given horizon."""
+        array = np.tile(value.reshape(1, -1), (horizon, 1))
+
+        assert shape_of(array, matches=(horizon, value.shape[0]))
+
+        return NumPySimpleControlInputSequence(array)
+
+    @staticmethod
     def zeroes[T_: int, D_u_: int](
         horizon: T_, dimension: D_u_
     ) -> "NumPySimpleControlInputSequence[T_, D_u_]":
         """Creates a zeroed control input sequence for the given horizon."""
-        array = np.zeros((horizon, dimension))
-
-        assert shape_of(array, matches=(horizon, dimension))
-
-        return NumPySimpleControlInputSequence(array)
+        return NumPySimpleControlInputSequence.constant(
+            np.zeros((dimension,)), horizon=horizon
+        )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return self.array

@@ -108,7 +108,7 @@ class JaxFixedWidthBoundary[StateT](
             boundary_distance(lateral=lateral.array, left=self._left, right=self._right)
         )
 
-    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def left[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s = JaxPathParameters(
             jnp.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
         )
@@ -120,7 +120,7 @@ class JaxFixedWidthBoundary[StateT](
             )[..., 0]
         )
 
-    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def right[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s = JaxPathParameters(
             jnp.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
         )
@@ -190,7 +190,7 @@ class JaxPiecewiseFixedWidthBoundary[StateT](
             )
         )
 
-    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def left[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s_values = jnp.linspace(0, self.reference.path_length, sample_count)
         s = JaxPathParameters(s_values.reshape(-1, 1))
 
@@ -204,7 +204,7 @@ class JaxPiecewiseFixedWidthBoundary[StateT](
             )
         )
 
-    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def right[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s_values = jnp.linspace(0, self.reference.path_length, sample_count)
         s = JaxPathParameters(s_values.reshape(-1, 1))
 

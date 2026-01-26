@@ -103,7 +103,7 @@ class NumPyFixedWidthBoundary[StateT](
 
         return NumPyBoundaryDistance(np.minimum(distance_to_left, distance_to_right))
 
-    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def left[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s = NumPyPathParameters(
             np.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
         )
@@ -113,7 +113,7 @@ class NumPyFixedWidthBoundary[StateT](
             - self._left * self.reference.normal(s).array
         )[..., 0]
 
-    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def right[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s = NumPyPathParameters(
             np.linspace(0, self.reference.path_length, sample_count).reshape(-1, 1)
         )
@@ -187,7 +187,7 @@ class NumPyPiecewiseFixedWidthBoundary[StateT, B: int = int](
 
         return NumPyBoundaryDistance(np.minimum(distance_to_left, distance_to_right))
 
-    def left(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def left[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s_values = np.linspace(0, self.reference.path_length, sample_count)
         s = NumPyPathParameters(s_values.reshape(-1, 1))
 
@@ -200,7 +200,7 @@ class NumPyPiecewiseFixedWidthBoundary[StateT, B: int = int](
             - left[:, np.newaxis, np.newaxis] * self.reference.normal(s).array
         )[..., 0]
 
-    def right(self, *, sample_count: int = 100) -> BoundaryPoints:
+    def right[L: int](self, *, sample_count: L = 100) -> BoundaryPoints[L]:
         s_values = np.linspace(0, self.reference.path_length, sample_count)
         s = NumPyPathParameters(s_values.reshape(-1, 1))
 

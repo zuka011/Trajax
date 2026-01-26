@@ -290,7 +290,7 @@ class Visualizable:
         trajectories: "Visualizable.PlannedTrajectories | None" = None
         obstacles: "Visualizable.Obstacles | None" = None
         network: "Road.Network | None" = None
-        boundaries: "Visualizable.Boundary | None" = None
+        boundaries: "Visualizable.Boundaries | None" = None
         additional_plots: Sequence[Plot.Additional] | None = None
 
         @staticmethod
@@ -302,7 +302,7 @@ class Visualizable:
             trajectories: "Visualizable.PlannedTrajectories | None" = None,
             obstacles: "Visualizable.Obstacles | None" = None,
             network: "Road.Network | None" = None,
-            boundaries: "Visualizable.Boundary | None" = None,
+            boundaries: "Visualizable.Boundaries | None" = None,
             additional_plots: Sequence[Plot.Additional] | None = None,
         ) -> "Visualizable.SimulationResult":
             return Visualizable.SimulationResult(

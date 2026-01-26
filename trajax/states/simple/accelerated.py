@@ -151,13 +151,22 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
     _array: Float[JaxArray, "T D_u"]
 
     @staticmethod
+    def constant[T_: int, D_u_: int](
+        value: Float[JaxArray, "D_u"] | Array[Dims[D_u_]], *, horizon: T_
+    ) -> "JaxSimpleControlInputSequence[T_, D_u_]":
+        """Creates a constant control input sequence for the given horizon and dimension."""
+        return JaxSimpleControlInputSequence(
+            jnp.tile(jnp.asarray(value)[jnp.newaxis, :], (horizon, 1))
+        )
+
+    @staticmethod
     def zeroes[T_: int, D_u_: int](
         horizon: T_, dimension: D_u_
     ) -> "JaxSimpleControlInputSequence[T_, D_u_]":
         """Creates a zeroed control input sequence for the given horizon."""
-        array = jnp.zeros((horizon, dimension))
-
-        return JaxSimpleControlInputSequence(array)
+        return JaxSimpleControlInputSequence.constant(
+            jnp.zeros((dimension,)), horizon=horizon
+        )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
         return np.asarray(self.array)

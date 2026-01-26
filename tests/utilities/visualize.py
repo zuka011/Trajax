@@ -1,4 +1,12 @@
-from typing import Protocol, AsyncGenerator, Final, NamedTuple, Self, runtime_checkable
+from typing import (
+    Protocol,
+    AsyncGenerator,
+    Final,
+    NamedTuple,
+    Self,
+    runtime_checkable,
+    cast,
+)
 from dataclasses import dataclass
 
 from tests.tasks import BackgroundTasks
@@ -132,6 +140,6 @@ async def visualization[T = object](
     background_tasks.schedule(args.visualizer(capture.data, key=args.key))
 
 
-def doc_example[*Args](*case: Args) -> tuple[*Args]:
+def doc_example[*Args](*case: *Args) -> tuple[*Args]:
     """Marks a parameterized test case as a documentation example."""
-    return param(*case, marks=mark.docs)
+    return cast(tuple[*Args], param(*case, marks=mark.docs))
