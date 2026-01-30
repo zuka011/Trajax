@@ -60,9 +60,13 @@ type MpccInputBatch = types.augmented.ControlInputBatch[
 type Planner = Mppi[MpccState, MpccInputSequence]
 type ObstacleStates = types.ObstacleStates
 type ObstacleStatesForTimeStep = types.ObstacleStatesForTimeStep
+type SampledObstacleStates = types.SampledObstacleStates
 type ObstaclePositions = types.Obstacle2dPositions
 type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
 type ObstacleSimulatorProvider = Callable[[], ObstacleSimulator]
+type RiskMetric = types.RiskMetric[
+    MpccStateBatch, ObstacleStatesForTimeStep, SampledObstacleStates
+]
 
 
 class NumPyObstaclePositionExtractor(
@@ -688,6 +692,7 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
+        risk_metric: RiskMetric = risk.mean_variance(gamma=0.5, sample_count=10),
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
@@ -788,9 +793,7 @@ class configure:
                     weight=weights.collision,
                     metric=(
                         risk_collector := (
-                            collectors.risk.decorating(
-                                risk.mean_variance(gamma=0.5, sample_count=10)
-                            )
+                            collectors.risk.decorating(risk_metric)
                             if use_covariance_propagation
                             else None
                         )

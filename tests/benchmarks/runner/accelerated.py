@@ -13,7 +13,7 @@ class JaxBenchmarkRunner:
         return JaxBenchmarkRunner()
 
     def __repr__(self) -> str:
-        return "JaxBenchmarkRunner"
+        return self.name
 
     def warm_up(self, target: BenchmarkTarget) -> None:
         result = target()
@@ -23,3 +23,10 @@ class JaxBenchmarkRunner:
         result = target()
         jax.block_until_ready(result)
         return result
+
+    def is_slow_for(self, *, risk_metric_sample_count: int) -> bool:
+        return False
+
+    @property
+    def name(self) -> str:
+        return "JAX"

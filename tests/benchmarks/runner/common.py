@@ -18,6 +18,15 @@ class BenchmarkRunner(Protocol):
         """Executes the benchmark target and returns its result."""
         ...
 
+    def is_slow_for(self, *, risk_metric_sample_count: int) -> bool:
+        """Indicates whether the runner is too slow for the given sample count."""
+        ...
+
+    @property
+    def name(self) -> str:
+        """The name of the benchmark runner."""
+        ...
+
 
 def run_benchmark[T](
     benchmark: BenchmarkFixture,

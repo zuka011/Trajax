@@ -18,7 +18,7 @@ class RiskMetricCreator[
         *,
         cost: rk.BatchCostFunction[StateT, SampledObstacleStateT, CostsT],
         backend: rk.Backend[CostsT, RiskT, ArrayT],
-    ) -> rk.RiskMetric[StateT, SampledObstacleStateT, RiskT]:
+    ) -> rk.RiskMetric[StateT, SampledObstacleStateT, CostsT, RiskT]:
         """Creates a risk metric based on the provided cost function and backend."""
         ...
 

@@ -383,14 +383,14 @@ wheels = [
 
 [[package]]
 name = "jaxtyping"
-version = "0.3.6"
+version = "0.3.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "wadler-lindig" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/25/0b2c2cd048fe03561d3ed8aa9d0242903606c31ee0ef329b2adae79ebc79/jaxtyping-0.3.6.tar.gz", hash = "sha256:88e5450c96a1bcaf37c74ae5ef60084b5d307727a198d31cc7eaeba9db3f42e7", size = 45681, upload-time = "2026-01-24T17:37:48.131Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/40/a2ea3ce0e3e5f540eb970de7792c90fa58fef1b27d34c83f9fa94fea4729/jaxtyping-0.3.7.tar.gz", hash = "sha256:3bd7d9beb7d3cb01a89f93f90581c6f4fff3e5c5dc3c9307e8f8687a040d10c4", size = 45721, upload-time = "2026-01-30T14:18:47.409Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/87/944bcf3cb5b82a1f7fb86e825e866eb3a72220d4bb0f2c163d7b122772f2/jaxtyping-0.3.6-py3-none-any.whl", hash = "sha256:179df02f6b5b704d2ebafd1946cc857e745b489328d668ff4f8555b02e8aa944", size = 56053, upload-time = "2026-01-24T17:37:46.472Z" },
+    { url = "https://files.pythonhosted.org/packages/78/42/caf65e9a0576a3abadc537e2f831701ba9081f21317fb3be87d64451587a/jaxtyping-0.3.7-py3-none-any.whl", hash = "sha256:303ab8599edf412eeb40bf06c863e3168fa186cf0e7334703fa741ddd7046e66", size = 56101, upload-time = "2026-01-30T14:18:45.954Z" },
 ]
 
 [[package]]
@@ -1033,16 +1033,16 @@ wheels = [
 
 [[package]]
 name = "riskit"
-version = "0.2.6"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jax" },
     { name = "jaxtyping" },
     { name = "numtypes" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/14/10d273b2f0b01a052ea0b81118a4c40df1970165bba71798f4ebcdf8812d/riskit-0.2.6.tar.gz", hash = "sha256:79a2d2b9618739ddb96af7f13162677bfc2957d94d5b5a0a6381c7aded9abbd2", size = 60139, upload-time = "2026-01-26T21:42:06.525Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/ab/259bb9df7aed76a7f995e37f270aeb965642ab03b90da832d0b0686ae83c/riskit-0.3.0.tar.gz", hash = "sha256:05ce881468b097e120d4703dad45c841a0c92863b1dd53dcb9b706a0cfe14dd0", size = 76136, upload-time = "2026-01-30T15:40:00.159Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/58/6dfbdbe3706506cfbb9158ae7faa4f83af2250d02d20e991706722ebf66b/riskit-0.2.6-py3-none-any.whl", hash = "sha256:bbefa059fed959deb0ccfd34baebbfd2d628d4875d84b3fc7632bdf11cae5e9e", size = 20459, upload-time = "2026-01-26T21:42:05.654Z" },
+    { url = "https://files.pythonhosted.org/packages/de/c0/1501a74183d5809fd05ef2ecd6e008b492ca38351850e1cf6be0bba871e4/riskit-0.3.0-py3-none-any.whl", hash = "sha256:7a368da20a2bbfd34eebaed241df416408d18cf119e044212f1677aa678b3fd8", size = 36866, upload-time = "2026-01-30T15:39:59.228Z" },
 ]
 
 [[package]]
@@ -1185,9 +1185,9 @@ requires-dist = [
     { name = "beartype", specifier = ">=0.22.9" },
     { name = "deepmerge", specifier = ">=2.0" },
     { name = "jax", specifier = ">=0.9.0" },
-    { name = "jaxtyping", specifier = ">=0.3.6" },
+    { name = "jaxtyping", specifier = ">=0.3.7" },
     { name = "numtypes", specifier = ">=0.5.1" },
-    { name = "riskit", specifier = ">=0.2.6" },
+    { name = "riskit", specifier = ">=0.3.0" },
     { name = "scipy", specifier = ">=1.17.0" },
 ]
 
