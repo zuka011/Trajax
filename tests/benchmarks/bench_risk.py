@@ -25,7 +25,7 @@ class MpccConfigurationProvider(Protocol):
         ...
 
 
-@mark.slow_benchmark(group="mpcc-risk")
+@mark.risk_benchmark
 class bench_mpcc_risk:
     @staticmethod
     def cases(runner, risk, mpcc, reference, obstacles) -> Sequence[tuple]:
@@ -56,6 +56,7 @@ class bench_mpcc_risk:
                 name,
             )
             for name, create_risk_metric in [
+                ("No Metric", lambda sample_count: risk.none()),
                 ("Expected Value", risk.expected_value),
                 ("Mean Variance", partial(risk.mean_variance, gamma=0.1)),
                 ("VaR", partial(risk.var, alpha=0.9)),

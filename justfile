@@ -12,11 +12,16 @@ bench-baseline:
 
 # Generate report for benchmark results
 bench-report *args:
-    uv run python tests/benchmarks/report.py {{ args }}
+    uv run python -m tests.benchmarks.report {{ args }}
 
 # Run benchmarks then generate report
 bench-and-report *args: bench
-    uv run python tests/benchmarks/report.py show benchmark.json {{ args }}
+    uv run python -m tests.benchmarks.report show benchmark.json {{ args }}
+
+# Run risk metric benchmarks then generate report
+bench-risk-and-report *args:
+    uv run pytest -m risk_benchmark --benchmark-json=benchmark_risk.json
+    uv run python -m tests.benchmarks.report show benchmark_risk.json {{ args }}
 
 [unix]
 check modules=default_modules:

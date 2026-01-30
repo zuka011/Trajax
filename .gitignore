@@ -13,7 +13,8 @@ wheels/
 .pytest_cache
 .ruff_cache
 .codspeed
-benchmark.json
+benchmark*.json
+benchmark*.html
 
 # Test visualizations
 **/visualizations/
