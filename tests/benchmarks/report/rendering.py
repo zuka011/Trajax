@@ -17,6 +17,9 @@ def environment(data: BenchmarkData, console: Console) -> None:
         lines.append(f"Python: {info.python_version or 'unknown'}")
         lines.append(f"Platform: {info.platform or 'unknown'}")
         lines.append(f"CPU: {info.cpu.get('brand_raw', 'unknown')}")
+        lines.append(
+            f"GPU: {', '.join(it.get('name', 'unknown') for it in info.gpu.get('devices', []))} - {info.gpu.get('count', 0)} device(s)"
+        )
 
     if data.commit_info and data.commit_info.id:
         lines.append(f"Commit: {data.commit_info.id[:8]}")

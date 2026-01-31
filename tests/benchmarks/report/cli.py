@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 from pathlib import Path
+from io import StringIO
 
 from . import io, parsing, rendering
 
@@ -41,7 +42,9 @@ async def show_async(
     save_tasks: list[Any] = []
 
     if output_html:
-        html_console = Console(record=True, force_terminal=True, width=120)
+        html_console = Console(
+            record=True, force_terminal=True, width=120, file=StringIO()
+        )
         rendering.full(data, html_console)
         save_tasks.append(io.save_html(output_html, html_console, console))
 

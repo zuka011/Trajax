@@ -1,12 +1,20 @@
-from typing import Generator
+import asyncio
+from typing import Generator, MutableMapping
 
 import jax
 
-from pytest import fixture
+from tests.benchmarks.runner import gpu_info
+from pytest import fixture, Config
 
 
 def pytest_configure(config) -> None:
     jax.config.update("jax_enable_x64", True)
+
+
+def pytest_benchmark_update_machine_info(
+    config: Config, machine_info: MutableMapping[str, object]
+):
+    machine_info["gpu"] = asyncio.run(gpu_info())
 
 
 @fixture(scope="session", autouse=True)

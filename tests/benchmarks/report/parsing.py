@@ -3,7 +3,7 @@ from typing import Any, Final
 from .models import Benchmark, BenchmarkData, ExportData, ParsedBenchmark
 
 
-BACKENDS: Final = {"NumPy", "JAX"}
+BACKENDS: Final = {"NumPy", "JAX", "JAX (CPU)", "JAX (GPU)"}
 
 
 def implementation(benchmark: Benchmark) -> str:
@@ -136,6 +136,7 @@ def build_machine_info(data: BenchmarkData) -> dict[str, Any]:
         "python_version": data.machine_info.python_version,
         "platform": data.machine_info.platform,
         "cpu": data.machine_info.cpu,
+        "gpu": data.machine_info.gpu,
     }
 
 

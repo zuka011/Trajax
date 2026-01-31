@@ -3,7 +3,7 @@ from functools import partial
 
 from trajax import ControlInputSequence, risk
 
-from tests.examples import mpcc, reference, obstacles
+from tests.examples import mpcc, reference, obstacles, sampling
 from tests.benchmarks.runner import (
     run_benchmark,
     BenchmarkRunner,
@@ -28,21 +28,20 @@ class MpccConfigurationProvider(Protocol):
 @mark.risk_benchmark
 class bench_mpcc_risk:
     @staticmethod
-    def cases(runner, risk, mpcc, reference, obstacles) -> Sequence[tuple]:
+    def cases(runner, sampling, risk, mpcc, reference, obstacles) -> Sequence[tuple]:
         return [
             (
-                runner.create(),
+                runner(),
                 partial(
                     lambda sample_count, *, create_risk_metric: MpccConfiguration(
                         planner=(
                             configuration := mpcc.planner_from_mpcc(
                                 reference=reference.slalom,
                                 obstacles=obstacles.dynamic.slalom,
+                                sampling=sampling(rollout_count=1024),
                                 use_covariance_propagation=True,
-                                risk_metric=(
-                                    risk_metric := create_risk_metric(
-                                        sample_count=sample_count
-                                    )
+                                risk_metric=create_risk_metric(
+                                    sample_count=sample_count
                                 ),
                             )
                         ).planner,
@@ -69,27 +68,43 @@ class bench_mpcc_risk:
         ["runner", "create_configuration", "risk_metric_name"],
         all_cases := [
             *cases(
-                runner=NumPyBenchmarkRunner,
+                runner=NumPyBenchmarkRunner.create,
                 risk=risk.numpy,
                 mpcc=mpcc.numpy,
                 reference=reference.numpy,
                 obstacles=obstacles.numpy,
+                sampling=sampling.numpy,
             ),
             *cases(
-                runner=JaxBenchmarkRunner,
+                runner=partial(JaxBenchmarkRunner.create, device="CPU"),
                 risk=risk.jax,
                 mpcc=mpcc.jax,
                 reference=reference.jax,
                 obstacles=obstacles.jax,
+                sampling=sampling.jax,
             ),
-        ],
+        ]
+        + (
+            [
+                *cases(
+                    runner=partial(JaxBenchmarkRunner.create, device="GPU"),
+                    risk=risk.jax,
+                    mpcc=mpcc.jax,
+                    reference=reference.jax,
+                    obstacles=obstacles.jax,
+                    sampling=sampling.jax,
+                )
+            ]
+            if JaxBenchmarkRunner.supports(device="GPU")
+            else []
+        ),
         ids=[
             f"{runner.name}-{risk_metric_name}"
             for runner, _, risk_metric_name in all_cases
         ],
     )
     @mark.parametrize(
-        "sample_count", [10, 50, 100, 500, 1000], ids=lambda it: f"samples={it}"
+        "sample_count", [10, 50, 100, 250, 500, 1000], ids=lambda it: f"samples={it}"
     )
     def bench(
         self,

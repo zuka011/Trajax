@@ -13,6 +13,11 @@ class obstacles:
     jax: Final = accelerated.obstacles
 
 
+class sampling:
+    numpy: Final = basic.NumPySamplingOptions
+    jax: Final = accelerated.JaxSamplingOptions
+
+
 class mpcc:
     numpy: Final = basic.configure
     jax: Final = accelerated.configure

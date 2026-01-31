@@ -54,6 +54,7 @@ class MachineInfo:
     python_version: str = ""
     platform: str = ""
     cpu: dict[str, Any] = field(default_factory=dict)
+    gpu: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
