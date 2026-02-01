@@ -23,7 +23,7 @@ from trajax_visualizer import MpccSimulationResult, visualizer
 
 
 from tests.utilities import VisualizationData, doc_example
-from tests.examples import mpcc, reference, obstacles
+from tests.examples import mpcc, reference, obstacles, sampling, weights
 from pytest import mark
 
 
@@ -285,6 +285,18 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
                 use_covariance_propagation=True,
             ),
             "jax-from-mpcc-dynamic-uncertain",
+        ),
+        doc_example(
+            mpcc.jax.planner_from_mpcc(
+                reference=reference.jax.highway,
+                obstacles=obstacles.jax.dynamic.highway,
+                sampling=sampling.jax.modified(steering_standard_deviation=0.025),
+                weights=weights.jax.modified(contouring=75.0),
+                horizon=35,
+                use_covariance_propagation=True,
+                use_halton=True,
+            ),
+            "jax-from-mpcc-highway-uncertain",
         ),
     ],
 )

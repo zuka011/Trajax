@@ -162,6 +162,10 @@ class JaxMpccPlannerWeights:
     collision: float = 1500.0
     boundary: float = 1000.0
 
+    @staticmethod
+    def modified(*, contouring: float) -> "JaxMpccPlannerWeights":
+        return JaxMpccPlannerWeights(contouring=contouring)
+
 
 @dataclass(frozen=True)
 class JaxSamplingOptions:
@@ -173,6 +177,14 @@ class JaxSamplingOptions:
     physical_seed: int = 42
     virtual_seed: int = 43
     obstacle_seed: int = 44
+
+    @staticmethod
+    def modified(*, steering_standard_deviation: float) -> "JaxSamplingOptions":
+        return JaxSamplingOptions(
+            physical_standard_deviation=array(
+                [0.5, steering_standard_deviation], shape=(2,)
+            )
+        )
 
 
 class reference:
@@ -288,6 +300,26 @@ class reference:
         path_length=100.0,
     )
 
+    highway: Final = trajectory.waypoints(
+        points=array(
+            [
+                [0.0, 0.0],
+                [20.0, 1.0],
+                [40.0, 3.0],
+                [60.0, 4.0],
+                [80.0, 4.0],
+                [100.0, 3.0],
+                [120.0, 1.0],
+                [140.0, 0.0],
+                [160.0, -1.0],
+                [180.0, -1.5],
+                [200.0, -1.0],
+            ],
+            shape=(11, 2),
+        ),
+        path_length=200.0,
+    )
+
 
 class obstacles:
     @staticmethod
@@ -381,6 +413,27 @@ class obstacles:
                 velocities=array(
                     [[0.0, -1.5]],
                     shape=(1, 2),
+                ),
+            )
+
+        @staticmethod
+        def highway() -> ObstacleSimulator:
+            return create_obstacles.dynamic(
+                positions=array(
+                    [
+                        [30.0, 5.0],
+                        [80.0, 4.0],
+                        [10.0, 7.0],
+                    ],
+                    shape=(3, 2),
+                ),
+                velocities=array(
+                    [
+                        [2.0, 0.1],
+                        [-3.0, -0.1],
+                        [3.0, 0.1],
+                    ],
+                    shape=(3, 2),
                 ),
             )
 
@@ -696,7 +749,7 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
-        risk_metric: RiskMetric = risk.mean_variance(gamma=0.5, sample_count=10),
+        risk_metric: RiskMetric = risk.mean_variance(gamma=0.1, sample_count=10),
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
@@ -830,7 +883,7 @@ class configure:
                     "periodic": cyclic_reference,
                 },
             },
-            filter_function=filters.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=15, polynomial_order=3),
         )
 
         planner = (

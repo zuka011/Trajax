@@ -18,6 +18,11 @@ class sampling:
     jax: Final = accelerated.JaxSamplingOptions
 
 
+class weights:
+    numpy: Final = basic.NumPyMpccPlannerWeights
+    jax: Final = accelerated.JaxMpccPlannerWeights
+
+
 class mpcc:
     numpy: Final = basic.configure
     jax: Final = accelerated.configure
