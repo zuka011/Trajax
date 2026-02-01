@@ -33,13 +33,17 @@ from .unicycle import (
     NumPyUnicyclePositions as NumPyUnicyclePositions,
     NumPyUnicycleControlInputSequence as NumPyUnicycleControlInputSequence,
     NumPyUnicycleControlInputBatch as NumPyUnicycleControlInputBatch,
+    NumPyUnicycleObstacleStateSequences as NumPyUnicycleObstacleStateSequences,
     NumPyUnicycleModel as NumPyUnicycleModel,
+    NumPyUnicycleObstacleModel as NumPyUnicycleObstacleModel,
     JaxUnicycleState as JaxUnicycleState,
     JaxUnicycleStateSequence as JaxUnicycleStateSequence,
     JaxUnicycleStateBatch as JaxUnicycleStateBatch,
     JaxUnicyclePositions as JaxUnicyclePositions,
     JaxUnicycleControlInputSequence as JaxUnicycleControlInputSequence,
     JaxUnicycleControlInputBatch as JaxUnicycleControlInputBatch,
+    JaxUnicycleObstacleStateSequences as JaxUnicycleObstacleStateSequences,
     JaxUnicycleModel as JaxUnicycleModel,
+    JaxUnicycleObstacleModel as JaxUnicycleObstacleModel,
 )
 from .factory import model as model

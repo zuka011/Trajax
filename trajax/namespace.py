@@ -119,12 +119,14 @@ from trajax.models import (
     NumPyUnicyclePositions,
     NumPyUnicycleControlInputSequence,
     NumPyUnicycleControlInputBatch,
+    NumPyUnicycleObstacleStateSequences,
     JaxUnicycleState,
     JaxUnicycleStateSequence,
     JaxUnicycleStateBatch,
     JaxUnicyclePositions,
     JaxUnicycleControlInputSequence,
     JaxUnicycleControlInputBatch,
+    JaxUnicycleObstacleStateSequences,
 )
 from trajax.costs import (
     NumPyContouringCost,
@@ -384,6 +386,9 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 NumPyUnicycleControlInputBatch[T, M]
             )
+            type ObstacleStateSequences[T: int = Any, K: int = Any] = (
+                NumPyUnicycleObstacleStateSequences[T, K]
+            )
 
             state: Final = NumPyUnicycleState
             state_sequence: Final = NumPyUnicycleStateSequence
@@ -554,6 +559,9 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 JaxUnicycleControlInputBatch[T, M]
             )
+            type ObstacleStateSequences[T: int = Any, K: int = Any] = (
+                JaxUnicycleObstacleStateSequences[T, K]
+            )
 
             state: Final = JaxUnicycleState
             state_sequence: Final = JaxUnicycleStateSequence
@@ -667,6 +675,7 @@ class classes:
             Positions: Final = NumPyUnicyclePositions
             ControlInputSequence: Final = NumPyUnicycleControlInputSequence
             ControlInputBatch: Final = NumPyUnicycleControlInputBatch
+            ObstacleStateSequences: Final = NumPyUnicycleObstacleStateSequences
 
         class augmented:
             State: Final = NumPyAugmentedState
@@ -723,6 +732,7 @@ class classes:
             Positions: Final = JaxUnicyclePositions
             ControlInputSequence: Final = JaxUnicycleControlInputSequence
             ControlInputBatch: Final = JaxUnicycleControlInputBatch
+            ObstacleStateSequences: Final = JaxUnicycleObstacleStateSequences
 
         class augmented:
             State: Final = JaxAugmentedState

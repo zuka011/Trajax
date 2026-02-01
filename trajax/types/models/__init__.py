@@ -48,4 +48,6 @@ from .unicycle import (
     UnicyclePositions as UnicyclePositions,
     UnicycleControlInputSequence as UnicycleControlInputSequence,
     UnicycleControlInputBatch as UnicycleControlInputBatch,
+    NumPyUnicycleObstacleStatesHistory as NumPyUnicycleObstacleStatesHistory,
+    JaxUnicycleObstacleStatesHistory as JaxUnicycleObstacleStatesHistory,
 )

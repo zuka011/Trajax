@@ -75,6 +75,8 @@ from .models import (
     UnicyclePositions as UnicyclePositions,
     UnicycleControlInputSequence as UnicycleControlInputSequence,
     UnicycleControlInputBatch as UnicycleControlInputBatch,
+    NumPyUnicycleObstacleStatesHistory as NumPyUnicycleObstacleStatesHistory,
+    JaxUnicycleObstacleStatesHistory as JaxUnicycleObstacleStatesHistory,
     IntegratorState as IntegratorState,
     IntegratorStateSequence as IntegratorStateSequence,
     IntegratorStateBatch as IntegratorStateBatch,

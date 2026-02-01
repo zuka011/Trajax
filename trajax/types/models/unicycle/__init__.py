@@ -12,3 +12,9 @@ from .common import (
     UnicycleControlInputSequence as UnicycleControlInputSequence,
     UnicycleControlInputBatch as UnicycleControlInputBatch,
 )
+from .basic import (
+    NumPyUnicycleObstacleStatesHistory as NumPyUnicycleObstacleStatesHistory,
+)
+from .accelerated import (
+    JaxUnicycleObstacleStatesHistory as JaxUnicycleObstacleStatesHistory,
+)

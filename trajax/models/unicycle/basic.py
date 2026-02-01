@@ -8,6 +8,7 @@ from trajax.types import (
     NumPyStateBatch,
     NumPyControlInputSequence,
     NumPyControlInputBatch,
+    NumPyUnicycleObstacleStatesHistory,
     UnicycleState,
     UnicycleStateSequence,
     UnicycleStateBatch,
@@ -19,6 +20,8 @@ from trajax.types import (
     UnicycleD_u,
     UNICYCLE_D_U,
     DynamicalModel,
+    ObstacleModel,
+    EstimatedObstacleStates,
 )
 
 from numtypes import Array, Dims, D, shape_of, array
@@ -313,6 +316,100 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
         return self._array
 
 
+@dataclass(frozen=True)
+class NumPyUnicycleObstacleStates[K: int]:
+    array: Array[Dims[UnicycleD_x, K]]
+
+    @staticmethod
+    def create(
+        *,
+        x: Array[Dims[K]],
+        y: Array[Dims[K]],
+        heading: Array[Dims[K]],
+    ) -> "NumPyUnicycleObstacleStates[K]":
+        """Creates NumPy unicycle obstacle states from individual state components."""
+        array = np.stack([x, y, heading], axis=0)
+
+        assert shape_of(array, matches=(UNICYCLE_D_X, x.shape[0]))
+
+        return NumPyUnicycleObstacleStates(array)
+
+
+@dataclass(frozen=True)
+class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
+    array: Array[Dims[T, UnicycleD_x, K]]
+
+    @staticmethod
+    def create(
+        *,
+        x: Array[Dims[T, K]],
+        y: Array[Dims[T, K]],
+        heading: Array[Dims[T, K]],
+    ) -> "NumPyUnicycleObstacleStateSequences[T, K]":
+        """Creates NumPy unicycle obstacle state sequences from individual state components."""
+        T, K = x.shape
+        array = np.stack([x, y, heading], axis=1)
+
+        assert shape_of(array, matches=(T, UNICYCLE_D_X, K))
+
+        return NumPyUnicycleObstacleStateSequences(array)
+
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, UnicycleD_x, K]]:
+        return self.array
+
+    def x(self) -> Array[Dims[T, K]]:
+        return self.array[:, 0, :]
+
+    def y(self) -> Array[Dims[T, K]]:
+        return self.array[:, 1, :]
+
+    def heading(self) -> Array[Dims[T, K]]:
+        return self.array[:, 2, :]
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> UnicycleD_x:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
+
+@dataclass(frozen=True)
+class NumPyUnicycleObstacleVelocities[K: int]:
+    linear_velocities: Array[Dims[K]]
+    angular_velocities: Array[Dims[K]]
+
+    @property
+    def count(self) -> K:
+        return self.linear_velocities.shape[0]
+
+
+@dataclass(frozen=True)
+class NumPyUnicycleObstacleControlInputSequences[T: int, K: int]:
+    array: Array[Dims[T, UnicycleD_u, K]]
+
+    @staticmethod
+    def create(
+        *,
+        linear_velocities: Array[Dims[T, K]],
+        angular_velocities: Array[Dims[T, K]],
+    ) -> "NumPyUnicycleObstacleControlInputSequences[T, K]":
+        """Creates NumPy unicycle obstacle control input sequences from individual input components."""
+        T, K = linear_velocities.shape
+        array = np.stack([linear_velocities, angular_velocities], axis=1)
+
+        assert shape_of(array, matches=(T, UNICYCLE_D_U, K))
+
+        return NumPyUnicycleObstacleControlInputSequences(array)
+
+
 @dataclass(kw_only=True, frozen=True)
 class NumPyUnicycleModel(
     DynamicalModel[
@@ -406,6 +503,93 @@ class NumPyUnicycleModel(
         return self._time_step_size
 
 
+@dataclass(kw_only=True, frozen=True)
+class NumPyUnicycleObstacleModel(
+    ObstacleModel[
+        NumPyUnicycleObstacleStatesHistory,
+        NumPyUnicycleObstacleStates,
+        NumPyUnicycleObstacleVelocities,
+        NumPyUnicycleObstacleControlInputSequences,
+        NumPyUnicycleObstacleStateSequences,
+    ]
+):
+    time_step_size: float
+
+    @staticmethod
+    def create(*, time_step_size: float) -> "NumPyUnicycleObstacleModel":
+        """Creates a NumPy unicycle obstacle model."""
+        return NumPyUnicycleObstacleModel(time_step_size=time_step_size)
+
+    def estimate_state_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleVelocities[K]
+    ]:
+        assert history.horizon > 0, "History must have at least one time step."
+
+        if history.horizon < 2:
+            linear_velocities = np.zeros((history.count))
+            angular_velocities = np.zeros((history.count))
+        else:
+            linear_velocities = estimate_speeds_from(
+                history, time_step_size=self.time_step_size
+            )
+            angular_velocities = estimate_angular_velocities_from(
+                history, time_step_size=self.time_step_size
+            )
+
+        assert shape_of(linear_velocities, matches=(history.count,))
+        assert shape_of(angular_velocities, matches=(history.count,))
+
+        return EstimatedObstacleStates(
+            states=NumPyUnicycleObstacleStates.create(
+                x=history.x()[-1],
+                y=history.y()[-1],
+                heading=history.heading()[-1],
+            ),
+            velocities=NumPyUnicycleObstacleVelocities(
+                linear_velocities=linear_velocities,
+                angular_velocities=angular_velocities,
+            ),
+        )
+
+    def input_to_maintain[K: int](
+        self,
+        velocities: NumPyUnicycleObstacleVelocities[K],
+        *,
+        states: NumPyUnicycleObstacleStates[K],
+        horizon: int,
+    ) -> NumPyUnicycleObstacleControlInputSequences[int, K]:
+        return NumPyUnicycleObstacleControlInputSequences.create(
+            linear_velocities=np.tile(
+                velocities.linear_velocities[np.newaxis, :], (horizon, 1)
+            ),
+            angular_velocities=np.tile(
+                velocities.angular_velocities[np.newaxis, :], (horizon, 1)
+            ),
+        )
+
+    def forward[T: int, K: int](
+        self,
+        *,
+        current: NumPyUnicycleObstacleStates[K],
+        inputs: NumPyUnicycleObstacleControlInputSequences[T, K],
+    ) -> NumPyUnicycleObstacleStateSequences[T, K]:
+        result = simulate(
+            inputs.array,
+            current.array,
+            time_step_size=self.time_step_size,
+            speed_limits=(float("-inf"), float("inf")),
+            angular_velocity_limits=(float("-inf"), float("inf")),
+        )
+
+        return NumPyUnicycleObstacleStateSequences.create(
+            x=result[:, 0, :],
+            y=result[:, 1, :],
+            heading=result[:, 2, :],
+        )
+
+
 def simulate[T: int, N: int](
     inputs: ControlInputBatchArray[T, N],
     initial: StatesAtTimeStep[N],
@@ -454,3 +638,40 @@ def step[M: int](
     new_theta = theta + angular_velocity * time_step_size
 
     return np.stack([new_x, new_y, new_theta])
+
+
+def estimate_speeds_from[K: int](
+    history: NumPyUnicycleObstacleStatesHistory[int, K], *, time_step_size: float
+) -> Array[Dims[K]]:
+    assert history.horizon >= 2, (
+        "At least two history steps are required to estimate speed."
+    )
+
+    delta_x = history.x()[-1] - history.x()[-2]
+    delta_y = history.y()[-1] - history.y()[-2]
+
+    speeds = np.sqrt(delta_x**2 + delta_y**2) / time_step_size
+
+    assert shape_of(speeds, matches=(history.count,), name="estimated speeds")
+
+    return speeds
+
+
+def estimate_angular_velocities_from[K: int](
+    history: NumPyUnicycleObstacleStatesHistory[int, K], *, time_step_size: float
+) -> Array[Dims[K]]:
+    assert history.horizon >= 2, (
+        "At least two history steps are required to estimate angular velocity."
+    )
+
+    angular_velocities = (
+        history.heading()[-1] - history.heading()[-2]
+    ) / time_step_size
+
+    assert shape_of(
+        angular_velocities,
+        matches=(history.count,),
+        name="estimated angular velocities",
+    )
+
+    return angular_velocities

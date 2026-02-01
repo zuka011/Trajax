@@ -104,6 +104,50 @@ class JaxBicyclePredictionCreator:
         )
 
 
+class NumPyUnicyclePredictionCreator:
+    def __call__(
+        self,
+        *,
+        states: types.numpy.unicycle.ObstacleStateSequences,
+        covariances: types.numpy.PositionCovariance | None,
+    ) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=states.x(),
+            y=states.y(),
+            heading=states.heading(),
+            covariance=covariances,
+        )
+
+    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+        return data.numpy.obstacle_states(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
+
+
+class JaxUnicyclePredictionCreator:
+    def __call__(
+        self,
+        *,
+        states: types.jax.unicycle.ObstacleStateSequences,
+        covariances: types.jax.PositionCovariance,
+    ) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=states.x(),
+            y=states.y(),
+            heading=states.heading(),
+            covariance=covariances,
+        )
+
+    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+        return data.jax.obstacle_states(
+            x=jnp.empty((horizon, 0)),
+            y=jnp.empty((horizon, 0)),
+            heading=jnp.empty((horizon, 0)),
+        )
+
+
 class test_that_obstacle_motion_is_predicted_correctly:
     @staticmethod
     def cases(
@@ -111,6 +155,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
         model,
         integrator_prediction_creator,
         bicycle_prediction_creator,
+        unicycle_prediction_creator,
         data,
     ) -> Sequence[tuple]:
         return [
@@ -432,6 +477,203 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     ),
                 ),
             ],
+            *[  # Unicycle CL model tests
+                (  # No history
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 5),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        x=np.empty((T_h := 0, K := 0)),
+                        y=np.empty((T_h, K)),
+                        heading=np.empty((T_h, K)),
+                    ),
+                    expected := data.obstacle_states(
+                        x=np.empty((T_p, K)),
+                        y=np.empty((T_p, K)),
+                        heading=np.empty((T_p, K)),
+                    ),
+                ),
+                (  # Single state, zero velocity - stays still
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 5),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        x=array([[x := 3.0]], shape=(T_h := 1, K := 1)),
+                        y=array([[y := 2.0]], shape=(T_h, K)),
+                        heading=array([[theta := np.pi / 4]], shape=(T_h, K)),
+                    ),
+                    expected := data.obstacle_states(
+                        x=np.full((T_p, K), x),
+                        y=np.full((T_p, K), y),
+                        heading=np.full((T_p, K), theta),
+                    ),
+                ),
+                (  # Straight line motion along x-axis (θ=0, ω=0)
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        x=array([[-1.0], [4.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[2.0], [2.0]], shape=(T_h, K)),
+                        heading=array([[0.0], [0.0]], shape=(T_h, K)),
+                    ),
+                    # v = 50 m/s, ω = 0; x increases by 5.0 per step
+                    expected := data.obstacle_states(
+                        x=array([[9.0], [14.0], [19.0], [24.0]], shape=(T_p, K)),
+                        y=np.full((T_p, K), 2.0),
+                        heading=np.full((T_p, K), 0.0),
+                    ),
+                ),
+                (  # Stationary obstacle (v=0, ω=0)
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[1.0], [1.0]], shape=(T_h, K)),
+                        heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+                    ),
+                    expected := data.obstacle_states(
+                        x=np.full((T_p, K), 0.0),
+                        y=np.full((T_p, K), 1.0),
+                        heading=np.full((T_p, K), np.pi / 2),
+                    ),
+                ),
+                (  # Multiple obstacles with different velocities and headings
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 3),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        # Obstacle 0 - v = 10 m/s, θ=0 (moving +x)
+                        # Obstacle 1 - v = 10 m/s, θ=π/2 (moving +y)
+                        # Obstacle 2 - v = 20 m/s, θ=π (moving -x)
+                        x=array(
+                            [[0.0, 5.0, 10.0], [1.0, 5.0, 8.0]],
+                            shape=(T_h := 2, K := 3),
+                        ),
+                        y=array([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]], shape=(T_h, K)),
+                        heading=array(
+                            [[0.0, np.pi / 2, np.pi], [0.0, np.pi / 2, np.pi]],
+                            shape=(T_h, K),
+                        ),
+                    ),
+                    expected := data.obstacle_states(
+                        x=array(
+                            [[2.0, 5.0, 6.0], [3.0, 5.0, 4.0], [4.0, 5.0, 2.0]],
+                            shape=(T_p, K),
+                        ),
+                        y=array(
+                            [[0.0, 2.0, 0.0], [0.0, 3.0, 0.0], [0.0, 4.0, 0.0]],
+                            shape=(T_p, K),
+                        ),
+                        heading=array([[0.0, np.pi / 2, np.pi]] * T_p, shape=(T_p, K)),
+                    ),
+                ),
+                (  # Turning motion with constant ω
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        # v = 10 m/s (Δ pos = 1.0 per step along heading)
+                        # ω = 0.5 rad/s (Δ θ = 0.05 rad per step)
+                        x=array([[x_0 := 0.0], [x_1 := 2.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[0.0], [0.0]], shape=(T_h, K)),
+                        # ω * dt = 0.05
+                        heading=array(
+                            [[theta_0 := 0.0], [theta_1 := 0.05]], shape=(T_h, K)
+                        ),
+                    ),
+                    # Prediction: θ increases by 0.05 each step, path curves
+                    # Same as bicycle for this case since both predict constant ω
+                    expected := data.obstacle_states(
+                        x=array(
+                            [
+                                [
+                                    x_1
+                                    + (v := x_1 - x_0)
+                                    * np.cos((w := theta_1 - theta_0) * 1)
+                                ],
+                                [x_1 + v * np.cos(w * 1) + v * np.cos(w * 2)],
+                                [
+                                    x_1
+                                    + v * np.cos(w * 1)
+                                    + v * np.cos(w * 2)
+                                    + v * np.cos(w * 3)
+                                ],
+                                [
+                                    x_1
+                                    + v * np.cos(w * 1)
+                                    + v * np.cos(w * 2)
+                                    + v * np.cos(w * 3)
+                                    + v * np.cos(w * 4)
+                                ],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        y=array(
+                            [
+                                [v * np.sin(w * 1)],
+                                [v * np.sin(w * 1) + v * np.sin(w * 2)],
+                                [
+                                    v * np.sin(w * 1)
+                                    + v * np.sin(w * 2)
+                                    + v * np.sin(w * 3)
+                                ],
+                                [
+                                    v * np.sin(w * 1)
+                                    + v * np.sin(w * 2)
+                                    + v * np.sin(w * 3)
+                                    + v * np.sin(w * 4)
+                                ],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        heading=array(
+                            [
+                                [theta_1 + w * 1],
+                                [theta_1 + w * 2],
+                                [theta_1 + w * 3],
+                                [theta_1 + w * 4],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                    ),
+                ),
+                (  # Pure rotation (v=0, ω≠0) - spinning in place
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=unicycle_prediction_creator(),
+                    ),
+                    history := data.obstacle_states(
+                        # v = 0 (stationary position), ω = 1.0 rad/s
+                        x=array([[5.0], [5.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[3.0], [3.0]], shape=(T_h, K)),
+                        heading=array([[0.0], [0.1]], shape=(T_h, K)),  # ω * dt = 0.1
+                    ),
+                    # Position stays constant, only heading changes
+                    expected := data.obstacle_states(
+                        x=np.full((T_p, K), 5.0),
+                        y=np.full((T_p, K), 3.0),
+                        heading=array(
+                            [[0.2], [0.3], [0.4], [0.5]],
+                            shape=(T_p, K),
+                        ),
+                    ),
+                ),
+            ],
         ]
 
     @mark.parametrize(
@@ -442,6 +684,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                 model=model.numpy,
                 integrator_prediction_creator=NumPyIntegratorPredictionCreator,
                 bicycle_prediction_creator=NumPyBicyclePredictionCreator,
+                unicycle_prediction_creator=NumPyUnicyclePredictionCreator,
                 data=data.numpy,
             ),
             *cases(
@@ -449,6 +692,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                 model=model.jax,
                 integrator_prediction_creator=JaxIntegratorPredictionCreator,
                 bicycle_prediction_creator=JaxBicyclePredictionCreator,
+                unicycle_prediction_creator=JaxUnicyclePredictionCreator,
                 data=data.jax,
             ),
         ],

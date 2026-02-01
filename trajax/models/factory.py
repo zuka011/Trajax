@@ -12,7 +12,12 @@ from trajax.models.bicycle import (
     JaxBicycleModel,
     JaxBicycleObstacleModel,
 )
-from trajax.models.unicycle import NumPyUnicycleModel, JaxUnicycleModel
+from trajax.models.unicycle import (
+    NumPyUnicycleModel,
+    NumPyUnicycleObstacleModel,
+    JaxUnicycleModel,
+    JaxUnicycleObstacleModel,
+)
 
 
 class model:
@@ -27,6 +32,7 @@ class model:
 
         class unicycle:
             dynamical: Final = NumPyUnicycleModel.create
+            obstacle: Final = NumPyUnicycleObstacleModel.create
 
     class jax:
         class integrator:
@@ -39,3 +45,4 @@ class model:
 
         class unicycle:
             dynamical: Final = JaxUnicycleModel.create
+            obstacle: Final = JaxUnicycleObstacleModel.create
