@@ -671,7 +671,6 @@ def simulate(
     steering_limits: tuple[Scalar, Scalar],
     acceleration_limits: tuple[Scalar, Scalar],
 ) -> StateBatchArray:
-    @jaxtyped
     def do_step(
         state: StatesAtTimeStep, control: ControlInputsAtTimeStep
     ) -> tuple[StatesAtTimeStep, StatesAtTimeStep]:

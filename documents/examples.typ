@@ -1,7 +1,7 @@
 #import "@preview/zero:0.5.0": num
 #import "@preview/suiji:0.4.0": gen-rng-f, normal-f
 #import "@preview/cetz:0.4.2"
-#import "@local/roboter:0.3.1": (
+#import "@local/roboter:0.3.2": (
   draw,
   curves,
   zero-inputs,
@@ -15,6 +15,8 @@
   with-visualizers,
   kinematic-bicycle,
   bicycle-theme,
+  kinematic-unicycle,
+  unicycle-theme,
 )
 
 #let grid-color = gray.transparentize(80%)
@@ -153,6 +155,17 @@
       chassis-width: 3.5,
       heading: 45deg,
       theme: bicycle-theme(angle: red, velocity: blue),
+    )
+  })
+}
+
+#let kinematic-unicycle-diagram() = {
+  draw.diagram({
+    draw.grid((0, 0), (8, 4), color: grid-color)
+    kinematic-unicycle(
+      position: (4, 2),
+      heading: 45deg,
+      theme: unicycle-theme(angle: red, velocity: blue),
     )
   })
 }

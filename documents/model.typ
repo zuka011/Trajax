@@ -2,6 +2,7 @@
 #import "examples.typ": (
   mppi-example-diagram,
   kinematic-bicycle-diagram,
+  kinematic-unicycle-diagram,
   tracking-error-diagram,
 )
 #import "@local/roboter:0.3.1": function, algorithm, definition, model, draw
@@ -73,6 +74,8 @@ The exact algorithm is as follows:
 
 == Dynamical Model
 
+=== Kinematic Bicycle Model (KBM)
+
 A common choice for the dynamical model of a wheeled robot is the *kinematic bicycle model*. This model represents the robot as a bicycle with a single front and a single rear wheel. Other than simplifying the number of wheels, the model also assumes that there is no slip between the wheels and the ground. This assumption is not necessarily true at high speeds or during sharp turns, so we should keep that in mind. Here's a diagram for the model:
 
 #figure(
@@ -100,7 +103,7 @@ The state $#state-single := [x quad y quad theta quad v]$ of the robot is repres
   where $L$ is the wheelbase (distance between the front and rear axles).
 ]
 
-=== Euler Integration
+=== Euler Integration for KBM
 
 #let delta-t = $Delta t$
 
@@ -132,6 +135,61 @@ Where $(dot)_t$ represents the value of $(dot)$ at time step $t$. A Euler integr
       + $v' arrow.l v + a dot #delta-t$ #h(1fr) ➤ Update velocity
 
       + *return* $#state-single ' = [x' quad y' quad theta' quad v']$
+  ]
+]
+
+=== Unicycle Model (UM)
+
+A simpler alternative to the kinematic bicycle model is the *unicycle model*. This model represents the robot as a single point with a heading, abstracting away the physical wheel configuration. It's particularly suitable for differential-drive robots or when high-fidelity steering dynamics are not required.
+
+#figure(
+  kinematic-unicycle-diagram(),
+  caption: [The unicycle model. The robot state is defined by position $(x, y)$ and heading $theta$. The control inputs are linear velocity $v$ and angular velocity $omega$.],
+)
+
+The control inputs $#input-single := [v quad omega]$ are:
+- $v$: Linear velocity
+- $omega$: Angular velocity (yaw rate)
+
+The state $#state-single := [x quad y quad theta]$ of the robot is represented by three variables:
+- $x$: Position along the x-axis
+- $y$: Position along the y-axis
+- $theta$: Heading angle (orientation) in radians
+
+#model(title: [Unicycle Model @Oriolo2002])[
+  The continuous-time dynamics of the unicycle model are given as:
+
+  $
+    dot(x) = v cos(theta), quad dot(y) = v sin(theta), quad dot(theta) = omega
+  $ <unicycle-equations>
+]
+
+=== Euler Integration for Unicycle Model
+
+To simulate the model, we discretize @unicycle-equations with a time step size of #delta-t to get:
+
+#align(
+  center,
+  block[
+    #set align(left)
+    $x_(t+1) = x_t + v_t cos(theta_t) dot #delta-t \
+      y_(t+1) = y_t + v_t sin(theta_t) dot #delta-t \
+      theta_(t+1) = theta_t + omega_t dot #delta-t$
+  ],
+)
+
+#algorithm(title: "Euler Integration Step for the Unicycle Model")[
+  #pseudocode-list(hooks: .5em)[
+    + *Given:*
+      - Control input #input-single $= [v quad omega]$, Current state #state-single $= [x quad y quad theta]$
+      - Time step #delta-t
+
+    + *Compute next state:*
+      + $x' arrow.l x + v dot cos(theta) dot #delta-t$ #h(1fr) ➤ Update x position
+      + $y' arrow.l y + v dot sin(theta) dot #delta-t$ #h(1fr) ➤ Update y position
+      + $theta' arrow.l theta + omega dot #delta-t$ #h(1fr) ➤ Update heading
+
+      + *return* $#state-single ' = [x' quad y' quad theta']$
   ]
 ]
 
@@ -345,7 +403,6 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
 #let input-change = $Delta #input-single$
 #let input-smooth-weight = $K_u$
 #let control-effort-weight = $K_n$
-#let control-effort-weight-single = $k_n$
 #let control-effort-cost-note = footnote[Although this cost is theoretically necessary for correct importance sampling, in practice the planner can work without it. We use it as a regularization/comfort term. Hence, it is written in the section corresponding to comfort costs.]
 
 #definition(title: [Control Smoothing Cost @Liniger2015])[
@@ -369,7 +426,7 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
     #effort-cost = #temperature / 2 #input-single _t^top Sigma^(-1) #input-single _t
   $
 
-  With #control-effort-weight-single being the cost weight, and #temperature - the temperature parameter. However, for flexibility, we define this cost more generally as:
+  With #temperature being the temperature parameter. However, for flexibility, we define this cost more generally as:
 
   $
     #effort-cost = #control-effort-weight #input-single _t^top #input-single _t = #control-effort-weight || #input-single _t ||^2
@@ -382,7 +439,7 @@ The progress cost given by @progress-cost-equation pushes #path-parameter to mov
 
 === Constant Velocity (CV) Model @Schubert2008
 
-To effectively avoid collisions, only considering the current state of moving obstacles is insufficient in most cases. Instead, we need to predict how these obstacles will move in the near future. A simple method to predict the future motion of obstacles is to assume they will continue moving with their current velocity. We can call this a *constant velocity model*.
+To effectively avoid collisions, only considering the current state of moving obstacles is insufficient in most cases. Instead, we need to predict how these obstacles will move in the near future. A simple method to predict the future motion of obstacles is to assume they will continue moving with their current velocity. We call this a *constant velocity model*.
 
 For example, assume a robot follows the kinematic bicycle model described in @kinematic-bicycle-equations. The state of this robot can then be represented as $#state-single _("obs") = [x quad y quad theta quad v]$. In this case, we can assume the state variable $v$, representing the robot's linear velocity, remains constant over the prediction horizon. This means that we predict the robot will continue moving on a straight line in the direction of its current heading $theta$ with speed $v$ for the next #horizon time steps.
 

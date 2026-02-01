@@ -32,6 +32,16 @@ from trajax.types import (
     BicyclePositions,
     BicycleControlInputSequence,
     BicycleControlInputBatch,
+    UNICYCLE_D_X,
+    UNICYCLE_D_U,
+    UnicycleD_x,
+    UnicycleD_u,
+    UnicycleState,
+    UnicycleStateSequence,
+    UnicycleStateBatch,
+    UnicyclePositions,
+    UnicycleControlInputSequence,
+    UnicycleControlInputBatch,
     NumPyPathParameters,
     NumPyReferencePoints,
     NumPyPositions,
@@ -103,6 +113,18 @@ from trajax.models import (
     JaxBicycleControlInputBatch,
     JaxBicycleObstacleStateSequences,
     JaxIntegratorObstacleStateSequences,
+    NumPyUnicycleState,
+    NumPyUnicycleStateSequence,
+    NumPyUnicycleStateBatch,
+    NumPyUnicyclePositions,
+    NumPyUnicycleControlInputSequence,
+    NumPyUnicycleControlInputBatch,
+    JaxUnicycleState,
+    JaxUnicycleStateSequence,
+    JaxUnicycleStateBatch,
+    JaxUnicyclePositions,
+    JaxUnicycleControlInputSequence,
+    JaxUnicycleControlInputBatch,
 )
 from trajax.costs import (
     NumPyContouringCost,
@@ -188,6 +210,21 @@ class types:
 
         D_X: Final = BICYCLE_D_X
         D_U: Final = BICYCLE_D_U
+
+    class unicycle:
+        type D_x = UnicycleD_x
+        type D_u = UnicycleD_u
+        type State = UnicycleState
+        type StateSequence = UnicycleStateSequence
+        type StateBatch[T: int = Any, M: int = Any] = UnicycleStateBatch[T, M]
+        type Positions[T: int = Any, M: int = Any] = UnicyclePositions[T, M]
+        type ControlInputSequence[T: int = Any] = UnicycleControlInputSequence[T]
+        type ControlInputBatch[T: int = Any, M: int = Any] = UnicycleControlInputBatch[
+            T, M
+        ]
+
+        D_X: Final = UNICYCLE_D_X
+        D_U: Final = UNICYCLE_D_U
 
     class augmented:
         type State[P, V] = AugmentedState[P, V]
@@ -335,6 +372,25 @@ class types:
             positions: Final = NumPyBicyclePositions
             control_input_sequence: Final = NumPyBicycleControlInputSequence
             control_input_batch: Final = NumPyBicycleControlInputBatch
+
+        class unicycle:
+            type State = NumPyUnicycleState
+            type StateSequence[T: int = Any] = NumPyUnicycleStateSequence[T]
+            type StateBatch[T: int = Any, M: int = Any] = NumPyUnicycleStateBatch[T, M]
+            type Positions[T: int = Any, M: int = Any] = NumPyUnicyclePositions[T, M]
+            type ControlInputSequence[T: int = Any] = NumPyUnicycleControlInputSequence[
+                T
+            ]
+            type ControlInputBatch[T: int = Any, M: int = Any] = (
+                NumPyUnicycleControlInputBatch[T, M]
+            )
+
+            state: Final = NumPyUnicycleState
+            state_sequence: Final = NumPyUnicycleStateSequence
+            state_batch: Final = NumPyUnicycleStateBatch
+            positions: Final = NumPyUnicyclePositions
+            control_input_sequence: Final = NumPyUnicycleControlInputSequence
+            control_input_batch: Final = NumPyUnicycleControlInputBatch
 
         class augmented:
             type State[P: NumPyState, V: NumPyState] = NumPyAugmentedState[P, V]
@@ -489,6 +545,23 @@ class types:
             control_input_sequence: Final = JaxBicycleControlInputSequence
             control_input_batch: Final = JaxBicycleControlInputBatch
 
+        class unicycle:
+            type State = JaxUnicycleState
+            type StateSequence[T: int = Any] = JaxUnicycleStateSequence[T]
+            type StateBatch[T: int = Any, M: int = Any] = JaxUnicycleStateBatch[T, M]
+            type Positions[T: int = Any, M: int = Any] = JaxUnicyclePositions[T, M]
+            type ControlInputSequence[T: int = Any] = JaxUnicycleControlInputSequence[T]
+            type ControlInputBatch[T: int = Any, M: int = Any] = (
+                JaxUnicycleControlInputBatch[T, M]
+            )
+
+            state: Final = JaxUnicycleState
+            state_sequence: Final = JaxUnicycleStateSequence
+            state_batch: Final = JaxUnicycleStateBatch
+            positions: Final = JaxUnicyclePositions
+            control_input_sequence: Final = JaxUnicycleControlInputSequence
+            control_input_batch: Final = JaxUnicycleControlInputBatch
+
         class augmented:
             type State[P: JaxState, V: JaxState] = JaxAugmentedState[P, V]
             type StateSequence[P: JaxStateSequence, V: JaxStateSequence] = (
@@ -530,6 +603,14 @@ class classes:
         Positions: Final = BicyclePositions
         ControlInputSequence: Final = BicycleControlInputSequence
         ControlInputBatch: Final = BicycleControlInputBatch
+
+    class unicycle:
+        State: Final = UnicycleState
+        StateSequence: Final = UnicycleStateSequence
+        StateBatch: Final = UnicycleStateBatch
+        Positions: Final = UnicyclePositions
+        ControlInputSequence: Final = UnicycleControlInputSequence
+        ControlInputBatch: Final = UnicycleControlInputBatch
 
     class augmented:
         State: Final = AugmentedState
@@ -579,6 +660,14 @@ class classes:
             ControlInputBatch: Final = NumPyBicycleControlInputBatch
             ObstacleStateSequences: Final = NumPyBicycleObstacleStateSequences
 
+        class unicycle:
+            State: Final = NumPyUnicycleState
+            StateSequence: Final = NumPyUnicycleStateSequence
+            StateBatch: Final = NumPyUnicycleStateBatch
+            Positions: Final = NumPyUnicyclePositions
+            ControlInputSequence: Final = NumPyUnicycleControlInputSequence
+            ControlInputBatch: Final = NumPyUnicycleControlInputBatch
+
         class augmented:
             State: Final = NumPyAugmentedState
             StateSequence: Final = NumPyAugmentedStateSequence
@@ -626,6 +715,14 @@ class classes:
             ControlInputSequence: Final = JaxBicycleControlInputSequence
             ControlInputBatch: Final = JaxBicycleControlInputBatch
             ObstacleStateSequences: Final = JaxBicycleObstacleStateSequences
+
+        class unicycle:
+            State: Final = JaxUnicycleState
+            StateSequence: Final = JaxUnicycleStateSequence
+            StateBatch: Final = JaxUnicycleStateBatch
+            Positions: Final = JaxUnicyclePositions
+            ControlInputSequence: Final = JaxUnicycleControlInputSequence
+            ControlInputBatch: Final = JaxUnicycleControlInputBatch
 
         class augmented:
             State: Final = JaxAugmentedState

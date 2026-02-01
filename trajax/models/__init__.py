@@ -26,4 +26,20 @@ from .integrator import (
     JaxIntegratorModel as JaxIntegratorModel,
     JaxIntegratorObstacleModel as JaxIntegratorObstacleModel,
 )
+from .unicycle import (
+    NumPyUnicycleState as NumPyUnicycleState,
+    NumPyUnicycleStateSequence as NumPyUnicycleStateSequence,
+    NumPyUnicycleStateBatch as NumPyUnicycleStateBatch,
+    NumPyUnicyclePositions as NumPyUnicyclePositions,
+    NumPyUnicycleControlInputSequence as NumPyUnicycleControlInputSequence,
+    NumPyUnicycleControlInputBatch as NumPyUnicycleControlInputBatch,
+    NumPyUnicycleModel as NumPyUnicycleModel,
+    JaxUnicycleState as JaxUnicycleState,
+    JaxUnicycleStateSequence as JaxUnicycleStateSequence,
+    JaxUnicycleStateBatch as JaxUnicycleStateBatch,
+    JaxUnicyclePositions as JaxUnicyclePositions,
+    JaxUnicycleControlInputSequence as JaxUnicycleControlInputSequence,
+    JaxUnicycleControlInputBatch as JaxUnicycleControlInputBatch,
+    JaxUnicycleModel as JaxUnicycleModel,
+)
 from .factory import model as model
