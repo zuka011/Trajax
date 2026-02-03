@@ -14,7 +14,9 @@ include:
 variables:
   RUN_INTEGRATION_TESTS: "true"
   RUN_BENCHMARKS: "true"
+  COLLECT_COVERAGE: "true"
   PYPI_PROJECT_NAME: "trajax"
+  COVERAGE_SOURCE: "trajax"
 
 benchmark:
   extends: .benchmark-base
