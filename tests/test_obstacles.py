@@ -39,7 +39,9 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                             )
                         ),
                     ),
-                    history=types.obstacle_states_running_history.empty(),
+                    history=types.obstacle_states_running_history.empty(
+                        creator=types.obstacle_2d_poses
+                    ),
                 ),
                 states_sequence := [
                     history.at(time_step=0),
@@ -68,7 +70,9 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                             ),
                         ),
                         history=types.obstacle_states_running_history.empty(
-                            horizon=horizon, obstacle_count=obstacle_count
+                            creator=types.obstacle_2d_poses,
+                            horizon=horizon,
+                            obstacle_count=obstacle_count,
                         ),
                     ),
                     states_sequence := [],
@@ -99,7 +103,7 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                         ),
                     ),
                     history=types.obstacle_states_running_history.empty(
-                        horizon=H,
+                        creator=types.obstacle_2d_poses, horizon=H
                     ),
                 ),
                 states_sequence := [
@@ -240,7 +244,9 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                             )
                         ),
                     ),
-                    history=types.obstacle_states_running_history.empty(),
+                    history=types.obstacle_states_running_history.empty(
+                        creator=types.obstacle_2d_poses
+                    ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
                             lambda observation_0,
@@ -367,7 +373,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                         ),
                     ),
                     history=types.obstacle_states_running_history.empty(
-                        obstacle_count=K
+                        creator=types.obstacle_2d_poses, obstacle_count=K
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
@@ -547,7 +553,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                         ),
                     ),
                     history=types.obstacle_states_running_history.empty(
-                        obstacle_count=K
+                        creator=types.obstacle_2d_poses, obstacle_count=K
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
@@ -632,7 +638,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                         ),
                     ),
                     history=types.obstacle_states_running_history.empty(
-                        obstacle_count=K
+                        creator=types.obstacle_2d_poses, obstacle_count=K
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
@@ -800,7 +806,9 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                         ),
                     ),
                     # No obstacle count (limit) specified.
-                    history=types.obstacle_states_running_history.empty(),
+                    history=types.obstacle_states_running_history.empty(
+                        creator=types.obstacle_2d_poses
+                    ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
                             lambda history_0, history_1, ids: (
@@ -875,7 +883,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                         ),
                     ),
                     history=types.obstacle_states_running_history.empty(
-                        horizon=H, obstacle_count=K
+                        creator=types.obstacle_2d_poses, horizon=H, obstacle_count=K
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
@@ -980,7 +988,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
         return [
             (  # Single persistent obstacle among many transient ones
                 history := types.obstacle_states_running_history.empty(
-                    obstacle_count=2,
+                    creator=types.obstacle_2d_poses, obstacle_count=2
                 )
                 .append(
                     data.obstacle_states_for_time_step(
@@ -1019,7 +1027,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
             ),
             (  # Multiple persistent IDs among transient ones
                 history := types.obstacle_states_running_history.empty(
-                    obstacle_count=3,
+                    creator=types.obstacle_2d_poses, obstacle_count=3
                 )
                 .append(
                     data.obstacle_states_for_time_step(

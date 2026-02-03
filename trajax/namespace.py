@@ -58,8 +58,8 @@ from trajax.types import (
     JaxLongitudinalPositions,
     JaxNormals,
     JaxRisk,
-    D_o as D_o_,
-    D_O as D_O_,
+    PoseD_o as PoseD_o_,
+    POSE_D_O as POSE_D_O_,
     NumPyPathParameterExtractor,
     NumPyPathVelocityExtractor,
     NumPyPositionExtractor,
@@ -74,8 +74,14 @@ from trajax.types import (
     Risk as Risk,
     RiskMetric as RiskMetric,
     ContouringCost as ContouringCost,
+    NumPySampledObstacleStates,
+    NumPyObstacleStates,
+    NumPyObstacleStatesForTimeStep,
     NumPyObstacleStateProvider,
     NumPyObstaclePositionExtractor,
+    JaxSampledObstacleStates,
+    JaxObstacleStates,
+    JaxObstacleStatesForTimeStep,
     JaxObstacleStateProvider,
     JaxObstaclePositionExtractor,
     AugmentedState,
@@ -135,17 +141,17 @@ from trajax.costs import (
     JaxDistance,
 )
 from trajax.obstacles import (
-    NumPySampledObstacleStates,
     NumPyObstacleIds,
-    NumPyObstacleStates,
-    NumPyObstacleStatesForTimeStep,
+    NumPySampledObstacle2dPoses,
+    NumPyObstacle2dPoses,
+    NumPyObstacle2dPosesForTimeStep,
     NumPyObstacle2dPositions,
     NumPyObstacle2dPositionsForTimeStep,
     NumPyObstacleStatesRunningHistory,
-    JaxSampledObstacleStates,
     JaxObstacleIds,
-    JaxObstacleStates,
-    JaxObstacleStatesForTimeStep,
+    JaxSampledObstacle2dPoses,
+    JaxObstacle2dPoses,
+    JaxObstacle2dPosesForTimeStep,
     JaxObstacle2dPositions,
     JaxObstacle2dPositionsForTimeStep,
     JaxObstacleStatesRunningHistory,
@@ -194,9 +200,9 @@ class types:
     type RiskMetric[CF, SB, OS, S, R] = RiskMetric[CF, SB, OS, S, R]
 
     class obstacle:
-        type D_o = D_o_
+        type PoseD_o = PoseD_o_
 
-        D_O: Final = D_O_
+        POSE_D_O: Final = POSE_D_O_
 
     class bicycle:
         type D_x = BicycleD_x
@@ -263,19 +269,33 @@ class types:
             NumPyLongitudinalPositions[T, M]
         )
         type ObstacleIds[K: int = Any] = NumPyObstacleIds[K]
-        type ObstacleStates[T: int = Any, K: int = Any] = NumPyObstacleStates[T, K]
-        type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
-            NumPySampledObstacleStates[T, K, N]
+        type SampledObstacleStates[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            N: int = Any,
+        ] = NumPySampledObstacleStates[T, D_o, K, N]
+        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
+            NumPyObstacleStates[T, D_o, K, SST]
         )
-        type ObstacleStatesForTimeStep[K: int = Any] = NumPyObstacleStatesForTimeStep[K]
+        type ObstacleStatesForTimeStep[D_o: int = Any, K: int = Any, OS = Any] = (
+            NumPyObstacleStatesForTimeStep[D_o, K, OS]
+        )
+        type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
+            NumPySampledObstacle2dPoses[T, K, N]
+        )
+        type Obstacle2dPoses[T: int = Any, K: int = Any] = NumPyObstacle2dPoses[T, K]
+        type Obstacle2dPosesForTimeStep[K: int = Any] = NumPyObstacle2dPosesForTimeStep[
+            K
+        ]
         type Obstacle2dPositions[T: int = Any, K: int = Any] = NumPyObstacle2dPositions[
             T, K
         ]
         type Obstacle2dPositionsForTimeStep[K: int = Any] = (
             NumPyObstacle2dPositionsForTimeStep[K]
         )
-        type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
-            NumPyObstacleStatesRunningHistory[T, K]
+        type ObstacleStatesRunningHistory[S, STS: NumPyObstacleStatesForTimeStep] = (
+            NumPyObstacleStatesRunningHistory[S, STS]
         )
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
@@ -321,8 +341,8 @@ class types:
         distance: Final = NumPyDistance
         boundary_distance: Final = NumPyBoundaryDistance
         obstacle_ids: Final = NumPyObstacleIds
-        obstacle_states: Final = NumPyObstacleStates
-        obstacle_states_for_time_step: Final = NumPyObstacleStatesForTimeStep
+        obstacle_2d_poses: Final = NumPyObstacle2dPoses
+        obstacle_2d_poses_for_time_step: Final = NumPyObstacle2dPosesForTimeStep
         obstacle_states_running_history: Final = NumPyObstacleStatesRunningHistory
 
         class simple:
@@ -442,20 +462,36 @@ class types:
             JaxLongitudinalPositions[T, M]
         )
         type ObstacleIds[K: int = Any] = JaxObstacleIds[K]
-        type ObstacleStates[T: int = Any, K: int = Any] = JaxObstacleStates[T, K]
-        type SampledObstacleStates[T: int = Any, K: int = Any, N: int = Any] = (
-            JaxSampledObstacleStates[T, K, N]
+        type SampledObstacleStates[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            N: int = Any,
+        ] = JaxSampledObstacleStates[T, D_o, K, N]
+        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
+            JaxObstacleStates[T, D_o, K, SST]
         )
-        type ObstacleStatesForTimeStep[K: int = Any] = JaxObstacleStatesForTimeStep[K]
+        type ObstacleStatesForTimeStep[
+            D_o: int = Any,
+            K: int = Any,
+            OS = Any,
+            NumPyT = Any,
+        ] = JaxObstacleStatesForTimeStep[D_o, K, OS, NumPyT]
+        type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
+            JaxSampledObstacle2dPoses[T, K, N]
+        )
+        type Obstacle2dPoses[T: int = Any, K: int = Any] = JaxObstacle2dPoses[T, K]
+        type Obstacle2dPosesForTimeStep[K: int = Any] = JaxObstacle2dPosesForTimeStep[K]
         type Obstacle2dPositions[T: int = Any, K: int = Any] = JaxObstacle2dPositions[
             T, K
         ]
         type Obstacle2dPositionsForTimeStep[K: int = Any] = (
             JaxObstacle2dPositionsForTimeStep[K]
         )
-        type ObstacleStatesRunningHistory[T: int = Any, K: int = Any] = (
-            JaxObstacleStatesRunningHistory[T, K]
-        )
+        type ObstacleStatesRunningHistory[
+            S: JaxObstacleStates,
+            STS: JaxObstacleStatesForTimeStep,
+        ] = JaxObstacleStatesRunningHistory[S, STS]
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]
         )
@@ -498,8 +534,8 @@ class types:
         distance: Final = JaxDistance
         boundary_distance: Final = JaxBoundaryDistance
         obstacle_ids: Final = JaxObstacleIds
-        obstacle_states: Final = JaxObstacleStates
-        obstacle_states_for_time_step: Final = JaxObstacleStatesForTimeStep
+        obstacle_2d_poses: Final = JaxObstacle2dPoses
+        obstacle_2d_poses_for_time_step: Final = JaxObstacle2dPosesForTimeStep
         obstacle_states_running_history: Final = JaxObstacleStatesRunningHistory
 
         class simple:

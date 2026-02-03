@@ -2,7 +2,7 @@ from typing import cast
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleStateSampler
-from trajax.obstacles.basic import NumPySampledObstacleStates, NumPyObstacleStates
+from trajax.obstacles.basic import NumPySampledObstacle2dPoses, NumPyObstacle2dPoses
 
 from numtypes import shape_of
 from riskit import distribution
@@ -14,26 +14,26 @@ type Rng = np.random.Generator
 
 
 @dataclass(frozen=True)
-class NumPyGaussianObstacleStateSampler(
-    NumPyObstacleStateSampler[NumPyObstacleStates, NumPySampledObstacleStates]
+class NumPyGaussianObstacle2dPoseSampler(
+    NumPyObstacleStateSampler[NumPyObstacle2dPoses, NumPySampledObstacle2dPoses]
 ):
     rng: Rng
 
     @staticmethod
-    def create(*, seed: int = 42) -> "NumPyGaussianObstacleStateSampler":
-        return NumPyGaussianObstacleStateSampler(rng=np.random.default_rng(seed))
+    def create(*, seed: int = 42) -> "NumPyGaussianObstacle2dPoseSampler":
+        return NumPyGaussianObstacle2dPoseSampler(rng=np.random.default_rng(seed))
 
     def __call__[T: int, K: int, N: int](
-        self, states: NumPyObstacleStates[T, K], *, count: N
-    ) -> NumPySampledObstacleStates[T, K, N]:
+        self, states: NumPyObstacle2dPoses[T, K], *, count: N
+    ) -> NumPySampledObstacle2dPoses[T, K, N]:
         if states.count == 0:
-            return cast(NumPySampledObstacleStates, states.single())
+            return cast(NumPySampledObstacle2dPoses, states.single())
 
         if (covariance := states.covariance()) is None:
             assert count == 1, (
                 "It's pointless to take multiple samples, when covariance information is not available."
             )
-            return cast(NumPySampledObstacleStates, states.single())
+            return cast(NumPySampledObstacle2dPoses, states.single())
 
         T, D_O, _, K = covariance.shape
 

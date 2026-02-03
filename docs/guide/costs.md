@@ -96,7 +96,14 @@ from trajax import Circles
 collision = costs.safety.collision(
     obstacle_states=obstacle_provider,
     sampler=obstacles.sampler.gaussian(seed=44),
-    distance=distance.circles(ego=ego, obstacle=obstacle, ...),
+    distance=distance.circles(
+        ego=ego,
+        obstacle=obstacle,
+        position_extractor=...,
+        heading_extractor=...,
+        obstacle_position_extractor=obstacles.pose_position_extractor,
+        obstacle_heading_extractor=obstacles.pose_heading_extractor,
+    ),
     distance_threshold=array([0.5, 0.5, 0.5], shape=(3,)),
     weight=1500.0,
 )

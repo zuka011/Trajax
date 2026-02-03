@@ -1,13 +1,36 @@
-from typing import Sequence, Self, NamedTuple, cast
+from typing import Protocol, Sequence, Self, NamedTuple
 from dataclasses import dataclass
 from functools import cached_property
 
-from trajax.types import DataType
-from trajax.obstacles.basic import NumPyObstacleStatesForTimeStep, NumPyObstacleStates
+from trajax.types import DataType, NumPyObstacleStatesForTimeStep
 
-from numtypes import NumberArray, IndexArray, Dims, D, shape_of
+from numtypes import NumberArray, IndexArray, Array, Dims, D, shape_of
 
 import numpy as np
+
+
+class NumPyObstacleStateCreator[StatesT](Protocol):
+    def wrap[T: int = int, D_o: int = int, K: int = int](
+        self, states: Array[Dims[T, D_o, K]]
+    ) -> StatesT:
+        """Wraps a NumPy array into the appropriate obstacle states type."""
+        ...
+
+    def empty(self, *, horizon: int, obstacle_count: int) -> StatesT:
+        """Creates empty obstacle states with the given horizon and obstacle count."""
+        ...
+
+
+class HistoryEntry[StatesForTimeStepT](Protocol):
+    @property
+    def states(self) -> StatesForTimeStepT:
+        """The obstacle states at this time step."""
+        ...
+
+    @property
+    def ids(self) -> "NumPyObstacleIds | None":
+        """The obstacle IDs at this time step, if available."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -35,67 +58,76 @@ class NumPyObstacleIds[K: int]:
 
 
 @dataclass(kw_only=True, frozen=True)
-class NumPyObstacleStatesRunningHistory[H: int, K: int]:
-    class Entry(NamedTuple):
-        states: NumPyObstacleStatesForTimeStep
+class NumPyObstacleStatesRunningHistory[
+    StatesT,
+    StatesForTimeStepT: NumPyObstacleStatesForTimeStep,
+]:
+    class Entry[STS: NumPyObstacleStatesForTimeStep](NamedTuple):
+        states: STS
         ids: NumPyObstacleIds | None
 
-    class MergedIds[K_: int](NamedTuple):
+    class MergedIds(NamedTuple):
         all: NumPyObstacleIds
-        recent: NumPyObstacleIds[K_]
+        recent: NumPyObstacleIds
 
-    history: list[Entry]
-    fixed_horizon: H | None
-    fixed_obstacle_count: K | None
-
-    @staticmethod
-    def empty[H_: int = int, K_: int = int](
-        *, horizon: H_ | None = None, obstacle_count: K_ | None = None
-    ) -> "NumPyObstacleStatesRunningHistory[H_, K_]":
-        return NumPyObstacleStatesRunningHistory(
-            history=[], fixed_horizon=horizon, fixed_obstacle_count=obstacle_count
-        )
+    history: list[Entry[StatesForTimeStepT]]
+    creator: NumPyObstacleStateCreator[StatesT]
+    fixed_horizon: int | None
+    fixed_obstacle_count: int | None
 
     @staticmethod
-    def single[H_: int = int, K_: int = int](
-        observation: NumPyObstacleStatesForTimeStep,
+    def empty[S, STS: NumPyObstacleStatesForTimeStep = NumPyObstacleStatesForTimeStep](
         *,
-        horizon: H_ | None = None,
-        obstacle_count: K_ | None = None,
-    ) -> "NumPyObstacleStatesRunningHistory[H_, K_]":
+        creator: NumPyObstacleStateCreator[S],
+        horizon: int | None = None,
+        obstacle_count: int | None = None,
+    ) -> "NumPyObstacleStatesRunningHistory[S, STS]":
         return NumPyObstacleStatesRunningHistory(
-            history=[NumPyObstacleStatesRunningHistory.Entry(observation, None)],
+            history=[],
+            creator=creator,
             fixed_horizon=horizon,
             fixed_obstacle_count=obstacle_count,
         )
 
-    def last(self) -> NumPyObstacleStatesForTimeStep[K]:
+    @staticmethod
+    def single[S, STS: NumPyObstacleStatesForTimeStep](
+        observation: STS,
+        *,
+        creator: NumPyObstacleStateCreator[S],
+        horizon: int | None = None,
+        obstacle_count: int | None = None,
+    ) -> "NumPyObstacleStatesRunningHistory[S, STS]":
+        return NumPyObstacleStatesRunningHistory(
+            history=[NumPyObstacleStatesRunningHistory.Entry(observation, None)],
+            creator=creator,
+            fixed_horizon=horizon,
+            fixed_obstacle_count=obstacle_count,
+        )
+
+    def last(self) -> StatesForTimeStepT:
         assert self.horizon > 0, "Cannot get last state from empty history."
 
         return self.history[-1].states
 
-    def get(self) -> NumPyObstacleStates[int, K]:
+    def get(self) -> StatesT:
         return (
             self._combined_history
             if self.horizon > 0
-            else NumPyObstacleStates.empty(
+            else self.creator.empty(
                 horizon=self.fixed_horizon or 0,
                 obstacle_count=self.fixed_obstacle_count or 0,
             )
         )
 
-    def ids(self) -> NumPyObstacleIds[K]:
+    def ids(self) -> NumPyObstacleIds:
         return (
             ids.recent
             if (ids := self._merged_ids) is not None
             else NumPyObstacleIds.create(ids=np.array([]))
         )
 
-    def append[N: int](
-        self,
-        observation: NumPyObstacleStatesForTimeStep,
-        *,
-        ids: NumPyObstacleIds | None = None,
+    def append(
+        self, observation: StatesForTimeStepT, *, ids: NumPyObstacleIds | None = None
     ) -> Self:
         assert ids is None or ids.count == observation.count, (
             f"The number of IDs ({ids.count}) does not match "
@@ -116,6 +148,7 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
             history=entries[-self.fixed_horizon :]
             if self.fixed_horizon is not None
             else entries,
+            creator=self.creator,
             fixed_horizon=self.fixed_horizon,
             fixed_obstacle_count=self.fixed_obstacle_count,
         )
@@ -125,15 +158,15 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         return len(self.history)
 
     @property
-    def count(self) -> K:
+    def count(self) -> int:
         return self._count
 
     @cached_property
-    def _count(self) -> K:
+    def _count(self) -> int:
         if self.fixed_obstacle_count is not None:
             return self.fixed_obstacle_count
 
-        return ids.all.count if (ids := self._merged_ids) is not None else cast(K, 0)
+        return ids.all.count if (ids := self._merged_ids) is not None else 0
 
     @cached_property
     def _full_horizon(self) -> int:
@@ -143,21 +176,20 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         return len(self.history)
 
     @cached_property
-    def _combined_history(self) -> NumPyObstacleStates[int, K]:
-        if (ids := self._merged_ids) is None:
-            return NumPyObstacleStates.wrap(
-                np.stack([entry.states.array for entry in self.history], axis=0)
+    def _combined_history(self) -> StatesT:
+        return self.creator.wrap(
+            np.stack([entry.states.array for entry in self.history], axis=0)
+            if (ids := self._merged_ids) is None
+            else combine_history(
+                recent_ids=ids.recent,
+                history=self.history,
+                horizon=self._full_horizon,
+                obstacle_count=self.count,
             )
-
-        return combine_history(
-            recent_ids=ids.recent,
-            history=self.history,
-            horizon=self._full_horizon,
-            obstacle_count=self.count,
         )
 
     @cached_property
-    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds[K] | None":
+    def _merged_ids(self) -> "NumPyObstacleStatesRunningHistory.MergedIds | None":
         if all(entry.ids is None for entry in self.history):
             return None
 
@@ -190,13 +222,13 @@ class NumPyObstacleStatesRunningHistory[H: int, K: int]:
         )
 
 
-def combine_history[H: int, K: int](
+def combine_history[H: int, K: int, D_o: int = int](
     *,
     recent_ids: NumPyObstacleIds[K],
-    history: Sequence[NumPyObstacleStatesRunningHistory.Entry],
+    history: Sequence[HistoryEntry[NumPyObstacleStatesForTimeStep]],
     horizon: H,
     obstacle_count: K,
-) -> NumPyObstacleStates[H, K]:
+) -> Array[Dims[H, D_o, K]]:
     recent_id_count = recent_ids.count
     time_padding = horizon - len(history)
     dimension = history[0].states.dimension
@@ -222,4 +254,4 @@ def combine_history[H: int, K: int](
 
     assert shape_of(output, matches=output_shape)
 
-    return NumPyObstacleStates.wrap(output)
+    return output

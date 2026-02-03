@@ -7,11 +7,14 @@ from trajax.types import (
     NumPyPositions,
     NumPyPositionExtractor,
     NumPyHeadingExtractor,
+    NumPySampledObstaclePositions,
+    NumPySampledObstacleHeadings,
+    NumPySampledObstaclePositionExtractor,
+    NumPySampledObstacleHeadingExtractor,
 )
-from trajax.obstacles import NumPySampledObstacleStates
 from trajax.costs.collision import NumPyDistance
-from trajax.costs.distance.circles.common import Circles
 from trajax.costs.distance.basic import replace_missing
+from trajax.costs.distance.circles.common import Circles
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -23,8 +26,8 @@ type RadiiArray[N: int = int] = Array[Dims[N]]
 
 
 @dataclass(frozen=True)
-class NumPyCircleDistanceExtractor[StateT, V: int, C: int](
-    DistanceExtractor[StateT, NumPySampledObstacleStates, NumPyDistance]
+class NumPyCircleDistanceExtractor[StateT, SampledObstacleStatesT, V: int, C: int](
+    DistanceExtractor[StateT, SampledObstacleStatesT, NumPyDistance]
 ):
     """
     Computes the distances between parts of the ego robot and obstacles. Both the ego
@@ -35,34 +38,45 @@ class NumPyCircleDistanceExtractor[StateT, V: int, C: int](
     obstacle: Circles[C]
     positions_from: NumPyPositionExtractor[StateT]
     headings_from: NumPyHeadingExtractor[StateT]
+    obstacle_positions_from: NumPySampledObstaclePositionExtractor[
+        SampledObstacleStatesT
+    ]
+    obstacle_headings_from: NumPySampledObstacleHeadingExtractor[SampledObstacleStatesT]
 
     @staticmethod
-    def create[S, V_: int, C_: int](
+    def create[S, SOS, V_: int, C_: int](
         *,
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: NumPyPositionExtractor[S],
         heading_extractor: NumPyHeadingExtractor[S],
-    ) -> "NumPyCircleDistanceExtractor[S, V_, C_]":
+        obstacle_position_extractor: NumPySampledObstaclePositionExtractor[SOS],
+        obstacle_heading_extractor: NumPySampledObstacleHeadingExtractor[SOS],
+    ) -> "NumPyCircleDistanceExtractor[S, SOS, V_, C_]":
         return NumPyCircleDistanceExtractor(
             ego=ego,
             obstacle=obstacle,
             positions_from=position_extractor,
             headings_from=heading_extractor,
+            obstacle_positions_from=obstacle_position_extractor,
+            obstacle_headings_from=obstacle_heading_extractor,
         )
 
-    def __call__[T: int, N: int, M: int = int, K: int = int](
-        self,
-        *,
-        states: StateT,
-        obstacle_states: NumPySampledObstacleStates[T, K, N],
+    def __call__[T: int = int, N: int = int, M: int = int](
+        self, *, states: StateT, obstacle_states: SampledObstacleStatesT
     ) -> NumPyDistance[T, V, M, N]:
+        obstacle_positions, obstacle_headings = replace_missing(
+            positions=self.obstacle_positions_from(obstacle_states),
+            headings=self.obstacle_headings_from(obstacle_states),
+        )
+
         return NumPyDistance(
             compute_circle_distances(
                 ego_positions=self.positions_from(states),
                 ego_headings=self.headings_from(states),
                 ego=self.ego,
-                obstacle_states=replace_missing(obstacle_states),
+                obstacle_positions=obstacle_positions,
+                obstacle_headings=obstacle_headings,
                 obstacle=self.obstacle,
             )
         )
@@ -73,20 +87,21 @@ def compute_circle_distances[T: int, M: int, V: int, C: int, K: int, N: int](
     ego_positions: NumPyPositions[T, M],
     ego_headings: NumPyHeadings[T, M],
     ego: Circles[V],
-    obstacle_states: NumPySampledObstacleStates[T, K, N],
+    obstacle_positions: NumPySampledObstaclePositions[T, K, N],
+    obstacle_headings: NumPySampledObstacleHeadings[T, K, N],
     obstacle: Circles[C],
 ) -> Array[Dims[T, V, M, N]]:
     ego_global_x, ego_global_y = to_global_positions(
         x=ego_positions.x(),
         y=ego_positions.y(),
-        heading=ego_headings.heading,
+        heading=ego_headings.heading(),
         local_origins=ego.origins,
     )
 
     obstacle_global_x, obstacle_global_y = to_global_positions(
-        x=obstacle_states.x(),
-        y=obstacle_states.y(),
-        heading=obstacle_states.heading(),
+        x=obstacle_positions.x(),
+        y=obstacle_positions.y(),
+        heading=obstacle_headings.heading(),
         local_origins=obstacle.origins,
     )
 

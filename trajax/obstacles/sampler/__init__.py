@@ -1,6 +1,6 @@
 from .basic import (
-    NumPyGaussianObstacleStateSampler as NumPyGaussianObstacleStateSampler,
+    NumPyGaussianObstacle2dPoseSampler as NumPyGaussianObstacle2dPoseSampler,
 )
 from .accelerated import (
-    JaxGaussianObstacleStateSampler as JaxGaussianObstacleStateSampler,
+    JaxGaussianObstacle2dPoseSampler as JaxGaussianObstacle2dPoseSampler,
 )

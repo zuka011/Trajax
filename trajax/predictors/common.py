@@ -45,7 +45,7 @@ class StaticPredictor:
         self,
         *,
         history: ObstacleStatesHistory[
-            Any, Any, Any, ObstacleStatesForTimeStep[Any, PredictionT]
+            Any, Any, Any, ObstacleStatesForTimeStep[Any, Any, PredictionT]
         ],
     ) -> PredictionT:
         assert history.horizon > 0, (

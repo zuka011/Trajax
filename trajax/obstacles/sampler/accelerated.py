@@ -2,7 +2,7 @@ from typing import cast
 from dataclasses import dataclass
 
 from trajax.types import JaxObstacleStateSampler
-from trajax.obstacles.accelerated import JaxSampledObstacleStates, JaxObstacleStates
+from trajax.obstacles.accelerated import JaxSampledObstacle2dPoses, JaxObstacle2dPoses
 
 from jaxtyping import PRNGKeyArray
 from riskit import distribution
@@ -12,26 +12,26 @@ import jax.numpy as jnp
 
 
 @dataclass
-class JaxGaussianObstacleStateSampler(
-    JaxObstacleStateSampler[JaxObstacleStates, JaxSampledObstacleStates]
+class JaxGaussianObstacle2dPoseSampler(
+    JaxObstacleStateSampler[JaxObstacle2dPoses, JaxSampledObstacle2dPoses]
 ):
     key: PRNGKeyArray
 
     @staticmethod
-    def create(*, seed: int = 42) -> "JaxGaussianObstacleStateSampler":
-        return JaxGaussianObstacleStateSampler(key=jax.random.key(seed))
+    def create(*, seed: int = 42) -> "JaxGaussianObstacle2dPoseSampler":
+        return JaxGaussianObstacle2dPoseSampler(key=jax.random.key(seed))
 
     def __call__[T: int, K: int, N: int](
-        self, states: JaxObstacleStates[T, K], *, count: N
-    ) -> JaxSampledObstacleStates[T, K, N]:
+        self, states: JaxObstacle2dPoses[T, K], *, count: N
+    ) -> JaxSampledObstacle2dPoses[T, K, N]:
         if states.count == 0:
-            return cast(JaxSampledObstacleStates, states.single())
+            return cast(JaxSampledObstacle2dPoses, states.single())
 
         if (covariance := states.covariance_array) is None:
             assert count == 1, (
                 "It's pointless to take multiple samples, when covariance information is not available."
             )
-            return cast(JaxSampledObstacleStates, states.single())
+            return cast(JaxSampledObstacle2dPoses, states.single())
 
         T, D_O, _, K = covariance.shape
 

@@ -64,7 +64,7 @@ class test_that_collision_is_detected_when_distance_is_below_threshold:
                         ),
                         observer := collectors.obstacle_states.decorating(
                             stubs.ObstacleStateObserver.create(),
-                            transformer=types.obstacle_states.of_states,
+                            transformer=types.obstacle_2d_poses.of_states,
                         ),
                     ),
                 ),
@@ -220,7 +220,7 @@ class test_that_metrics_are_recomputed_when_new_data_is_collected:
                         ),
                         observer := collectors.obstacle_states.decorating(
                             stubs.ObstacleStateObserver.create(),
-                            transformer=types.obstacle_states.of_states,
+                            transformer=types.obstacle_2d_poses.of_states,
                         ),
                     ),
                 ),

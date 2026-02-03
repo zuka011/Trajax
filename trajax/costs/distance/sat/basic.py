@@ -7,8 +7,11 @@ from trajax.types import (
     NumPyPositions,
     NumPyPositionExtractor,
     NumPyHeadingExtractor,
+    NumPySampledObstaclePositions,
+    NumPySampledObstacleHeadings,
+    NumPySampledObstaclePositionExtractor,
+    NumPySampledObstacleHeadingExtractor,
 )
-from trajax.obstacles import NumPySampledObstacleStates
 from trajax.costs.collision import NumPyDistance
 from trajax.costs.distance.basic import replace_missing
 from trajax.costs.distance.sat.common import ConvexPolygon, VerticesArray
@@ -20,9 +23,6 @@ import numpy as np
 type V = D[1]
 """Number of ego polygons (fixed to 1 for now)."""
 
-type C = D[1]
-"""Number of obstacle polygons (fixed to 1 for now)."""
-
 
 class MaskedObstacleStates[T: int, K: int, N: int](NamedTuple):
     x: Array[Dims[T, K, N]]
@@ -32,8 +32,8 @@ class MaskedObstacleStates[T: int, K: int, N: int](NamedTuple):
 
 
 @dataclass(frozen=True)
-class NumPySatDistanceExtractor[StateT](
-    DistanceExtractor[StateT, NumPySampledObstacleStates, NumPyDistance]
+class NumPySatDistanceExtractor[StateT, SampledObstacleStatesT](
+    DistanceExtractor[StateT, SampledObstacleStatesT, NumPyDistance]
 ):
     """
     Computes the signed distances between the ego polygon and obstacle polygons
@@ -46,34 +46,45 @@ class NumPySatDistanceExtractor[StateT](
     obstacle: ConvexPolygon
     positions_from: NumPyPositionExtractor[StateT]
     headings_from: NumPyHeadingExtractor[StateT]
+    obstacle_positions_from: NumPySampledObstaclePositionExtractor[
+        SampledObstacleStatesT
+    ]
+    obstacle_headings_from: NumPySampledObstacleHeadingExtractor[SampledObstacleStatesT]
 
     @staticmethod
-    def create[S](
+    def create[S, SOS](
         *,
         ego: ConvexPolygon,
         obstacle: ConvexPolygon,
         position_extractor: NumPyPositionExtractor[S],
         heading_extractor: NumPyHeadingExtractor[S],
-    ) -> "NumPySatDistanceExtractor[S]":
+        obstacle_position_extractor: NumPySampledObstaclePositionExtractor[SOS],
+        obstacle_heading_extractor: NumPySampledObstacleHeadingExtractor[SOS],
+    ) -> "NumPySatDistanceExtractor[S, SOS]":
         return NumPySatDistanceExtractor(
             ego=ego,
             obstacle=obstacle,
             positions_from=position_extractor,
             headings_from=heading_extractor,
+            obstacle_positions_from=obstacle_position_extractor,
+            obstacle_headings_from=obstacle_heading_extractor,
         )
 
-    def __call__[T: int, N: int, M: int = int, K: int = int](
-        self,
-        *,
-        states: StateT,
-        obstacle_states: NumPySampledObstacleStates[T, K, N],
+    def __call__[T: int = int, N: int = int, M: int = int](
+        self, *, states: StateT, obstacle_states: SampledObstacleStatesT
     ) -> NumPyDistance[T, V, M, N]:
+        obstacle_positions, obstacle_headings = replace_missing(
+            positions=self.obstacle_positions_from(obstacle_states),
+            headings=self.obstacle_headings_from(obstacle_states),
+        )
+
         return NumPyDistance(
             compute_sat_distances(
                 ego_positions=self.positions_from(states),
                 ego_headings=self.headings_from(states),
                 ego_vertices=self.ego.vertices,
-                obstacle_states=replace_missing(obstacle_states),
+                obstacle_positions=obstacle_positions,
+                obstacle_headings=obstacle_headings,
                 obstacle_vertices=self.obstacle.vertices,
             )
         )
@@ -84,15 +95,16 @@ def compute_sat_distances[T: int, M: int, K: int, N: int](
     ego_positions: NumPyPositions[T, M],
     ego_headings: NumPyHeadings[T, M],
     ego_vertices: VerticesArray,
-    obstacle_states: NumPySampledObstacleStates[T, K, N],
+    obstacle_positions: NumPySampledObstaclePositions[T, K, N],
+    obstacle_headings: NumPySampledObstacleHeadings[T, K, N],
     obstacle_vertices: VerticesArray,
 ) -> Array[Dims[T, V, M, N]]:
     ego_x = ego_positions.x()
     ego_y = ego_positions.y()
-    ego_heading = ego_headings.heading
+    ego_heading = ego_headings.heading()
 
     obstacle_x, obstacle_y, obstacle_heading, is_valid = mask_valid_obstacle_states(
-        obstacle_states=obstacle_states
+        positions=obstacle_positions, headings=obstacle_headings
     )
 
     T, M = ego_x.shape
@@ -133,18 +145,18 @@ def compute_sat_distances[T: int, M: int, K: int, N: int](
 
 def mask_valid_obstacle_states[T: int, K: int, N: int](
     *,
-    obstacle_states: NumPySampledObstacleStates[T, K, N],
+    positions: NumPySampledObstaclePositions[T, K, N],
+    headings: NumPySampledObstacleHeadings[T, K, N],
 ) -> MaskedObstacleStates[T, K, N]:
-    T, K, N = (
-        obstacle_states.horizon,
-        obstacle_states.count,
-        obstacle_states.sample_count,
-    )
+    x = positions.x()
+    y = positions.y()
+    heading = headings.heading()
+    T, K, N = x.shape
 
-    is_valid = ~(np.isinf(obstacle_states.x()) | np.isinf(obstacle_states.y()))
-    x = np.where(is_valid, obstacle_states.x(), 0.0)
-    y = np.where(is_valid, obstacle_states.y(), 0.0)
-    heading = np.where(is_valid, obstacle_states.heading(), 0.0)
+    is_valid = ~(np.isnan(x) | np.isnan(y) | np.isinf(x) | np.isinf(y))
+    x = np.where(is_valid, x, 0.0)
+    y = np.where(is_valid, y, 0.0)
+    heading = np.where(is_valid, heading, 0.0)
 
     assert shape_of(x, matches=(T, K, N), name="x")
     assert shape_of(y, matches=(T, K, N), name="y")

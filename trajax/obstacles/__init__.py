@@ -1,15 +1,15 @@
 from .common import PredictingObstacleStateProvider as PredictingObstacleStateProvider
 from .basic import (
-    NumPySampledObstacleStates as NumPySampledObstacleStates,
-    NumPyObstacleStates as NumPyObstacleStates,
-    NumPyObstacleStatesForTimeStep as NumPyObstacleStatesForTimeStep,
+    NumPySampledObstacle2dPoses as NumPySampledObstacle2dPoses,
+    NumPyObstacle2dPoses as NumPyObstacle2dPoses,
+    NumPyObstacle2dPosesForTimeStep as NumPyObstacle2dPosesForTimeStep,
     NumPyObstacle2dPositions as NumPyObstacle2dPositions,
     NumPyObstacle2dPositionsForTimeStep as NumPyObstacle2dPositionsForTimeStep,
 )
 from .accelerated import (
-    JaxSampledObstacleStates as JaxSampledObstacleStates,
-    JaxObstacleStates as JaxObstacleStates,
-    JaxObstacleStatesForTimeStep as JaxObstacleStatesForTimeStep,
+    JaxSampledObstacle2dPoses as JaxSampledObstacle2dPoses,
+    JaxObstacle2dPoses as JaxObstacle2dPoses,
+    JaxObstacle2dPosesForTimeStep as JaxObstacle2dPosesForTimeStep,
     JaxObstacle2dPositions as JaxObstacle2dPositions,
     JaxObstacle2dPositionsForTimeStep as JaxObstacle2dPositionsForTimeStep,
 )

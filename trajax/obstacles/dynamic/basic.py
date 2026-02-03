@@ -2,7 +2,7 @@ from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleSimulator
-from trajax.obstacles.basic import NumPyObstacleStatesForTimeStep
+from trajax.obstacles.basic import NumPyObstacle2dPosesForTimeStep
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -11,9 +11,9 @@ import numpy as np
 
 @dataclass(kw_only=True)
 class NumPyDynamicObstacleSimulator[K: int](
-    NumPyObstacleSimulator[NumPyObstacleStatesForTimeStep[K]]
+    NumPyObstacleSimulator[NumPyObstacle2dPosesForTimeStep[K]]
 ):
-    last: NumPyObstacleStatesForTimeStep[K]
+    last: NumPyObstacle2dPosesForTimeStep[K]
     velocities: Array[Dims[K, D[2]]]
 
     time_step: float | None = None
@@ -27,7 +27,7 @@ class NumPyDynamicObstacleSimulator[K: int](
         headings = headings_from(velocities)
 
         return NumPyDynamicObstacleSimulator(
-            last=NumPyObstacleStatesForTimeStep.create(
+            last=NumPyObstacle2dPosesForTimeStep.create(
                 x=positions[:, 0], y=positions[:, 1], heading=headings
             ),
             velocities=velocities,
@@ -38,7 +38,7 @@ class NumPyDynamicObstacleSimulator[K: int](
             last=self.last, velocities=self.velocities, time_step=time_step_size
         )
 
-    def step(self) -> NumPyObstacleStatesForTimeStep[K]:
+    def step(self) -> NumPyObstacle2dPosesForTimeStep[K]:
         assert self.time_step is not None, (
             "Time step must be set to advance obstacle states."
         )
@@ -50,7 +50,7 @@ class NumPyDynamicObstacleSimulator[K: int](
             time_step=self.time_step,
         )
 
-        self.last = NumPyObstacleStatesForTimeStep.create(
+        self.last = NumPyObstacle2dPosesForTimeStep.create(
             x=x, y=y, heading=self.last.heading()
         )
 

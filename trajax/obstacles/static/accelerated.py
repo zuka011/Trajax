@@ -2,7 +2,7 @@ from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import JaxObstacleSimulator
-from trajax.obstacles.accelerated import JaxObstacleStatesForTimeStep
+from trajax.obstacles.accelerated import JaxObstacle2dPosesForTimeStep
 
 from numtypes import Array, Dims, D
 from jaxtyping import Array as JaxArray, Float
@@ -12,7 +12,7 @@ import jax.numpy as jnp
 
 @dataclass(frozen=True)
 class JaxStaticObstacleSimulator[K: int](
-    JaxObstacleSimulator[JaxObstacleStatesForTimeStep[K]]
+    JaxObstacleSimulator[JaxObstacle2dPosesForTimeStep[K]]
 ):
     positions: Float[JaxArray, "K 2"]
     headings: Float[JaxArray, "K"]
@@ -46,8 +46,8 @@ class JaxStaticObstacleSimulator[K: int](
         # Time step does not matter.
         return self
 
-    def step(self) -> JaxObstacleStatesForTimeStep[K]:
-        return JaxObstacleStatesForTimeStep.create(
+    def step(self) -> JaxObstacle2dPosesForTimeStep[K]:
+        return JaxObstacle2dPosesForTimeStep.create(
             x=self.positions[:, 0], y=self.positions[:, 1], heading=self.headings
         )
 

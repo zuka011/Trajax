@@ -58,9 +58,9 @@ type MpccInputBatch = types.augmented.ControlInputBatch[
     PhysicalInputBatch, VirtualInputBatch
 ]
 type Planner = Mppi[MpccState, MpccInputSequence]
-type ObstacleStates = types.ObstacleStates
-type ObstacleStatesForTimeStep = types.ObstacleStatesForTimeStep
-type SampledObstacleStates = types.SampledObstacleStates
+type ObstacleStates = types.Obstacle2dPoses
+type ObstacleStatesForTimeStep = types.Obstacle2dPosesForTimeStep
+type SampledObstacleStates = types.SampledObstacle2dPoses
 type ObstaclePositions = types.Obstacle2dPositions
 type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
 type ObstacleSimulatorProvider = Callable[[], ObstacleSimulator]
@@ -105,7 +105,7 @@ def heading(states: PhysicalStateBatch) -> types.Headings:
 def bicycle_to_obstacle_states(
     states: types.bicycle.ObstacleStateSequences, covariances: Array | None
 ) -> ObstacleStates:
-    return types.obstacle_states.create(
+    return types.obstacle_2d_poses.create(
         x=states.x(), y=states.y(), heading=states.heading(), covariance=covariances
     )
 
@@ -582,6 +582,7 @@ class configure:
                                     else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
+                                    creator=types.obstacle_2d_poses,
                                     horizon=2,
                                     obstacle_count=obstacle_simulator.obstacle_count,
                                 ),
@@ -613,6 +614,8 @@ class configure:
                             ),
                             position_extractor=position_extractor,
                             heading_extractor=extract.from_physical(heading),
+                            obstacle_position_extractor=lambda states: states.positions(),
+                            obstacle_heading_extractor=lambda states: states.headings(),
                         )
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
@@ -651,7 +654,7 @@ class configure:
         )
 
         obstacle_collector = collectors.obstacle_states.decorating(
-            obstacles_provider, transformer=types.obstacle_states.of_states
+            obstacles_provider, transformer=types.obstacle_2d_poses.of_states
         )
 
         return NumPyMpccPlannerConfiguration(
@@ -756,6 +759,7 @@ class configure:
                                     else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
+                                    creator=types.obstacle_2d_poses,
                                     horizon=2,
                                     obstacle_count=obstacle_simulator.obstacle_count,
                                 ),
@@ -787,6 +791,8 @@ class configure:
                             ),
                             position_extractor=position_extractor,
                             heading_extractor=extract.from_physical(heading),
+                            obstacle_position_extractor=lambda states: states.positions(),
+                            obstacle_heading_extractor=lambda states: states.headings(),
                         )
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
@@ -845,7 +851,7 @@ class configure:
         )
 
         obstacle_collector = collectors.obstacle_states.decorating(
-            obstacles_provider, transformer=types.obstacle_states.of_states
+            obstacles_provider, transformer=types.obstacle_2d_poses.of_states
         )
 
         return NumPyMpccPlannerConfiguration(
@@ -867,6 +873,8 @@ class configure:
                         obstacle=ConvexPolygon.rectangle(length=L, width=W),
                         position_extractor=position_extractor,
                         heading_extractor=extract.from_physical(heading),
+                        obstacle_position_extractor=lambda states: states.positions(),
+                        obstacle_heading_extractor=lambda states: states.headings(),
                     ),
                 ),
                 collectors=collectors.registry(

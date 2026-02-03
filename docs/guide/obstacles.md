@@ -82,6 +82,8 @@ distance_extractor = distance.circles(
     ),
     position_extractor=extract.from_physical(position),
     heading_extractor=extract.from_physical(heading),
+    obstacle_position_extractor=obstacles.pose_position_extractor,
+    obstacle_heading_extractor=obstacles.pose_heading_extractor,
 )
 ```
 
@@ -97,6 +99,8 @@ distance_extractor = distance.sat(
     obstacle=ConvexPolygon.rectangle(length=2.5, width=1.2),
     position_extractor=extract.from_physical(position),
     heading_extractor=extract.from_physical(heading),
+    obstacle_position_extractor=obstacles.pose_position_extractor,
+    obstacle_heading_extractor=obstacles.pose_heading_extractor,
 )
 ```
 

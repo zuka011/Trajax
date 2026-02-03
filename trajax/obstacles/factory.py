@@ -11,8 +11,8 @@ from trajax.obstacles.dynamic import (
     JaxDynamicObstacleSimulator,
 )
 from trajax.obstacles.sampler import (
-    NumPyGaussianObstacleStateSampler,
-    JaxGaussianObstacleStateSampler,
+    NumPyGaussianObstacle2dPoseSampler,
+    JaxGaussianObstacle2dPoseSampler,
 )
 from trajax.obstacles.assignment import (
     NumPyHungarianObstacleIdAssignment,
@@ -30,7 +30,7 @@ class obstacles:
             predicting: Final = PredictingObstacleStateProvider.create
 
         class sampler:
-            gaussian: Final = NumPyGaussianObstacleStateSampler.create
+            gaussian: Final = NumPyGaussianObstacle2dPoseSampler.create
 
         class id_assignment:
             hungarian: Final = NumPyHungarianObstacleIdAssignment.create
@@ -44,7 +44,7 @@ class obstacles:
             predicting: Final = PredictingObstacleStateProvider.create
 
         class sampler:
-            gaussian: Final = JaxGaussianObstacleStateSampler.create
+            gaussian: Final = JaxGaussianObstacle2dPoseSampler.create
 
         class id_assignment:
             hungarian: Final = JaxHungarianObstacleIdAssignment.create

@@ -15,7 +15,7 @@ mppi_collector = collectors.states.decorating(
 
 obstacle_collector = collectors.obstacle_states.decorating(
     observer,
-    transformer=types.obstacle_states.of_states,
+    transformer=types.obstacle_2d_poses.of_states,
 )
 
 # Create registries
@@ -131,7 +131,7 @@ mppi_collector = collectors.states.decorating(
 )
 obstacle_collector = collectors.obstacle_states.decorating(
     observer,
-    transformer=types.obstacle_states.of_states,
+    transformer=types.obstacle_2d_poses.of_states,
 )
 
 registry = metrics.registry(

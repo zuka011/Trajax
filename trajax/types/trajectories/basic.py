@@ -75,7 +75,7 @@ class NumPyPositions[T: int, M: int](Positions[T, M]):
 
 @dataclass(frozen=True)
 class NumPyHeadings[T: int, M: int]:
-    heading: Array[Dims[T, M]]
+    _heading: Array[Dims[T, M]]
 
     @staticmethod
     def create[T_: int, M_: int](
@@ -84,6 +84,24 @@ class NumPyHeadings[T: int, M: int]:
     ) -> "NumPyHeadings[T_, M_]":
         """Creates a NumPy headings instance from an array of headings."""
         return NumPyHeadings(heading)
+
+    def __array__(self) -> Array[Dims[T, M]]:
+        return self.array
+
+    def heading(self) -> Array[Dims[T, M]]:
+        return self._heading
+
+    @property
+    def horizon(self) -> T:
+        return self._heading.shape[0]
+
+    @property
+    def rollout_count(self) -> M:
+        return self._heading.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[T, M]]:
+        return self._heading
 
 
 @dataclass(frozen=True)

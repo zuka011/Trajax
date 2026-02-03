@@ -1,9 +1,13 @@
 from .common import (
-    D_o as D_o,
-    D_O as D_O,
+    POSE_D_O as POSE_D_O,
+    PoseD_o as PoseD_o,
     SampledObstacleStates as SampledObstacleStates,
+    SampledObstaclePositions as SampledObstaclePositions,
+    SampledObstacleHeadings as SampledObstacleHeadings,
     ObstacleStatesForTimeStep as ObstacleStatesForTimeStep,
     ObstacleStates as ObstacleStates,
+    SampledObstaclePositionExtractor as SampledObstaclePositionExtractor,
+    SampledObstacleHeadingExtractor as SampledObstacleHeadingExtractor,
     ObstacleStateProvider as ObstacleStateProvider,
     ObstacleStateSampler as ObstacleStateSampler,
     Distance as Distance,
@@ -13,6 +17,13 @@ from .common import (
     RiskMetric as RiskMetric,
 )
 from .basic import (
+    NumPySampledObstacleStates as NumPySampledObstacleStates,
+    NumPySampledObstaclePositions as NumPySampledObstaclePositions,
+    NumPySampledObstacleHeadings as NumPySampledObstacleHeadings,
+    NumPyObstacleStatesForTimeStep as NumPyObstacleStatesForTimeStep,
+    NumPyObstacleStates as NumPyObstacleStates,
+    NumPySampledObstaclePositionExtractor as NumPySampledObstaclePositionExtractor,
+    NumPySampledObstacleHeadingExtractor as NumPySampledObstacleHeadingExtractor,
     NumPyObstacleStateProvider as NumPyObstacleStateProvider,
     NumPyObstacleStateSampler as NumPyObstacleStateSampler,
     NumPyDistanceExtractor as NumPyDistanceExtractor,
@@ -20,6 +31,13 @@ from .basic import (
     NumPyRiskMetric as NumPyRiskMetric,
 )
 from .accelerated import (
+    JaxSampledObstacleStates as JaxSampledObstacleStates,
+    JaxSampledObstaclePositions as JaxSampledObstaclePositions,
+    JaxSampledObstacleHeadings as JaxSampledObstacleHeadings,
+    JaxObstacleStatesForTimeStep as JaxObstacleStatesForTimeStep,
+    JaxObstacleStates as JaxObstacleStates,
+    JaxSampledObstaclePositionExtractor as JaxSampledObstaclePositionExtractor,
+    JaxSampledObstacleHeadingExtractor as JaxSampledObstacleHeadingExtractor,
     JaxObstacleStateProvider as JaxObstacleStateProvider,
     JaxObstacleStateSampler as JaxObstacleStateSampler,
     JaxDistanceExtractor as JaxDistanceExtractor,

@@ -2,7 +2,7 @@ from typing import Self, cast
 from dataclasses import dataclass
 
 from trajax.types import NumPyObstacleSimulator
-from trajax.obstacles.basic import NumPyObstacleStatesForTimeStep
+from trajax.obstacles.basic import NumPyObstacle2dPosesForTimeStep
 
 from numtypes import Array, Dims, D, shape_of
 
@@ -11,7 +11,7 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyStaticObstacleSimulator[K: int](
-    NumPyObstacleSimulator[NumPyObstacleStatesForTimeStep[K]]
+    NumPyObstacleSimulator[NumPyObstacle2dPosesForTimeStep[K]]
 ):
     positions: Array[Dims[K, D[2]]]
     headings: Array[Dims[K]]
@@ -41,8 +41,8 @@ class NumPyStaticObstacleSimulator[K: int](
         # Time step does not matter.
         return self
 
-    def step(self) -> NumPyObstacleStatesForTimeStep[K]:
-        return NumPyObstacleStatesForTimeStep.create(
+    def step(self) -> NumPyObstacle2dPosesForTimeStep[K]:
+        return NumPyObstacle2dPosesForTimeStep.create(
             x=self.positions[:, 0],
             y=self.positions[:, 1],
             heading=self.headings,

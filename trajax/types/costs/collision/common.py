@@ -4,27 +4,15 @@ from trajax.types.array import DataType
 
 from numtypes import Array, Dims, D
 
-D_O: Final = 3
+POSE_D_O: Final = 3
 
-type D_o = D[3]
-"""Dimension of a single obstacle state (x, y, heading)."""
+type PoseD_o = D[3]
+"""Dimension of a single obstacle pose state (x, y, heading)."""
 
 
-class SampledObstacleStates[T: int, K: int, N: int](Protocol):
+class SampledObstacleStates[T: int, D_o: int, K: int, N: int](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
         """Returns the sampled states of obstacles as a NumPy array."""
-        ...
-
-    def x(self) -> Array[Dims[T, K, N]]:
-        """Returns the x positions of obstacles over time and samples."""
-        ...
-
-    def y(self) -> Array[Dims[T, K, N]]:
-        """Returns the y positions of obstacles over time and samples."""
-        ...
-
-    def heading(self) -> Array[Dims[T, K, N]]:
-        """Returns the headings of obstacles over time and samples."""
         ...
 
     @property
@@ -48,7 +36,61 @@ class SampledObstacleStates[T: int, K: int, N: int](Protocol):
         ...
 
 
-class ObstacleStatesForTimeStep[K: int, ObstacleStatesT](Protocol):
+class SampledObstaclePositions[T: int, K: int, N: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], K, N]]:
+        """Returns the sampled positions of obstacles as a NumPy array."""
+        ...
+
+    def x(self) -> Array[Dims[T, K, N]]:
+        """Returns the x positions of obstacles over time and samples."""
+        ...
+
+    def y(self) -> Array[Dims[T, K, N]]:
+        """Returns the y positions of obstacles over time and samples."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon over which the positions are defined."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+    @property
+    def sample_count(self) -> N:
+        """The number of samples per obstacle."""
+        ...
+
+
+class SampledObstacleHeadings[T: int, K: int, N: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, K, N]]:
+        """Returns the sampled headings of obstacles as a NumPy array."""
+        ...
+
+    def heading(self) -> Array[Dims[T, K, N]]:
+        """Returns the headings of obstacles over time and samples."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon over which the headings are defined."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+    @property
+    def sample_count(self) -> N:
+        """The number of samples per obstacle."""
+        ...
+
+
+class ObstacleStatesForTimeStep[D_o: int, K: int, ObstacleStatesT](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
         """Returns the mean states of obstacles at a single time step as a NumPy array."""
         ...
@@ -80,7 +122,7 @@ class ObstacleStatesForTimeStep[K: int, ObstacleStatesT](Protocol):
         ...
 
 
-class ObstacleStates[T: int, K: int, SingleSampleT](Protocol):
+class ObstacleStates[T: int, D_o: int, K: int, SingleSampleT](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the mean states of obstacles as a NumPy array."""
         ...
@@ -107,17 +149,17 @@ class ObstacleStates[T: int, K: int, SingleSampleT](Protocol):
         ...
 
     @property
-    def horizon(self) -> int:
+    def horizon(self) -> T:
         """The time horizon over which the obstacle states are defined."""
         ...
 
     @property
-    def dimension(self) -> int:
+    def dimension(self) -> D_o:
         """The dimension of a single obstacle state."""
         ...
 
     @property
-    def count(self) -> int:
+    def count(self) -> K:
         """The number of obstacles."""
         ...
 
@@ -159,6 +201,18 @@ class Distance[T: int, V: int, M: int, N: int](Protocol):
     @property
     def sample_count(self) -> N:
         """The number of obstacle samples for which distances are computed."""
+        ...
+
+
+class SampledObstaclePositionExtractor[SampledStatesT, PositionsT](Protocol):
+    def __call__(self, states: SampledStatesT, /) -> PositionsT:
+        """Extracts the positions from the given sampled obstacle states."""
+        ...
+
+
+class SampledObstacleHeadingExtractor[SampledStatesT, HeadingsT](Protocol):
+    def __call__(self, states: SampledStatesT, /) -> HeadingsT:
+        """Extracts the headings from the given sampled obstacle states."""
         ...
 
 

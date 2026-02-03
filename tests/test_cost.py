@@ -1205,7 +1205,7 @@ class test_that_collision_cost_with_uncertainty_is_consistent_with_deterministic
                             y=rng.uniform(low=0.0, high=2.0, size=(T, K)),
                             heading=rng.uniform(low=-np.pi, high=np.pi, size=(T, K)),
                             covariance=array(
-                                (variance * np.eye(D_O := types_obstacle.D_O))[
+                                (variance * np.eye(D_O := types_obstacle.POSE_D_O))[
                                     None, ..., None
                                 ]
                                 * np.ones((T, D_O, D_O, K)),
@@ -1230,6 +1230,8 @@ class test_that_collision_cost_with_uncertainty_is_consistent_with_deterministic
                         heading_extractor=lambda states: types.headings(
                             heading=states.array[:, 2]
                         ),
+                        obstacle_position_extractor=lambda states: states.positions(),
+                        obstacle_heading_extractor=lambda states: states.headings(),
                     ),
                     distance_threshold=array([0.5], shape=(V,)),
                     weight=10.0,
@@ -1386,7 +1388,7 @@ class test_that_collision_cost_increases_with_higher_variance_in_obstacle_state_
                             heading=rng.uniform(low=-np.pi, high=np.pi, size=(T, K)),
                             covariance=array(
                                 # Each covariance matrix is diagonal with `variance` on the diagonal.
-                                (variance * np.eye(D_O := types_obstacle.D_O))[
+                                (variance * np.eye(D_O := types_obstacle.POSE_D_O))[
                                     None, ..., None
                                 ]
                                 * np.ones((T, D_O, D_O, K)),
@@ -1411,6 +1413,8 @@ class test_that_collision_cost_increases_with_higher_variance_in_obstacle_state_
                         heading_extractor=lambda states: types.headings(
                             heading=states.array[:, 2]
                         ),
+                        obstacle_position_extractor=lambda states: states.positions(),
+                        obstacle_heading_extractor=lambda states: states.headings(),
                     ),
                     distance_threshold=array([0.5], shape=(V,)),
                     weight=10.0,

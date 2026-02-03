@@ -1,15 +1,21 @@
 import numpy as np
 
-from trajax.obstacles import NumPySampledObstacleStates
+from trajax.types import NumPySampledObstaclePositions, NumPySampledObstacleHeadings
 
 
 def replace_missing[T: int, K: int, N: int](
-    obstacle_states: NumPySampledObstacleStates[T, K, N],
-) -> NumPySampledObstacleStates[T, K, N]:
-    return NumPySampledObstacleStates.create(
-        x=np.nan_to_num(obstacle_states.x(), nan=np.inf, posinf=np.inf, neginf=np.inf),
-        y=np.nan_to_num(obstacle_states.y(), nan=np.inf, posinf=np.inf, neginf=np.inf),
-        heading=np.nan_to_num(
-            obstacle_states.heading(), nan=0.0, posinf=0.0, neginf=0.0
+    *,
+    positions: NumPySampledObstaclePositions[T, K, N],
+    headings: NumPySampledObstacleHeadings[T, K, N],
+) -> tuple[
+    NumPySampledObstaclePositions[T, K, N], NumPySampledObstacleHeadings[T, K, N]
+]:
+    return (
+        NumPySampledObstaclePositions.create(
+            x=np.nan_to_num(positions.x(), nan=np.inf, posinf=np.inf, neginf=np.inf),
+            y=np.nan_to_num(positions.y(), nan=np.inf, posinf=np.inf, neginf=np.inf),
+        ),
+        NumPySampledObstacleHeadings.create(
+            heading=np.nan_to_num(headings.heading(), nan=0.0, posinf=0.0, neginf=0.0)
         ),
     )

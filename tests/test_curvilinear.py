@@ -24,14 +24,14 @@ class NumPyIntegratorPredictionCreator:
         *,
         states: types.numpy.integrator.ObstacleStateSequences,
         covariances: types.numpy.PositionCovariance,
-    ) -> types.numpy.ObstacleStates:
+    ) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=states.array[:, 0, :],
             y=states.array[:, 1, :],
             heading=states.array[:, 2, :],
         )
 
-    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=np.empty((horizon, 0)),
             y=np.empty((horizon, 0)),
@@ -45,7 +45,7 @@ class NumPyBicyclePredictionCreator:
         *,
         states: types.numpy.bicycle.ObstacleStateSequences,
         covariances: types.numpy.PositionCovariance | None,
-    ) -> types.numpy.ObstacleStates:
+    ) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=states.x(),
             y=states.y(),
@@ -53,7 +53,7 @@ class NumPyBicyclePredictionCreator:
             covariance=covariances,
         )
 
-    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=np.empty((horizon, 0)),
             y=np.empty((horizon, 0)),
@@ -67,14 +67,14 @@ class JaxIntegratorPredictionCreator:
         *,
         states: types.jax.integrator.ObstacleStateSequences,
         covariances: types.jax.PositionCovariance,
-    ) -> types.jax.ObstacleStates:
+    ) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=states.array[:, 0, :],
             y=states.array[:, 1, :],
             heading=states.array[:, 2, :],
         )
 
-    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=jnp.empty((horizon, 0)),
             y=jnp.empty((horizon, 0)),
@@ -88,7 +88,7 @@ class JaxBicyclePredictionCreator:
         *,
         states: types.jax.bicycle.ObstacleStateSequences,
         covariances: types.jax.PositionCovariance,
-    ) -> types.jax.ObstacleStates:
+    ) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=states.x(),
             y=states.y(),
@@ -96,7 +96,7 @@ class JaxBicyclePredictionCreator:
             covariance=covariances,
         )
 
-    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=jnp.empty((horizon, 0)),
             y=jnp.empty((horizon, 0)),
@@ -110,7 +110,7 @@ class NumPyUnicyclePredictionCreator:
         *,
         states: types.numpy.unicycle.ObstacleStateSequences,
         covariances: types.numpy.PositionCovariance | None,
-    ) -> types.numpy.ObstacleStates:
+    ) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=states.x(),
             y=states.y(),
@@ -118,7 +118,7 @@ class NumPyUnicyclePredictionCreator:
             covariance=covariances,
         )
 
-    def empty(self, *, horizon: int) -> types.numpy.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.numpy.Obstacle2dPoses:
         return data.numpy.obstacle_states(
             x=np.empty((horizon, 0)),
             y=np.empty((horizon, 0)),
@@ -132,7 +132,7 @@ class JaxUnicyclePredictionCreator:
         *,
         states: types.jax.unicycle.ObstacleStateSequences,
         covariances: types.jax.PositionCovariance,
-    ) -> types.jax.ObstacleStates:
+    ) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=states.x(),
             y=states.y(),
@@ -140,7 +140,7 @@ class JaxUnicyclePredictionCreator:
             covariance=covariances,
         )
 
-    def empty(self, *, horizon: int) -> types.jax.ObstacleStates:
+    def empty(self, *, horizon: int) -> types.jax.Obstacle2dPoses:
         return data.jax.obstacle_states(
             x=jnp.empty((horizon, 0)),
             y=jnp.empty((horizon, 0)),

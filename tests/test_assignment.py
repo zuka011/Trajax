@@ -8,12 +8,12 @@ from tests.dsl import mppi as data
 from pytest import mark
 
 
-type NumPyObstacleStatesForTimeStep = types.numpy.ObstacleStatesForTimeStep
-type NumPyObstacleStates = types.numpy.ObstacleStates
+type NumPyObstacleStatesForTimeStep = types.numpy.Obstacle2dPosesForTimeStep
+type NumPyObstacleStates = types.numpy.Obstacle2dPoses
 type NumPyObstacle2dPositionsForTimeStep = types.numpy.Obstacle2dPositionsForTimeStep
 type NumPyObstacle2dPositions = types.numpy.Obstacle2dPositions
-type JaxObstacleStatesForTimeStep = types.jax.ObstacleStatesForTimeStep
-type JaxObstacleStates = types.jax.ObstacleStates
+type JaxObstacleStatesForTimeStep = types.jax.Obstacle2dPosesForTimeStep
+type JaxObstacleStates = types.jax.Obstacle2dPoses
 type JaxObstacle2dPositionsForTimeStep = types.jax.Obstacle2dPositionsForTimeStep
 type JaxObstacle2dPositions = types.jax.Obstacle2dPositions
 

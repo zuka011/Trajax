@@ -127,7 +127,7 @@ class JaxPositions[T: int, M: int](Positions[T, M]):
 @jaxtyped
 @dataclass(frozen=True)
 class JaxHeadings[T: int, M: int]:
-    heading: Float[JaxArray, "T M"]
+    _heading: Float[JaxArray, "T M"]
 
     @staticmethod
     def create[T_: int, M_: int](
@@ -138,6 +138,28 @@ class JaxHeadings[T: int, M: int]:
     ) -> "JaxHeadings[T_, M_]":
         """Creates a JAX headings instance from an array of headings."""
         return JaxHeadings(heading)
+
+    def __array__(self) -> Array[Dims[T, M]]:
+        return self._numpy_heading
+
+    def heading(self) -> Array[Dims[T, M]]:
+        return self._numpy_heading
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self._heading.shape[0])
+
+    @property
+    def rollout_count(self) -> M:
+        return cast(M, self._heading.shape[1])
+
+    @property
+    def heading_array(self) -> Float[JaxArray, "T M"]:
+        return self._heading
+
+    @cached_property
+    def _numpy_heading(self) -> Array[Dims[T, M]]:
+        return np.asarray(self._heading)
 
 
 @dataclass(frozen=True)

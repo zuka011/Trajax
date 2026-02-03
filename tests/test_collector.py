@@ -221,7 +221,7 @@ class test_that_obstacle_state_collector_works_when_number_of_obstacles_varies:
                 registry := collectors.registry(
                     observer := collectors.obstacle_states.decorating(
                         stubs.ObstacleStateObserver.create(),
-                        transformer=types.obstacle_states.of_states,
+                        transformer=types.obstacle_2d_poses.of_states,
                     ),
                 ),
                 observer,

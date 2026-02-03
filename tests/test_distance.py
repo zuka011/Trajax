@@ -40,6 +40,8 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -74,6 +76,8 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -106,6 +110,8 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -169,6 +175,8 @@ class test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -233,6 +241,8 @@ class test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -294,6 +304,8 @@ class test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     # Ego center at (0, 0)
@@ -365,6 +377,8 @@ class test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_no
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     # Ego at origin
@@ -428,6 +442,8 @@ class test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacl
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -490,6 +506,8 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     # Three ego samples at different x positions
@@ -525,6 +543,8 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -593,6 +613,8 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     # Ego stationary at origin
@@ -626,6 +648,8 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -692,6 +716,8 @@ class test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_rad
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -752,6 +778,8 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                         heading_extractor=lambda states: types.headings(
                             heading=states.array[:, 2, :],
                         ),
+                        obstacle_position_extractor=lambda states: states.positions(),
+                        obstacle_heading_extractor=lambda states: states.headings(),
                     ),
                     states := data.state_batch(
                         array(
@@ -795,6 +823,8 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -822,6 +852,8 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -884,6 +916,8 @@ class test_that_distance_accounts_for_obstacle_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
@@ -915,6 +949,8 @@ class test_that_distance_accounts_for_obstacle_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array([[[0.0], [0.0], [0.0]]], shape=(T := 1, D_x := 3, M := 1))
@@ -954,6 +990,8 @@ class test_that_distance_accounts_for_obstacle_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1014,6 +1052,8 @@ class test_that_distance_accounts_for_ego_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1049,6 +1089,8 @@ class test_that_distance_accounts_for_ego_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1101,6 +1143,8 @@ class test_that_distance_accounts_for_ego_heading:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1161,6 +1205,8 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1195,6 +1241,8 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1231,6 +1279,8 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1260,6 +1310,8 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1285,6 +1337,8 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1347,6 +1401,8 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1411,6 +1467,8 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1506,6 +1564,8 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1531,6 +1591,8 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1556,6 +1618,8 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1581,6 +1645,8 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1636,6 +1702,8 @@ class test_that_sat_distance_is_computed_correctly_for_rotated_polygons:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1664,6 +1732,8 @@ class test_that_sat_distance_is_computed_correctly_for_rotated_polygons:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1719,6 +1789,8 @@ class test_that_sat_distance_is_positive_when_separation_exists:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1767,6 +1839,8 @@ class test_that_sat_distance_is_zero_when_polygons_are_touching_edge_to_edge:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1817,6 +1891,8 @@ class test_that_sat_distance_is_negative_when_polygons_are_penetrating:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1842,6 +1918,8 @@ class test_that_sat_distance_is_negative_when_polygons_are_penetrating:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1902,6 +1980,8 @@ class test_that_sat_works_with_non_rectangular_convex_polygons:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1951,6 +2031,8 @@ class test_that_sat_uses_closest_obstacle_when_multiple_obstacles_exist:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -1976,6 +2058,8 @@ class test_that_sat_uses_closest_obstacle_when_multiple_obstacles_exist:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -2033,6 +2117,8 @@ class test_that_sat_works_with_asymmetric_polygons:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(
@@ -2101,6 +2187,8 @@ class test_that_sat_works_with_complex_convex_polygons:
                     heading_extractor=lambda states: types.headings(
                         heading=states.array[:, 2, :],
                     ),
+                    obstacle_position_extractor=lambda states: states.positions(),
+                    obstacle_heading_extractor=lambda states: states.headings(),
                 ),
                 states := data.state_batch(
                     array(

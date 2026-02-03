@@ -2,7 +2,7 @@ from typing import Self
 from dataclasses import dataclass
 
 from trajax.types import jaxtyped, JaxObstacleSimulator
-from trajax.obstacles.accelerated import JaxObstacleStatesForTimeStep
+from trajax.obstacles.accelerated import JaxObstacle2dPosesForTimeStep
 
 from jaxtyping import Array as JaxArray, Float, Scalar
 
@@ -12,9 +12,9 @@ import jax.numpy as jnp
 
 @dataclass(kw_only=True)
 class JaxDynamicObstacleSimulator[K: int](
-    JaxObstacleSimulator[JaxObstacleStatesForTimeStep[K]]
+    JaxObstacleSimulator[JaxObstacle2dPosesForTimeStep[K]]
 ):
-    last: JaxObstacleStatesForTimeStep[K]
+    last: JaxObstacle2dPosesForTimeStep[K]
     velocities: Float[JaxArray, "K 2"]
 
     time_step: Scalar | None = None
@@ -34,7 +34,7 @@ class JaxDynamicObstacleSimulator[K: int](
         )
 
         return JaxDynamicObstacleSimulator(
-            last=JaxObstacleStatesForTimeStep.create(
+            last=JaxObstacle2dPosesForTimeStep.create(
                 x=positions[:, 0], y=positions[:, 1], heading=headings
             ),
             velocities=velocities,
@@ -47,7 +47,7 @@ class JaxDynamicObstacleSimulator[K: int](
             time_step=jnp.asarray(time_step_size),
         )
 
-    def step(self) -> JaxObstacleStatesForTimeStep[K]:
+    def step(self) -> JaxObstacle2dPosesForTimeStep[K]:
         assert self.time_step is not None, (
             "Time step must be set to advance obstacle states."
         )
@@ -59,7 +59,7 @@ class JaxDynamicObstacleSimulator[K: int](
             time_step=self.time_step,
         )
 
-        self.last = JaxObstacleStatesForTimeStep.create(
+        self.last = JaxObstacle2dPosesForTimeStep.create(
             x=x, y=y, heading=self.last.heading_array
         )
 

@@ -5,11 +5,13 @@ from trajax.types import (
     DistanceExtractor,
     JaxPositionExtractor,
     JaxHeadingExtractor,
+    JaxSampledObstaclePositions,
+    JaxSampledObstaclePositionExtractor,
+    JaxSampledObstacleHeadingExtractor,
 )
-from trajax.obstacles import JaxSampledObstacleStates
 from trajax.costs.collision import JaxDistance
-from trajax.costs.distance.circles.common import Circles
 from trajax.costs.distance.accelerated import replace_missing
+from trajax.costs.distance.circles.common import Circles
 
 from jaxtyping import Array as JaxArray, Float
 
@@ -18,8 +20,8 @@ import jax.numpy as jnp
 
 
 @dataclass(frozen=True)
-class JaxCircleDistanceExtractor[StateT, V: int, C: int](
-    DistanceExtractor[StateT, JaxSampledObstacleStates, JaxDistance]
+class JaxCircleDistanceExtractor[StateT, SampledObstacleStatesT, V: int, C: int](
+    DistanceExtractor[StateT, SampledObstacleStatesT, JaxDistance]
 ):
     """
     Computes the distances between parts of the ego robot and obstacles. Both the ego
@@ -32,15 +34,19 @@ class JaxCircleDistanceExtractor[StateT, V: int, C: int](
     obstacle_radii: Float[JaxArray, "C"]
     positions_from: JaxPositionExtractor[StateT]
     headings_from: JaxHeadingExtractor[StateT]
+    obstacle_positions_from: JaxSampledObstaclePositionExtractor[SampledObstacleStatesT]
+    obstacle_headings_from: JaxSampledObstacleHeadingExtractor[SampledObstacleStatesT]
 
     @staticmethod
-    def create[S, V_: int, C_: int](
+    def create[S, SOS, V_: int, C_: int](
         *,
         ego: Circles[V_],
         obstacle: Circles[C_],
         position_extractor: JaxPositionExtractor[S],
         heading_extractor: JaxHeadingExtractor[S],
-    ) -> "JaxCircleDistanceExtractor[S, V_, C_]":
+        obstacle_position_extractor: JaxSampledObstaclePositionExtractor[SOS],
+        obstacle_heading_extractor: JaxSampledObstacleHeadingExtractor[SOS],
+    ) -> "JaxCircleDistanceExtractor[S, SOS, V_, C_]":
         return JaxCircleDistanceExtractor(
             ego_origins=jnp.asarray(ego.origins),
             ego_radii=jnp.asarray(ego.radii),
@@ -48,40 +54,41 @@ class JaxCircleDistanceExtractor[StateT, V: int, C: int](
             obstacle_radii=jnp.asarray(obstacle.radii),
             positions_from=position_extractor,
             headings_from=heading_extractor,
+            obstacle_positions_from=obstacle_position_extractor,
+            obstacle_headings_from=obstacle_heading_extractor,
         )
 
-    def __call__[T: int, N: int, M: int = int, K: int = int](
-        self,
-        *,
-        states: StateT,
-        obstacle_states: JaxSampledObstacleStates[T, K, N],
+    def __call__[T: int = int, N: int = int, M: int = int](
+        self, *, states: StateT, obstacle_states: SampledObstacleStatesT
     ) -> JaxDistance[T, V, M, N]:
         ego_positions = self.positions_from(states)
         ego_headings = self.headings_from(states)
+        obstacle_positions = self.obstacle_positions_from(obstacle_states)
+        obstacle_headings = self.obstacle_headings_from(obstacle_states)
 
-        if self._no_obstacles_exist(obstacle_states):
+        if self._no_obstacles_exist(obstacle_positions):
             T, M = ego_positions.horizon, ego_positions.rollout_count
             V = self._ego_circle_count
-            N = obstacle_states.sample_count
+            N = obstacle_positions.sample_count
             return JaxDistance(jnp.full((T, V, M, N), jnp.inf))
 
         return JaxDistance(
             compute_circle_distances(
                 ego_x=ego_positions.x_array,
                 ego_y=ego_positions.y_array,
-                ego_heading=ego_headings.heading,
+                ego_heading=ego_headings.heading_array,
                 ego_origins=self.ego_origins,
                 ego_radii=self.ego_radii,
-                obstacle_x=obstacle_states.x_array,
-                obstacle_y=obstacle_states.y_array,
-                obstacle_heading=obstacle_states.heading_array,
+                obstacle_x=obstacle_positions.x_array,
+                obstacle_y=obstacle_positions.y_array,
+                obstacle_heading=obstacle_headings.heading_array,
                 obstacle_origins=self.obstacle_origins,
                 obstacle_radii=self.obstacle_radii,
             )
         )
 
-    def _no_obstacles_exist(self, states: JaxSampledObstacleStates) -> bool:
-        return self._obstacle_circle_count == 0 or states.x_array.shape[1] == 0
+    def _no_obstacles_exist(self, positions: JaxSampledObstaclePositions) -> bool:
+        return self._obstacle_circle_count == 0 or positions.x_array.shape[1] == 0
 
     @property
     def _obstacle_circle_count(self) -> int:

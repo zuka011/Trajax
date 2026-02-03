@@ -8,9 +8,9 @@ from numtypes import Array, NumberArray, Dims
 import numpy as np
 import jax.numpy as jnp
 
-D_O: Final = types.obstacle.D_O
+D_O: Final = types.obstacle.POSE_D_O
 
-type D_o = types.obstacle.D_o
+type D_o = types.obstacle.PoseD_o
 type NumPyState[D_x: int] = types.numpy.simple.State[D_x]
 type NumPyStateBatch[T: int, D_x: int, M: int] = types.numpy.simple.StateBatch[
     T, D_x, M
@@ -22,11 +22,11 @@ type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
     types.numpy.simple.ControlInputBatch[T, D_u, M]
 )
 type NumPySampledObstacleStates[T: int, K: int, N: int] = (
-    types.numpy.SampledObstacleStates[T, K, N]
+    types.numpy.SampledObstacle2dPoses[T, K, N]
 )
 type NumPyObstacleIds[K: int] = types.numpy.ObstacleIds[K]
-type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.ObstacleStatesForTimeStep[K]
-type NumPyObstacleStates[T: int, K: int] = types.numpy.ObstacleStates[T, K]
+type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.Obstacle2dPosesForTimeStep[K]
+type NumPyObstacleStates[T: int, K: int] = types.numpy.Obstacle2dPoses[T, K]
 type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
 type NumPyBoundaryDistance[T: int, M: int] = types.numpy.BoundaryDistance[T, M]
 
@@ -38,12 +38,12 @@ type JaxControlInputSequence[T: int, D_u: int] = types.jax.simple.ControlInputSe
 type JaxControlInputBatch[T: int, D_u: int, M: int] = (
     types.jax.simple.ControlInputBatch[T, D_u, M]
 )
-type JaxSampledObstacleStates[T: int, K: int, N: int] = types.jax.SampledObstacleStates[
-    T, K, N
-]
+type JaxSampledObstacleStates[T: int, K: int, N: int] = (
+    types.jax.SampledObstacle2dPoses[T, K, N]
+)
 type JaxObstacleIds[K: int] = types.jax.ObstacleIds[K]
-type JaxObstacleStatesForTimeStep[K: int] = types.jax.ObstacleStatesForTimeStep[K]
-type JaxObstacleStates[T: int, K: int] = types.jax.ObstacleStates[T, K]
+type JaxObstacleStatesForTimeStep[K: int] = types.jax.Obstacle2dPosesForTimeStep[K]
+type JaxObstacleStates[T: int, K: int] = types.jax.Obstacle2dPoses[T, K]
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
 type JaxBoundaryDistance[T: int, M: int] = types.jax.BoundaryDistance[T, M]
 
@@ -85,7 +85,7 @@ class numpy:
         heading: Array[Dims[T, K]] | None = None,
         covariance: Array[Dims[T, D_o, D_o, K]] | None = None,
     ) -> NumPyObstacleStates[T, K]:
-        return types.numpy.obstacle_states.create(
+        return types.numpy.obstacle_2d_poses.create(
             x=x,
             y=y,
             heading=heading if heading is not None else np.zeros_like(x),
@@ -99,7 +99,7 @@ class numpy:
         y: Array[Dims[K]],
         heading: Array[Dims[K]] | None = None,
     ) -> NumPyObstacleStatesForTimeStep[K]:
-        return types.numpy.obstacle_states_for_time_step.create(
+        return types.numpy.obstacle_2d_poses_for_time_step.create(
             x=x,
             y=y,
             heading=heading if heading is not None else np.zeros_like(x),
@@ -112,7 +112,7 @@ class numpy:
         y: Array[Dims[T, K, N]],
         heading: Array[Dims[T, K, N]] | None = None,
     ) -> NumPySampledObstacleStates[T, K, N]:
-        return types.numpy.obstacle_states.sampled(
+        return types.numpy.obstacle_2d_poses.sampled(
             x=x,
             y=y,
             heading=heading if heading is not None else np.zeros_like(x),
@@ -170,7 +170,7 @@ class jax:
         | Float[JaxArray, f"T {D_O} {D_O} K"]
         | None = None,
     ) -> JaxObstacleStates[T, K]:
-        return types.jax.obstacle_states.create(
+        return types.jax.obstacle_2d_poses.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
             heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
@@ -184,7 +184,7 @@ class jax:
         y: Array[Dims[K]] | Float[JaxArray, "K"],
         heading: Array[Dims[K]] | Float[JaxArray, "K"] | None = None,
     ) -> JaxObstacleStatesForTimeStep[K]:
-        return types.jax.obstacle_states_for_time_step.create(
+        return types.jax.obstacle_2d_poses_for_time_step.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
             heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
@@ -197,7 +197,7 @@ class jax:
         y: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
         heading: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"] | None = None,
     ) -> JaxSampledObstacleStates[T, K, N]:
-        return types.jax.obstacle_states.sampled(
+        return types.jax.obstacle_2d_poses.sampled(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
             heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),

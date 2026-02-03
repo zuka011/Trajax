@@ -14,11 +14,14 @@ def environment(data: BenchmarkData, console: Console) -> None:
 
     if data.machine_info:
         info = data.machine_info
+        gpus = info.gpu.get("devices", [])
         lines.append(f"Python: {info.python_version or 'unknown'}")
         lines.append(f"Platform: {info.platform or 'unknown'}")
         lines.append(f"CPU: {info.cpu.get('brand_raw', 'unknown')}")
         lines.append(
-            f"GPU: {', '.join(it.get('name', 'unknown') for it in info.gpu.get('devices', []))} - {info.gpu.get('count', 0)} device(s)"
+            f"GPU: {', '.join(it.get('name', 'unknown') for it in gpus)} - {info.gpu.get('count', 0)} device(s)"
+            if len(gpus) > 0
+            else "GPU: none"
         )
 
     if data.commit_info and data.commit_info.id:

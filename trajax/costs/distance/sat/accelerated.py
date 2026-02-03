@@ -5,16 +5,22 @@ from trajax.types import (
     DistanceExtractor,
     JaxPositionExtractor,
     JaxHeadingExtractor,
+    JaxSampledObstaclePositions,
+    JaxSampledObstaclePositionExtractor,
+    JaxSampledObstacleHeadingExtractor,
 )
-from trajax.obstacles import JaxSampledObstacleStates
 from trajax.costs.collision import JaxDistance
 from trajax.costs.distance.sat.common import ConvexPolygon
 from trajax.costs.distance.accelerated import replace_missing
 
 from jaxtyping import Array as JaxArray, Float, Scalar, Bool
+from numtypes import D
 
 import jax
 import jax.numpy as jnp
+
+type V = D[1]
+"""Number of ego polygons (fixed to 1 for now)."""
 
 
 type BoolScalar = Bool[JaxArray, ""]
@@ -22,8 +28,8 @@ type Vector2d = Float[JaxArray, "2"]
 
 
 @dataclass(frozen=True)
-class JaxSatDistanceExtractor[StateT](
-    DistanceExtractor[StateT, JaxSampledObstacleStates, JaxDistance]
+class JaxSatDistanceExtractor[StateT, SampledObstacleStatesT](
+    DistanceExtractor[StateT, SampledObstacleStatesT, JaxDistance]
 ):
     """
     Computes the signed distances between the ego polygon and obstacle polygons
@@ -36,53 +42,58 @@ class JaxSatDistanceExtractor[StateT](
     obstacle_vertices: Float[JaxArray, "P_obs 2"]
     positions_from: JaxPositionExtractor[StateT]
     headings_from: JaxHeadingExtractor[StateT]
+    obstacle_positions_from: JaxSampledObstaclePositionExtractor[SampledObstacleStatesT]
+    obstacle_headings_from: JaxSampledObstacleHeadingExtractor[SampledObstacleStatesT]
 
     @staticmethod
-    def create[S](
+    def create[S, SOS](
         *,
         ego: ConvexPolygon,
         obstacle: ConvexPolygon,
         position_extractor: JaxPositionExtractor[S],
         heading_extractor: JaxHeadingExtractor[S],
-    ) -> "JaxSatDistanceExtractor[S]":
+        obstacle_position_extractor: JaxSampledObstaclePositionExtractor[SOS],
+        obstacle_heading_extractor: JaxSampledObstacleHeadingExtractor[SOS],
+    ) -> "JaxSatDistanceExtractor[S, SOS]":
         return JaxSatDistanceExtractor(
             ego_vertices=jnp.asarray(ego.vertices),
             obstacle_vertices=jnp.asarray(obstacle.vertices),
             positions_from=position_extractor,
             headings_from=heading_extractor,
+            obstacle_positions_from=obstacle_position_extractor,
+            obstacle_headings_from=obstacle_heading_extractor,
         )
 
-    def __call__[T: int, N: int](
-        self,
-        *,
-        states: StateT,
-        obstacle_states: JaxSampledObstacleStates[T, int, N],
-    ) -> JaxDistance[T, int, int, N]:
+    def __call__[T: int = int, N: int = int, M: int = int](
+        self, *, states: StateT, obstacle_states: SampledObstacleStatesT
+    ) -> JaxDistance[T, V, M, N]:
         ego_positions = self.positions_from(states)
         ego_headings = self.headings_from(states)
+        obstacle_positions = self.obstacle_positions_from(obstacle_states)
+        obstacle_headings = self.obstacle_headings_from(obstacle_states)
 
-        if self._no_obstacles_exist(obstacle_states):
+        if self._no_obstacles_exist(obstacle_positions):
             T = ego_positions.horizon
             M = ego_positions.rollout_count
             V = 1
-            N = obstacle_states.sample_count
+            N = obstacle_positions.sample_count
             return JaxDistance(jnp.full((T, V, M, N), jnp.inf))
 
         return JaxDistance(
             compute_sat_distances(
                 ego_x=ego_positions.x_array,
                 ego_y=ego_positions.y_array,
-                ego_heading=ego_headings.heading,
+                ego_heading=ego_headings.heading_array,
                 ego_vertices=self.ego_vertices,
-                obstacle_x=obstacle_states.x_array,
-                obstacle_y=obstacle_states.y_array,
-                obstacle_heading=obstacle_states.heading_array,
+                obstacle_x=obstacle_positions.x_array,
+                obstacle_y=obstacle_positions.y_array,
+                obstacle_heading=obstacle_headings.heading_array,
                 obstacle_vertices=self.obstacle_vertices,
             )
         )
 
-    def _no_obstacles_exist(self, states: JaxSampledObstacleStates) -> bool:
-        return states.x_array.shape[1] == 0
+    def _no_obstacles_exist(self, positions: JaxSampledObstaclePositions) -> bool:
+        return positions.x_array.shape[1] == 0
 
 
 @jax.jit
