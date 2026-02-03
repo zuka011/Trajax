@@ -671,7 +671,9 @@ class configure:
                             ),
                             position_extractor=position_extractor,
                             heading_extractor=extract.from_physical(heading),
-                            obstacle_position_extractor=lambda states: states.positions(),
+                            obstacle_position_extractor=lambda states: (
+                                states.positions()
+                            ),
                             obstacle_heading_extractor=lambda states: states.headings(),
                         )
                     ),
@@ -848,7 +850,9 @@ class configure:
                             ),
                             position_extractor=position_extractor,
                             heading_extractor=extract.from_physical(heading),
-                            obstacle_position_extractor=lambda states: states.positions(),
+                            obstacle_position_extractor=lambda states: (
+                                states.positions()
+                            ),
                             obstacle_heading_extractor=lambda states: states.headings(),
                         )
                     ),

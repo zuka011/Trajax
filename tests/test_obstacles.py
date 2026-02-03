@@ -249,14 +249,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
-                            lambda observation_0,
-                            observation_1,
-                            observation_2,
-                            observation_3,
-                            x,
-                            y,
-                            heading,
-                            ids: (
+                            lambda observation_0, observation_1, observation_2, observation_3, x, y, heading, ids: (
                                 # IDs don't start from 0 intentionally.
                                 ids(
                                     data.obstacle_ids([6, 2, 3]),
@@ -377,19 +370,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
-                            lambda observation_0,
-                            history_0,
-                            ids_0,
-                            observation_1,
-                            history_1,
-                            ids_1,
-                            observation_2,
-                            history_2,
-                            ids_2,
-                            observation_3,
-                            history_3,
-                            ids_3,
-                            ids: (
+                            lambda observation_0, history_0, ids_0, observation_1, history_1, ids_1, observation_2, history_2, ids_2, observation_3, history_3, ids_3, ids: (
                                 ids(
                                     data.obstacle_ids([6, 3, 2]),
                                     when_observing=observation_0,
@@ -642,19 +623,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
-                            lambda observation_0,
-                            history_0,
-                            ids_0,
-                            observation_1,
-                            history_1,
-                            ids_1,
-                            observation_2,
-                            history_2,
-                            ids_2,
-                            observation_3,
-                            history_3,
-                            ids_3,
-                            ids: (
+                            lambda observation_0, history_0, ids_0, observation_1, history_1, ids_1, observation_2, history_2, ids_2, observation_3, history_3, ids_3, ids: (
                                 ids(
                                     data.obstacle_ids([3, 6]),
                                     when_observing=observation_0,
@@ -887,13 +856,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                     ),
                     id_assignment=stubs.ObstacleIdAssignment.returns(
                         partial(
-                            lambda observation_0,
-                            history_0,
-                            ids_0,
-                            observation_1,
-                            history_1,
-                            ids_1,
-                            ids: (
+                            lambda observation_0, history_0, ids_0, observation_1, history_1, ids_1, ids: (
                                 ids(
                                     data.obstacle_ids([2, 3]),
                                     when_observing=observation_0,

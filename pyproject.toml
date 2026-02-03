@@ -63,7 +63,9 @@ benchmark = [
     "pytest-benchmark>=5.2.3",
     "rich>=14.3.2",
     "typer>=0.21.1",
-    "jax[cuda]>=0.9.0; sys_platform == 'linux'",
+]
+benchmark-cuda = [
+    "jax[cuda]>=0.9.0",
 ]
 
 [tool.uv]

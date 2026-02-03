@@ -549,8 +549,9 @@ class test_that_simulating_individual_steps_matches_horizon_simulation:
                 ),
                 initial_state := data.state(x=0.0, y=0.0, heading=0.0),
                 horizon := T,
-                input_of := lambda input_batch,
-                t: types.unicycle.control_input_sequence(input_batch.array[t:, :, 0]),
+                input_of := lambda input_batch, t: (
+                    types.unicycle.control_input_sequence(input_batch.array[t:, :, 0])
+                ),
             ),
         ]
 
@@ -614,8 +615,9 @@ class test_that_simulating_individual_input_sequence_matches_horizon_simulation:
                     angular_velocity=array([0.1, -0.1, 0.2, 0.0], shape=(T,)),
                 ),
                 initial_state := data.state(x=0.0, y=0.0, heading=0.0),
-                input_of := lambda input_batch,
-                t: types.unicycle.control_input_sequence(input_batch.array[..., t]),
+                input_of := lambda input_batch, t: (
+                    types.unicycle.control_input_sequence(input_batch.array[..., t])
+                ),
             ),
         ]
 

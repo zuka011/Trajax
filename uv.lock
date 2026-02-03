@@ -1342,11 +1342,13 @@ cuda = [
 
 [package.dev-dependencies]
 benchmark = [
-    { name = "jax", extra = ["cuda"], marker = "sys_platform == 'linux'" },
     { name = "msgspec" },
     { name = "pytest-benchmark" },
     { name = "rich" },
     { name = "typer" },
+]
+benchmark-cuda = [
+    { name = "jax", extra = ["cuda"] },
 ]
 dev = [
     { name = "pre-commit" },
@@ -1383,12 +1385,12 @@ provides-extras = ["cuda"]
 
 [package.metadata.requires-dev]
 benchmark = [
-    { name = "jax", extras = ["cuda"], marker = "sys_platform == 'linux'", specifier = ">=0.9.0" },
     { name = "msgspec", specifier = ">=0.20.0" },
     { name = "pytest-benchmark", specifier = ">=5.2.3" },
     { name = "rich", specifier = ">=14.3.2" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
+benchmark-cuda = [{ name = "jax", extras = ["cuda"], specifier = ">=0.9.0" }]
 dev = [
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pyright", specifier = ">=1.1.408" },
