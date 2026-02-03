@@ -6,7 +6,7 @@ stages:
 
 include:
   - project: "zurabm/ci-templates"
-    ref: v1.4.3
+    ref: v1.4.4
     file:
       - "/python/verify.yml"
       - "/python/publish.yml"
@@ -61,12 +61,16 @@ pages:
   extends:
     - .base
   script:
+    - uv run pytest -v -m docs --visualize
     - uv run mkdocs build --strict --site-dir public
   artifacts:
     paths:
       - public
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  needs:
+    - job: test-integration
+      optional: true
       
 visualizer:
   stage: triggers
