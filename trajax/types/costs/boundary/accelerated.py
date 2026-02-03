@@ -38,4 +38,4 @@ class JaxBoundaryDistance[T: int, M: int]:
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[T, M]]:
-        return np.array(self._array)
+        return np.asarray(self._array)

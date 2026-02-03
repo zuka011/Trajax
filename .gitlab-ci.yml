@@ -1,11 +1,12 @@
 stages:
   - verify
   - publish
+  - pages
   - triggers
 
 include:
   - project: "zurabm/ci-templates"
-    ref: v1.4.2
+    ref: v1.4.3
     file:
       - "/python/verify.yml"
       - "/python/publish.yml"
@@ -36,6 +37,35 @@ benchmark:
       --adapter python_pytest
       --file benchmark.json
 
+coverage:
+  extends:
+    - .coverage-report-base
+  script:
+    - |
+      COVERAGE_FILES=""
+      [ -f coverage-unit.xml ] && COVERAGE_FILES="$COVERAGE_FILES --file coverage-unit.xml"
+      [ -f coverage-integration.xml ] && COVERAGE_FILES="$COVERAGE_FILES --file coverage-integration.xml"
+      
+      if [ -z "$COVERAGE_FILES" ]; then
+        echo "ERROR - No coverage files found" && exit 1
+      fi
+      
+      curl -Os https://cli.codecov.io/latest/linux/codecov
+      chmod +x codecov
+      ./codecov upload-process $COVERAGE_FILES --token $CODECOV_TOKEN
+
+pages:
+  stage: pages
+  extends:
+    - .base
+  script:
+    - uv run mkdocs build --strict --site-dir public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      
 visualizer:
   stage: triggers
   trigger:

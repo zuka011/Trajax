@@ -30,7 +30,7 @@ class NumPyWeights[M: int]:
     _array: Array[Dims[M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
-        return np.array(self._array, dtype=dtype)
+        return self._array
 
     @property
     def rollout_count(self) -> M:

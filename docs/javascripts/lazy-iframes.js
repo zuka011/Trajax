@@ -4,7 +4,7 @@
  * - Iframes go "idle" (src removed) when they scroll out of view
  */
 document$.subscribe(({ body }) => {
-  const iframes = body.querySelectorAll('iframe[src*="/visualizations/"]');
+  const iframes = body.querySelectorAll('iframe[src*="visualizations/"]');
   
   if (!iframes.length) return;
   

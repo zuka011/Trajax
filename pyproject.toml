@@ -42,7 +42,7 @@ cuda = [
 dev = [
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
-    "ruff>=0.14.14",
+    "ruff>=0.15.0",
 ]
 doc = [
     "typi>=0.1.1",

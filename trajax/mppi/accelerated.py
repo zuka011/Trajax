@@ -35,7 +35,7 @@ class JaxWeights[M: int]:
     _array: Float[JaxArray, "M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
-        return np.array(self._array)
+        return np.asarray(self._array)
 
     @property
     def rollout_count(self) -> M:

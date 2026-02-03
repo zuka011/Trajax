@@ -1,8 +1,19 @@
 site_name: trajax
+site_url: https://risk-metrics.gitlab.io/trajax/
 site_description: A library providing performant NumPy & JAX implementations of an MPPI planner
 site_author: Zurab Mujirishvili
 repo_url: https://gitlab.com/risk-metrics/trajax
 repo_name: risk-metrics/trajax
+
+# Exclude unused visualization files from build
+exclude_docs: |
+  visualizations/**/*.json
+  visualizations/**/numpy-*.html
+  visualizations/**/jax-from-augmented*.html
+  visualizations/**/jax-from-base*.html
+  visualizations/**/*-static-obstacles.html
+  visualizations/**/*-halton-*.html
+  visualizations/**/*-highway-*.html
 
 theme:
   name: material

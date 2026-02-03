@@ -978,6 +978,3 @@ class test_that_normal_changes_direction_when_trajectory_is_curved:
         assert np.allclose(start_normal.y(), expected_start_normal[1], atol=0.2)
         assert np.allclose(end_normal.x(), expected_end_normal[0], atol=0.2)
         assert np.allclose(end_normal.y(), expected_end_normal[1], atol=0.2)
-
-
-# # TODO: Add tests for optimal behavior when following looped trajectories.
