@@ -1,4 +1,5 @@
 stages:
+  - build
   - verify
   - publish
   - pages
@@ -56,11 +57,27 @@ coverage:
       chmod +x codecov
       ./codecov upload-process $COVERAGE_FILES --token $CODECOV_TOKEN
 
+build-visualizer-cli:
+  stage: build
+  image: node:22
+  script:
+    - npm install -g pnpm
+    - cd visualizer/core
+    - pnpm install --frozen-lockfile
+    - pnpm build
+  artifacts:
+    paths:
+      - visualizer/trajax_visualizer/assets/cli.js
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 pages:
   stage: pages
   extends:
     - .base
   script:
+    - apt-get update -qq && apt-get install -qq -y nodejs
     - uv run pytest -v -m docs --visualize
     - uv run mkdocs build --strict --site-dir public
   artifacts:
@@ -71,7 +88,9 @@ pages:
   needs:
     - job: test-integration
       optional: true
-      
+    - job: build-visualizer-cli
+      artifacts: true
+
 visualizer:
   stage: triggers
   trigger:
