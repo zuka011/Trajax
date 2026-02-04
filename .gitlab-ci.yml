@@ -1,7 +1,7 @@
 stages:
-  - build
   - verify
   - publish
+  - build
   - pages
   - triggers
 
@@ -60,6 +60,7 @@ coverage:
 build-visualizer-cli:
   stage: build
   image: node:22
+  needs: []
   script:
     - npm install -g pnpm
     - cd visualizer/core
