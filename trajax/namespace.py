@@ -200,12 +200,18 @@ class types:
         ControlInputBatch[T, D_u, M]
     )
     type Costs[T: int = Any, M: int = Any] = Costs[T, M]
-    type CostFunction[I, S, C] = CostFunction[I, S, C]
+    type CostFunction[InputBatchT, StateBatchT, CostsT] = CostFunction[
+        InputBatchT, StateBatchT, CostsT
+    ]
     type Error[T: int = Any, M: int = Any] = Error[T, M]
     type Risk[T: int = Any, M: int = Any] = Risk[T, M]
 
-    type ContouringCost[I, S, E] = ContouringCost[I, S, E]
-    type RiskMetric[CF, SB, OS, S, R] = RiskMetric[CF, SB, OS, S, R]
+    type ContouringCost[InputBatchT, StateBatchT, ErrorT] = ContouringCost[
+        InputBatchT, StateBatchT, ErrorT
+    ]
+    type RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT] = (
+        RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT]
+    )
 
     class obstacle:
         type PoseD_o = PoseD_o_
@@ -289,20 +295,34 @@ class types:
         type SampledObstacleHeadings[T: int = Any, K: int = Any, N: int = Any] = (
             NumPySampledObstacleHeadings[T, K, N]
         )
-        type SampledObstaclePositionExtractor[S] = (
-            NumPySampledObstaclePositionExtractor[S]
+        type SampledObstaclePositionExtractor[SampledStatesT] = (
+            NumPySampledObstaclePositionExtractor[SampledStatesT]
         )
-        type SampledObstacleHeadingExtractor[S] = NumPySampledObstacleHeadingExtractor[
-            S
-        ]
-        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
-            NumPyObstacleStates[T, D_o, K, SST]
+        type SampledObstacleHeadingExtractor[SampledStatesT] = (
+            NumPySampledObstacleHeadingExtractor[SampledStatesT]
         )
-        type ObstacleStatesForTimeStep[D_o: int = Any, K: int = Any, OS = Any] = (
-            NumPyObstacleStatesForTimeStep[D_o, K, OS]
-        )
-        type ObstaclePositionExtractor[OTS, O, PTS, P] = NumPyObstaclePositionExtractor[
-            OTS, O, PTS, P
+        type ObstacleStates[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            SingleSampleT = Any,
+            ObstacleStatesForTimeStepT = Any,
+        ] = NumPyObstacleStates[T, D_o, K, SingleSampleT, ObstacleStatesForTimeStepT]
+        type ObstacleStatesForTimeStep[
+            D_o: int = Any,
+            K: int = Any,
+            ObstacleStatesT = Any,
+        ] = NumPyObstacleStatesForTimeStep[D_o, K, ObstacleStatesT]
+        type ObstaclePositionExtractor[
+            ObstacleStatesForTimeStepT,
+            ObstacleStatesT,
+            PositionsForTimeStepT,
+            PositionsT,
+        ] = NumPyObstaclePositionExtractor[
+            ObstacleStatesForTimeStepT,
+            ObstacleStatesT,
+            PositionsForTimeStepT,
+            PositionsT,
         ]
         type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
             NumPySampledObstacle2dPoses[T, K, N]
@@ -317,9 +337,10 @@ class types:
         type Obstacle2dPositionsForTimeStep[K: int = Any] = (
             NumPyObstacle2dPositionsForTimeStep[K]
         )
-        type ObstacleStatesRunningHistory[S, STS: NumPyObstacleStatesForTimeStep] = (
-            NumPyObstacleStatesRunningHistory[S, STS]
-        )
+        type ObstacleStatesRunningHistory[
+            StatesT,
+            StatesForTimeStepT: NumPyObstacleStatesForTimeStep,
+        ] = NumPyObstacleStatesRunningHistory[StatesT, StatesForTimeStepT]
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             NumPyDistance[T, V, M, N]
         )
@@ -341,18 +362,29 @@ class types:
             NumPyStateBatch[T, D_x, M],
             NumPyCosts[T, M],
         ]
-        type PathParameterExtractor[S] = NumPyPathParameterExtractor[S]
-        type PathVelocityExtractor[I] = NumPyPathVelocityExtractor[I]
-        type PositionExtractor[S] = NumPyPositionExtractor[S]
-        type DistanceExtractor[SB, SOS, D] = NumPyDistanceExtractor[SB, SOS, D]
-        type BoundaryDistanceExtractor[SB, D] = NumPyBoundaryDistanceExtractor[SB, D]
-        type RiskMetric[SB, OS, SOS] = NumPyRiskMetric[SB, OS, SOS]
-        type ContouringCost[S] = NumPyContouringCost[S]
-        type ObstacleStateProvider[O] = NumPyObstacleStateProvider[O]
-        type ObstaclePositionExtractor[OTS, O, PTS, P] = NumPyObstaclePositionExtractor[
-            OTS, O, PTS, P
+        type PathParameterExtractor[StateBatchT] = NumPyPathParameterExtractor[
+            StateBatchT
         ]
-        type InitialCovarianceProvider[S] = NumPyInitialCovarianceProvider[S]
+        type PathVelocityExtractor[InputBatchT] = NumPyPathVelocityExtractor[
+            InputBatchT
+        ]
+        type PositionExtractor[StateBatchT] = NumPyPositionExtractor[StateBatchT]
+        type DistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT] = (
+            NumPyDistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT]
+        )
+        type BoundaryDistanceExtractor[StateBatchT, DistanceT] = (
+            NumPyBoundaryDistanceExtractor[StateBatchT, DistanceT]
+        )
+        type RiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT] = (
+            NumPyRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT]
+        )
+        type ContouringCost[StateBatchT] = NumPyContouringCost[StateBatchT]
+        type ObstacleStateProvider[ObstacleStatesT] = NumPyObstacleStateProvider[
+            ObstacleStatesT
+        ]
+        type InitialCovarianceProvider[StateSequencesT] = (
+            NumPyInitialCovarianceProvider[StateSequencesT]
+        )
 
         path_parameters: Final = NumPyPathParameters
         reference_points: Final = NumPyReferencePoints.create
@@ -497,21 +529,35 @@ class types:
         type SampledObstacleHeadings[T: int = Any, K: int = Any, N: int = Any] = (
             JaxSampledObstacleHeadings[T, K, N]
         )
-        type SampledObstaclePositionExtractor[S] = JaxSampledObstaclePositionExtractor[
-            S
-        ]
-        type SampledObstacleHeadingExtractor[S] = JaxSampledObstacleHeadingExtractor[S]
-        type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
-            JaxObstacleStates[T, D_o, K, SST]
+        type SampledObstaclePositionExtractor[SampledStatesT] = (
+            JaxSampledObstaclePositionExtractor[SampledStatesT]
         )
+        type SampledObstacleHeadingExtractor[SampledStatesT] = (
+            JaxSampledObstacleHeadingExtractor[SampledStatesT]
+        )
+        type ObstacleStates[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            SingleSampleT = Any,
+            ObstacleStatesForTimeStepT = Any,
+        ] = JaxObstacleStates[T, D_o, K, SingleSampleT, ObstacleStatesForTimeStepT]
         type ObstacleStatesForTimeStep[
             D_o: int = Any,
             K: int = Any,
-            OS = Any,
+            ObstacleStatesT = Any,
             NumPyT = Any,
-        ] = JaxObstacleStatesForTimeStep[D_o, K, OS, NumPyT]
-        type ObstaclePositionExtractor[OTS, O, PTS, P] = JaxObstaclePositionExtractor[
-            OTS, O, PTS, P
+        ] = JaxObstacleStatesForTimeStep[D_o, K, ObstacleStatesT, NumPyT]
+        type ObstaclePositionExtractor[
+            ObstacleStatesForTimeStepT,
+            ObstacleStatesT,
+            PositionsForTimeStepT,
+            PositionsT,
+        ] = JaxObstaclePositionExtractor[
+            ObstacleStatesForTimeStepT,
+            ObstacleStatesT,
+            PositionsForTimeStepT,
+            PositionsT,
         ]
         type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
             JaxSampledObstacle2dPoses[T, K, N]
@@ -525,9 +571,9 @@ class types:
             JaxObstacle2dPositionsForTimeStep[K]
         )
         type ObstacleStatesRunningHistory[
-            S: JaxObstacleStates,
-            STS: JaxObstacleStatesForTimeStep,
-        ] = JaxObstacleStatesRunningHistory[S, STS]
+            StatesT: JaxObstacleStates,
+            StatesForTimeStepT: JaxObstacleStatesForTimeStep,
+        ] = JaxObstacleStatesRunningHistory[StatesT, StatesForTimeStepT]
         type Distance[T: int = Any, V: int = Any, M: int = Any, N: int = Any] = (
             JaxDistance[T, V, M, N]
         )
@@ -547,18 +593,27 @@ class types:
         ] = JaxCostFunction[
             JaxControlInputBatch[T, D_u, M], JaxStateBatch[T, D_x, M], JaxCosts[T, M]
         ]
-        type PathParameterExtractor[S] = JaxPathParameterExtractor[S]
-        type PathVelocityExtractor[I] = JaxPathVelocityExtractor[I]
-        type PositionExtractor[S] = JaxPositionExtractor[S]
-        type DistanceExtractor[SB, SOS, D] = JaxDistanceExtractor[SB, SOS, D]
-        type BoundaryDistanceExtractor[SB, D] = JaxBoundaryDistanceExtractor[SB, D]
-        type RiskMetric[SB, OS, SOS] = JaxRiskMetric[SB, OS, SOS]
-        type ContouringCost[S] = JaxContouringCost[S]
-        type ObstacleStateProvider[O] = JaxObstacleStateProvider[O]
-        type ObstaclePositionExtractor[OTS, O, PTS, P] = JaxObstaclePositionExtractor[
-            OTS, O, PTS, P
+        type PathParameterExtractor[StateBatchT] = JaxPathParameterExtractor[
+            StateBatchT
         ]
-        type InitialCovarianceProvider[S] = JaxInitialCovarianceProvider[S]
+        type PathVelocityExtractor[InputBatchT] = JaxPathVelocityExtractor[InputBatchT]
+        type PositionExtractor[StateBatchT] = JaxPositionExtractor[StateBatchT]
+        type DistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT] = (
+            JaxDistanceExtractor[StateBatchT, SampledObstacleStatesT, DistanceT]
+        )
+        type BoundaryDistanceExtractor[StateBatchT, DistanceT] = (
+            JaxBoundaryDistanceExtractor[StateBatchT, DistanceT]
+        )
+        type RiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT] = (
+            JaxRiskMetric[StateBatchT, ObstacleStatesT, SampledObstacleStatesT]
+        )
+        type ContouringCost[StateBatchT] = JaxContouringCost[StateBatchT]
+        type ObstacleStateProvider[ObstacleStatesT] = JaxObstacleStateProvider[
+            ObstacleStatesT
+        ]
+        type InitialCovarianceProvider[StateSequencesT] = JaxInitialCovarianceProvider[
+            StateSequencesT
+        ]
 
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create
@@ -674,6 +729,8 @@ class classes:
     Costs: Final = Costs
     CostFunction: Final = CostFunction
     Error: Final = Error
+    Risk: Final = Risk
+    RiskMetric: Final = RiskMetric
     ContouringCost: Final = ContouringCost
 
     class bicycle:
@@ -710,15 +767,39 @@ class classes:
         ReferencePoints: Final = NumPyReferencePoints
         Positions: Final = NumPyPositions
         Headings: Final = NumPyHeadings
+        LateralPositions: Final = NumPyLateralPositions
+        LongitudinalPositions: Final = NumPyLongitudinalPositions
+        ObstacleIds: Final = NumPyObstacleIds
         ObstacleStates: Final = NumPyObstacleStates
+        ObstacleStatesForTimeStep: Final = NumPyObstacleStatesForTimeStep
         SampledObstacleStates: Final = NumPySampledObstacleStates
+        SampledObstaclePositions: Final = NumPySampledObstaclePositions
+        SampledObstacleHeadings: Final = NumPySampledObstacleHeadings
+        SampledObstaclePositionExtractor: Final = NumPySampledObstaclePositionExtractor
+        SampledObstacleHeadingExtractor: Final = NumPySampledObstacleHeadingExtractor
+        SampledObstacle2dPoses: Final = NumPySampledObstacle2dPoses
+        Obstacle2dPoses: Final = NumPyObstacle2dPoses
+        Obstacle2dPosesForTimeStep: Final = NumPyObstacle2dPosesForTimeStep
+        Obstacle2dPositions: Final = NumPyObstacle2dPositions
+        Obstacle2dPositionsForTimeStep: Final = NumPyObstacle2dPositionsForTimeStep
+        ObstacleStatesRunningHistory: Final = NumPyObstacleStatesRunningHistory
+        ObstaclePositionExtractor: Final = NumPyObstaclePositionExtractor
         Distance: Final = NumPyDistance
+        BoundaryDistance: Final = NumPyBoundaryDistance
+        Risk: Final = NumPyRisk
+        InitialPositionCovariance: Final = NumPyInitialPositionCovariance
+        InitialVelocityCovariance: Final = NumPyInitialVelocityCovariance
+        PositionCovariance: Final = NumPyPositionCovariance
         CostFunction: Final = NumPyCostFunction
         PathParameterExtractor: Final = NumPyPathParameterExtractor
         PathVelocityExtractor: Final = NumPyPathVelocityExtractor
         PositionExtractor: Final = NumPyPositionExtractor
+        DistanceExtractor: Final = NumPyDistanceExtractor
+        BoundaryDistanceExtractor: Final = NumPyBoundaryDistanceExtractor
+        RiskMetric: Final = NumPyRiskMetric
         ContouringCost: Final = NumPyContouringCost
         ObstacleStateProvider: Final = NumPyObstacleStateProvider
+        InitialCovarianceProvider: Final = NumPyInitialCovarianceProvider
 
         class simple:
             State: Final = NumPySimpleState
@@ -767,15 +848,39 @@ class classes:
         ReferencePoints: Final = JaxReferencePoints
         Positions: Final = JaxPositions
         Headings: Final = JaxHeadings
+        LateralPositions: Final = JaxLateralPositions
+        LongitudinalPositions: Final = JaxLongitudinalPositions
+        ObstacleIds: Final = JaxObstacleIds
         ObstacleStates: Final = JaxObstacleStates
+        ObstacleStatesForTimeStep: Final = JaxObstacleStatesForTimeStep
         SampledObstacleStates: Final = JaxSampledObstacleStates
+        SampledObstaclePositions: Final = JaxSampledObstaclePositions
+        SampledObstacleHeadings: Final = JaxSampledObstacleHeadings
+        SampledObstaclePositionExtractor: Final = JaxSampledObstaclePositionExtractor
+        SampledObstacleHeadingExtractor: Final = JaxSampledObstacleHeadingExtractor
+        SampledObstacle2dPoses: Final = JaxSampledObstacle2dPoses
+        Obstacle2dPoses: Final = JaxObstacle2dPoses
+        Obstacle2dPosesForTimeStep: Final = JaxObstacle2dPosesForTimeStep
+        Obstacle2dPositions: Final = JaxObstacle2dPositions
+        Obstacle2dPositionsForTimeStep: Final = JaxObstacle2dPositionsForTimeStep
+        ObstacleStatesRunningHistory: Final = JaxObstacleStatesRunningHistory
+        ObstaclePositionExtractor: Final = JaxObstaclePositionExtractor
         Distance: Final = JaxDistance
+        BoundaryDistance: Final = JaxBoundaryDistance
+        Risk: Final = JaxRisk
+        InitialPositionCovariance: Final = JaxInitialPositionCovariance
+        InitialVelocityCovariance: Final = JaxInitialVelocityCovariance
+        PositionCovariance: Final = JaxPositionCovariance
         CostFunction: Final = JaxCostFunction
         PathParameterExtractor: Final = JaxPathParameterExtractor
         PathVelocityExtractor: Final = JaxPathVelocityExtractor
         PositionExtractor: Final = JaxPositionExtractor
+        DistanceExtractor: Final = JaxDistanceExtractor
+        BoundaryDistanceExtractor: Final = JaxBoundaryDistanceExtractor
+        RiskMetric: Final = JaxRiskMetric
         ContouringCost: Final = JaxContouringCost
         ObstacleStateProvider: Final = JaxObstacleStateProvider
+        InitialCovarianceProvider: Final = JaxInitialCovarianceProvider
 
         class simple:
             State: Final = JaxSimpleState
