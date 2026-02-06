@@ -10,7 +10,7 @@ Access type factories through the backend namespaces:
 
     ```python
     from trajax import types
-    
+
     positions = types.numpy.positions(x=..., y=...)
     ```
 
@@ -18,7 +18,7 @@ Access type factories through the backend namespaces:
 
     ```python
     from trajax import types
-    
+
     positions = types.jax.positions(x=..., y=...)
     ```
 
@@ -55,10 +55,7 @@ Access type factories through the backend namespaces:
 
 ### Trajectory Types
 
-::: trajax.types.Trajectory
-    options:
-      show_root_heading: true
-      heading_level: 3
+- [`Trajectory`](trajectory.md#trajax.types.Trajectory) — see [trajectory](trajectory.md)
 
 ::: trajax.types.PathParameters
     options:
@@ -82,10 +79,7 @@ Access type factories through the backend namespaces:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.types.CostFunction
-    options:
-      show_root_heading: true
-      heading_level: 3
+- [`CostFunction`](costs.md#trajax.types.CostFunction) — see [costs](costs.md)
 
 ### Boundary Types
 
@@ -106,17 +100,11 @@ Access type factories through the backend namespaces:
 
 ### Model Types
 
-::: trajax.types.DynamicalModel
-    options:
-      show_root_heading: true
-      heading_level: 3
+- [`DynamicalModel`](model.md#trajax.types.DynamicalModel) — see [model](model.md)
 
 ### MPPI Types
 
-::: trajax.types.Mppi
-    options:
-      show_root_heading: true
-      heading_level: 3
+- [`Mppi`](mppi.md#trajax.types.Mppi) — see [mppi](mppi.md)
 
 ::: trajax.types.Sampler
     options:

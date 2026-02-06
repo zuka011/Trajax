@@ -76,6 +76,8 @@ type NumPyMpccCostFunction[
 
 
 class NumPyMpccWeightConfig:
+    """Weight configuration for contouring, lag, and progress costs."""
+
     class Full(TypedDict):
         contouring: float
         lag: float
@@ -88,6 +90,8 @@ class NumPyMpccWeightConfig:
 
 
 class NumPyMpccVirtualStateConfig:
+    """Configuration for the virtual (path parameter) state in MPCC."""
+
     class Full(TypedDict):
         state_limits: tuple[float, float]
         velocity_limits: tuple[float, float]
@@ -104,6 +108,8 @@ class NumPyMpccVirtualStateConfig:
 
 
 class NumPyMpccConfig:
+    """Combined MPCC configuration grouping weight and virtual state settings."""
+
     class Full(TypedDict):
         weights: NumPyMpccWeightConfig.Full
         virtual: NumPyMpccVirtualStateConfig.Full
@@ -140,6 +146,8 @@ def fill_defaults(
 
 
 class NumPyMpccMppi:
+    """Factory for NumPy MPPI planners configured for model predictive contouring control."""
+
     @staticmethod
     def create[
         S: NumPyState,

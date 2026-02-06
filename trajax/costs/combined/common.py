@@ -5,6 +5,8 @@ from trajax.types import CostFunction, Costs, CostSumFunction
 
 @dataclass(frozen=True)
 class CombinedCost[InputT, StateT, CostsT: Costs]:
+    """Evaluates multiple cost functions and sums their outputs."""
+
     costs: list[CostFunction[InputT, StateT, CostsT]]
     sum: CostSumFunction[CostsT]
 

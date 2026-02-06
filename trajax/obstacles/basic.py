@@ -26,6 +26,8 @@ type ObstacleCovarianceArray[T: int = int, K: int = int] = Array[Dims[T, D_o, D_
 class NumPySampledObstacle2dPoses[T: int, K: int, N: int](
     NumPySampledObstacleStates[T, D_o, K, N]
 ):
+    """Sampled 2D poses (x, y, heading) with shape (T, POSE_D_O, K, N)."""
+
     _x: Array[Dims[T, K, N]]
     _y: Array[Dims[T, K, N]]
     _heading: Array[Dims[T, K, N]]
@@ -93,6 +95,8 @@ class NumPySampledObstacle2dPoses[T: int, K: int, N: int](
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyObstacle2dPositions[T: int, K: int](NumPyObstaclePositions[T, D[2], K]):
+    """2D positions (x, y) with shape (T, 2, K)."""
+
     _x: Array[Dims[T, K]]
     _y: Array[Dims[T, K]]
 
@@ -130,6 +134,8 @@ class NumPyObstacle2dPositions[T: int, K: int](NumPyObstaclePositions[T, D[2], K
 class NumPyObstacle2dPositionsForTimeStep[K: int](
     NumPyObstaclePositionsForTimeStep[D[2], K]
 ):
+    """2D positions (x, y) for a single time step with shape (2, K)."""
+
     _x: Array[Dims[K]]
     _y: Array[Dims[K]]
 
@@ -169,6 +175,8 @@ class NumPyObstacle2dPoses[T: int, K: int](
         "NumPyObstacle2dPosesForTimeStep[K]",
     ]
 ):
+    """2D poses (x, y, heading) with shape (T, POSE_D_O, K)."""
+
     _x: Array[Dims[T, K]]
     _y: Array[Dims[T, K]]
     _heading: Array[Dims[T, K]]
@@ -309,6 +317,8 @@ class NumPyObstacle2dPoses[T: int, K: int](
 class NumPyObstacle2dPosesForTimeStep[K: int](
     NumPyObstacleStatesForTimeStep[D_o, K, NumPyObstacle2dPoses]
 ):
+    """2D poses (x, y, heading) for a single time step with shape (POSE_D_O, K)."""
+
     _x: Array[Dims[K]]
     _y: Array[Dims[K]]
     _heading: Array[Dims[K]]

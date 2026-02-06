@@ -41,13 +41,14 @@ type ControlInputsAtTimeStep[M: int] = Array[Dims[BicycleD_u, M]]
 
 @dataclass(frozen=True)
 class NumPyBicycleState(BicycleState, NumPyState[BicycleD_x]):
+    """Kinematic bicycle state: [x, y, heading, speed]."""
+
     _array: StateArray
 
     @staticmethod
     def create(
         *, x: float, y: float, heading: float, speed: float
     ) -> "NumPyBicycleState":
-        """Creates a NumPy bicycle state from individual state components."""
         return NumPyBicycleState(array([x, y, heading, speed], shape=(BICYCLE_D_X,)))
 
     def __array__(self, dtype: DataType | None = None) -> StateArray:
@@ -59,22 +60,18 @@ class NumPyBicycleState(BicycleState, NumPyState[BicycleD_x]):
 
     @property
     def x(self) -> float:
-        """Returns the x position of the bicycle."""
         return self.array[0]
 
     @property
     def y(self) -> float:
-        """Returns the y position of the bicycle."""
         return self.array[1]
 
     @property
     def heading(self) -> float:
-        """Returns the heading (orientation) of the bicycle."""
         return self.array[2]
 
     @property
     def speed(self) -> float:
-        """Returns the speed (velocity magnitude) of the bicycle."""
         return self.array[3]
 
     @property
@@ -93,7 +90,6 @@ class NumPyBicycleStateSequence[T: int, M: int = Any](
     def of_states[T_: int = int](
         states: Sequence[NumPyBicycleState], *, horizon: T_ | None = None
     ) -> "NumPyBicycleStateSequence[T_, D[1]]":
-        """Creates a NumPy bicycle state sequence from a sequence of bicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -149,14 +145,12 @@ class NumPyBicycleStateBatch[T: int, M: int](
     def wrap[T_: int, M_: int](
         array: StateBatchArray[T_, M_],
     ) -> "NumPyBicycleStateBatch[T_, M_]":
-        """Creates a NumPy bicycle state batch from the given array."""
         return NumPyBicycleStateBatch(array)
 
     @staticmethod
     def of_states[T_: int = int](
         states: Sequence[NumPyBicycleState], *, horizon: T_ | None = None
     ) -> "NumPyBicycleStateBatch[int, D[1]]":
-        """Creates a NumPy bicycle state batch from a sequence of bicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -217,6 +211,8 @@ class NumPyBicyclePositions[T: int, M: int](BicyclePositions[T, M]):
 class NumPyBicycleControlInputSequence[T: int](
     BicycleControlInputSequence[T], NumPyControlInputSequence[T, BicycleD_u]
 ):
+    """Control inputs: [acceleration, steering_angle]."""
+
     _array: ControlInputSequenceArray[T]
 
     @staticmethod
@@ -280,7 +276,6 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
     def zero[T_: int, M_: int](
         *, horizon: T_, rollout_count: M_ = 1
     ) -> "NumPyBicycleControlInputBatch[T_, M_]":
-        """Creates a zeroed control input batch for the given horizon and rollout count."""
         array = np.zeros((horizon, BICYCLE_D_U, rollout_count))
 
         assert shape_of(array, matches=(horizon, BICYCLE_D_U, rollout_count))
@@ -291,7 +286,6 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
     def create[T_: int, M_: int](
         *, array: Array[Dims[T_, BicycleD_u, M_]]
     ) -> "NumPyBicycleControlInputBatch[T_, M_]":
-        """Creates a NumPy bicycle control input batch from the given array."""
 
         return NumPyBicycleControlInputBatch(array)
 
@@ -299,7 +293,6 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
     def of[T_: int](
         sequence: NumPyBicycleControlInputSequence[T_],
     ) -> "NumPyBicycleControlInputBatch[T_, D[1]]":
-        """Creates a NumPy bicycle control input batch from a single control input sequence."""
         array = sequence.array[..., np.newaxis]
 
         assert shape_of(array, matches=(sequence.horizon, BICYCLE_D_U, 1))
@@ -338,7 +331,6 @@ class NumPyBicycleObstacleStates[K: int]:
         heading: Array[Dims[K]],
         speed: Array[Dims[K]],
     ) -> "NumPyBicycleObstacleStates[K]":
-        """Creates a NumPy bicycle obstacle states from individual state components."""
         array = np.stack([x, y, heading, speed], axis=0)
 
         assert shape_of(array, matches=(BICYCLE_D_X, x.shape[0]))
@@ -358,7 +350,6 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
         heading: Array[Dims[T, K]],
         speed: Array[Dims[T, K]],
     ) -> "NumPyBicycleObstacleStateSequences[T, K]":
-        """Creates a NumPy bicycle obstacle state sequences from individual state components."""
         T, K = x.shape
         array = np.stack([x, y, heading, speed], axis=1)
 
@@ -435,6 +426,8 @@ class NumPyBicycleModel(
         NumPyBicycleControlInputBatch,
     ],
 ):
+    """Kinematic bicycle with rear-axle reference, Euler-integrated with configurable limits."""
+
     _time_step_size: float
     wheelbase: float
     speed_limits: tuple[float, float]
@@ -450,7 +443,6 @@ class NumPyBicycleModel(
         steering_limits: tuple[float, float] | None = None,
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "NumPyBicycleModel":
-        """Creates a kinematic bicycle model that uses NumPy for computations."""
 
         return NumPyBicycleModel(
             _time_step_size=time_step_size,
@@ -539,6 +531,8 @@ class NumPyBicycleObstacleModel(
         NumPyBicycleObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle steering from history and propagates bicycle kinematics forward."""
+
     time_step_size: float
     wheelbase: float
 
@@ -546,7 +540,6 @@ class NumPyBicycleObstacleModel(
     def create(
         *, time_step_size: float, wheelbase: float = 1.0
     ) -> "NumPyBicycleObstacleModel":
-        """Creates a NumPy bicycle obstacle model."""
         return NumPyBicycleObstacleModel(
             time_step_size=time_step_size, wheelbase=wheelbase
         )

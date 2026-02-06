@@ -47,6 +47,8 @@ type ControlInputsAtTimeStep[M: int] = Float[JaxArray, f"{BICYCLE_D_U} M"]
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
+    """Kinematic bicycle state: [x, y, heading, speed]."""
+
     _array: StateArray
 
     @staticmethod
@@ -57,7 +59,6 @@ class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
         heading: float | Scalar,
         speed: float | Scalar,
     ) -> "JaxBicycleState":
-        """Creates a JAX bicycle state from individual state components."""
         return JaxBicycleState(jnp.array([x, y, heading, speed]))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_x]]:
@@ -69,22 +70,18 @@ class JaxBicycleState(BicycleState, JaxState[BicycleD_x]):
 
     @property
     def x(self) -> float:
-        """Returns the x position of the bicycle."""
         return float(self.array[0])
 
     @property
     def y(self) -> float:
-        """Returns the y position of the bicycle."""
         return float(self.array[1])
 
     @property
     def heading(self) -> float:
-        """Returns the heading (orientation) of the bicycle."""
         return float(self.array[2])
 
     @property
     def speed(self) -> float:
-        """Returns the speed (velocity magnitude) of the bicycle."""
         return float(self.array[3])
 
     @property
@@ -119,7 +116,6 @@ class JaxBicycleStateSequence[T: int, M: int = Any](
     def of_states[T_: int = int](
         states: Sequence[JaxBicycleState], *, horizon: T_ | None = None
     ) -> "JaxBicycleStateSequence[T_, D[1]]":
-        """Creates a JAX bicycle state sequence from a sequence of bicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -178,14 +174,12 @@ class JaxBicycleStateBatch[T: int, M: int](
     def wrap[T_: int, M_: int](
         array: StateBatchArray[T_, M_],
     ) -> "JaxBicycleStateBatch[T_, M_]":
-        """Creates a JAX bicycle state batch from the given array."""
         return JaxBicycleStateBatch(array)
 
     @staticmethod
     def of_states[T_: int = int](
         states: Sequence[JaxBicycleState], *, horizon: T_ | None = None
     ) -> "JaxBicycleStateBatch[T_, int]":
-        """Creates a bicycle state batch from a sequence of bicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -262,6 +256,8 @@ class JaxBicyclePositions[T: int, M: int](BicyclePositions[T, M]):
 class JaxBicycleControlInputSequence[T: int](
     BicycleControlInputSequence[T], JaxControlInputSequence[T, BicycleD_u]
 ):
+    """Control inputs: [acceleration, steering_angle]."""
+
     _array: ControlInputSequenceArray[T]
 
     @staticmethod
@@ -322,7 +318,6 @@ class JaxBicycleControlInputBatch[T: int, M: int](
     def zero[T_: int, M_: int](
         *, horizon: T_, rollout_count: M_ = 1
     ) -> "JaxBicycleControlInputBatch[T_, M_]":
-        """Creates a zeroed control input batch for the given horizon and rollout count."""
         array = jnp.zeros((horizon, BICYCLE_D_U, rollout_count))
 
         return JaxBicycleControlInputBatch(array)
@@ -349,7 +344,6 @@ class JaxBicycleControlInputBatch[T: int, M: int](
     def of[T_: int = int](
         sequence: JaxBicycleControlInputSequence[T_],
     ) -> "JaxBicycleControlInputBatch[T_, D[1]]":
-        """Creates a bicycle control input batch from a single control input sequence."""
         array = sequence.array[..., jnp.newaxis]
 
         assert array.shape == (expected := (sequence.horizon, BICYCLE_D_U, 1)), (
@@ -392,7 +386,6 @@ class JaxBicycleObstacleStates[K: int]:
         speed: Float[JaxArray, "K"],
         count: K_ | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
-        """Creates a JAX bicycle obstacle states from individual state components."""
         array = jnp.stack([x, y, heading, speed], axis=0)
         return JaxBicycleObstacleStates(array)
 
@@ -410,7 +403,6 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         heading: Float[JaxArray, "T K"],
         speed: Float[JaxArray, "T K"],
     ) -> "JaxBicycleObstacleStateSequences[int, int]":
-        """Creates a JAX bicycle obstacle state sequences from individual state components."""
         array = jnp.stack([x, y, heading, speed], axis=1)
         return JaxBicycleObstacleStateSequences(array)
 
@@ -478,7 +470,6 @@ class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
         accelerations: Float[JaxArray, "T K"],
         steering_angles: Float[JaxArray, "T K"],
     ) -> "JaxBicycleObstacleControlInputSequences[int, int]":
-        """Creates a JAX bicycle obstacle control input sequences from individual input components."""
         array = jnp.stack([accelerations, steering_angles], axis=1)
         return JaxBicycleObstacleControlInputSequences(array)
 
@@ -493,6 +484,8 @@ class JaxBicycleModel(
         JaxBicycleControlInputBatch,
     ],
 ):
+    """Kinematic bicycle with rear-axle reference, Euler-integrated with configurable limits."""
+
     _time_step_size: float
     time_step_size_scalar: Scalar
     wheelbase: Scalar
@@ -509,7 +502,6 @@ class JaxBicycleModel(
         steering_limits: tuple[float, float] | None = None,
         acceleration_limits: tuple[float, float] | None = None,
     ) -> "JaxBicycleModel":
-        """Creates a kinematic bicycle model that uses JAX for computations."""
 
         return JaxBicycleModel(
             _time_step_size=time_step_size,
@@ -585,6 +577,8 @@ class JaxBicycleObstacleModel(
         JaxBicycleObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle steering from history and propagates bicycle kinematics forward."""
+
     time_step_size: Scalar
     wheelbase: Scalar
 
@@ -592,7 +586,6 @@ class JaxBicycleObstacleModel(
     def create(
         *, time_step_size: float, wheelbase: float = 1.0
     ) -> "JaxBicycleObstacleModel":
-        """Creates a JAX bicycle obstacle model."""
         return JaxBicycleObstacleModel(
             time_step_size=jnp.asarray(time_step_size), wheelbase=jnp.asarray(wheelbase)
         )

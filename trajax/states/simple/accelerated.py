@@ -23,6 +23,8 @@ import jax.numpy as jnp
 class JaxControlInputSequenceLike[T: int, D_u: int](
     ControlInputSequence[T, D_u], Protocol
 ):
+    """Protocol for JAX control input sequences exposing an array property."""
+
     @property
     def array(self) -> Float[JaxArray, "T D_u"]:
         """Returns the underlying JAX array representing the control input sequence."""
@@ -32,6 +34,8 @@ class JaxControlInputSequenceLike[T: int, D_u: int](
 @jaxtyped
 @dataclass(frozen=True)
 class JaxSimpleState[D_x: int](JaxState[D_x]):
+    """JAX simple flat state vector."""
+
     _array: Float[JaxArray, "D_x"]
 
     @staticmethod
@@ -54,6 +58,8 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
 @jaxtyped
 @dataclass(frozen=True)
 class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
+    """JAX state sequence as a 2D array (time × dimension)."""
+
     _array: Float[JaxArray, "T D_x"]
 
     @staticmethod
@@ -95,6 +101,8 @@ class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
 @jaxtyped
 @dataclass(frozen=True)
 class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
+    """JAX state batch as a 3D array (time × dimension × rollouts)."""
+
     _array: Float[JaxArray, "T D_x M"]
 
     @staticmethod
@@ -148,6 +156,8 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
 @jaxtyped
 @dataclass(frozen=True)
 class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T, D_u]):
+    """JAX control input sequence as a 2D array (time × dimension)."""
+
     _array: Float[JaxArray, "T D_u"]
 
     @staticmethod
@@ -208,6 +218,8 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
 class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
     JaxControlInputBatch[T, D_u, M]
 ):
+    """JAX control input batch as a 3D array (time × dimension × rollouts)."""
+
     _array: Float[JaxArray, "T D_u M"]
 
     @staticmethod
@@ -261,6 +273,8 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
 @jaxtyped
 @dataclass(frozen=True)
 class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
+    """JAX cost values as a 2D array (time × rollouts)."""
+
     _array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:

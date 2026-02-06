@@ -41,6 +41,8 @@ type ControlInputsAtTimeStep[M: int] = Array[Dims[UnicycleD_u, M]]
 
 @dataclass(frozen=True)
 class NumPyUnicycleState(UnicycleState, NumPyState[UnicycleD_x]):
+    """Kinematic unicycle state: [x, y, heading]."""
+
     _array: StateArray
 
     @staticmethod
@@ -57,17 +59,14 @@ class NumPyUnicycleState(UnicycleState, NumPyState[UnicycleD_x]):
 
     @property
     def x(self) -> float:
-        """Returns the x position of the unicycle."""
         return self.array[0]
 
     @property
     def y(self) -> float:
-        """Returns the y position of the unicycle."""
         return self.array[1]
 
     @property
     def heading(self) -> float:
-        """Returns the heading (orientation) of the unicycle."""
         return self.array[2]
 
     @property
@@ -86,7 +85,6 @@ class NumPyUnicycleStateSequence[T: int, M: int = Any](
     def of_states[T_: int = int](
         states: Sequence[NumPyUnicycleState], *, horizon: T_ | None = None
     ) -> "NumPyUnicycleStateSequence[T_, D[1]]":
-        """Creates a NumPy unicycle state sequence from a sequence of unicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -139,14 +137,12 @@ class NumPyUnicycleStateBatch[T: int, M: int](
     def wrap[T_: int, M_: int](
         array: StateBatchArray[T_, M_],
     ) -> "NumPyUnicycleStateBatch[T_, M_]":
-        """Creates a NumPy unicycle state batch from the given array."""
         return NumPyUnicycleStateBatch(array)
 
     @staticmethod
     def of_states[T_: int = int](
         states: Sequence[NumPyUnicycleState], *, horizon: T_ | None = None
     ) -> "NumPyUnicycleStateBatch[int, D[1]]":
-        """Creates a NumPy unicycle state batch from a sequence of unicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -204,6 +200,8 @@ class NumPyUnicyclePositions[T: int, M: int](UnicyclePositions[T, M]):
 class NumPyUnicycleControlInputSequence[T: int](
     UnicycleControlInputSequence[T], NumPyControlInputSequence[T, UnicycleD_u]
 ):
+    """Control inputs: [linear_velocity, angular_velocity]."""
+
     _array: ControlInputSequenceArray[T]
 
     @staticmethod
@@ -267,7 +265,6 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
     def zero[T_: int, M_: int](
         *, horizon: T_, rollout_count: M_ = 1
     ) -> "NumPyUnicycleControlInputBatch[T_, M_]":
-        """Creates a zeroed control input batch for the given horizon and rollout count."""
         array = np.zeros((horizon, UNICYCLE_D_U, rollout_count))
 
         assert shape_of(array, matches=(horizon, UNICYCLE_D_U, rollout_count))
@@ -278,7 +275,6 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
     def create[T_: int, M_: int](
         *, array: Array[Dims[T_, UnicycleD_u, M_]]
     ) -> "NumPyUnicycleControlInputBatch[T_, M_]":
-        """Creates a NumPy unicycle control input batch from the given array."""
 
         return NumPyUnicycleControlInputBatch(array)
 
@@ -286,7 +282,6 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
     def of[T_: int](
         sequence: NumPyUnicycleControlInputSequence[T_],
     ) -> "NumPyUnicycleControlInputBatch[T_, D[1]]":
-        """Creates a NumPy unicycle control input batch from a single control input sequence."""
         array = sequence.array[..., np.newaxis]
 
         assert shape_of(array, matches=(sequence.horizon, UNICYCLE_D_U, 1))
@@ -327,7 +322,6 @@ class NumPyUnicycleObstacleStates[K: int]:
         y: Array[Dims[K]],
         heading: Array[Dims[K]],
     ) -> "NumPyUnicycleObstacleStates[K]":
-        """Creates NumPy unicycle obstacle states from individual state components."""
         array = np.stack([x, y, heading], axis=0)
 
         assert shape_of(array, matches=(UNICYCLE_D_X, x.shape[0]))
@@ -346,7 +340,6 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
         y: Array[Dims[T, K]],
         heading: Array[Dims[T, K]],
     ) -> "NumPyUnicycleObstacleStateSequences[T, K]":
-        """Creates NumPy unicycle obstacle state sequences from individual state components."""
         T, K = x.shape
         array = np.stack([x, y, heading], axis=1)
 
@@ -401,7 +394,6 @@ class NumPyUnicycleObstacleControlInputSequences[T: int, K: int]:
         linear_velocities: Array[Dims[T, K]],
         angular_velocities: Array[Dims[T, K]],
     ) -> "NumPyUnicycleObstacleControlInputSequences[T, K]":
-        """Creates NumPy unicycle obstacle control input sequences from individual input components."""
         T, K = linear_velocities.shape
         array = np.stack([linear_velocities, angular_velocities], axis=1)
 
@@ -420,6 +412,8 @@ class NumPyUnicycleModel(
         NumPyUnicycleControlInputBatch,
     ],
 ):
+    """Kinematic unicycle with direct velocity control, Euler-integrated with configurable limits."""
+
     _time_step_size: float
     speed_limits: tuple[float, float]
     angular_velocity_limits: tuple[float, float]
@@ -431,7 +425,6 @@ class NumPyUnicycleModel(
         speed_limits: tuple[float, float] | None = None,
         angular_velocity_limits: tuple[float, float] | None = None,
     ) -> "NumPyUnicycleModel":
-        """Creates a unicycle model that uses NumPy for computations."""
 
         return NumPyUnicycleModel(
             _time_step_size=time_step_size,
@@ -513,6 +506,8 @@ class NumPyUnicycleObstacleModel(
         NumPyUnicycleObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle velocities from history and propagates unicycle kinematics forward."""
+
     time_step_size: float
 
     @staticmethod

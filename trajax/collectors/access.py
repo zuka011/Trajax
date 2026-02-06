@@ -11,6 +11,8 @@ from trajax.types import (
 
 
 class access:
+    """Namespace of typed accessors for retrieving simulation data by key."""
+
     states: Final = SimulationDataAccessor.create(StateSequence, key="states")
     controls: Final = SimulationDataAccessor.create(Sequence[Control], key="controls")
     risks: Final = SimulationDataAccessor.create(Sequence[Risk], key="risks")

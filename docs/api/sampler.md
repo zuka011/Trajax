@@ -1,58 +1,79 @@
 # sampler
 
-The sampler module provides control input samplers for MPPI and obstacle state samplers for risk-aware planning.
+Samplers generate control input perturbations around a nominal sequence for MPPI rollout exploration.
 
-## Control Input Samplers
+## Gaussian Sampler
 
-=== "NumPy"
+Draws i.i.d. Gaussian perturbations per timestep with a fixed standard deviation per control dimension.
 
-    ```python
-    from trajax import sampler
-    
-    # Gaussian sampler with fixed seed for reproducibility
-    control_sampler = sampler.numpy.gaussian(seed=42)
-    
-    # Sample control inputs around a nominal trajectory
-    sampled_inputs = control_sampler(nominal=nominal_inputs)
-    ```
+```python
+from trajax.numpy import sampler, types
+from numtypes import array
 
-=== "JAX"
+control_sampler = sampler.gaussian(
+    standard_deviation=array([0.5, 0.2], shape=(2,)),
+    rollout_count=256,
+    to_batch=types.bicycle.control_input_batch.create,
+    seed=42,
+)
+```
 
-    ```python
-    from trajax import sampler
-    
-    # JIT-compiled Gaussian sampler
-    control_sampler = sampler.jax.gaussian(seed=42)
-    ```
+::: trajax.samplers.gaussian.basic.NumPyGaussianSampler
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+::: trajax.samplers.gaussian.accelerated.JaxGaussianSampler
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+## Halton Spline Sampler
+
+Generates temporally smooth perturbations using Halton quasi-random sequences interpolated through cubic splines. Halton sequences provide better coverage of the sampling space compared to pseudo-random sampling, and the spline interpolation produces smooth control trajectories.
+
+```python
+control_sampler = sampler.halton(
+    standard_deviation=array([0.5, 0.2], shape=(2,)),
+    rollout_count=256,
+    knot_count=8,
+    to_batch=types.bicycle.control_input_batch.create,
+    seed=42,
+)
+```
+
+::: trajax.samplers.halton.basic.NumPyHaltonSplineSampler
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+::: trajax.samplers.halton.accelerated.JaxHaltonSplineSampler
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
 
 ## Obstacle State Samplers
 
-Used for sampling from predicted obstacle distributions:
+Obstacle state samplers draw from predicted obstacle state distributions (Gaussian) for risk-aware collision cost evaluation.
 
-=== "NumPy"
-
-    ```python
-    from trajax import obstacles
-    
-    # Gaussian sampler for obstacle predictions
-    obstacle_sampler = obstacles.numpy.sampler.gaussian(seed=42)
-    
-    # Sample N possible obstacle positions from predictions
-    samples = obstacle_sampler(obstacle_states, count=N)
-    ```
-
-=== "JAX"
-
-    ```python
-    from trajax import obstacles
-    
-    obstacle_sampler = obstacles.jax.sampler.gaussian(seed=42)
-    ```
+::: trajax.obstacles.sampler.basic.NumPyGaussianObstacle2dPoseSampler
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
 
 ## Sampler Protocol
 
-All samplers implement the [`Sampler`](types.md#trajax.types.Sampler) protocol.
-
-## Obstacle State Sampler Protocol
-
-Obstacle state samplers implement the `ObstacleStateSampler` protocol.
+::: trajax.types.Sampler
+    options:
+      show_root_heading: true
+      heading_level: 3

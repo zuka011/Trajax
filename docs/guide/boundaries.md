@@ -1,28 +1,29 @@
-# Working with Boundaries
+# Boundaries
 
-Boundaries define drivable corridors around reference trajectories.
+Boundaries define drivable corridors around a reference trajectory. They produce signed distances that feed into a boundary cost.
 
-## Fixed-Width Boundaries
+## Fixed-Width Corridor
+
+Constant width on each side of the reference path:
 
 ```python
-from trajax.numpy import trajectory, boundary, types
+from trajax.numpy import boundary, trajectory, types
 
 reference = trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0)
 
 corridor = boundary.fixed_width(
     reference=reference,
     position_extractor=lambda states: types.positions(
-        x=states.array[:, 0, :],
-        y=states.array[:, 1, :],
+        x=states.array[:, 0, :], y=states.array[:, 1, :],
     ),
     left=2.0,
     right=5.0,
 )
 ```
 
-## Piecewise Fixed-Width Boundaries
+## Variable-Width Corridor
 
-For corridors that change width along the path:
+Width changes at arc-length breakpoints:
 
 ```python
 corridor = boundary.piecewise_fixed_width(
@@ -36,21 +37,19 @@ corridor = boundary.piecewise_fixed_width(
 )
 ```
 
-Each key is an arc-length breakpoint.
+## Distance Convention
 
-## Computing Boundary Distances
+Calling the corridor returns signed distances with shape $(T, M)$:
 
 ```python
-distances = corridor(states=states)  # Shape: (T, M)
+distances = corridor(states=states)
 ```
-
-### Distance Sign Convention
 
 | Value | Meaning |
 |-------|---------|
-| `distance > 0` | Inside corridor |
-| `distance = 0` | On boundary |
-| `distance < 0` | Outside (violation) |
+| $d > 0$ | Inside corridor |
+| $d = 0$ | On boundary |
+| $d < 0$ | Violation |
 
 ## Boundary Cost
 
@@ -64,19 +63,4 @@ boundary_cost = costs.safety.boundary(
 )
 ```
 
-## Position Extractors
-
-```python
-# For simple states
-position_extractor = lambda states: types.positions(
-    x=states.array[:, 0, :],
-    y=states.array[:, 1, :],
-)
-
-# For augmented states
-from trajax.states import extract
-
-position_extractor = extract.from_physical(
-    lambda s: types.positions(x=s.positions.x(), y=s.positions.y())
-)
-```
+The cost activates when the signed distance drops below `distance_threshold`, penalizing states that approach or cross the boundary.

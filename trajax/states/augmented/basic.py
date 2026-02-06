@@ -34,6 +34,8 @@ import numpy as np
 class NumPyAugmentedState[P: NumPyState, V: NumPyState](
     AugmentedState[P, V], HasPhysical[P], HasVirtual[V], NumPyState
 ):
+    """NumPy augmented state pairing a physical and a virtual state."""
+
     inner: BaseAugmentedState[P, V]
 
     @staticmethod
@@ -73,6 +75,8 @@ class NumPyAugmentedStateSequence[P: NumPyStateSequence, V: NumPyStateSequence](
     HasVirtual[V],
     NumPyStateSequence,
 ):
+    """NumPy augmented state sequence pairing physical and virtual sequences."""
+
     inner: BaseAugmentedStateSequence[P, V]
 
     @staticmethod
@@ -141,6 +145,8 @@ class NumPyAugmentedStateSequence[P: NumPyStateSequence, V: NumPyStateSequence](
 class NumPyAugmentedStateBatch[P: NumPyStateBatch, V: NumPyStateBatch](
     AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], NumPyStateBatch
 ):
+    """NumPy augmented state batch pairing physical and virtual batches."""
+
     inner: BaseAugmentedStateBatch[P, V]
 
     @staticmethod
@@ -191,6 +197,8 @@ class NumPyAugmentedControlInputSequence[
     HasVirtual[V],
     NumPyControlInputSequence,
 ):
+    """NumPy augmented control input sequence pairing physical and virtual inputs."""
+
     inner: BaseAugmentedControlInputSequence[P, V]
 
     @staticmethod
@@ -267,6 +275,8 @@ class NumPyAugmentedControlInputBatch[
     HasVirtual[V],
     NumPyControlInputBatch,
 ):
+    """NumPy augmented control input batch pairing physical and virtual batches."""
+
     inner: BaseAugmentedControlInputBatch[P, V]
 
     @staticmethod

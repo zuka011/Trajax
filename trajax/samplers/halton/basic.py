@@ -24,6 +24,8 @@ class NumPyHaltonSplineSampler[
     D_u: int = int,
     M: int = int,
 ](NumPySampler[NumPyControlInputSequence, BatchT]):
+    """Perturbs a nominal control sequence using Halton sequences interpolated through cubic splines."""
+
     standard_deviation: Final[Array[Dims[D_u]]]
     to_batch: Final[NumPyControlInputBatchCreator[BatchT, D_u, M]]
     knot_count: Final[int]

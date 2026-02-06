@@ -8,6 +8,8 @@ from trajax.collectors import CollectorRegistry
 
 @dataclass
 class MetricRegistry:
+    """Registry computing and caching metric results from collected simulation data."""
+
     metrics_by_name: Mapping[str, Metric]
     computed_metrics_by_name: dict[str, Any]
     collectors: CollectorRegistry

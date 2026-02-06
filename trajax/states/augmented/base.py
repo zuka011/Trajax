@@ -25,6 +25,8 @@ import numpy as np
 class BaseAugmentedState[P: State, V: State](
     AugmentedState[P, V], HasPhysical[P], HasVirtual[V], State
 ):
+    """Base augmented state combining a physical and a virtual state."""
+
     _physical: P
     _virtual: V
 
@@ -54,6 +56,8 @@ class BaseAugmentedState[P: State, V: State](
 class BaseAugmentedStateSequence[P: StateSequence, V: StateSequence](
     AugmentedStateSequence[P, V], HasPhysical[P], HasVirtual[V], StateSequence
 ):
+    """Base augmented state sequence combining physical and virtual sequences."""
+
     _physical: P
     _virtual: V
 
@@ -101,6 +105,8 @@ class BaseAugmentedStateSequence[P: StateSequence, V: StateSequence](
 class BaseAugmentedStateBatch[P: StateBatch, V: StateBatch](
     AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], StateBatch
 ):
+    """Base augmented state batch combining physical and virtual batches."""
+
     _physical: P
     _virtual: V
 
@@ -156,6 +162,8 @@ class BaseAugmentedControlInputSequence[
     HasVirtual[V],
     ControlInputSequence,
 ):
+    """Base augmented control input sequence combining physical and virtual inputs."""
+
     _physical: P
     _virtual: V
 
@@ -197,6 +205,8 @@ class BaseAugmentedControlInputSequence[
 class BaseAugmentedControlInputBatch[P: ControlInputBatch, V: ControlInputBatch](
     AugmentedControlInputBatch[P, V], HasPhysical[P], HasVirtual[V], ControlInputBatch
 ):
+    """Base augmented control input batch combining physical and virtual batches."""
+
     _physical: P
     _virtual: V
 

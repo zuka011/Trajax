@@ -1,4 +1,14 @@
-## Basic MPCC Path Following
+---
+hide:
+  - navigation
+  - toc
+---
+
+# Examples
+
+Interactive visualizations of MPCC simulations.
+
+## Basic Path Following
 
 <iframe src="../../visualizations/mpcc-simulation/jax-from-mpcc.html" width="100%" height="800" frameborder="0"></iframe>
 

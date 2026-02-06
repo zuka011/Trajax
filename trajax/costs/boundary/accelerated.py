@@ -27,6 +27,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts]):
+    """Penalizes states that approach within a threshold distance of the corridor edges."""
+
     distance: JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
     distance_threshold: Scalar
     weight: Scalar
@@ -60,6 +62,8 @@ class JaxBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, JaxCosts])
 class JaxFixedWidthBoundary[StateT](
     JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
 ):
+    """Fixed-width corridor boundary around a reference trajectory."""
+
     reference: Trajectory[
         JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
     ]
@@ -137,6 +141,8 @@ class JaxFixedWidthBoundary[StateT](
 class JaxPiecewiseFixedWidthBoundary[StateT](
     JaxBoundaryDistanceExtractor[StateT, JaxBoundaryDistance]
 ):
+    """Piecewise fixed-width corridor boundary with segment-varying widths."""
+
     reference: Trajectory[
         JaxPathParameters, JaxReferencePoints, JaxPositions, JaxLateralPositions
     ]

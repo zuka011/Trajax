@@ -66,6 +66,8 @@ class MppiCreator[
     InputBatchT,
     CostsT,
 ](Protocol):
+    """Protocol for callables that create an MPPI planner from model, sampler, and cost."""
+
     def __call__(
         self,
         model: DynamicalModel[
@@ -79,11 +81,15 @@ class MppiCreator[
 
 
 class AugmentedMppiSetup[MppiT, ModelT](NamedTuple):
+    """Bundled result of augmented MPPI creation containing the planner and its model."""
+
     mppi: MppiT
     model: ModelT
 
 
 class AugmentedMppi:
+    """Generic factory for MPPI planners with augmented (physical + virtual) state spaces."""
+
     @staticmethod
     def create[
         PS,
@@ -141,6 +147,8 @@ class AugmentedMppi:
 
 
 class NumPyAugmentedMppi:
+    """Factory for NumPy MPPI planners with augmented state spaces."""
+
     @staticmethod
     def create[
         PS: NumPyState,
@@ -202,6 +210,8 @@ class NumPyAugmentedMppi:
 
 
 class JaxAugmentedMppi:
+    """Factory for JAX MPPI planners with augmented state spaces."""
+
     @staticmethod
     def create[
         PS: JaxState,

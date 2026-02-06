@@ -35,6 +35,8 @@ type ObstacleCovarianceArray[T: int = int, K: int = int] = Float[
 class JaxSampledObstacle2dPoses[T: int, K: int, N: int](
     JaxSampledObstacleStates[T, D_o, K, N]
 ):
+    """Sampled 2D poses (x, y, heading) with shape (T, POSE_D_O, K, N)."""
+
     _x: Float[JaxArray, "T K N"]
     _y: Float[JaxArray, "T K N"]
     _heading: Float[JaxArray, "T K N"]
@@ -133,6 +135,8 @@ class JaxSampledObstacle2dPoses[T: int, K: int, N: int](
 
 @dataclass(kw_only=True, frozen=True)
 class JaxObstacle2dPositions[T: int, K: int](JaxObstaclePositions[T, D[2], K]):
+    """2D positions (x, y) with shape (T, 2, K)."""
+
     _x: Float[JaxArray, "T K"]
     _y: Float[JaxArray, "T K"]
 
@@ -178,6 +182,8 @@ class JaxObstacle2dPositions[T: int, K: int](JaxObstaclePositions[T, D[2], K]):
 class JaxObstacle2dPositionsForTimeStep[K: int](
     JaxObstaclePositionsForTimeStep[D[2], K]
 ):
+    """2D positions (x, y) for a single time step with shape (2, K)."""
+
     _x: Float[JaxArray, "K"]
     _y: Float[JaxArray, "K"]
 
@@ -225,6 +231,8 @@ class JaxObstacle2dPoses[T: int, K: int](
         "JaxObstacle2dPosesForTimeStep[K]",
     ]
 ):
+    """2D poses (x, y, heading) with shape (T, POSE_D_O, K)."""
+
     _x: Float[JaxArray, "T K"]
     _y: Float[JaxArray, "T K"]
     _heading: Float[JaxArray, "T K"]
@@ -416,6 +424,8 @@ class JaxObstacle2dPoses[T: int, K: int](
 class JaxObstacle2dPosesForTimeStep[K: int](
     JaxObstacleStatesForTimeStep[D_o, K, JaxObstacle2dPoses]
 ):
+    """2D poses (x, y, heading) for a single time step with shape (POSE_D_O, K)."""
+
     _x: Float[JaxArray, "K"]
     _y: Float[JaxArray, "K"]
     _heading: Float[JaxArray, "K"]

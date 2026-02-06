@@ -33,6 +33,8 @@ import jax.numpy as jnp
 @jaxtyped
 @dataclass(frozen=True)
 class JaxError[T: int, M: int](Error[T, M]):
+    """Contouring or lag error between the state batch and reference trajectory."""
+
     array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
@@ -44,6 +46,8 @@ class JaxContouringCost[StateBatchT](
     ContouringCost[ControlInputBatch, StateBatchT, JaxError],
     CostFunction[ControlInputBatch, StateBatchT, JaxCosts],
 ):
+    """Penalizes lateral deviation from a reference trajectory."""
+
     reference: Trajectory[JaxPathParameters, JaxReferencePoints]
     path_parameter_extractor: JaxPathParameterExtractor[StateBatchT]
     position_extractor: JaxPositionExtractor[StateBatchT]
@@ -113,6 +117,8 @@ class JaxLagCost[StateBatchT](
     LagCost[ControlInputBatch, StateBatchT, JaxError],
     CostFunction[ControlInputBatch, StateBatchT, JaxCosts],
 ):
+    """Penalizes longitudinal deviation from a reference trajectory."""
+
     reference: Trajectory[JaxPathParameters, JaxReferencePoints]
     path_parameter_extractor: JaxPathParameterExtractor[StateBatchT]
     position_extractor: JaxPositionExtractor[StateBatchT]
@@ -185,6 +191,8 @@ class JaxLagCost[StateBatchT](
 
 @dataclass(kw_only=True, frozen=True)
 class JaxProgressCost[InputBatchT](CostFunction[InputBatchT, StateBatch, JaxCosts]):
+    """Rewards forward progress along a reference trajectory."""
+
     path_velocity_extractor: JaxPathVelocityExtractor[InputBatchT]
     time_step_size: float
     weight: float
@@ -228,6 +236,8 @@ class JaxProgressCost[InputBatchT](CostFunction[InputBatchT, StateBatch, JaxCost
 class JaxControlSmoothingCost[D_u: int](
     CostFunction[JaxControlInputBatch[int, D_u, int], StateBatch, JaxCosts]
 ):
+    """Penalizes abrupt changes in control inputs between consecutive time steps."""
+
     weights: Float[JaxArray, "D_u"]
     dimensions: D_u
 
@@ -284,6 +294,8 @@ class JaxControlSmoothingCost[D_u: int](
 class JaxControlEffortCost[D_u: int](
     CostFunction[JaxControlInputBatch[int, D_u, int], Any, JaxCosts]
 ):
+    """Penalizes large control input magnitudes."""
+
     weights: Float[JaxArray, "D_u"]
 
     @staticmethod

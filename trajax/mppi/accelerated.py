@@ -32,6 +32,8 @@ import numpy as np
 @jaxtyped
 @dataclass(frozen=True)
 class JaxWeights[M: int]:
+    """Softmax-normalized cost weights used to compute the weighted average over rollouts."""
+
     _array: Float[JaxArray, "M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
@@ -49,6 +51,8 @@ class JaxWeights[M: int]:
 class JaxZeroPadding(
     JaxPaddingFunction[JaxControlInputSequence, JaxControlInputSequence]
 ):
+    """Fills shifted-out time steps with zero control inputs after horizon advancement."""
+
     def __call__[T: int, D_u: int, L: int](
         self, *, nominal_input: JaxControlInputSequence[T, D_u], padding_size: L
     ) -> JaxControlInputSequence[L, D_u]:
@@ -64,6 +68,8 @@ class JaxMppi[
     ControlInputBatchT: JaxControlInputBatch,
     ControlInputPaddingT: JaxControlInputSequence = ControlInputSequenceT,
 ](Mppi[StateT, ControlInputSequenceT, JaxWeights[int]]):
+    """Sampling-based stochastic optimal controller using the information-theoretic MPPI algorithm."""
+
     planning_interval: int
     model: JaxDynamicalModel[
         StateT, Any, StateBatchT, ControlInputSequenceT, ControlInputBatchT
@@ -91,7 +97,6 @@ class JaxMppi[
         padding_function: JaxPaddingFunction[CIS, CIP] | None = None,
         filter_function: JaxFilterFunction[CIS] | None = None,
     ) -> "JaxMppi[S, SB, CIS, CIB, CIP]":
-        """Creates a JAX-based MPPI controller."""
         return JaxMppi(
             planning_interval=planning_interval,
             model=model,
@@ -114,6 +119,7 @@ class JaxMppi[
         nominal_input: ControlInputSequenceT,
         initial_state: StateT,
     ) -> Control[ControlInputSequenceT, JaxWeights]:
+        """Samples rollouts, evaluates costs, and returns the cost-weighted optimal control."""
         assert temperature > 0.0, "Temperature must be positive."
 
         samples = self.sampler.sample(around=nominal_input)

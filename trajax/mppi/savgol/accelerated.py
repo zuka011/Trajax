@@ -11,6 +11,8 @@ import jax.numpy as jnp
 
 @dataclass(frozen=True)
 class JaxSavGolFilter:
+    """Savitzky-Golay smoothing filter for MPPI control sequences (JAX)."""
+
     coefficients: Float[JaxArray, "W"]
 
     @staticmethod

@@ -42,6 +42,8 @@ class AugmentedModel[
         AugmentedControlInputBatch[PInputBatchT, VInputBatchT],
     ]
 ):
+    """Dynamical model combining physical and virtual sub-models for augmented states."""
+
     physical: DynamicalModel[
         PStateT, PStateSequenceT, PStateBatchT, PInputSequenceT, PInputBatchT
     ]
@@ -145,6 +147,8 @@ class AugmentedSampler[
     VInputBatchT,
     ABatchT: AugmentedControlInputBatch,
 ](Sampler[AugmentedControlInputSequence[PInputSequenceT, VInputSequenceT], ABatchT]):
+    """Sampler combining physical and virtual sub-samplers for augmented control inputs."""
+
     physical: Sampler[PInputSequenceT, PInputBatchT]
     virtual: Sampler[VInputSequenceT, VInputBatchT]
     batch: AugmentedControlInputBatchCreator[PInputBatchT, VInputBatchT, ABatchT]
@@ -180,6 +184,8 @@ class AugmentedSampler[
 
 
 class extract:
+    """Helpers to extract data from the physical or virtual part of an augmented state."""
+
     @staticmethod
     def from_physical[R, P](
         extract: Callable[[P], R],

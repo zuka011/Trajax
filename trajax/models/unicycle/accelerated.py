@@ -47,6 +47,8 @@ type ControlInputsAtTimeStep[M: int] = Float[JaxArray, f"{UNICYCLE_D_U} M"]
 @jaxtyped
 @dataclass(frozen=True)
 class JaxUnicycleState(UnicycleState, JaxState[UnicycleD_x]):
+    """Kinematic unicycle state: [x, y, heading]."""
+
     _array: StateArray
 
     @staticmethod
@@ -56,7 +58,6 @@ class JaxUnicycleState(UnicycleState, JaxState[UnicycleD_x]):
         y: float | Scalar,
         heading: float | Scalar,
     ) -> "JaxUnicycleState":
-        """Creates a JAX unicycle state from individual state components."""
         return JaxUnicycleState(jnp.array([x, y, heading]))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_x]]:
@@ -68,17 +69,14 @@ class JaxUnicycleState(UnicycleState, JaxState[UnicycleD_x]):
 
     @property
     def x(self) -> float:
-        """Returns the x position of the unicycle."""
         return float(self.array[0])
 
     @property
     def y(self) -> float:
-        """Returns the y position of the unicycle."""
         return float(self.array[1])
 
     @property
     def heading(self) -> float:
-        """Returns the heading (orientation) of the unicycle."""
         return float(self.array[2])
 
     @property
@@ -109,7 +107,6 @@ class JaxUnicycleStateSequence[T: int, M: int = Any](
     def of_states[T_: int = int](
         states: Sequence[JaxUnicycleState], *, horizon: T_ | None = None
     ) -> "JaxUnicycleStateSequence[T_, D[1]]":
-        """Creates a JAX unicycle state sequence from a sequence of unicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -165,14 +162,12 @@ class JaxUnicycleStateBatch[T: int, M: int](
     def wrap[T_: int, M_: int](
         array: StateBatchArray[T_, M_],
     ) -> "JaxUnicycleStateBatch[T_, M_]":
-        """Creates a JAX unicycle state batch from the given array."""
         return JaxUnicycleStateBatch(array)
 
     @staticmethod
     def of_states[T_: int = int](
         states: Sequence[JaxUnicycleState], *, horizon: T_ | None = None
     ) -> "JaxUnicycleStateBatch[T_, int]":
-        """Creates a unicycle state batch from a sequence of unicycle states."""
         assert len(states) > 0, "States sequence must not be empty."
 
         horizon = horizon if horizon is not None else cast(T_, len(states))
@@ -248,6 +243,8 @@ class JaxUnicyclePositions[T: int, M: int](UnicyclePositions[T, M]):
 class JaxUnicycleControlInputSequence[T: int](
     UnicycleControlInputSequence[T], JaxControlInputSequence[T, UnicycleD_u]
 ):
+    """Control inputs: [linear_velocity, angular_velocity]."""
+
     _array: ControlInputSequenceArray[T]
 
     @staticmethod
@@ -308,7 +305,6 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
     def zero[T_: int, M_: int](
         *, horizon: T_, rollout_count: M_ = 1
     ) -> "JaxUnicycleControlInputBatch[T_, M_]":
-        """Creates a zeroed control input batch for the given horizon and rollout count."""
         array = jnp.zeros((horizon, UNICYCLE_D_U, rollout_count))
 
         return JaxUnicycleControlInputBatch(array)
@@ -335,7 +331,6 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
     def of[T_: int = int](
         sequence: JaxUnicycleControlInputSequence[T_],
     ) -> "JaxUnicycleControlInputBatch[T_, D[1]]":
-        """Creates a unicycle control input batch from a single control input sequence."""
         array = sequence.array[..., jnp.newaxis]
 
         assert array.shape == (expected := (sequence.horizon, UNICYCLE_D_U, 1)), (
@@ -381,7 +376,6 @@ class JaxUnicycleObstacleStates[K: int]:
         y: Float[JaxArray, "K"],
         heading: Float[JaxArray, "K"],
     ) -> "JaxUnicycleObstacleStates[K]":
-        """Creates JAX unicycle obstacle states from individual state components."""
         return JaxUnicycleObstacleStates(jnp.stack([x, y, heading], axis=0))
 
 
@@ -397,7 +391,6 @@ class JaxUnicycleObstacleStateSequences[T: int, K: int]:
         y: Float[JaxArray, "T K"],
         heading: Float[JaxArray, "T K"],
     ) -> "JaxUnicycleObstacleStateSequences[T, K]":
-        """Creates JAX unicycle obstacle state sequences from individual state components."""
         return JaxUnicycleObstacleStateSequences(jnp.stack([x, y, heading], axis=1))
 
     def x(self) -> Float[JaxArray, "T K"]:
@@ -444,7 +437,6 @@ class JaxUnicycleObstacleControlInputSequences[T: int, K: int]:
         linear_velocities: Float[JaxArray, "T K"],
         angular_velocities: Float[JaxArray, "T K"],
     ) -> "JaxUnicycleObstacleControlInputSequences[T, K]":
-        """Creates JAX unicycle obstacle control input sequences from individual input components."""
         return JaxUnicycleObstacleControlInputSequences(
             jnp.stack([linear_velocities, angular_velocities], axis=1)
         )
@@ -460,6 +452,8 @@ class JaxUnicycleModel(
         JaxUnicycleControlInputBatch,
     ],
 ):
+    """Kinematic unicycle with direct velocity control, Euler-integrated with configurable limits."""
+
     _time_step_size: float
     time_step_size_scalar: Scalar
     speed_limits: tuple[Scalar, Scalar]
@@ -472,7 +466,6 @@ class JaxUnicycleModel(
         speed_limits: tuple[float, float] | None = None,
         angular_velocity_limits: tuple[float, float] | None = None,
     ) -> "JaxUnicycleModel":
-        """Creates a unicycle model that uses JAX for computations."""
 
         return JaxUnicycleModel(
             _time_step_size=time_step_size,
@@ -541,6 +534,8 @@ class JaxUnicycleObstacleModel(
         JaxUnicycleObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle velocities from history and propagates unicycle kinematics forward."""
+
     time_step_size: Scalar
 
     @staticmethod

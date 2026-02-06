@@ -19,6 +19,8 @@ import numpy as np
 
 @dataclass(kw_only=True, frozen=True)
 class ComfortMetricResult[T: int = int]:
+    """Results of the comfort metric, including lateral acceleration and jerk."""
+
     lateral_acceleration: Array[Dims[T]]
     lateral_jerk: Array[Dims[T]]
 
@@ -27,6 +29,8 @@ class ComfortMetricResult[T: int = int]:
 class ComfortMetric[StateBatchT, PositionsT, LateralT](
     Metric[ComfortMetricResult[Any]]
 ):
+    """Metric evaluating lateral acceleration and jerk relative to a reference trajectory."""
+
     reference: Trajectory[Any, Any, PositionsT, LateralT]
     time_step_size: float
     position_extractor: PositionExtractor[StateBatchT, PositionsT]

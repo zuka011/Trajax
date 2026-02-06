@@ -33,6 +33,8 @@ NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 @jaxtyped
 @dataclass(frozen=True)
 class JaxIntegratorObstacleStates[D_o: int, K: int]:
+    """Obstacle states represented in integrator model coordinates."""
+
     array: Float[JaxArray, "D_o K"]
 
     @property
@@ -47,6 +49,8 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
 @jaxtyped
 @dataclass(frozen=True)
 class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
+    """Time-indexed obstacle state sequences for integrator model obstacles."""
+
     array: Float[JaxArray, "T D_o K"]
 
     @property
@@ -104,6 +108,8 @@ class JaxIntegratorModel(
         JaxIntegratorControlInputBatch,
     ]
 ):
+    """Point-mass model with direct position control, used for obstacle prediction."""
+
     _time_step_size: float
     time_step_size_scalar: Scalar
     state_limits: tuple[Scalar, Scalar]
@@ -123,7 +129,7 @@ class JaxIntegratorModel(
         This model represents a particle that moves according to velocity commands.
         State dimension must equal control dimension (D_x == D_u).
 
-        x_{t+1} = clip(x_t + clip(u_t, velocity_limits) * dt, state_limits)
+        $$x_{t+1} = \\text{clip}(x_t + \\text{clip}(u_t,\\; v_{\\text{lim}}) \\cdot \\Delta t,\\; s_{\\text{lim}})$$
 
         Args:
             time_step_size: The time step size for the integrator.
@@ -219,6 +225,8 @@ class JaxIntegratorObstacleModel(
         JaxIntegratorObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle velocities from position history and propagates with constant velocity."""
+
     time_step: Scalar
 
     @staticmethod

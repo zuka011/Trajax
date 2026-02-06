@@ -17,6 +17,8 @@ import jax.numpy as jnp
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
 class JaxConstantVarianceProvider:
+    """Provides constant isotropic position and velocity covariance matrices."""
+
     position_variance: Scalar
     velocity_variance: Scalar
 
@@ -51,6 +53,8 @@ class JaxConstantVarianceProvider:
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
 class JaxConstantCovarianceProvider[K: int]:
+    """Provides fixed position and velocity covariance matrices."""
+
     position_covariance: Float[JaxArray, "2 2 K"]
     velocity_covariance: Float[JaxArray, "2 2 K"]
 

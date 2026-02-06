@@ -14,6 +14,8 @@ import jax.numpy as jnp
 class JaxDynamicObstacleSimulator[K: int](
     JaxObstacleSimulator[JaxObstacle2dPosesForTimeStep[K]]
 ):
+    """Simulates obstacles moving with constant velocity over the prediction horizon."""
+
     last: JaxObstacle2dPosesForTimeStep[K]
     velocities: Float[JaxArray, "K 2"]
 

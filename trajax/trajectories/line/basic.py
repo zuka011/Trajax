@@ -29,6 +29,8 @@ class NumPyLineTrajectory(
         NumPyLongitudinalPositions,
     ]
 ):
+    """NumPy straight-line reference trajectory from start to end."""
+
     start: Vector
     direction: Vector
 

@@ -191,6 +191,8 @@ from trajax.states import (
 
 
 class types:
+    """Namespace of type aliases for states, controls, costs, and related domain types."""
+
     type State[D_x: int = Any] = State[D_x]
     type StateBatch[T: int = Any, D_x: int = Any, M: int = Any] = StateBatch[T, D_x, M]
     type ControlInputSequence[T: int = Any, D_u: int = Any] = ControlInputSequence[
@@ -721,6 +723,8 @@ class types:
 
 
 class classes:
+    """Namespace of concrete protocol classes for states, controls, costs, and related types."""
+
     State: Final = State
     StateSequence: Final = StateSequence
     StateBatch: Final = StateBatch

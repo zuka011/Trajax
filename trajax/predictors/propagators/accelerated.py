@@ -21,6 +21,8 @@ type JaxPaddedPositionCovariance[T: int, D: int, K: int] = Float[JaxArray, "T D 
 
 @dataclass(kw_only=True, frozen=True)
 class JaxLinearCovariancePropagator[StateSequencesT: ObstacleStateSequences]:
+    """JAX linear covariance propagator assuming constant-velocity motion."""
+
     time_step: Scalar
     epsilon: Scalar
     to_dimension: int

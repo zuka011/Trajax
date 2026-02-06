@@ -14,6 +14,8 @@ from trajax.collectors.state import (
 
 
 class collectors:
+    """Factory namespace for creating simulation data collectors."""
+
     states: Final = StateCollector
     controls: Final = ControlCollector
     trajectories: Final = TrajectoryCollector

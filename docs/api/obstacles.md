@@ -16,7 +16,7 @@ This module handles:
 
     ```python
     from trajax import obstacles, types
-    
+
     # Create obstacle states from observed data
     states = types.numpy.obstacle_states(
         x=...,  # x-positions [T, K]
@@ -24,7 +24,7 @@ This module handles:
         heading=...,  # headings [T, K]
         covariance=...,  # uncertainty [T, 3, 3, K]
     )
-    
+
     # Create a Gaussian sampler for obstacle predictions
     sampler = obstacles.numpy.sampler.gaussian(seed=42)
     samples = sampler(states, count=N)
@@ -34,7 +34,7 @@ This module handles:
 
     ```python
     from trajax import obstacles, types
-    
+
     states = types.jax.obstacle_states(...)
     sampler = obstacles.jax.sampler.gaussian(seed=42)
     ```
@@ -56,6 +56,26 @@ For testing and simulation purposes:
     options:
       show_root_heading: true
       heading_level: 3
+
+## ID Assignment
+
+### Hungarian Algorithm
+
+Matches detected obstacles to tracked IDs across frames using the Hungarian algorithm on position distances. Detections beyond a configurable cutoff distance are assigned new IDs.
+
+::: trajax.obstacles.assignment.basic.NumPyHungarianObstacleIdAssignment
+    options:
+      show_root_heading: true
+      heading_level: 4
+      members:
+        - create
+
+::: trajax.obstacles.assignment.accelerated.JaxHungarianObstacleIdAssignment
+    options:
+      show_root_heading: true
+      heading_level: 4
+      members:
+        - create
 
 ## ID Assignment
 

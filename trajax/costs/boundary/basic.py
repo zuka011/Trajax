@@ -24,6 +24,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCosts]):
+    """Penalizes states that approach within a threshold distance of the corridor edges."""
+
     distance: NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
     distance_threshold: float
     weight: float
@@ -51,6 +53,8 @@ class NumPyBoundaryCost[StateT](CostFunction[ControlInputBatch, StateT, NumPyCos
 class NumPyFixedWidthBoundary[StateT](
     NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
 ):
+    """Fixed-width corridor boundary around a reference trajectory."""
+
     reference: Trajectory[
         NumPyPathParameters, NumPyReferencePoints, NumPyPositions, NumPyLateralPositions
     ]
@@ -128,6 +132,8 @@ class NumPyFixedWidthBoundary[StateT](
 class NumPyPiecewiseFixedWidthBoundary[StateT, B: int = int](
     NumPyBoundaryDistanceExtractor[StateT, NumPyBoundaryDistance]
 ):
+    """Piecewise fixed-width corridor boundary with segment-varying widths."""
+
     reference: Trajectory[
         NumPyPathParameters, NumPyReferencePoints, NumPyPositions, NumPyLateralPositions
     ]

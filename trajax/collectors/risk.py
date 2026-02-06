@@ -23,6 +23,8 @@ class RiskCollector[
     ModificationNotifierMixin,
     ListCollectorMixin,
 ):
+    """Decorator collecting computed risk values at each evaluation."""
+
     inner: RiskMetric[CostFunctionT, StateBatchT, ObstacleStatesT, SamplerT, RiskT]
     transformer: DataTransformer[RiskT]
     _callbacks: list[OnModifyCallback] = field(default_factory=list)

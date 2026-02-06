@@ -11,12 +11,16 @@ from trajax.types import (
 
 
 class NoCovariance:
+    """Stub covariance propagator that returns None, indicating no uncertainty."""
+
     def propagate(self, *args, **kwargs) -> None:
         return None
 
 
 @dataclass(kw_only=True, frozen=True)
 class CovariancePadding:
+    """Pads a covariance matrix to a target dimension with a small epsilon diagonal."""
+
     to_dimension: int
     epsilon: float
 
@@ -35,6 +39,8 @@ class CovariancePadding:
 
 @dataclass(kw_only=True, frozen=True)
 class StaticPredictor:
+    """Predicts obstacle motion by replicating the last observed state over the horizon."""
+
     horizon: int
 
     @staticmethod
@@ -65,6 +71,8 @@ class CurvilinearPredictor[
     CovarianceSequencesT,
     PredictionT,
 ]:
+    """Predicts obstacle motion by estimating velocities and propagating forward with a dynamical model."""
+
     horizon: int
     model: ObstacleModel[
         HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequencesT

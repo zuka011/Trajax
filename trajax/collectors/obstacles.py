@@ -17,6 +17,8 @@ class ObstacleStateCollector[ObstacleStatesForTimeStepT](
     ModificationNotifierMixin,
     ListCollectorMixin,
 ):
+    """Decorator collecting observed obstacle states at each time step."""
+
     inner: ObstacleStateObserver[ObstacleStatesForTimeStepT]
     transformer: DataTransformer[ObstacleStatesForTimeStepT]
     _callbacks: list[OnModifyCallback] = field(default_factory=list)
@@ -46,6 +48,8 @@ class ObstacleForecastCollector[ObstacleStatesT](
     ModificationNotifierMixin,
     ListCollectorMixin,
 ):
+    """Decorator collecting predicted obstacle state forecasts."""
+
     inner: ObstacleStateProvider[ObstacleStatesT]
     transformer: DataTransformer[ObstacleStatesT]
     _callbacks: list[OnModifyCallback] = field(default_factory=list)

@@ -1,6 +1,6 @@
 # Visualizer
 
-trajax-visualizer generates interactive HTML visualizations for trajectory planning simulations.
+`trajax-visualizer` is a separate package that generates interactive HTML visualizations from simulation results.
 
 ## Installation
 
@@ -8,9 +8,9 @@ trajax-visualizer generates interactive HTML visualizations for trajectory plann
 pip install trajax-visualizer
 ```
 
-The visualizer requires **Node.js 18+** at runtime.
+Requires **Node.js 18+** at runtime.
 
-## MPCC Visualizer
+## MPCC Visualization
 
 ```python
 from trajax_visualizer import visualizer, MpccSimulationResult
@@ -29,55 +29,22 @@ mpcc_viz = visualizer.mpcc()
 await mpcc_viz(result, key="my-simulation")
 ```
 
-### MpccSimulationResult Fields
+`MpccSimulationResult` also accepts optional fields: `obstacles`, `obstacle_forecasts`, `boundary`, `controls`, `risks`, `optimal_trajectories`, `nominal_trajectories`, `vehicle_width`, `max_contouring_error`, `max_lag_error`, and `network`.
+
+## Generic Visualization
+
+For simulations that don't use the MPCC factory:
 
 ```python
-MpccSimulationResult(
-    # Required
-    reference=trajectory,
-    states=augmented_states,
-    contouring_errors=contouring_errors,
-    lag_errors=lag_errors,
-    time_step_size=0.1,
-    wheelbase=2.5,
-
-    # Optional
-    max_contouring_error=0.5,
-    max_lag_error=1.0,
-    vehicle_width=1.2,
-    optimal_trajectories=trajectories,
-    nominal_trajectories=nominals,
-    obstacles=obstacle_states,
-    obstacle_forecasts=forecasts,
-    controls=controls,
-    risks=risks,
-    network=road_network,
-    boundary=corridor,
-)
-```
-
-## Simulation Visualizer
-
-For generic simulations:
-
-```python
-from trajax_visualizer import visualizer, Visualizable, Plot
+from trajax_visualizer import visualizer, Visualizable
 
 result = Visualizable.SimulationResult.create(
     info=Visualizable.SimulationInfo(
-        path_length=100.0,
-        time_step=0.1,
-        wheelbase=2.5,
+        path_length=100.0, time_step=0.1, wheelbase=2.5,
     ),
-    reference=Visualizable.ReferenceTrajectory(
-        x=reference_x,
-        y=reference_y,
-    ),
+    reference=Visualizable.ReferenceTrajectory(x=ref_x, y=ref_y),
     ego=Visualizable.Ego(
-        x=ego_x,
-        y=ego_y,
-        heading=ego_heading,
-        path_parameter=ego_progress,
+        x=ego_x, y=ego_y, heading=ego_heading, path_parameter=ego_progress,
     ),
 )
 
@@ -87,46 +54,20 @@ await sim_viz(result, key="my-simulation")
 
 ## Custom Plots
 
+Attach additional time-series plots with optional bounds and uncertainty bands:
+
 ```python
 from trajax_visualizer import Plot
 
 speed_plot = Plot.Additional(
     id="speed",
     name="Vehicle Speed",
-    series=[
-        Plot.Series(label="Speed", values=speeds, color="blue"),
-        Plot.Series(label="Target", values=target_speeds, color="green"),
-    ],
+    series=[Plot.Series(label="Speed", values=speeds, color="blue")],
     y_axis_label="Speed (m/s)",
     upper_bound=Plot.Bound(values=15.0, label="Max Speed"),
 )
 ```
 
-### Uncertainty Bands
+## Output
 
-```python
-risk_plot = Plot.Additional(
-    id="risk",
-    name="Collision Risk",
-    series=[
-        Plot.Series(label="Median", values=np.median(risks, axis=1)),
-    ],
-    bands=[
-        Plot.Band(
-            lower=np.percentile(risks, 25, axis=1),
-            upper=np.percentile(risks, 75, axis=1),
-            color="#457b9d",
-            label="25-75%",
-        ),
-    ],
-    y_axis_label="Risk",
-    y_axis_scale="log",
-)
-```
-
-## Output Files
-
-| File | Description |
-|------|-------------|
-| `<key>.json` | Serialized simulation data |
-| `<key>.html` | Interactive Plotly visualization |
+Each visualization produces a `<key>.json` data file and a self-contained `<key>.html` file with interactive Plotly charts.

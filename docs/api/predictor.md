@@ -12,10 +12,10 @@ Predictors estimate future obstacle states based on motion models and covariance
 
     ```python
     from trajax import predictor, propagator
-    
+
     # Create a motion predictor
     motion_predictor = predictor.numpy.constant_velocity(time_step_size=0.1)
-    
+
     # Create a covariance propagator
     cov_propagator = propagator.numpy.constant_velocity(
         time_step_size=0.1,
@@ -27,7 +27,7 @@ Predictors estimate future obstacle states based on motion models and covariance
 
     ```python
     from trajax import predictor, propagator
-    
+
     motion_predictor = predictor.jax.constant_velocity(time_step_size=0.1)
     cov_propagator = propagator.jax.constant_velocity(
         time_step_size=0.1,

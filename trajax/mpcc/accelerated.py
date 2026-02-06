@@ -84,6 +84,8 @@ type JaxMpccCostFunction[
 
 
 class JaxMpccWeightConfig:
+    """Weight configuration for contouring, lag, and progress costs."""
+
     class Full(TypedDict):
         contouring: float
         lag: float
@@ -96,6 +98,8 @@ class JaxMpccWeightConfig:
 
 
 class JaxMpccVirtualStateConfig:
+    """Configuration for the virtual (path parameter) state in MPCC."""
+
     class Full(TypedDict):
         state_limits: tuple[float, float]
         velocity_limits: tuple[float, float]
@@ -112,6 +116,8 @@ class JaxMpccVirtualStateConfig:
 
 
 class JaxMpccConfig:
+    """Combined MPCC configuration grouping weight and virtual state settings."""
+
     class Full(TypedDict):
         weights: JaxMpccWeightConfig.Full
         virtual: JaxMpccVirtualStateConfig.Full
@@ -148,6 +154,8 @@ def fill_defaults(
 
 
 class JaxMpccMppi:
+    """Factory for JAX MPPI planners configured for model predictive contouring control."""
+
     @staticmethod
     def create[
         S: JaxState,

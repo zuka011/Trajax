@@ -19,6 +19,8 @@ from numtypes import Array, Dims, D, shape_of
 class NumPyControlInputSequenceLike[T: int, D_u: int](
     ControlInputSequence[T, D_u], Protocol
 ):
+    """Protocol for NumPy control input sequences exposing an array property."""
+
     @property
     def array(self) -> Array[Dims[T, D_u]]:
         """Returns the underlying NumPy array representing the control input sequence."""
@@ -27,6 +29,8 @@ class NumPyControlInputSequenceLike[T: int, D_u: int](
 
 @dataclass(frozen=True)
 class NumPySimpleState[D_x: int](NumPyState[D_x]):
+    """NumPy simple flat state vector."""
+
     _array: Array[Dims[D_x]]
 
     @staticmethod
@@ -52,6 +56,8 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
 
 @dataclass(frozen=True)
 class NumPySimpleStateSequence[T: int, D_x: int](NumPyStateSequence[T, D_x]):
+    """NumPy state sequence as a 2D array (time × dimension)."""
+
     _array: Array[Dims[T, D_x]]
 
     @staticmethod
@@ -90,6 +96,8 @@ class NumPySimpleStateSequence[T: int, D_x: int](NumPyStateSequence[T, D_x]):
 
 @dataclass(frozen=True)
 class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]):
+    """NumPy state batch as a 3D array (time × dimension × rollouts)."""
+
     _array: Array[Dims[T, D_x, M]]
 
     @staticmethod
@@ -144,6 +152,8 @@ class NumPySimpleStateBatch[T: int, D_x: int, M: int](NumPyStateBatch[T, D_x, M]
 class NumPySimpleControlInputSequence[T: int, D_u: int](
     NumPyControlInputSequence[T, D_u]
 ):
+    """NumPy control input sequence as a 2D array (time × dimension)."""
+
     _array: Array[Dims[T, D_u]]
 
     @staticmethod
@@ -206,6 +216,8 @@ class NumPySimpleControlInputSequence[T: int, D_u: int](
 class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
     NumPyControlInputBatch[T, D_u, M]
 ):
+    """NumPy control input batch as a 3D array (time × dimension × rollouts)."""
+
     _array: Array[Dims[T, D_u, M]]
 
     @staticmethod
@@ -259,6 +271,8 @@ class NumPySimpleControlInputBatch[T: int, D_u: int, M: int](
 
 @dataclass(frozen=True)
 class NumPySimpleCosts[T: int, M: int](NumPyCosts[T, M]):
+    """NumPy cost values as a 2D array (time × rollouts)."""
+
     _array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:

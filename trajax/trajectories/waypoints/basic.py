@@ -33,6 +33,8 @@ class NumPyWaypointsTrajectory(
         NumPyLongitudinalPositions,
     ]
 ):
+    """NumPy cubic spline trajectory through a set of waypoints."""
+
     reference_points: Array[Dim1]
     spline_x: CubicSpline
     spline_y: CubicSpline

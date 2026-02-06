@@ -27,6 +27,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyError[T: int, M: int](Error[T, M]):
+    """Contouring or lag error between the state batch and reference trajectory."""
+
     array: Array[Dims[T, M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
@@ -38,6 +40,8 @@ class NumPyContouringCost[StateBatchT](
     ContouringCost[ControlInputBatch, StateBatchT, NumPyError],
     CostFunction[ControlInputBatch, StateBatchT, NumPyCosts],
 ):
+    """Penalizes lateral deviation from a reference trajectory."""
+
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
     path_parameter_extractor: NumPyPathParameterExtractor[StateBatchT]
     position_extractor: NumPyPositionExtractor[StateBatchT]
@@ -90,6 +94,8 @@ class NumPyLagCost[StateBatchT](
     LagCost[ControlInputBatch, StateBatchT, NumPyError],
     CostFunction[ControlInputBatch, StateBatchT, NumPyCosts],
 ):
+    """Penalizes longitudinal deviation from a reference trajectory."""
+
     reference: Trajectory[NumPyPathParameters, NumPyReferencePoints]
     path_parameter_extractor: NumPyPathParameterExtractor[StateBatchT]
     position_extractor: NumPyPositionExtractor[StateBatchT]
@@ -139,6 +145,8 @@ class NumPyLagCost[StateBatchT](
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyProgressCost[InputBatchT](CostFunction[InputBatchT, StateBatch, NumPyCosts]):
+    """Rewards forward progress along a reference trajectory."""
+
     path_velocity_extractor: NumPyPathVelocityExtractor[InputBatchT]
     time_step_size: float
     weight: float
@@ -175,6 +183,8 @@ class NumPyProgressCost[InputBatchT](CostFunction[InputBatchT, StateBatch, NumPy
 class NumPyControlSmoothingCost[D_u: int](
     CostFunction[NumPyControlInputBatch[int, D_u, int], StateBatch, NumPyCosts]
 ):
+    """Penalizes abrupt changes in control inputs between consecutive time steps."""
+
     weights: Array[Dims[D_u]]
 
     @staticmethod
@@ -207,6 +217,8 @@ class NumPyControlSmoothingCost[D_u: int](
 class NumPyControlEffortCost[D_u: int](
     CostFunction[NumPyControlInputBatch[int, D_u, int], Any, NumPyCosts]
 ):
+    """Penalizes large control input magnitudes."""
+
     weights: Array[Dims[D_u]]
 
     @staticmethod

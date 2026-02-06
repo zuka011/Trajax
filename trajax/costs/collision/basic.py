@@ -25,6 +25,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
+    """Pairwise distances between V vehicle parts and N obstacle samples over T time steps and M rollouts."""
+
     _array: Array[Dims[T, V, M, N]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
@@ -52,6 +54,8 @@ class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
 
 
 class NumPyNoMetric:
+    """Bypasses risk computation, evaluating collision cost with a single deterministic sample."""
+
     @staticmethod
     def create() -> "NumPyNoMetric":
         return NumPyNoMetric()
@@ -82,6 +86,8 @@ class NumPyCollisionCost[
     DistanceT: NumPyDistance,
     V: int,
 ](CostFunction[ControlInputBatch, StateT, NumPyCosts]):
+    """Collision avoidance cost based on distance thresholds to sampled obstacle positions."""
+
     obstacle_states: NumPyObstacleStateProvider[ObstacleStatesT]
     sampler: NumPyObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT]
     distance: NumPyDistanceExtractor[StateT, SampledObstacleStatesT, DistanceT]

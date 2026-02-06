@@ -28,6 +28,8 @@ class StateCollector[StateT = State, InputSequenceT = Any, WeightsT = Any](
     ModificationNotifierMixin,
     ListCollectorMixin,
 ):
+    """Decorator collecting initial states passed to each MPPI step."""
+
     inner: Mppi[StateT, InputSequenceT, WeightsT]
     transformer: DataTransformer[StateT, Any]
     _callbacks: list[OnModifyCallback] = field(default_factory=list)
@@ -72,6 +74,8 @@ class ControlCollector[
     ModificationNotifierMixin,
     ListCollectorMixin,
 ):
+    """Decorator collecting control outputs from each MPPI step."""
+
     inner: Mppi[StateT, InputSequenceT, WeightsT]
     transformer: DataTransformer[Control[InputSequenceT, WeightsT]]
     _callbacks: list[OnModifyCallback] = field(default_factory=list)
@@ -116,6 +120,8 @@ class TrajectoryCollector[
     InputSequenceT = Any,
     WeightsT = Any,
 ](Mppi[StateT, InputSequenceT, WeightsT], ModificationNotifierMixin):
+    """Decorator lazily collecting optimal and nominal trajectories from each MPPI step."""
+
     @dataclass(frozen=True)
     class LazyTrajectories[T]:
         factory: Callable[[], StateTrajectories[T]]

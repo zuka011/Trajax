@@ -21,6 +21,8 @@ import jax.numpy as jnp
 class JaxGaussianSampler[BatchT: JaxControlInputBatch, D_u: int = int, M: int = int](
     JaxSampler[JaxControlInputSequence, BatchT]
 ):
+    """Perturbs a nominal control sequence with zero-mean Gaussian noise."""
+
     standard_deviation: Final[Float[JaxArray, "D_u"]]
     to_batch: Final[JaxControlInputBatchCreator[BatchT]]
 

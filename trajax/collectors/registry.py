@@ -13,12 +13,16 @@ class NoCollectedDataWarning(RuntimeWarning):
 
 
 class DataTransformer[InputT, OutputT = Any](Protocol):
+    """Protocol for transforming collected data before storage."""
+
     def __call__(self, data: Sequence[InputT], /) -> OutputT:
         """Transforms the collected data into the desired output format."""
         ...
 
 
 class Collector[T](Protocol):
+    """Protocol for simulation data collectors with modification callbacks."""
+
     def on_modified(self, callback: OnModifyCallback) -> None:
         """Registers a callback to be invoked when new data is collected."""
         ...
@@ -44,6 +48,8 @@ class Collector[T](Protocol):
 
 
 class HasCallbacks(Protocol):
+    """Protocol for objects holding a list of modification callbacks."""
+
     @property
     def _callbacks(self) -> list[OnModifyCallback]:
         """Returns the list of registered modification callbacks."""
@@ -51,6 +57,8 @@ class HasCallbacks(Protocol):
 
 
 class HasList[T](Protocol):
+    """Protocol for objects holding a list of collected items."""
+
     @property
     def _collected(self) -> list[T]:
         """Returns the list of collected data."""
@@ -58,12 +66,16 @@ class HasList[T](Protocol):
 
 
 class IdentityTransformer[InputT]:
+    """Transformer that returns collected data unchanged."""
+
     def __call__(self, data: Sequence[InputT], /) -> Sequence[InputT]:
         """Returns the input data unchanged."""
         return data
 
 
 class ModificationNotifierMixin:
+    """Mixin that invokes registered callbacks when data is modified."""
+
     def notify(self: HasCallbacks) -> None:
         for callback in self._callbacks:
             callback()
@@ -73,6 +85,8 @@ class ModificationNotifierMixin:
 
 
 class ListCollectorMixin:
+    """Mixin providing list-backed collected data access."""
+
     def collected[T](self: HasList[T], *, take: int) -> Sequence[T]:
         return self._collected[:take]
 
@@ -83,6 +97,8 @@ class ListCollectorMixin:
 
 @dataclass
 class CollectorRegistry:
+    """Registry aggregating multiple collectors and producing unified simulation data."""
+
     collectors: tuple[Collector, ...]
     _data: SimulationData | None
 

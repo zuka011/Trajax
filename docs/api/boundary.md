@@ -1,48 +1,59 @@
 # boundary
 
-The boundary module provides corridor boundary extractors for constraint checking.
-
-## Factory Functions
-
-Access boundary factories through the backend namespaces:
-
-=== "NumPy"
-
-    ```python
-    from trajax import boundary
-    
-    corridor = boundary.numpy.fixed_width(...)
-    corridor = boundary.numpy.piecewise_fixed_width(...)
-    ```
-
-=== "JAX"
-
-    ```python
-    from trajax import boundary
-    
-    corridor = boundary.jax.fixed_width(...)
-    corridor = boundary.jax.piecewise_fixed_width(...)
-    ```
+Boundaries define drivable corridors around a reference trajectory and compute signed distances from vehicle positions to corridor edges.
 
 ## Fixed-Width Boundary
 
-Creates a corridor with constant width along the entire reference trajectory.
+Constant corridor width on each side of the reference path.
 
-::: trajax.costs.boundary.basic.NumPyFixedWidthBoundary.create
+::: trajax.costs.boundary.basic.NumPyFixedWidthBoundary
     options:
       show_root_heading: true
       heading_level: 3
+      members:
+        - create
+
+::: trajax.costs.boundary.accelerated.JaxFixedWidthBoundary
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
 
 ## Piecewise Fixed-Width Boundary
 
-Creates a corridor where width varies by longitudinal segment.
+Corridor width varies at arc-length breakpoints along the reference.
 
-::: trajax.costs.boundary.basic.NumPyPiecewiseFixedWidthBoundary.create
+::: trajax.costs.boundary.basic.NumPyPiecewiseFixedWidthBoundary
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+::: trajax.costs.boundary.accelerated.JaxPiecewiseFixedWidthBoundary
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+## Boundary Protocols
+
+::: trajax.types.BoundaryDistanceExtractor
     options:
       show_root_heading: true
       heading_level: 3
 
-## Width Specification Types
+::: trajax.types.ExplicitBoundary
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - left
+        - right
+
+## Width Types
 
 ::: trajax.types.BoundaryWidths
     options:
@@ -53,26 +64,3 @@ Creates a corridor where width varies by longitudinal segment.
     options:
       show_root_heading: true
       heading_level: 3
-
-## Boundary Protocols
-
-### BoundaryDistanceExtractor
-
-Callable protocol for computing signed distances to boundaries:
-
-::: trajax.types.BoundaryDistanceExtractor
-    options:
-      show_root_heading: true
-      heading_level: 3
-
-### ExplicitBoundary
-
-Protocol for boundaries that can sample explicit boundary points:
-
-::: trajax.types.ExplicitBoundary
-    options:
-      show_root_heading: true
-      heading_level: 3
-      members:
-        - left
-        - right

@@ -13,6 +13,8 @@ import numpy as np
 class NumPyStaticObstacleSimulator[K: int](
     NumPyObstacleSimulator[NumPyObstacle2dPosesForTimeStep[K]]
 ):
+    """Simulates stationary obstacles by replicating fixed positions over the horizon."""
+
     positions: Array[Dims[K, D[2]]]
     headings: Array[Dims[K]]
 

@@ -31,6 +31,8 @@ import jax.numpy as jnp
 @jaxtyped
 @dataclass(frozen=True)
 class JaxDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
+    """Pairwise distances between V vehicle parts and N obstacle samples over T time steps and M rollouts."""
+
     _array: Float[JaxArray, "T V M N"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
@@ -62,6 +64,8 @@ class JaxDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
 
 
 class JaxNoMetric:
+    """Bypasses risk computation, evaluating collision cost with a single deterministic sample."""
+
     @staticmethod
     def create() -> "JaxNoMetric":
         return JaxNoMetric()
@@ -92,6 +96,8 @@ class JaxCollisionCost[
     DistanceT: JaxDistance,
     V: int,
 ](CostFunction[ControlInputBatch, StateT, JaxCosts]):
+    """Collision avoidance cost based on distance thresholds to sampled obstacle positions."""
+
     obstacle_states: JaxObstacleStateProvider[ObstacleStatesT]
     sampler: JaxObstacleStateSampler[ObstacleStatesT, SampledObstacleStatesT]
     distance: JaxDistanceExtractor[StateT, SampledObstacleStatesT, DistanceT]

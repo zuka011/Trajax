@@ -12,6 +12,8 @@ import numpy as np
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyConstantVarianceProvider:
+    """Provides constant isotropic position and velocity covariance matrices."""
+
     position_variance: float
     velocity_variance: float
 
@@ -42,6 +44,8 @@ class NumPyConstantVarianceProvider:
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyConstantCovarianceProvider[K: int]:
+    """Provides fixed position and velocity covariance matrices."""
+
     position_covariance: NumPyInitialPositionCovariance[K]
     velocity_covariance: NumPyInitialVelocityCovariance[K]
 

@@ -1,47 +1,48 @@
 # trajectory
 
-The trajectory module provides reference path definitions for trajectory planning.
-
-## Factory Functions
-
-Access trajectory factories through the backend namespaces:
-
-=== "NumPy"
-
-    ```python
-    from trajax import trajectory
-    
-    reference = trajectory.numpy.line(...)
-    reference = trajectory.numpy.waypoints(...)
-    ```
-
-=== "JAX"
-
-    ```python
-    from trajax import trajectory
-    
-    reference = trajectory.jax.line(...)
-    reference = trajectory.jax.waypoints(...)
-    ```
-
-## Line Trajectory
-
-Creates a straight-line trajectory between two points.
-
-::: trajax.trajectories.line.basic.NumPyLineTrajectory.create
-    options:
-      show_root_heading: true
-      heading_level: 3
+Reference trajectories define the path to be followed by MPCC. A trajectory is parameterized by $\phi \in [0, L]$ and can be queried to return position $(x_\phi, y_\phi)$ and heading $\theta_\phi$ at any path parameter value.
 
 ## Waypoints Trajectory
 
-Creates a piecewise-linear trajectory through waypoints.
+Piecewise-linear path through a sequence of 2D waypoints. Headings are computed from segment tangent directions.
 
-::: trajax.trajectories.waypoints.basic.NumPyWaypointsTrajectory.create
+::: trajax.trajectories.waypoints.basic.NumPyWaypointsTrajectory
     options:
       show_root_heading: true
       heading_level: 3
+      members:
+        - create
+        - query
+
+::: trajax.trajectories.waypoints.accelerated.JaxWaypointsTrajectory
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+## Line Trajectory
+
+Straight path between two endpoints.
+
+::: trajax.trajectories.line.basic.NumPyLineTrajectory
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+        - query
+
+::: trajax.trajectories.line.accelerated.JaxLineTrajectory
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
 
 ## Trajectory Protocol
 
-All trajectories implement the [`Trajectory`](types.md#trajax.types.Trajectory) protocol, which defines methods for querying positions, computing lateral/longitudinal errors, and getting path length.
+::: trajax.types.Trajectory
+    options:
+      show_root_heading: true
+      heading_level: 3

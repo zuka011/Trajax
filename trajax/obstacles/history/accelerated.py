@@ -22,6 +22,8 @@ import jax.numpy as jnp
 
 
 class JaxObstacleStateCreator[StatesT](Protocol):
+    """Protocol for creating obstacle state objects from JAX arrays."""
+
     def wrap(self, states: Float[JaxArray, "T D_o K"], /) -> StatesT:
         """Wraps a JAX array into the appropriate obstacle states type."""
         ...
@@ -33,6 +35,8 @@ class JaxObstacleStateCreator[StatesT](Protocol):
 
 @dataclass(frozen=True)
 class JaxObstacleStateCreatorAdapter[StatesT]:
+    """Adapts a JAX obstacle state creator to accept NumPy arrays."""
+
     _creator: JaxObstacleStateCreator[StatesT]
 
     def wrap[T: int = int, D_o: int = int, K: int = int](
@@ -47,6 +51,8 @@ class JaxObstacleStateCreatorAdapter[StatesT]:
 @jaxtyped
 @dataclass(kw_only=True, frozen=True)
 class JaxObstacleIds[K: int]:
+    """JAX container for integer obstacle identifiers."""
+
     _ids: Int[JaxArray, "K"]
 
     @staticmethod
@@ -81,6 +87,8 @@ class JaxObstacleStatesRunningHistory[
     StatesT: JaxObstacleStates,
     StatesForTimeStepT: JaxObstacleStatesForTimeStep,
 ]:
+    """JAX sliding window history of obstacle states, delegating to NumPy internally."""
+
     # NOTE: Internally uses NumPy implementation, since it's faster in most cases.
     history: NumPyObstacleStatesRunningHistory[StatesT, NumPyObstacleStatesForTimeStep]
 

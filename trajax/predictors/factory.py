@@ -18,6 +18,8 @@ from trajax.predictors.covariance import (
 
 
 class predictor:
+    """Factory namespace for creating obstacle motion predictors."""
+
     class numpy:
         curvilinear: Final = CurvilinearPredictor.create
         static: Final = StaticPredictor.create
@@ -28,6 +30,8 @@ class predictor:
 
 
 class propagator:
+    """Factory namespace for creating covariance propagators and providers."""
+
     class numpy:
         linear: Final = NumPyLinearCovariancePropagator.create
 

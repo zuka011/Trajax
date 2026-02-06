@@ -27,6 +27,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class NumPyWeights[M: int]:
+    """Softmax-normalized cost weights used to compute the weighted average over rollouts."""
+
     _array: Array[Dims[M]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[M]]:
@@ -44,6 +46,8 @@ class NumPyWeights[M: int]:
 class NumPyZeroPadding(
     NumPyPaddingFunction[NumPyControlInputSequence, NumPyControlInputSequence]
 ):
+    """Fills shifted-out time steps with zero control inputs after horizon advancement."""
+
     def __call__[T: int, D_u: int, L: int](
         self, *, nominal_input: NumPyControlInputSequence[T, D_u], padding_size: L
     ) -> NumPyControlInputSequence[L, D_u]:
@@ -62,6 +66,8 @@ class NumPyMppi[
     ControlInputBatchT: NumPyControlInputBatch,
     ControlInputPaddingT: NumPyControlInputSequence = ControlInputSequenceT,
 ](Mppi[StateT, ControlInputSequenceT, NumPyWeights[int]]):
+    """Sampling-based stochastic optimal controller using the information-theoretic MPPI algorithm."""
+
     planning_interval: int
     model: NumPyDynamicalModel[
         StateT, Any, StateBatchT, ControlInputSequenceT, ControlInputBatchT
@@ -89,7 +95,6 @@ class NumPyMppi[
         padding_function: NumPyPaddingFunction[CIS, CIP] | None = None,
         filter_function: NumPyFilterFunction[CIS] | None = None,
     ) -> "NumPyMppi[S, SB, CIS, CIB, CIP]":
-        """Creates a NumPy-based MPPI controller."""
         return NumPyMppi(
             planning_interval=planning_interval,
             model=model,
@@ -113,6 +118,7 @@ class NumPyMppi[
         nominal_input: ControlInputSequenceT,
         initial_state: StateT,
     ) -> Control[ControlInputSequenceT, NumPyWeights]:
+        """Samples rollouts, evaluates costs, and returns the cost-weighted optimal control."""
         assert temperature > 0.0, "Temperature must be positive."
 
         samples = self.sampler.sample(around=nominal_input)

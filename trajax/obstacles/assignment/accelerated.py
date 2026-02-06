@@ -31,6 +31,8 @@ type JaxPositionsExtractor[StatesT, HistoryT] = JaxObstaclePositionExtractor[
 class NumPyAdaptedObstaclePositionsForTimeStep[D_p: int, K: int](
     NumPyObstaclePositionsForTimeStep[D_p, K]
 ):
+    """Adapts JAX obstacle positions to NumPy for a single time step."""
+
     _array: Array[Dims[D_p, K]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_p, K]]:
@@ -53,6 +55,8 @@ class NumPyAdaptedObstaclePositionsForTimeStep[D_p: int, K: int](
 class NumPyAdaptedObstaclePositions[T: int, D_p: int, K: int](
     NumPyObstaclePositions[T, D_p, K]
 ):
+    """Adapts JAX obstacle positions to NumPy across time steps."""
+
     _array: Array[Dims[T, D_p, K]]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_p, K]]:
@@ -81,6 +85,8 @@ class PositionExtractorAdapter[StatesT, HistoryT](
         StatesT, HistoryT, NumPyObstaclePositionsForTimeStep, NumPyObstaclePositions
     ]
 ):
+    """Adapts a JAX position extractor to the NumPy interface for obstacle assignment."""
+
     inner: JaxObstaclePositionExtractor[
         StatesT, HistoryT, JaxObstaclePositionsForTimeStep, JaxObstaclePositions
     ]
@@ -107,6 +113,8 @@ class JaxHungarianObstacleIdAssignment[
     StatesT: ObstacleStatesForTimeStep,
     HistoryT: ObstacleStatesHistory,
 ](ObstacleIdAssignment[StatesT, JaxObstacleIds, HistoryT]):
+    """Matches detected obstacles to tracked IDs using the Hungarian algorithm on position distances."""
+
     # NOTE: Internally the Hungarian assignment is still done using SciPy and NumPy.
     inner: NumPyHungarianObstacleIdAssignment[StatesT, HistoryT]
 

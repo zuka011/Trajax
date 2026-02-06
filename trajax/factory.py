@@ -16,6 +16,8 @@ from trajax.mpcc import NumPyMpccMppi, JaxMpccMppi
 
 
 class mppi:
+    """Factory namespace for creating MPPI planners."""
+
     class numpy:
         base: Final = NumPyMppi.create
         augmented: Final = NumPyAugmentedMppi.create
@@ -28,6 +30,8 @@ class mppi:
 
 
 class update:
+    """Factory namespace for MPPI control sequence update strategies."""
+
     class numpy:
         none: Final = NoUpdate
         use_optimal_control: Final = UseOptimalControlUpdate
@@ -38,6 +42,8 @@ class update:
 
 
 class padding:
+    """Factory namespace for MPPI control sequence padding strategies."""
+
     class numpy:
         zero: Final = NumPyZeroPadding
 
@@ -46,6 +52,8 @@ class padding:
 
 
 class filters:
+    """Factory namespace for MPPI control sequence filtering strategies."""
+
     class numpy:
         none: Final = NoFilter
         savgol: Final = NumPySavGolFilter.create

@@ -9,6 +9,8 @@ from scipy.ndimage import convolve1d
 
 @dataclass(frozen=True)
 class NumPySavGolFilter:
+    """Savitzky-Golay smoothing filter for MPPI control sequences (NumPy)."""
+
     coefficients: Array[Dim1]
 
     @staticmethod

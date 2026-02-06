@@ -9,6 +9,8 @@ import jax.numpy as jnp
 
 
 class JaxCostSumFunction[CostsT: JaxCosts](CostSumFunction[CostsT]):
+    """Sums multiple cost arrays element-wise into a single cost."""
+
     def __call__(self, costs: Sequence[CostsT], *, initial: CostsT) -> CostsT:
         return initial.similar(
             array=sum_costs(costs=[it.array for it in costs], initial=initial.array)

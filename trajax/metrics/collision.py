@@ -19,6 +19,8 @@ import numpy as np
 
 @dataclass(kw_only=True, frozen=True)
 class CollisionMetricResult[T: int = int, V: int = int]:
+    """Results of the collision metric, including distances and collision flags."""
+
     distances: Array[Dims[T, V]]
     distance_threshold: float
 
@@ -39,6 +41,8 @@ class CollisionMetricResult[T: int = int, V: int = int]:
 class CollisionMetric[StateBatchT, SampledObstacleStatesT](
     Metric[CollisionMetricResult[Any]]
 ):
+    """Metric evaluating minimum distances between the ego vehicle and obstacles."""
+
     distance: DistanceExtractor[StateBatchT, SampledObstacleStatesT, Distance]
     distance_threshold: float
 

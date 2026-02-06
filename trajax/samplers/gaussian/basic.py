@@ -19,6 +19,8 @@ class NumPyGaussianSampler[
     D_u: int = int,
     M: int = int,
 ](NumPySampler[NumPyControlInputSequence, BatchT]):
+    """Perturbs a nominal control sequence with zero-mean Gaussian noise."""
+
     standard_deviation: Final[Array[Dims[D_u]]]
     to_batch: Final[NumPyControlInputBatchCreator[BatchT, D_u, M]]
     rng: np.random.Generator

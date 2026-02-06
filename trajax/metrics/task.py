@@ -47,6 +47,8 @@ class TaskCompletionMetric[
     PositionsT: Positions,
     LongitudinalT: LongitudinalPositions,
 ](Metric[TaskCompletionMetricResult[Any]]):
+    """Metric evaluating whether the ego vehicle reached the goal position."""
+
     reference: Trajectory[Any, Any, PositionsT, Any, LongitudinalT]
     goal_position: Array[Dims[D[2]]]
     optimal_distance: float

@@ -1,109 +1,45 @@
 # Notation and Conventions
 
-This page documents the notation used throughout trajax for dimensions, shapes, and symbols.
+Quick reference for dimension symbols and array shapes used throughout the API.
 
-## Dimension Symbols
+## Index Dimensions
 
-### Index Dimensions
+| Symbol | Meaning |
+|--------|---------|
+| $T$ | Time horizon (planning steps) |
+| $M$ | Rollout count (samples) |
+| $K$ | Obstacle count |
+| $N$ | Prediction samples per obstacle |
 
-| Symbol | Description | Example Value |
-|--------|-------------|---------------|
-| $T$ | Time horizon (number of time steps) | 20 |
-| $M$ | Number of rollouts (samples) | 256 |
-| $K$ | Number of obstacles | 5 |
-| $N$ | Number of prediction samples per obstacle | 10 |
+## State and Input Dimensions
 
-### State/Input Dimensions
+| Symbol | Meaning | Bicycle | Unicycle | Integrator |
+|--------|---------|---------|----------|------------|
+| $D_x$ | State dimension | 4 $(x, y, \theta, v)$ | 3 $(x, y, \theta)$ | $n$ |
+| $D_u$ | Control input dimension | 2 $(a, \delta)$ | 2 $(v, \omega)$ | $n$ |
 
-| Symbol | Description | Value |
-|--------|-------------|-------|
-| $D_x$ | State dimension | Model-dependent |
-| $D_u$ | Control input dimension | Model-dependent |
-| $D_v$ | Virtual state dimension | 2 (MPCC) |
-| $D_o$ | Obstacle state dimension | 3 (x, y, heading) |
-| $D_r$ | Reference point dimension | 3 (x, y, heading) |
-
-### Bicycle Model Dimensions
-
-| Symbol | Constant | Value | Components |
-|--------|----------|-------|------------|
-| $D_x$ | `BICYCLE_D_X` | 4 | x, y, heading, speed |
-| $D_u$ | `BICYCLE_D_U` | 2 | acceleration, steering |
-| $D_v$ | `BICYCLE_D_V` | 2 | path parameter, virtual velocity |
-| $D_o$ | `BICYCLE_D_O` | 3 | x, y, heading |
+MPCC adds a virtual component with dimension $D_v = 1$ (path parameter $\phi$) and virtual control $\dot{\phi}$.
 
 ## Array Shapes
 
-### States
-
-| Type | Shape | Description |
-|------|-------|-------------|
-| State | $(D_x,)$ | Single state |
-| StateSequence | $(T, D_x)$ | State trajectory |
-| StateBatch | $(T, D_x, M)$ | Batch of rollouts |
-
-### Control Inputs
-
-| Type | Shape | Description |
-|------|-------|-------------|
-| ControlInputSequence | $(T, D_u)$ | Single input sequence |
-| ControlInputBatch | $(T, D_u, M)$ | Batch of input sequences |
-
-### Obstacles
-
-| Type | Shape | Description |
-|------|-------|-------------|
-| ObstacleStatesForTimeStep | $(D_o, K)$ | Obstacles at one time |
-| ObstacleStatesHistory | $(T, D_o, K)$ | Obstacle history |
-| SampledObstacleStates | $(T, D_o, K, N)$ | Predicted samples |
-
-### Trajectories
-
-| Type | Shape | Description |
-|------|-------|-------------|
-| PathParameters | $(T, M)$ | Path progress per rollout |
-| Positions | $(T, 2, M)$ | x, y positions |
-| ReferencePoints | $(T, D_r, M)$ | x, y, heading |
-
-## Augmented States (MPCC)
-
-MPCC uses augmented states combining physical and virtual components:
-
-```
-AugmentedState = Physical + Virtual
-```
-
-| Component | Shape | Description |
-|-----------|-------|-------------|
-| Physical | $(D_x,)$ | Vehicle state (e.g., bicycle) |
-| Virtual | $(D_v,)$ | Path parameter, virtual velocity |
-| Augmented | $(D_x + D_v,)$ | Combined state |
+| Type | Shape | Notes |
+|------|-------|-------|
+| `State` | $(D_x,)$ | Single state vector |
+| `StateSequence` | $(T, D_x)$ | Trajectory over time |
+| `StateBatch` | $(T, D_x, M)$ | Batched rollouts |
+| `ControlInputSequence` | $(T, D_u)$ | Single control sequence |
+| `ControlInputBatch` | $(T, D_u, M)$ | Batched control sequences |
+| `PathParameters` | $(T, M)$ | Path progress per rollout |
+| `ReferencePoints` | $(T, 3, M)$ | $(x, y, \theta)$ per rollout |
+| `ObstacleStates` | $(T, D_o, K)$ | $K$ obstacles over $T$ steps |
+| `SampledObstacleStates` | $(T, D_o, K, N)$ | $N$ prediction samples |
 
 ## Naming Conventions
 
-### Properties
-
-- `horizon` — Time horizon $T$
-- `dimension` — State or input dimension ($D_x$, $D_u$, etc.)
-- `rollout_count` — Number of samples $M$
-- `count` — Number of obstacles $K$
-- `sample_count` — Number of prediction samples $N$
-
-### Type Aliases
-
-trajax exports type aliases matching dimension constants:
-
-```python
-from trajax.types import BicycleD_x, BicycleD_u, BicycleD_v, D_o, D_r
-```
-
-These are parameterized `D[n]` types from numtypes for static shape checking.
-
-## MPPI Parameters
-
-| Parameter | Symbol | Description |
-|-----------|--------|-------------|
-| Temperature | $\lambda$ | Softmax sharpness |
-| Time step | $\Delta t$ | Discretization interval |
-| Horizon | $T$ | Planning steps |
-| Samples | $M$ | Rollout count |
+| Property | Symbol |
+|----------|--------|
+| `horizon` | $T$ |
+| `dimension` | $D_x$, $D_u$ |
+| `rollout_count` | $M$ |
+| `count` | $K$ |
+| `sample_count` | $N$ |

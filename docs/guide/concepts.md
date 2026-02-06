@@ -1,123 +1,54 @@
 # Core Concepts
 
-This page explains the fundamental concepts behind trajax.
+## MPPI
 
-## Model Predictive Path Integral (MPPI)
+MPPI (Model Predictive Path Integral) is a sampling-based trajectory optimization algorithm. At each planning step it:
 
-MPPI is a sampling-based control algorithm that finds good controls by:
-
-1. **Sampling** candidate control sequences around a nominal trajectory
-2. **Simulating** each sequence through a dynamical model
-3. **Evaluating** the cost of each resulting trajectory
-4. **Weighting** samples by their cost using a softmax function
-5. **Averaging** the weighted samples to produce the optimal control
+1. Draws $M$ control sequences by perturbing a nominal sequence
+2. Simulates each through a dynamics model to produce $M$ state rollouts
+3. Evaluates a cost function on every rollout
+4. Computes a softmax-weighted average of the samples as the optimal control
 
 $$
-u_{\text{opt}} = \sum_{m=1}^{M} w_m \cdot u_m, \quad w_m = \frac{1}{\eta} \exp\left(-\frac{1}{\lambda}(J_m - J_{\min})\right)
+u^* = \sum_{m=1}^{M} w_m \, u_m, \quad w_m = \frac{1}{\eta} \exp\!\left(-\frac{1}{\lambda}\,(J_m - J_{\min})\right)
 $$
 
-where:
+The temperature $\lambda$ controls how aggressively the planner favors low-cost samples. Low temperature concentrates weight on the best samples; high temperature distributes weight more evenly.
 
-- $M$ is the number of rollouts (samples)
-- $\lambda$ is the temperature parameter
-- $J_m$ is the cost of rollout $m$
+### What You Provide
 
-### Temperature Parameter
+| Component | Role |
+|---|---|
+| Dynamics model | Predicts the next state given current state and control input |
+| Cost function | Scores each rollout (lower is better) |
+| Sampler | Generates perturbations around the nominal control sequence |
 
-The temperature $\lambda$ controls exploration vs exploitation:
+trajax provides concrete implementations for each of these (see [Feature Overview](features.md)), and you compose them into a planner via factory functions.
 
-| Temperature | Behavior |
-|-------------|----------|
-| Low | Strongly favor lowest-cost samples |
-| High | Weight all samples more equally |
+### Factory Functions
 
-## Key Components
-
-### Dynamical Models
-
-A dynamical model defines how your system evolves. The **kinematic bicycle model** is commonly used for wheeled robots:
-
-$$
-\dot{x} = v \cos(\theta), \quad \dot{y} = v \sin(\theta), \quad \dot{\theta} = \frac{v}{L} \tan(\delta), \quad \dot{v} = a
-$$
-
-where $L$ is the wheelbase, $\delta$ is steering angle, and $a$ is acceleration.
+| Factory | When to use |
+|---|---|
+| `mppi.base` | You have a single model and a custom cost function |
+| `mppi.augmented` | Your state has multiple components (e.g., physical + virtual) |
+| `mppi.mpcc` | Path following with the MPCC formulation (see below) |
 
 ```python
-bicycle = model.bicycle.dynamical(
-    time_step_size=0.1,
-    wheelbase=2.5,
-    speed_limits=(0.0, 15.0),
-    steering_limits=(-0.5, 0.5),
-    acceleration_limits=(-3.0, 3.0),
-)
-```
+from trajax.numpy import mppi
 
-### Samplers
+# Lowest-level: bring your own model, cost, sampler
+planner = mppi.base(model=..., cost_function=..., sampler=...)
 
-Samplers generate candidate control sequences:
-
-```python
-control_sampler = sampler.gaussian(
-    standard_deviation=array([0.5, 0.2], shape=(2,)),
-    rollout_count=256,
-    to_batch=types.bicycle.control_input_batch.create,
-    seed=42,
-)
-```
-
-A Halton sampler provides more uniform coverage:
-
-```python
-halton_sampler = sampler.halton(
-    standard_deviation=array([0.5, 0.2], shape=(2,)),
-    rollout_count=256,
-    knot_count=6,
-    to_batch=types.bicycle.control_input_batch.create,
-    seed=42,
-)
-```
-
-### Cost Functions
-
-Cost functions evaluate trajectory quality:
-
-**Tracking:**
-
-- `costs.tracking.contouring` — Lateral deviation from path
-- `costs.tracking.lag` — Longitudinal deviation from reference point  
-- `costs.tracking.progress` — Reward forward motion
-
-**Safety:**
-
-- `costs.safety.collision` — Penalize obstacle proximity
-- `costs.safety.boundary` — Penalize leaving corridor
-
-**Comfort:**
-
-- `costs.comfort.control_smoothing` — Penalize control rate of change
-- `costs.comfort.control_effort` — Penalize control magnitude
-
-Combine them:
-
-```python
-cost = costs.combined(
-    costs.tracking.contouring(reference=reference, weight=50.0, ...),
-    costs.tracking.lag(reference=reference, weight=100.0, ...),
-    costs.safety.collision(obstacle_states=..., weight=1500.0, ...),
-)
+# Highest-level: MPCC path following in one call
+planner, model, contouring, lag = mppi.mpcc(model=..., sampler=..., reference=..., ...)
 ```
 
 ## MPCC: Model Predictive Contouring Control
 
-MPCC is a path-following formulation. It introduces a **virtual path parameter** $\phi$ that tracks progress along the reference trajectory.
+MPCC is an MPC formulation for path following. It introduces a virtual path parameter $\phi$ that moves independently along the reference trajectory, and decomposes tracking error into two components:
 
-### Contouring/Lag Decomposition
-
-MPCC splits tracking error into:
-
-- **Contouring error** $e_c$: Perpendicular distance to the path
-- **Lag error** $e_l$: Parallel distance behind the reference point
+- **Contouring error** $e_c$ — perpendicular distance to the path (lateral deviation)
+- **Lag error** $e_l$ — distance along the path behind the reference point (longitudinal deviation)
 
 $$
 e_c = \sin(\theta_\phi)(x - x_\phi) - \cos(\theta_\phi)(y - y_\phi)
@@ -127,62 +58,65 @@ $$
 e_l = -\cos(\theta_\phi)(x - x_\phi) - \sin(\theta_\phi)(y - y_\phi)
 $$
 
-The progress cost pushes $\phi$ forward while contouring and lag costs pull it back, creating stable tracking.
+A progress cost pushes $\phi$ forward while contouring and lag costs pull the vehicle toward the reference point. The balance between these three costs determines tracking behavior.
 
-### MPCC Factory
+### Augmented State
 
-```python
-planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
-    model=bicycle,
-    sampler=control_sampler,
-    reference=reference,
-    position_extractor=extract.from_physical(position),
-    config={
-        "weights": {"contouring": 50.0, "lag": 100.0, "progress": 1000.0},
-        "virtual": {"velocity_limits": (0.0, 15.0)},
-    },
-)
-```
+MPCC augments the physical state with a virtual component:
 
-## State Representations
+| | Variables | Meaning |
+|---|---|---|
+| Physical state | $x, y, \theta, v$ | Vehicle pose and speed |
+| Virtual state | $\phi$ | Arc-length progress along the reference |
+| Physical controls | $a, \delta$ | Acceleration, steering |
+| Virtual control | $\dot\phi$ | Path velocity |
 
-### Batched Operations
+Both the physical and virtual dynamics are simulated together. The `mppi.mpcc` factory handles this composition automatically.
 
-Computations operate on **batches** with shape `(T, D_x, M)`:
+## Batched Computation
 
-- `T`: Time horizon
-- `D_x`: State dimension
-- `M`: Number of rollouts
+All computations operate on 3D tensors:
 
-### Augmented States
+| Shape | Meaning |
+|---|---|
+| $(T, D_x, M)$ | State batch — $T$ time steps, $D_x$ state dimensions, $M$ rollouts |
+| $(T, D_u, M)$ | Control batch — same layout for control inputs |
+| $(T, M)$ | Cost array — one scalar per rollout per time step |
 
-For MPCC, states combine physical and virtual components:
-
-```python
-state = types.augmented.state.of(
-    physical=types.bicycle.state.create(x=0.0, y=0.0, heading=0.0, speed=0.0),
-    virtual=types.simple.state.zeroes(dimension=1),  # path parameter
-)
-```
+The MPPI algorithm sums costs over $T$ to get a total cost per rollout, then computes softmax weights to combine all $M$ samples.
 
 ## Extractors
 
-Extractors decouple state representations from cost computations:
+Extractors decouple cost functions from specific state representations. A cost function never accesses state arrays directly — it asks an extractor for the values it needs (positions, headings, path parameters).
+
+This lets you reuse the same cost function implementation with different models:
 
 ```python
-# For augmented states
+from trajax.numpy import extract, types
+
+# For augmented states: extract position from the physical sub-state
 position_extractor = extract.from_physical(
     lambda states: types.positions(x=states.positions.x(), y=states.positions.y())
 )
 ```
 
-## Control Flow
+## Planning Loop
 
-Each planning step:
+A typical simulation loop:
 
-1. `sampler.sample()` — Generate control samples
-2. `model.simulate()` — Rollout each sample
-3. `cost()` — Evaluate costs
-4. Compute softmax weights
-5. `weighted_sum()` — Combine samples
-6. `shift_and_pad()` — Prepare for next timestep
+```python
+state = initial_state
+nominal = initial_nominal_input
+
+for step in range(max_steps):
+    control = planner.step(
+        temperature=50.0,
+        nominal_input=nominal,
+        initial_state=state,
+    )
+
+    state = model.step(inputs=control.optimal, state=state)
+    nominal = control.nominal  # warm-start for next iteration
+```
+
+`control.optimal` is the weighted-average control sequence. `control.nominal` is the shifted and padded sequence used as the center of sampling in the next step.

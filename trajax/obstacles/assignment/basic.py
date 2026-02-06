@@ -28,6 +28,8 @@ class NumPyHungarianObstacleIdAssignment[
     StatesT: ObstacleStatesForTimeStep,
     HistoryT: ObstacleStatesHistory,
 ](ObstacleIdAssignment[StatesT, NumPyObstacleIds, HistoryT]):
+    """Matches detected obstacles to tracked IDs using the Hungarian algorithm on position distances."""
+
     positions: Final[PositionsExtractor[StatesT, HistoryT]]
     cutoff: Final[float]
     next_id: int

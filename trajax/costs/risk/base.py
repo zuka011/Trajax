@@ -38,6 +38,8 @@ class RisKitRiskMetric[
     CostsT: rk.Costs,
     ArrayT: rk.ArrayLike,
 ]:
+    """Evaluates risk-aware collision cost via the riskit library (CVaR, EVaR, etc.)."""
+
     backend: rk.Backend[CostsT, RkRiskT, ArrayT]
     creator: RiskMetricCreator[StateT, SampleT, CostsT, RkRiskT, ArrayT]
     to_risk: RiskConverter[RkRiskT, RiskT]
@@ -82,6 +84,8 @@ class RisKitRiskMetric[
 
 @dataclass(frozen=True)
 class StateTrajectories[StateT: StateBatch]:
+    """Wraps a state batch as a riskit trajectory source."""
+
     states: StateT
 
     def get(self) -> StateT:
@@ -98,6 +102,8 @@ class StateTrajectories[StateT: StateBatch]:
 
 @dataclass(frozen=True)
 class ObstacleStateUncertainties[StateT, SampleT]:
+    """Lazily samples obstacle states on demand for the riskit uncertainty interface."""
+
     obstacle_states: StateT
     sampler: ObstacleStateSampler[StateT, SampleT]
 

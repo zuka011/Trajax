@@ -8,6 +8,8 @@ from trajax.trajectories.waypoints import (
 
 
 class trajectory:
+    """Factory namespace for creating reference trajectories."""
+
     class numpy:
         line: Final = NumPyLineTrajectory.create
         waypoints: Final = NumPyWaypointsTrajectory.create

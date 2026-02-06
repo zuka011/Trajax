@@ -1,51 +1,108 @@
 # mppi
 
-The mppi module provides Model Predictive Path Integral (MPPI) controllers for trajectory optimization.
+MPPI (Model Predictive Path Integral) is a sampling-based stochastic optimal control algorithm [^1] [^2]. At each planning step, it samples $M$ control input perturbations around a nominal sequence, simulates rollouts through a dynamical model, evaluates a cost function, and computes a cost-weighted average as the optimal control:
+
+$$
+\mathbf{u}_{\text{opt}} = \sum_{m=1}^{M} w_m \, \mathbf{u}_m, \quad w_m = \frac{1}{\eta} \exp\!\left(\frac{-1}{\lambda}(J_m - J_{\min})\right)
+$$
+
+where $\lambda$ is the temperature parameter controlling the sharpness of the softmax weighting.
+
+[^1]: G. Williams, A. Aldrich, E. Theodorou, "Model Predictive Path Integral Control using Covariance Variable Importance Sampling," arXiv:1509.01149, 2015.
+[^2]: G. Williams et al., "Aggressive Driving with Model Predictive Path Integral Control," IEEE ICRA, 2016.
 
 ## Factory Functions
 
-Access MPPI factories through the backend namespaces:
+```python
+from trajax.numpy import mppi
 
-=== "NumPy"
+# Base MPPI planner
+planner = mppi.base(model=..., cost_function=..., sampler=...)
 
-    ```python
-    from trajax import mppi, model, sampler, costs
-    
-    controller = mppi.numpy.base(
-        model=model.numpy.bicycle.dynamical(time_step_size=0.1),
-        cost_function=costs.numpy.tracking(reference=..., ...),
-        sampler=sampler.numpy.gaussian(seed=42),
-    )
-    ```
+# MPPI with augmented state (physical + virtual)
+planner = mppi.augmented(physical=..., virtual=..., ...)
 
-=== "JAX"
+# MPCC convenience factory (assembles augmented model, contouring/lag/progress costs)
+planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., reference=..., ...)
+```
 
-    ```python
-    from trajax import mppi, model, sampler, costs
-    
-    controller = mppi.jax.base(
-        model=model.jax.bicycle.dynamical(time_step_size=0.1),
-        cost_function=costs.jax.tracking(reference=..., ...),
-        sampler=sampler.jax.gaussian(seed=42),
-    )
-    ```
-
-## Controller Classes
+## NumPyMppi
 
 ::: trajax.mppi.basic.NumPyMppi
     options:
       show_root_heading: true
       heading_level: 3
+      show_source: true
       members:
-        - __call__
+        - create
+        - step
+
+## JaxMppi
 
 ::: trajax.mppi.accelerated.JaxMppi
     options:
       show_root_heading: true
       heading_level: 3
       members:
-        - __call__
+        - create
+        - step
+
+## MPCC Factory
+
+::: trajax.mpcc.basic.NumPyMpccMppi
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
+
+::: trajax.mpcc.accelerated.JaxMpccMppi
+    options:
+      show_root_heading: true
+      heading_level: 3
+      members:
+        - create
 
 ## Mppi Protocol
 
-All MPPI controllers implement the [`Mppi`](types.md#trajax.types.Mppi) protocol.
+::: trajax.types.Mppi
+    options:
+      show_root_heading: true
+      heading_level: 3
+
+## Supporting Types
+
+### Control
+
+::: trajax.types.Control
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+### Update Functions
+
+::: trajax.mppi.common.UseOptimalControlUpdate
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+::: trajax.mppi.common.NoFilter
+    options:
+      show_root_heading: true
+      heading_level: 4
+
+### Savitzky-Golay Filter
+
+::: trajax.mppi.savgol.basic.NumPySavGolFilter
+    options:
+      show_root_heading: true
+      heading_level: 4
+      members:
+        - create
+
+::: trajax.mppi.savgol.accelerated.JaxSavGolFilter
+    options:
+      show_root_heading: true
+      heading_level: 4
+      members:
+        - create

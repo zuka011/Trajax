@@ -29,6 +29,8 @@ type Int = JaxInt[JaxArray, ""]
 
 
 class GuessSamples(NamedTuple):
+    """Precomputed spline samples used for fast nearest-point lookup."""
+
     x: Float[JaxArray, "K"]
     y: Float[JaxArray, "K"]
     arc_lengths: Float[JaxArray, "K"]
@@ -44,6 +46,8 @@ class JaxWaypointsTrajectory(
         JaxLongitudinalPositions,
     ]
 ):
+    """JAX cubic spline trajectory through a set of waypoints."""
+
     reference_points: Float[JaxArray, "N"]
     coefficients_x: Float[JaxArray, "N-1 4"]
     coefficients_y: Float[JaxArray, "N-1 4"]

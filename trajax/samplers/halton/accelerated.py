@@ -40,6 +40,8 @@ class JaxHaltonSplineSampler[
     D_u: int = int,
     M: int = int,
 ](JaxSampler[JaxControlInputSequence, BatchT]):
+    """Perturbs a nominal control sequence using Halton sequences interpolated through cubic splines."""
+
     standard_deviation: Final[Float[JaxArray, "D_u"]]
     to_batch: Final[JaxControlInputBatchCreator[BatchT]]
     knot_count: Final[int]

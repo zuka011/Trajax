@@ -9,6 +9,8 @@ from trajax.metrics.comfort import ComfortMetric
 
 
 class metrics:
+    """Factory namespace for creating simulation evaluation metrics."""
+
     registry: Final = MetricRegistry.of
     collision: Final = CollisionMetric.create
     mpcc_error: Final = MpccErrorMetric.create

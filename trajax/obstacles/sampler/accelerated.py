@@ -15,6 +15,8 @@ import jax.numpy as jnp
 class JaxGaussianObstacle2dPoseSampler(
     JaxObstacleStateSampler[JaxObstacle2dPoses, JaxSampledObstacle2dPoses]
 ):
+    """Samples obstacle poses from a Gaussian distribution parameterized by predicted covariances."""
+
     key: PRNGKeyArray
 
     @staticmethod

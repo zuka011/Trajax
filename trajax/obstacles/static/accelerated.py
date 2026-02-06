@@ -14,6 +14,8 @@ import jax.numpy as jnp
 class JaxStaticObstacleSimulator[K: int](
     JaxObstacleSimulator[JaxObstacle2dPosesForTimeStep[K]]
 ):
+    """Simulates stationary obstacles by replicating fixed positions over the horizon."""
+
     positions: Float[JaxArray, "K 2"]
     headings: Float[JaxArray, "K"]
 

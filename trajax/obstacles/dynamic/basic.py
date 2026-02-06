@@ -13,6 +13,8 @@ import numpy as np
 class NumPyDynamicObstacleSimulator[K: int](
     NumPyObstacleSimulator[NumPyObstacle2dPosesForTimeStep[K]]
 ):
+    """Simulates obstacles moving with constant velocity over the prediction horizon."""
+
     last: NumPyObstacle2dPosesForTimeStep[K]
     velocities: Array[Dims[K, D[2]]]
 

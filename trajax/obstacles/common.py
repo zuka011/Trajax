@@ -11,6 +11,8 @@ from trajax.types import (
 
 
 class DefaultIdAssignment(ObstacleIdAssignment[Any, Any, Any]):
+    """No-op obstacle ID assignment that preserves existing IDs."""
+
     def __call__(self, states: Any, /, *, history: Any, ids: Any) -> None:
         return None
 
@@ -22,6 +24,8 @@ class PredictingObstacleStateProvider[
     HistoryT,
     PredictionT,
 ](ObstacleStateProvider[PredictionT]):
+    """Provides obstacle state predictions by maintaining a running history and forwarding to a predictor."""
+
     predictor: ObstacleMotionPredictor[HistoryT, PredictionT]
     history: ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT]
     id_assignment: ObstacleIdAssignment[ObstacleStatesForTimeStepT, IdT, HistoryT]

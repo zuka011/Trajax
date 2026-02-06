@@ -19,6 +19,8 @@ type NumPyPaddedPositionCovariance[T: int, D_c: int, K: int] = Array[
 
 @dataclass(kw_only=True, frozen=True)
 class NumPyLinearCovariancePropagator[StateSequencesT: ObstacleStateSequences]:
+    """NumPy linear covariance propagator assuming constant-velocity motion."""
+
     time_step: float
     initial_covariance: NumPyInitialCovarianceProvider[StateSequencesT]
     padding: CovariancePadding

@@ -1,37 +1,25 @@
 # Cost Function Design
 
-Cost functions define what behaviors the MPPI planner should optimize for.
-
-## How Costs Work
-
-A cost function takes batched states and control inputs, and returns a cost for each rollout:
+A cost function receives batched states and control inputs and returns a cost per rollout per time step. The MPPI algorithm sums costs over time, then uses softmax weighting to combine rollouts. Lower cost is better.
 
 ```python
-costs = cost_function(inputs=control_batch, states=state_batch)
+costs_array = cost_function(inputs=control_batch, states=state_batch)
+# costs_array.array has shape (T, M)
 ```
-
-Lower costs are better. The MPPI algorithm weights samples by their total cost.
 
 ## Tracking Costs
 
-### Contouring Cost
+These are used in the MPCC formulation (see [Concepts](concepts.md#mpcc-model-predictive-contouring-control)).
 
-Penalizes **lateral deviation** from the reference path:
+### Contouring
+
+Penalizes lateral deviation from the reference path:
 
 $$
-J_c = k_c \cdot e_c^2, \quad e_c = \sin(\theta_\phi)(x - x_\phi) - \cos(\theta_\phi)(y - y_\phi)
+J_c = k_c \cdot e_c^2
 $$
 
 ```python
-from trajax.numpy import costs, trajectory, types, extract
-from numtypes import array
-
-def position(states):
-    return types.positions(x=states.positions.x(), y=states.positions.y())
-
-def path_parameter(states):
-    return types.path_parameters(states.array[:, 0, :])
-
 contouring = costs.tracking.contouring(
     reference=reference,
     path_parameter_extractor=extract.from_virtual(path_parameter),
@@ -40,9 +28,9 @@ contouring = costs.tracking.contouring(
 )
 ```
 
-### Lag Cost
+### Lag
 
-Penalizes **longitudinal deviation** from the reference point:
+Penalizes longitudinal deviation from the reference point:
 
 $$
 J_l = k_l \cdot e_l^2
@@ -57,18 +45,15 @@ lag = costs.tracking.lag(
 )
 ```
 
-### Progress Cost
+### Progress
 
-**Rewards forward motion** by penalizing negative path velocity:
+Rewards forward motion along the path. Without this, $\phi$ would stay at zero:
 
 $$
-J_p = -k_p \cdot \dot{\phi} \cdot \Delta t
+J_p = -k_p \cdot \dot\phi \cdot \Delta t
 $$
 
 ```python
-def path_velocity(inputs):
-    return inputs.array[:, 0, :]
-
 progress = costs.tracking.progress(
     path_velocity_extractor=extract.from_virtual(path_velocity),
     time_step_size=0.1,
@@ -78,51 +63,31 @@ progress = costs.tracking.progress(
 
 ## Safety Costs
 
-### Collision Cost
+### Collision
 
-Penalizes proximity to obstacles:
+Penalizes proximity to obstacles when the signed distance falls below a threshold:
 
 $$
-J_{\text{col}} = \begin{cases}
-k_{\text{col}} (d_0 - d) & \text{if } d < d_0 \\
-0 & \text{otherwise}
-\end{cases}
+J_{\text{col}} = k_{\text{col}} \max(d_0 - d, \; 0)
 $$
+
+See [Obstacle Handling](obstacles.md) for how to set up obstacle states, distance extractors, and samplers.
 
 ```python
-from trajax.numpy import costs, distance, obstacles
-from trajax import Circles
-
 collision = costs.safety.collision(
-    obstacle_states=obstacle_provider,
+    obstacle_states=provider,
     sampler=obstacles.sampler.gaussian(seed=44),
-    distance=distance.circles(
-        ego=ego,
-        obstacle=obstacle,
-        position_extractor=...,
-        heading_extractor=...,
-        obstacle_position_extractor=obstacles.pose_position_extractor,
-        obstacle_heading_extractor=obstacles.pose_heading_extractor,
-    ),
+    distance=distance_extractor,
     distance_threshold=array([0.5, 0.5, 0.5], shape=(3,)),
     weight=1500.0,
 )
 ```
 
-### Boundary Cost
+### Boundary
 
-Penalizes leaving a corridor:
+Penalizes states approaching the edges of a corridor. See [Boundaries](boundaries.md).
 
 ```python
-from trajax.numpy import boundary
-
-corridor = boundary.fixed_width(
-    reference=reference,
-    position_extractor=extract.from_physical(position),
-    left=2.5,
-    right=2.5,
-)
-
 boundary_cost = costs.safety.boundary(
     distance=corridor,
     distance_threshold=0.25,
@@ -134,7 +99,7 @@ boundary_cost = costs.safety.boundary(
 
 ### Control Smoothing
 
-Penalizes the rate of change of control inputs:
+Penalizes the difference between consecutive control inputs:
 
 ```python
 smoothing = costs.comfort.control_smoothing(
@@ -154,26 +119,30 @@ effort = costs.comfort.control_effort(
 
 ## Combining Costs
 
+`costs.combined` sums any number of cost components:
+
 ```python
-cost = costs.combined(
-    costs.tracking.contouring(weight=50.0, ...),
-    costs.tracking.lag(weight=100.0, ...),
-    costs.tracking.progress(weight=1000.0, ...),
-    costs.safety.collision(weight=1500.0, ...),
+total = costs.combined(
+    costs.tracking.contouring(...),
+    costs.tracking.lag(...),
+    costs.tracking.progress(...),
+    costs.safety.collision(...),
+    costs.comfort.control_smoothing(...),
 )
 ```
 
 ## Custom Cost Functions
 
-Any callable with the right signature works:
+Any callable with the right signature works as a cost function. It must accept keyword arguments `inputs` and `states` and return a costs object:
 
 ```python
-def speed_limit_cost(inputs, states, *, target_speed=5.0, weight=10.0):
-    speeds = states.array[:, 3, :]
-    error = (speeds - target_speed) ** 2
-    return types.numpy.costs(weight * np.sum(error, axis=0))
+import numpy as np
 
-cost = costs.combined(
+def speed_limit_cost(*, inputs, states, target_speed=5.0, weight=10.0):
+    speeds = states.array[:, 3, :]
+    return types.numpy.costs(weight * (speeds - target_speed) ** 2)
+
+total = costs.combined(
     costs.tracking.contouring(...),
     speed_limit_cost,
 )

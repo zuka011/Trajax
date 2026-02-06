@@ -1,59 +1,27 @@
 # Backends
 
-trajax provides identical APIs for NumPy and JAX backends.
-
-## Choosing a Backend
-
-| Backend | Best For |
-|---------|----------|
-| NumPy | Prototyping, debugging |
-| JAX | GPU acceleration, production |
-
-## Importing
+trajax exposes identical APIs under two backends. Switch by changing the import path.
 
 ```python
-# NumPy backend
+# NumPy — prototyping, debugging, no GPU dependency
 from trajax.numpy import mppi, model, sampler, costs, trajectory, boundary, types
 
-# JAX backend
+# JAX — GPU acceleration, JIT compilation
 from trajax.jax import mppi, model, sampler, costs, trajectory, boundary, types
 ```
 
-Both expose identical factory functions. Pick one and use it consistently throughout your project.
+## Switching
 
-## Consistency Requirement
+Replace `trajax.numpy` with `trajax.jax` (or vice versa). All factory functions, types, and return values have the same signatures. With JAX, add a warm-up call before timing-critical code to trigger JIT compilation.
 
-All components in a pipeline must use the same backend:
+## Consistency
 
-```python
-# ✅ Correct: All NumPy
-reference = trajectory.numpy.waypoints(...)
-corridor = boundary.numpy.fixed_width(reference=reference, ...)
-cost = costs.numpy.tracking.contouring(reference=reference, ...)
+All components in a pipeline must use the same backend. Mixing `trajax.numpy` and `trajax.jax` objects will produce errors.
 
-# ❌ Wrong: Mixed
-reference = trajectory.numpy.waypoints(...)
-corridor = boundary.jax.fixed_width(reference=reference, ...)
-```
-
-## Converting Outputs
-
-Regardless of the backend used, outputs can be converted to NumPy arrays:
+## JAX Output Conversion
 
 ```python
 import numpy as np
 
-jax_control = jax_planner.step(...)
 numpy_array = np.asarray(jax_control.optimal)
 ```
-
-## Switching Backends
-
-To switch a codebase from NumPy to JAX:
-
-1. Change imports from `trajax.numpy` to `trajax.jax`
-2. Ensure all components use the same backend
-3. Add a warm-up call before timing-critical sections
-4. Convert outputs to NumPy if needed downstream
-
-The identical APIs make this a straightforward find-and-replace operation.

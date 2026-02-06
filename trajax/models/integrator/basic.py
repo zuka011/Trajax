@@ -30,11 +30,15 @@ NO_LIMITS: Final = (float("-inf"), float("inf"))
 
 @dataclass(frozen=True)
 class NumPyIntegratorObstacleStates[D_o: int, K: int]:
+    """Obstacle states represented in integrator model coordinates."""
+
     array: Array[Dims[D_o, K]]
 
 
 @dataclass(frozen=True)
 class NumPyIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
+    """Time-indexed obstacle state sequences for integrator model obstacles."""
+
     array: Array[Dims[T, D_o, K]]
 
 
@@ -58,6 +62,8 @@ class NumPyIntegratorModel(
         NumPyIntegratorControlInputBatch,
     ]
 ):
+    """Point-mass model with direct position control, used for obstacle prediction."""
+
     _time_step_size: float
     state_limits: tuple[float, float]
     velocity_limits: tuple[float, float]
@@ -76,7 +82,7 @@ class NumPyIntegratorModel(
         This model represents a particle that moves according to velocity commands.
         State dimension must equal control dimension (D_x == D_u).
 
-        x_{t+1} = clip(x_t + clip(u_t, velocity_limits) * dt, state_limits)
+        $$x_{t+1} = \\text{clip}(x_t + \\text{clip}(u_t,\\; v_{\\text{lim}}) \\cdot \\Delta t,\\; s_{\\text{lim}})$$
 
         Args:
             time_step_size: The time step size for the integrator.
@@ -171,6 +177,8 @@ class NumPyIntegratorObstacleModel(
         NumPyIntegratorObstacleStateSequences,
     ]
 ):
+    """Estimates obstacle velocities from position history and propagates with constant velocity."""
+
     time_step: float
 
     @staticmethod

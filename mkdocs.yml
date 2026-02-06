@@ -48,7 +48,7 @@ plugins:
         python:
           options:
             docstring_style: google
-            show_source: true
+            show_source: false
             show_root_heading: true
             show_root_full_path: false
             show_symbol_type_heading: true
@@ -96,6 +96,7 @@ markdown_extensions:
   - pymdownx.details
   - attr_list
   - md_in_html
+  - footnotes
   - toc:
       permalink: true
 
@@ -106,12 +107,14 @@ extra_javascript:
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
 extra_css:
+  - stylesheets/extra.css
   - https://unpkg.com/katex@0/dist/katex.min.css
 
 nav:
   - Home: index.md
   - User Guide:
       - Getting Started: guide/getting-started.md
+      - Feature Overview: guide/features.md
       - Core Concepts: guide/concepts.md
       - Notation and Conventions: guide/conventions.md
       - MPPI Planning: guide/mppi.md

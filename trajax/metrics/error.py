@@ -12,6 +12,8 @@ import numpy as np
 
 @dataclass(kw_only=True, frozen=True)
 class MpccErrorMetricResult[T: int = int]:
+    """Results of the MPCC error metric, including contouring and lag errors."""
+
     contouring: Array[Dims[T]]
     lag: Array[Dims[T]]
 
@@ -28,6 +30,8 @@ class MpccErrorMetricResult[T: int = int]:
 
 @dataclass(kw_only=True, frozen=True)
 class MpccErrorMetric[StateBatchT](Metric[MpccErrorMetricResult[Any]]):
+    """Metric evaluating contouring and lag errors in MPCC tracking."""
+
     contouring: ContouringCost[Any, StateBatchT]
     lag: LagCost[Any, StateBatchT]
 

@@ -10,6 +10,8 @@ import numpy as np
 
 
 class NumPyObstacleStateCreator[StatesT](Protocol):
+    """Protocol for creating obstacle state objects from NumPy arrays."""
+
     def wrap[T: int = int, D_o: int = int, K: int = int](
         self, states: Array[Dims[T, D_o, K]], /
     ) -> StatesT:
@@ -22,6 +24,8 @@ class NumPyObstacleStateCreator[StatesT](Protocol):
 
 
 class HistoryEntry[StatesForTimeStepT](Protocol):
+    """Single entry in an obstacle state history, pairing states with optional IDs."""
+
     @property
     def states(self) -> StatesForTimeStepT:
         """The obstacle states at this time step."""
@@ -35,6 +39,8 @@ class HistoryEntry[StatesForTimeStepT](Protocol):
 
 @dataclass(frozen=True)
 class NumPyObstacleIds[K: int]:
+    """NumPy container for integer obstacle identifiers."""
+
     _array: IndexArray[Dims[K]]
 
     @staticmethod
@@ -62,6 +68,8 @@ class NumPyObstacleStatesRunningHistory[
     StatesT,
     StatesForTimeStepT: NumPyObstacleStatesForTimeStep,
 ]:
+    """NumPy sliding window history of obstacle states with ID-based alignment."""
+
     class Entry[STS: NumPyObstacleStatesForTimeStep](NamedTuple):
         states: STS
         ids: NumPyObstacleIds | None

@@ -35,6 +35,8 @@ import jax.numpy as jnp
 class JaxAugmentedState[P: JaxState, V: JaxState](
     AugmentedState[P, V], HasPhysical[P], HasVirtual[V], JaxState
 ):
+    """JAX augmented state pairing a physical and a virtual state."""
+
     inner: BaseAugmentedState[P, V]
 
     @staticmethod
@@ -71,6 +73,8 @@ class JaxAugmentedState[P: JaxState, V: JaxState](
 class JaxAugmentedStateSequence[P: JaxStateSequence, V: JaxStateSequence](
     AugmentedStateSequence[P, V], HasPhysical[P], HasVirtual[V], JaxStateSequence
 ):
+    """JAX augmented state sequence pairing physical and virtual sequences."""
+
     inner: BaseAugmentedStateSequence[P, V]
 
     @staticmethod
@@ -139,6 +143,8 @@ class JaxAugmentedStateSequence[P: JaxStateSequence, V: JaxStateSequence](
 class JaxAugmentedStateBatch[P: JaxStateBatch, V: JaxStateBatch](
     AugmentedStateBatch[P, V], HasPhysical[P], HasVirtual[V], JaxStateBatch
 ):
+    """JAX augmented state batch pairing physical and virtual batches."""
+
     inner: BaseAugmentedStateBatch[P, V]
 
     @staticmethod
@@ -189,6 +195,8 @@ class JaxAugmentedControlInputSequence[
     HasVirtual[V],
     JaxControlInputSequence,
 ):
+    """JAX augmented control input sequence pairing physical and virtual inputs."""
+
     inner: BaseAugmentedControlInputSequence[P, V]
 
     @staticmethod
@@ -268,6 +276,8 @@ class JaxAugmentedControlInputBatch[
     HasVirtual[V],
     JaxControlInputBatch,
 ):
+    """JAX augmented control input batch pairing physical and virtual batches."""
+
     inner: BaseAugmentedControlInputBatch[P, V]
 
     @staticmethod

@@ -22,6 +22,8 @@ import numpy as np
 
 @dataclass(kw_only=True, frozen=True)
 class ConstraintViolationMetricResult[T: int = int]:
+    """Results of the constraint violation metric, including boundary distances."""
+
     lateral_deviations: Array[Dims[T]]
     boundary_distances: Array[Dims[T]]
 
@@ -38,6 +40,8 @@ class ConstraintViolationMetricResult[T: int = int]:
 class ConstraintViolationMetric[StateBatchT, PositionsT, LateralT, BoundaryDistanceT](
     Metric[ConstraintViolationMetricResult[Any]]
 ):
+    """Metric evaluating lateral deviations and boundary constraint violations."""
+
     reference: Trajectory[Any, Any, PositionsT, LateralT]
     boundary: BoundaryDistanceExtractor[StateBatchT, BoundaryDistanceT]
     position_extractor: PositionExtractor[StateBatchT, PositionsT]

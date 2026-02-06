@@ -17,6 +17,8 @@ type Rng = np.random.Generator
 class NumPyGaussianObstacle2dPoseSampler(
     NumPyObstacleStateSampler[NumPyObstacle2dPoses, NumPySampledObstacle2dPoses]
 ):
+    """Samples obstacle poses from a Gaussian distribution parameterized by predicted covariances."""
+
     rng: Rng
 
     @staticmethod

@@ -8,6 +8,8 @@ import riskit as rk
 
 
 class risk:
+    """Factory namespace for creating risk metrics with different risk measures."""
+
     class numpy:
         none: Final = NumPyNoMetric.create
 

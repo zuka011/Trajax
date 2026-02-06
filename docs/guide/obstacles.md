@@ -1,75 +1,25 @@
 # Obstacle Avoidance
 
-trajax supports collision avoidance with static and dynamic obstacles.
-
-## Pipeline Overview
+The collision avoidance pipeline has three stages:
 
 ```
-Observations → Prediction → Distance → Cost
+Obstacle states → Distance computation → Collision cost
 ```
 
-## Static Obstacles
-
-```python
-from trajax.numpy import obstacles
-from numtypes import array
-import numpy as np
-
-static_obstacles = obstacles.static(
-    positions=array([[15.0, 2.5], [17.0, 20.0]], shape=(2, 2)),
-    headings=array([np.pi/6, -np.pi/4], shape=(2,)),
-)
-```
-
-## Dynamic Obstacles
-
-```python
-dynamic_obstacles = obstacles.dynamic(
-    positions=array([[25.0, 22.5], [55.0, 0.0]], shape=(2, 2)),
-    velocities=array([[0.0, -1.5], [-2.5, 0.0]], shape=(2, 2)),
-)
-
-simulator = dynamic_obstacles.with_time_step_size(dt=0.1)
-obstacle_states = simulator.step()
-```
-
-## Motion Prediction
-
-Predict future positions using curvilinear prediction:
-
-```python
-from trajax.numpy import predictor, model
-
-motion_predictor = predictor.curvilinear(
-    horizon=30,
-    model=model.bicycle.obstacle(time_step_size=0.1, wheelbase=2.5),
-    prediction=bicycle_to_obstacle_states,
-)
-```
-
-## Obstacle State Provider
-
-Manages the prediction pipeline:
-
-```python
-from trajax.numpy import obstacles, types
-
-provider = obstacles.provider.predicting(
-    predictor=motion_predictor,
-    history=types.obstacle_states_running_history.empty(horizon=2),
-)
-
-provider.observe(detected_obstacle_states)
-predicted_states = provider()
-```
+Optionally, a risk metric replaces the expected collision cost with a risk measure (CVaR, etc.) when obstacle positions are uncertain.
 
 ## Distance Computation
 
+Two methods are available for computing signed distances between the ego vehicle and obstacles.
+
 ### Circle-to-Circle
+
+Represents both the ego and obstacles as collections of circles. Fast, suitable when precise geometry is not needed.
 
 ```python
 from trajax.numpy import distance
 from trajax import Circles
+from numtypes import array
 
 distance_extractor = distance.circles(
     ego=Circles(
@@ -87,9 +37,11 @@ distance_extractor = distance.circles(
 )
 ```
 
-Distance is center-to-center minus both radii. Negative values indicate penetration.
+Distance is center-to-center minus both radii. Negative values indicate overlap.
 
-### Polygon-to-Polygon
+### SAT (Separating Axis Theorem)
+
+Represents both the ego and obstacles as convex polygons. Computes exact signed separation distance.
 
 ```python
 from trajax import ConvexPolygon
@@ -104,11 +56,54 @@ distance_extractor = distance.sat(
 )
 ```
 
-## Collision Cost
+## Obstacle State Provider
+
+The obstacle state provider supplies predicted obstacle positions to the collision cost at each planning step. It wraps a motion predictor and maintains a running history of observations.
 
 ```python
-from trajax.numpy import costs, obstacles
+from trajax.numpy import obstacles, predictor, model, types
 
+motion_predictor = predictor.curvilinear(
+    horizon=30,
+    model=model.bicycle.obstacle(time_step_size=0.1, wheelbase=2.5),
+    prediction=bicycle_to_obstacle_states,
+)
+
+provider = obstacles.provider.predicting(
+    predictor=motion_predictor,
+    history=types.obstacle_states_running_history.empty(horizon=2),
+)
+
+# Feed observations each step
+provider.observe(detected_obstacle_states)
+```
+
+## Obstacle ID Assignment
+
+When obstacles are detected per-frame without persistent IDs, the library can match detections to tracked obstacles across time steps using the Hungarian algorithm on position distances.
+
+```python
+id_assignment = obstacles.id_assignment.hungarian(
+    position_extractor=obstacle_position_extractor,
+    cutoff=5.0,
+)
+```
+
+The `cutoff` distance (in meters) determines the maximum distance at which a detection can be matched to a tracked obstacle. Detections beyond the cutoff are assigned new IDs. The assignment function is called automatically by the running history when new observations are appended.
+
+### How It Works
+
+1. Computes a pairwise distance matrix between current detections and the last known positions of tracked obstacles
+2. Solves the assignment problem via `scipy.optimize.linear_sum_assignment` (NumPy) or an equivalent JAX implementation
+3. Pairs with distance ≤ `cutoff` are matched; unmatched detections receive new IDs
+
+Both NumPy and JAX backends are supported. The JAX backend delegates the Hungarian matching to NumPy internally (since the assignment is a small discrete problem) and converts the result back to JAX arrays.
+
+## Collision Cost
+
+The collision cost penalizes rollouts where the signed distance drops below a threshold:
+
+```python
 collision = costs.safety.collision(
     obstacle_states=provider,
     sampler=obstacles.sampler.gaussian(seed=44),
@@ -116,4 +111,26 @@ collision = costs.safety.collision(
     distance_threshold=array([0.5, 0.5, 0.5], shape=(3,)),
     weight=1500.0,
 )
+```
+
+The `distance_threshold` array has one entry per ego part (e.g., one per circle).
+
+## Risk-Aware Collision Cost
+
+When obstacle positions are uncertain, you can replace the default deterministic evaluation with a risk metric. The collision cost draws $N$ obstacle samples and evaluates the risk measure over the per-sample costs.
+
+```python
+from trajax.numpy import risk
+
+collision = costs.safety.collision(
+    obstacle_states=provider,
+    sampler=obstacles.sampler.gaussian(seed=44),
+    distance=distance_extractor,
+    distance_threshold=array([0.5, 0.5, 0.5], shape=(3,)),
+    weight=1500.0,
+    metric=risk.cvar(alpha=0.95, sample_count=50),
+)
+```
+
+Available risk metrics: `risk.expected_value`, `risk.mean_variance`, `risk.var`, `risk.cvar`, `risk.entropic_risk`. See the [Feature Overview](features.md) for details.
 ```
