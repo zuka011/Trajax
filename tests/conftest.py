@@ -1,6 +1,12 @@
 import pytest
 
 pytest.register_assert_rewrite("tests.dsl")
+pytest.register_assert_rewrite(
+    "docs.examples.01_basic_path_following",
+    "docs.examples.02_path_following_with_boundaries",
+    "docs.examples.03_obstacle_avoidance",
+    "docs.examples.04_obstacle_avoidance_with_uncertainty",
+)
 
 from typing import AsyncGenerator
 

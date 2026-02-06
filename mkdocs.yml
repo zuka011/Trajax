@@ -11,7 +11,7 @@ exclude_docs: |
   visualizations/**/numpy-*.html
   visualizations/**/jax-from-augmented*.html
   visualizations/**/jax-from-base*.html
-  visualizations/**/*-static-obstacles.html
+  visualizations/**/jax-from-mpcc-static-obstacles.html
   visualizations/**/*-halton-*.html
   visualizations/**/*-highway-*.html
 
@@ -83,7 +83,8 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ['.']
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
