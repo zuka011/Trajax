@@ -11,7 +11,7 @@ import numpy as np
 
 class NumPyObstacleStateCreator[StatesT](Protocol):
     def wrap[T: int = int, D_o: int = int, K: int = int](
-        self, states: Array[Dims[T, D_o, K]]
+        self, states: Array[Dims[T, D_o, K]], /
     ) -> StatesT:
         """Wraps a NumPy array into the appropriate obstacle states type."""
         ...

@@ -75,11 +75,19 @@ from trajax.types import (
     RiskMetric as RiskMetric,
     ContouringCost as ContouringCost,
     NumPySampledObstacleStates,
+    NumPySampledObstaclePositions,
+    NumPySampledObstacleHeadings,
+    NumPySampledObstaclePositionExtractor,
+    NumPySampledObstacleHeadingExtractor,
     NumPyObstacleStates,
     NumPyObstacleStatesForTimeStep,
     NumPyObstacleStateProvider,
     NumPyObstaclePositionExtractor,
     JaxSampledObstacleStates,
+    JaxSampledObstaclePositions,
+    JaxSampledObstacleHeadings,
+    JaxSampledObstaclePositionExtractor,
+    JaxSampledObstacleHeadingExtractor,
     JaxObstacleStates,
     JaxObstacleStatesForTimeStep,
     JaxObstacleStateProvider,
@@ -275,12 +283,27 @@ class types:
             K: int = Any,
             N: int = Any,
         ] = NumPySampledObstacleStates[T, D_o, K, N]
+        type SampledObstaclePositions[T: int = Any, K: int = Any, N: int = Any] = (
+            NumPySampledObstaclePositions[T, K, N]
+        )
+        type SampledObstacleHeadings[T: int = Any, K: int = Any, N: int = Any] = (
+            NumPySampledObstacleHeadings[T, K, N]
+        )
+        type SampledObstaclePositionExtractor[S] = (
+            NumPySampledObstaclePositionExtractor[S]
+        )
+        type SampledObstacleHeadingExtractor[S] = NumPySampledObstacleHeadingExtractor[
+            S
+        ]
         type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
             NumPyObstacleStates[T, D_o, K, SST]
         )
         type ObstacleStatesForTimeStep[D_o: int = Any, K: int = Any, OS = Any] = (
             NumPyObstacleStatesForTimeStep[D_o, K, OS]
         )
+        type ObstaclePositionExtractor[OTS, O, PTS, P] = NumPyObstaclePositionExtractor[
+            OTS, O, PTS, P
+        ]
         type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
             NumPySampledObstacle2dPoses[T, K, N]
         )
@@ -468,6 +491,16 @@ class types:
             K: int = Any,
             N: int = Any,
         ] = JaxSampledObstacleStates[T, D_o, K, N]
+        type SampledObstaclePositions[T: int = Any, K: int = Any, N: int = Any] = (
+            JaxSampledObstaclePositions[T, K, N]
+        )
+        type SampledObstacleHeadings[T: int = Any, K: int = Any, N: int = Any] = (
+            JaxSampledObstacleHeadings[T, K, N]
+        )
+        type SampledObstaclePositionExtractor[S] = JaxSampledObstaclePositionExtractor[
+            S
+        ]
+        type SampledObstacleHeadingExtractor[S] = JaxSampledObstacleHeadingExtractor[S]
         type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any, SST = Any] = (
             JaxObstacleStates[T, D_o, K, SST]
         )
@@ -477,6 +510,9 @@ class types:
             OS = Any,
             NumPyT = Any,
         ] = JaxObstacleStatesForTimeStep[D_o, K, OS, NumPyT]
+        type ObstaclePositionExtractor[OTS, O, PTS, P] = JaxObstaclePositionExtractor[
+            OTS, O, PTS, P
+        ]
         type SampledObstacle2dPoses[T: int = Any, K: int = Any, N: int = Any] = (
             JaxSampledObstacle2dPoses[T, K, N]
         )

@@ -22,7 +22,7 @@ import jax.numpy as jnp
 
 
 class JaxObstacleStateCreator[StatesT](Protocol):
-    def wrap(self, states: Float[JaxArray, "T D_o K"]) -> StatesT:
+    def wrap(self, states: Float[JaxArray, "T D_o K"], /) -> StatesT:
         """Wraps a JAX array into the appropriate obstacle states type."""
         ...
 
