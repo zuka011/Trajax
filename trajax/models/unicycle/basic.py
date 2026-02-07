@@ -1,5 +1,6 @@
 from typing import Self, overload, cast, Sequence, Final, Any
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     DataType,
@@ -17,8 +18,12 @@ from trajax.types import (
     UnicyclePositions,
     UnicycleD_x,
     UNICYCLE_D_X,
+    UnicycleD_v,
+    UNICYCLE_D_V,
     UnicycleD_u,
     UNICYCLE_D_U,
+    UnicycleD_o,
+    UNICYCLE_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
@@ -195,12 +200,24 @@ class NumPyUnicyclePositions[T: int, M: int](UnicyclePositions[T, M]):
     def y(self) -> Array[Dims[T, M]]:
         return self.batch.array[:, 1, :]
 
+    @property
+    def horizon(self) -> T:
+        return self.batch.horizon
+
+    @property
+    def dimension(self) -> D[2]:
+        return 2
+
+    @property
+    def rollout_count(self) -> M:
+        return self.batch.rollout_count
+
 
 @dataclass(frozen=True)
 class NumPyUnicycleControlInputSequence[T: int](
     UnicycleControlInputSequence[T], NumPyControlInputSequence[T, UnicycleD_u]
 ):
-    """Control inputs: [linear_velocity, angular_velocity]."""
+    """Control inputs: [linear velocity, angular velocity]."""
 
     _array: ControlInputSequenceArray[T]
 
@@ -313,7 +330,7 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
 
 @dataclass(frozen=True)
 class NumPyUnicycleObstacleStates[K: int]:
-    array: Array[Dims[UnicycleD_x, K]]
+    array: Array[Dims[UnicycleD_o, K]]
 
     @staticmethod
     def create(
@@ -324,14 +341,25 @@ class NumPyUnicycleObstacleStates[K: int]:
     ) -> "NumPyUnicycleObstacleStates[K]":
         array = np.stack([x, y, heading], axis=0)
 
-        assert shape_of(array, matches=(UNICYCLE_D_X, x.shape[0]))
+        assert shape_of(array, matches=(UNICYCLE_D_O, x.shape[0]))
 
         return NumPyUnicycleObstacleStates(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> UnicycleD_o:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
 
 
 @dataclass(frozen=True)
 class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
-    array: Array[Dims[T, UnicycleD_x, K]]
+    array: Array[Dims[T, UnicycleD_o, K]]
 
     @staticmethod
     def create(
@@ -343,13 +371,13 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
         T, K = x.shape
         array = np.stack([x, y, heading], axis=1)
 
-        assert shape_of(array, matches=(T, UNICYCLE_D_X, K))
+        assert shape_of(array, matches=(T, UNICYCLE_D_O, K))
 
         return NumPyUnicycleObstacleStateSequences(array)
 
     def __array__(
         self, dtype: DataType | None = None
-    ) -> Array[Dims[T, UnicycleD_x, K]]:
+    ) -> Array[Dims[T, UnicycleD_o, K]]:
         return self.array
 
     def x(self) -> Array[Dims[T, K]]:
@@ -366,7 +394,7 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> UnicycleD_x:
+    def dimension(self) -> UnicycleD_o:
         return self.array.shape[1]
 
     @property
@@ -379,9 +407,29 @@ class NumPyUnicycleObstacleVelocities[K: int]:
     linear_velocities: Array[Dims[K]]
     angular_velocities: Array[Dims[K]]
 
+    def zeroed(self, *, angular_velocity: bool) -> "NumPyUnicycleObstacleVelocities[K]":
+        """Returns a version of the velocities with the angular velocity zeroed out."""
+        return NumPyUnicycleObstacleVelocities(
+            linear_velocities=self.linear_velocities,
+            angular_velocities=np.zeros_like(self.angular_velocities)
+            if angular_velocity
+            else self.angular_velocities,
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_v, K]]:
+        return self._array
+
+    @property
+    def dimension(self) -> UnicycleD_v:
+        return UNICYCLE_D_V
+
     @property
     def count(self) -> K:
         return self.linear_velocities.shape[0]
+
+    @cached_property
+    def _array(self) -> Array[Dims[UnicycleD_v, K]]:
+        return np.stack([self.linear_velocities, self.angular_velocities], axis=0)
 
 
 @dataclass(frozen=True)
@@ -400,6 +448,23 @@ class NumPyUnicycleObstacleControlInputSequences[T: int, K: int]:
         assert shape_of(array, matches=(T, UNICYCLE_D_U, K))
 
         return NumPyUnicycleObstacleControlInputSequences(array)
+
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, UnicycleD_u, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> UnicycleD_u:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
 
 
 @dataclass(kw_only=True, frozen=True)

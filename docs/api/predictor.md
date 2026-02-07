@@ -42,6 +42,13 @@ Predictors estimate future obstacle states based on motion models and covariance
       show_root_heading: true
       heading_level: 3
 
+## Velocity Assumption Provider Protocol
+
+::: trajax.types.VelocityAssumptionProvider
+    options:
+      show_root_heading: true
+      heading_level: 3
+
 ## Covariance Propagator Protocol
 
 ::: trajax.types.CovariancePropagator

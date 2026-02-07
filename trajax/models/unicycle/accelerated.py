@@ -1,5 +1,6 @@
 from typing import cast, overload, Self, Sequence, Final, Any
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -18,8 +19,12 @@ from trajax.types import (
     UnicyclePositions,
     UnicycleD_x,
     UNICYCLE_D_X,
+    UnicycleD_v,
+    UNICYCLE_D_V,
     UnicycleD_u,
     UNICYCLE_D_U,
+    UnicycleD_o,
+    UNICYCLE_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
@@ -221,13 +226,13 @@ class JaxUnicyclePositions[T: int, M: int](UnicyclePositions[T, M]):
     batch: JaxUnicycleStateBatch[T, M]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
-        return np.asarray(self.batch.array[:, :2, :])
+        return self._numpy_array
 
     def x(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.batch.array[:, 0, :])
+        return self._numpy_array[:, 0, :]
 
     def y(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.batch.array[:, 1, :])
+        return self._numpy_array[:, 1, :]
 
     @property
     def x_array(self) -> Float[JaxArray, "T M"]:
@@ -237,13 +242,29 @@ class JaxUnicyclePositions[T: int, M: int](UnicyclePositions[T, M]):
     def y_array(self) -> Float[JaxArray, "T M"]:
         return self.batch.array[:, 1, :]
 
+    @property
+    def horizon(self) -> T:
+        return self.batch.horizon
+
+    @property
+    def dimension(self) -> D[2]:
+        return 2
+
+    @property
+    def rollout_count(self) -> M:
+        return self.batch.rollout_count
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D[2], M]]:
+        return np.asarray(self.batch.array[:, :2, :])
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxUnicycleControlInputSequence[T: int](
     UnicycleControlInputSequence[T], JaxControlInputSequence[T, UnicycleD_u]
 ):
-    """Control inputs: [linear_velocity, angular_velocity]."""
+    """Control inputs: [linear velocity, angular velocity]."""
 
     _array: ControlInputSequenceArray[T]
 
@@ -252,7 +273,7 @@ class JaxUnicycleControlInputSequence[T: int](
         return JaxUnicycleControlInputSequence(jnp.zeros((horizon, UNICYCLE_D_U)))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, UnicycleD_u]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
@@ -292,6 +313,10 @@ class JaxUnicycleControlInputSequence[T: int](
     @property
     def angular_velocity_array(self) -> Float[JaxArray, "T"]:
         return self.array[:, 1]
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, UnicycleD_u]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -342,10 +367,10 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
     def __array__(
         self, dtype: DataType | None = None
     ) -> Array[Dims[T, UnicycleD_u, M]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     def linear_velocity(self) -> Array[Dims[T, M]]:
-        return np.asarray(self.array[:, 0, :])
+        return self._numpy_array[:, 0, :]
 
     @property
     def horizon(self) -> T:
@@ -363,11 +388,15 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
     def array(self) -> ControlInputBatchArray[T, M]:
         return self._array
 
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, UnicycleD_u, M]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxUnicycleObstacleStates[K: int]:
-    array: Float[JaxArray, f"{UNICYCLE_D_X} K"]
+    array: Float[JaxArray, f"{UNICYCLE_D_O} K"]
 
     @staticmethod
     def create(
@@ -378,11 +407,26 @@ class JaxUnicycleObstacleStates[K: int]:
     ) -> "JaxUnicycleObstacleStates[K]":
         return JaxUnicycleObstacleStates(jnp.stack([x, y, heading], axis=0))
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
+        return self._numpy_array
+
+    @property
+    def dimension(self) -> UnicycleD_o:
+        return cast(UnicycleD_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[UnicycleD_o, K]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxUnicycleObstacleStateSequences[T: int, K: int]:
-    array: Float[JaxArray, f"T {UNICYCLE_D_X} K"]
+    array: Float[JaxArray, f"T {UNICYCLE_D_O} K"]
 
     @staticmethod
     def create(
@@ -393,26 +437,47 @@ class JaxUnicycleObstacleStateSequences[T: int, K: int]:
     ) -> "JaxUnicycleObstacleStateSequences[T, K]":
         return JaxUnicycleObstacleStateSequences(jnp.stack([x, y, heading], axis=1))
 
-    def x(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 0, :]
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, UnicycleD_o, K]]:
+        return self._numpy_array
 
-    def y(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 1, :]
+    def x(self) -> Array[Dims[T, K]]:
+        return self._numpy_array[:, 0, :]
 
-    def heading(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 2, :]
+    def y(self) -> Array[Dims[T, K]]:
+        return self._numpy_array[:, 1, :]
+
+    def heading(self) -> Array[Dims[T, K]]:
+        return self._numpy_array[:, 2, :]
 
     @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
     @property
-    def dimension(self) -> UnicycleD_x:
-        return cast(UnicycleD_x, self.array.shape[1])
+    def dimension(self) -> UnicycleD_o:
+        return cast(UnicycleD_o, self.array.shape[1])
 
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[2])
+
+    @property
+    def x_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 0, :]
+
+    @property
+    def y_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 1, :]
+
+    @property
+    def heading_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 2, :]
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, UnicycleD_o, K]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -421,9 +486,29 @@ class JaxUnicycleObstacleVelocities[K: int]:
     linear_velocities: Float[JaxArray, "K"]
     angular_velocities: Float[JaxArray, "K"]
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_v, K]]:
+        return self._numpy_array
+
+    def zeroed(self, *, angular_velocity: bool) -> "JaxUnicycleObstacleVelocities[K]":
+        """Returns a version of the velocities with the angular velocity zeroed out."""
+        return JaxUnicycleObstacleVelocities(
+            linear_velocities=self.linear_velocities,
+            angular_velocities=jnp.zeros_like(self.angular_velocities)
+            if angular_velocity
+            else self.angular_velocities,
+        )
+
+    @property
+    def dimension(self) -> UnicycleD_v:
+        return UNICYCLE_D_V
+
     @property
     def count(self) -> K:
         return cast(K, self.linear_velocities.shape[0])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[UnicycleD_v, K]]:
+        return np.stack([self.linear_velocities, self.angular_velocities], axis=0)
 
 
 @jaxtyped
@@ -440,6 +525,27 @@ class JaxUnicycleObstacleControlInputSequences[T: int, K: int]:
         return JaxUnicycleObstacleControlInputSequences(
             jnp.stack([linear_velocities, angular_velocities], axis=1)
         )
+
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, UnicycleD_u, K]]:
+        return self._numpy_array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> UnicycleD_u:
+        return cast(UnicycleD_u, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, UnicycleD_u, K]]:
+        return np.asarray(self.array)
 
 
 @dataclass(kw_only=True, frozen=True)

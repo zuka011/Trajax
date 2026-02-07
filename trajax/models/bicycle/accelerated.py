@@ -1,5 +1,6 @@
 from typing import Never, cast, overload, Self, Sequence, Final, Any
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -18,15 +19,19 @@ from trajax.types import (
     BicyclePositions,
     BicycleD_x,
     BICYCLE_D_X,
+    BicycleD_v,
+    BICYCLE_D_V,
     BicycleD_u,
     BICYCLE_D_U,
+    BicycleD_o,
+    BICYCLE_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims, D, shape_of
 
 import jax
 import jax.numpy as jnp
@@ -375,7 +380,7 @@ class JaxBicycleControlInputBatch[T: int, M: int](
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleStates[K: int]:
-    array: Float[JaxArray, f"{BICYCLE_D_X} K"]
+    array: Float[JaxArray, f"{BICYCLE_D_O} K"]
 
     @staticmethod
     def create[K_: int](
@@ -389,11 +394,26 @@ class JaxBicycleObstacleStates[K: int]:
         array = jnp.stack([x, y, heading, speed], axis=0)
         return JaxBicycleObstacleStates(array)
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
+        return self._numpy_array
+
+    @property
+    def dimension(self) -> BicycleD_o:
+        return cast(BicycleD_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[BicycleD_o, K]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleStateSequences[T: int, K: int]:
-    array: Float[JaxArray, f"T {BICYCLE_D_X} K"]
+    array: Float[JaxArray, f"T {BICYCLE_D_O} K"]
 
     @staticmethod
     def create(
@@ -407,7 +427,7 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         return JaxBicycleObstacleStateSequences(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     def single(self) -> Never:
         # TODO: Fix this!
@@ -416,13 +436,16 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
         )
 
     def x(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 0, :])
+        return self._numpy_array[:, 0, :]
 
     def y(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 1, :])
+        return self._numpy_array[:, 1, :]
 
     def heading(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 2, :])
+        return self._numpy_array[:, 2, :]
+
+    def speed(self) -> Array[Dims[T, K]]:
+        return self._numpy_array[:, 3, :]
 
     @property
     def horizon(self) -> T:
@@ -448,15 +471,46 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
     def heading_array(self) -> Float[JaxArray, "T K"]:
         return self.array[:, 2, :]
 
+    @property
+    def speed_array(self) -> Float[JaxArray, "T K"]:
+        return self.array[:, 3, :]
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, BicycleD_x, K]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleVelocities[K: int]:
     steering_angles: Float[JaxArray, "K"]
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_v, K]]:
+        return self._numpy_array
+
+    def zeroed(self, *, steering_angle: bool) -> "JaxBicycleObstacleVelocities[K]":
+        """Returns a version of the velocities with the specified components zeroed out."""
+        return JaxBicycleObstacleVelocities(
+            steering_angles=jnp.zeros_like(self.steering_angles)
+            if steering_angle
+            else self.steering_angles
+        )
+
+    @property
+    def dimension(self) -> BicycleD_v:
+        return BICYCLE_D_V
+
     @property
     def count(self) -> K:
         return cast(K, self.steering_angles.shape[0])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[BicycleD_v, K]]:
+        array = np.asarray(self.steering_angles).reshape((1, -1))
+
+        assert shape_of(array, matches=(BICYCLE_D_V, self.count))
+
+        return array
 
 
 @jaxtyped
@@ -472,6 +526,25 @@ class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
     ) -> "JaxBicycleObstacleControlInputSequences[int, int]":
         array = jnp.stack([accelerations, steering_angles], axis=1)
         return JaxBicycleObstacleControlInputSequences(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, K]]:
+        return self._numpy_array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> BicycleD_u:
+        return cast(BicycleD_u, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, BicycleD_u, K]]:
+        return np.asarray(self.array)
 
 
 @dataclass(kw_only=True, frozen=True)

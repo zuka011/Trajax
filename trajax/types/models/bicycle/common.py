@@ -5,14 +5,21 @@ from trajax.types.array import DataType
 from numtypes import Array, Dims, D
 
 BICYCLE_D_X: Final = 4
-BICYCLE_D_V: Final = 2
+BICYCLE_D_V: Final = 1
 BICYCLE_D_U: Final = 2
-BICYCLE_D_O: Final = 3
+BICYCLE_D_O: Final = 4
 
 type BicycleD_x = D[4]
-type BicycleD_v = D[2]
+"""State dimension of the bicycle model, consisting of (x position, y position, heading, speed)."""
+
+type BicycleD_v = D[1]
+"""Velocity dimension of the bicycle model, consisting of the steering angle."""
+
 type BicycleD_u = D[2]
-type BicycleD_o = D[3]
+"""Control input dimension of the bicycle model, consisting of (acceleration, steering angle)."""
+
+type BicycleD_o = D[4]
+"""Obstacle state dimension of the bicycle model, consisting of (x position, y position, heading, speed)."""
 
 
 class BicycleState(Protocol):
@@ -76,7 +83,7 @@ class BicycleStateBatch[T: int, M: int](Protocol):
 
 
 class BicyclePositions[T: int, M: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, M]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D[2], M]]:
         """Returns the positions as a NumPy array."""
         ...
 

@@ -7,6 +7,7 @@ from trajax.types import (
     CovariancePropagator,
     ObstacleModel,
     PredictionCreator,
+    VelocityAssumptionProvider,
 )
 
 
@@ -61,6 +62,13 @@ class StaticPredictor:
         return history.last().replicate(horizon=self.horizon)
 
 
+class NoAssumptions[VelocitiesT]:
+    """Identity assumption provider that passes velocities through unchanged."""
+
+    def __call__(self, velocities: VelocitiesT, /) -> VelocitiesT:
+        return velocities
+
+
 @dataclass(kw_only=True, frozen=True)
 class CurvilinearPredictor[
     HistoryT: ObstacleStatesHistory,
@@ -79,6 +87,7 @@ class CurvilinearPredictor[
     ]
     propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT]
     prediction: PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT]
+    assumptions: VelocityAssumptionProvider[VelocitiesT]
 
     @staticmethod
     def create[H: ObstacleStatesHistory, S, V, IS, SS, CS, P](
@@ -87,6 +96,7 @@ class CurvilinearPredictor[
         model: ObstacleModel[H, S, V, IS, SS],
         prediction: PredictionCreator[SS, CS, P],
         propagator: CovariancePropagator[SS, CS] | None = None,
+        assumptions: VelocityAssumptionProvider[V] | None = None,
     ) -> "CurvilinearPredictor[H, S, V, IS, SS, CS, P]":
         return CurvilinearPredictor(
             horizon=horizon,
@@ -95,6 +105,9 @@ class CurvilinearPredictor[
             propagator=propagator
             if propagator is not None
             else cast(CovariancePropagator[SS, CS], NoCovariance()),
+            assumptions=assumptions
+            if assumptions is not None
+            else cast(VelocityAssumptionProvider[V], NoAssumptions()),
         )
 
     def predict(self, *, history: HistoryT) -> PredictionT:
@@ -102,8 +115,9 @@ class CurvilinearPredictor[
             return self.prediction.empty(horizon=self.horizon)
 
         estimated = self.model.estimate_state_from(history)
+        velocities = self.assumptions(estimated.velocities)
         inputs = self.model.input_to_maintain(
-            estimated.velocities, states=estimated.states, horizon=self.horizon
+            velocities, states=estimated.states, horizon=self.horizon
         )
         states = self.model.forward(current=estimated.states, inputs=inputs)
         covariances = self.propagator.propagate(states=states)

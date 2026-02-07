@@ -1,6 +1,7 @@
 import math
 from typing import Final, cast
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -21,11 +22,12 @@ from trajax.states import (
     JaxSimpleControlInputBatch as SimpleControlInputBatch,
 )
 
+from numtypes import Array, Dims
 from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
-
+import numpy as np
 
 NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 
@@ -37,6 +39,9 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
 
     array: Float[JaxArray, "D_o K"]
 
+    def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
+        return self._numpy_array
+
     @property
     def dimension(self) -> D_o:
         return cast(D_o, self.array.shape[0])
@@ -44,6 +49,10 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[1])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[D_o, K]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -53,6 +62,9 @@ class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
 
     array: Float[JaxArray, "T D_o K"]
 
+    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
+        return self._numpy_array
+
     @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
@@ -65,11 +77,25 @@ class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
     def count(self) -> K:
         return cast(K, self.array.shape[2])
 
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxIntegratorObstacleVelocities[D_o: int, K: int]:
     array: Float[JaxArray, "D_o K"]
+
+    def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
+        return self._numpy_array
+
+    def zeroed(
+        self, *, at: tuple[int, ...]
+    ) -> "JaxIntegratorObstacleVelocities[D_o, K]":
+        """Returns new obstacle velocities with velocities at specified state dimensions zeroed out."""
+
+        return JaxIntegratorObstacleVelocities(self.array.at[at].set(0.0))
 
     @property
     def dimension(self) -> D_o:
@@ -79,11 +105,18 @@ class JaxIntegratorObstacleVelocities[D_o: int, K: int]:
     def count(self) -> K:
         return cast(K, self.array.shape[1])
 
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[D_o, K]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
     array: Float[JaxArray, "T D_o K"]
+
+    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
+        return self._numpy_array
 
     @property
     def horizon(self) -> T:
@@ -96,6 +129,10 @@ class JaxIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[2])
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K]]:
+        return np.asarray(self.array)
 
 
 @dataclass(kw_only=True, frozen=True)

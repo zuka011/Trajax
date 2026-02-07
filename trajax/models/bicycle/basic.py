@@ -1,5 +1,6 @@
 from typing import Never, Self, overload, cast, Sequence, Final, Any
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     DataType,
@@ -17,8 +18,12 @@ from trajax.types import (
     BicyclePositions,
     BicycleD_x,
     BICYCLE_D_X,
+    BicycleD_v,
+    BICYCLE_D_V,
     BicycleD_u,
     BICYCLE_D_U,
+    BicycleD_o,
+    BICYCLE_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
@@ -206,6 +211,18 @@ class NumPyBicyclePositions[T: int, M: int](BicyclePositions[T, M]):
     def y(self) -> Array[Dims[T, M]]:
         return self.batch.array[:, 1, :]
 
+    @property
+    def horizon(self) -> T:
+        return self.batch.horizon
+
+    @property
+    def dimension(self) -> D[2]:
+        return 2
+
+    @property
+    def rollout_count(self) -> M:
+        return self.batch.rollout_count
+
 
 @dataclass(frozen=True)
 class NumPyBicycleControlInputSequence[T: int](
@@ -321,7 +338,7 @@ class NumPyBicycleControlInputBatch[T: int, M: int](
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleStates[K: int]:
-    array: Array[Dims[BicycleD_x, K]]
+    array: Array[Dims[BicycleD_o, K]]
 
     @staticmethod
     def create(
@@ -333,14 +350,25 @@ class NumPyBicycleObstacleStates[K: int]:
     ) -> "NumPyBicycleObstacleStates[K]":
         array = np.stack([x, y, heading, speed], axis=0)
 
-        assert shape_of(array, matches=(BICYCLE_D_X, x.shape[0]))
+        assert shape_of(array, matches=(BICYCLE_D_O, x.shape[0]))
 
         return NumPyBicycleObstacleStates(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> BicycleD_o:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
 
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleStateSequences[T: int, K: int]:
-    array: Array[Dims[T, BicycleD_x, K]]
+    array: Array[Dims[T, BicycleD_o, K]]
 
     @staticmethod
     def create(
@@ -353,11 +381,11 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
         T, K = x.shape
         array = np.stack([x, y, heading, speed], axis=1)
 
-        assert shape_of(array, matches=(T, BICYCLE_D_X, K))
+        assert shape_of(array, matches=(T, BICYCLE_D_O, K))
 
         return NumPyBicycleObstacleStateSequences(array)
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_o, K]]:
         return self.array
 
     def single(self) -> Never:
@@ -375,12 +403,15 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
     def heading(self) -> Array[Dims[T, K]]:
         return self.array[:, 2, :]
 
+    def speed(self) -> Array[Dims[T, K]]:
+        return self.array[:, 3, :]
+
     @property
     def horizon(self) -> T:
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> BicycleD_x:
+    def dimension(self) -> BicycleD_o:
         return self.array.shape[1]
 
     @property
@@ -392,9 +423,32 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
 class NumPyBicycleObstacleVelocities[K: int]:
     steering_angles: Array[Dims[K]]
 
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_v, K]]:
+        return self._array
+
+    def zeroed(self, *, steering_angle: bool) -> "NumPyBicycleObstacleVelocities[K]":
+        """Returns a version of the velocities with the specified components zeroed out."""
+        return NumPyBicycleObstacleVelocities(
+            steering_angles=np.zeros_like(self.steering_angles)
+            if steering_angle
+            else self.steering_angles
+        )
+
+    @property
+    def dimension(self) -> BicycleD_v:
+        return BICYCLE_D_V
+
     @property
     def count(self) -> K:
         return self.steering_angles.shape[0]
+
+    @cached_property
+    def _array(self) -> Array[Dims[BicycleD_v, K]]:
+        array = self.steering_angles.reshape((1, -1))
+
+        assert shape_of(array, matches=(BICYCLE_D_V, self.count))
+
+        return array
 
 
 @dataclass(frozen=True)
@@ -414,6 +468,21 @@ class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
         assert shape_of(array, matches=(T, BICYCLE_D_U, K))
 
         return NumPyBicycleObstacleControlInputSequences(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> BicycleD_u:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
 
 
 @dataclass(kw_only=True, frozen=True)

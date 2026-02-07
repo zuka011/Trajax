@@ -34,6 +34,17 @@ class NumPyIntegratorObstacleStates[D_o: int, K: int]:
 
     array: Array[Dims[D_o, K]]
 
+    def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
+        return self.array
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
+
 
 @dataclass(frozen=True)
 class NumPyIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
@@ -41,15 +52,66 @@ class NumPyIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
 
     array: Array[Dims[T, D_o, K]]
 
+    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
 
 @dataclass(frozen=True)
 class NumPyIntegratorObstacleVelocities[D_o: int, K: int]:
     array: Array[Dims[D_o, K]]
 
+    def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
+        return self.array
+
+    def zeroed(
+        self, *, at: tuple[int, ...]
+    ) -> "NumPyIntegratorObstacleVelocities[D_o, K]":
+        """Returns new obstacle velocities with velocities at specified state dimensions zeroed out."""
+
+        zeroed_array = self.array.copy()
+        zeroed_array[at, :] = 0.0
+
+        return NumPyIntegratorObstacleVelocities(zeroed_array)
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
+
 
 @dataclass(frozen=True)
 class NumPyIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
     array: Array[Dims[T, D_o, K]]
+
+    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
 
 
 @dataclass(kw_only=True, frozen=True)

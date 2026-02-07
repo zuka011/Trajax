@@ -80,6 +80,7 @@ from .types import (
     CovarianceSequences as CovarianceSequences,
     CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
+    VelocityAssumptionProvider as VelocityAssumptionProvider,
     PredictionCreator as PredictionCreator,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,

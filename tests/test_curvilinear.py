@@ -820,3 +820,148 @@ class test_that_position_covariance_information_is_provided_when_propagator_is_a
                 for t in range(prediction_horizon - 1)
             ]
         )
+
+
+class test_that_velocity_assumptions_are_applied_during_prediction:
+    @staticmethod
+    def cases(
+        create_predictor,
+        model,
+        data,
+        integrator_prediction_creator,
+        bicycle_prediction_creator,
+        unicycle_prediction_creator,
+    ) -> Sequence[tuple]:
+        return [
+            (  # Integrator: zero out the heading velocity (index 2), keep x and y
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                    prediction=integrator_prediction_creator(),
+                    assumptions=lambda velocity: velocity.zeroed(at=(2,)),
+                ),
+                data.obstacle_states(
+                    x=array([[0.0, 0.0], [1.0, 0.0]], shape=(T_h := 2, K := 2)),
+                    y=array([[0.0, -1.0], [1.0, 1.0]], shape=(T_h, K)),
+                    heading=array([[0.0, np.pi / 2], [0.0, np.pi]], shape=(T_h, K)),
+                ),
+                data.obstacle_states(
+                    x=array(
+                        [[2.0, 0.0], [3.0, 0.0], [4.0, 0.0], [5.0, 0.0]], shape=(T_p, K)
+                    ),
+                    y=array(
+                        [[2.0, 3.0], [3.0, 5.0], [4.0, 7.0], [5.0, 9.0]], shape=(T_p, K)
+                    ),
+                    # Heading stays constant.
+                    heading=array([[0.0, np.pi]] * T_p, shape=(T_p, K)),
+                ),
+            ),
+            (  # Bicycle: zero out steering angle, obstacle goes straight
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.bicycle.obstacle(
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                    ),
+                    prediction=bicycle_prediction_creator(),
+                    assumptions=lambda velocity: velocity.zeroed(steering_angle=True),
+                ),
+                data.obstacle_states(
+                    # v = 10 m/s, ω = 0.5 rad/s => δ = arctan(ω * L / v)
+                    # With assumption: δ = 0, so heading stays constant
+                    x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
+                    y=array([[0.0], [0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [0.05]], shape=(T_h, K)),
+                ),
+                # With zeroed steering: straight-line motion at heading=0.05, speed=10
+                data.obstacle_states(
+                    x=array(
+                        [
+                            [1.0 + 10 * np.cos(0.05) * 0.1],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 2],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 3],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    y=array(
+                        [
+                            [10 * np.sin(0.05) * 0.1],
+                            [10 * np.sin(0.05) * 0.1 * 2],
+                            [10 * np.sin(0.05) * 0.1 * 3],
+                            [10 * np.sin(0.05) * 0.1 * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    heading=array([[0.05]] * T_p, shape=(T_p, K)),
+                ),
+            ),
+            (  # Unicycle: zero out angular velocity, obstacle goes straight
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    prediction=unicycle_prediction_creator(),
+                    assumptions=lambda velocity: velocity.zeroed(angular_velocity=True),
+                ),
+                data.obstacle_states(
+                    # v = 10 m/s, ω = 0.5 rad/s
+                    # With assumption: ω = 0, straight-line motion
+                    x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
+                    y=array([[0.0], [0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [0.05]], shape=(T_h, K)),
+                ),
+                # With zeroed angular velocity: straight-line at heading=0.05, v=10
+                data.obstacle_states(
+                    x=array(
+                        [
+                            [1.0 + 10 * np.cos(0.05) * 0.1],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 2],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 3],
+                            [1.0 + 10 * np.cos(0.05) * 0.1 * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    y=array(
+                        [
+                            [10 * np.sin(0.05) * 0.1],
+                            [10 * np.sin(0.05) * 0.1 * 2],
+                            [10 * np.sin(0.05) * 0.1 * 3],
+                            [10 * np.sin(0.05) * 0.1 * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    heading=array([[0.05]] * T_p, shape=(T_p, K)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["predictor", "history", "expected"],
+        [
+            *cases(
+                create_predictor=create_predictor.numpy,
+                model=model.numpy,
+                data=data.numpy,
+                integrator_prediction_creator=NumPyIntegratorPredictionCreator,
+                bicycle_prediction_creator=NumPyBicyclePredictionCreator,
+                unicycle_prediction_creator=NumPyUnicyclePredictionCreator,
+            ),
+            *cases(
+                create_predictor=create_predictor.jax,
+                model=model.jax,
+                data=data.jax,
+                integrator_prediction_creator=JaxIntegratorPredictionCreator,
+                bicycle_prediction_creator=JaxBicyclePredictionCreator,
+                unicycle_prediction_creator=JaxUnicyclePredictionCreator,
+            ),
+        ],
+    )
+    def test[HistoryT, PredictionT: ObstacleStates](
+        self,
+        predictor: ObstacleMotionPredictor[HistoryT, PredictionT],
+        history: HistoryT,
+        expected: PredictionT,
+    ) -> None:
+        actual = predictor.predict(history=history)
+        assert np.allclose(actual.x(), expected.x(), rtol=1e-3, atol=1e-6)
+        assert np.allclose(actual.y(), expected.y(), rtol=1e-3, atol=1e-6)
+        assert np.allclose(actual.heading(), expected.heading(), rtol=1e-3, atol=1e-6)

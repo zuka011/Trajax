@@ -159,6 +159,12 @@ class PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT](Prot
         ...
 
 
+class VelocityAssumptionProvider[VelocitiesT](Protocol):
+    def __call__(self, velocities: VelocitiesT, /) -> VelocitiesT:
+        """Applies assumptions to the given velocities and returns the modified velocities."""
+        ...
+
+
 class CovariancePropagator[StateSequencesT, CovarianceSequencesT](Protocol):
     def propagate(self, *, states: StateSequencesT) -> CovarianceSequencesT:
         """Propagates the covariance of obstacle states over time."""
