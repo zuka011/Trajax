@@ -1,7 +1,7 @@
 #import "@preview/zero:0.5.0": num
 #import "@preview/suiji:0.4.0": gen-rng-f, normal-f
 #import "@preview/cetz:0.4.2"
-#import "@local/roboter:0.3.2": (
+#import "@local/roboter:0.3.9": (
   draw,
   curves,
   zero-inputs,
@@ -17,6 +17,9 @@
   bicycle-theme,
   kinematic-unicycle,
   unicycle-theme,
+  sat,
+  vehicle-theme,
+  vehicle-approximation,
 )
 
 #let grid-color = gray.transparentize(80%)
@@ -362,6 +365,64 @@
       path-parameters: path-parameter-examples,
       curve: curve,
       color: path-parameter-marker-color,
+    )
+  })
+}
+
+#let sat-diagram() = {
+  draw.diagram({
+    draw.grid((-5, -4), (10, 4), color: grid-color)
+    sat(
+      rectangles: (
+        (length: 3.0, width: 1.5, offset: (0, 1), rotation: -30deg, color: red),
+        (
+          length: 3.0,
+          width: 1.5,
+          offset: (6, 2),
+          rotation: -15deg,
+          color: blue,
+        ),
+      ),
+      axes: (
+        (
+          origin: (0, -2),
+          angle: -15deg,
+          extents: (7.0, -5.0),
+          label-offset: (0.25, 0.25),
+          overlap-offset: (-0.25, -0.25),
+        ),
+        (
+          origin: (9, 0),
+          angle: 75deg,
+          extents: (3.0, -4.1),
+          label-offset: (0.5, 0.25),
+          overlap-offset: (-0.75, 0.25),
+        ),
+      ),
+    )
+  })
+}
+
+#let circle-approximation-diagram(
+  circle-count: 1,
+  radius: none,
+  safety-threshold: 2.0,
+  show-safety-threshold-separately: true,
+  theme: vehicle-theme(),
+) = {
+  draw.diagram({
+    draw.grid((-3.75, -3), (3.75, 3), color: grid-color, step: 0.75)
+    draw.transformed-group(
+      vehicle-approximation(
+        length: 5.0,
+        width: 2.0,
+        radius: radius,
+        circle-count: circle-count,
+        safety-threshold: safety-threshold,
+        show-safety-threshold-separately: show-safety-threshold-separately,
+        theme: theme,
+      ),
+      scale: 0.7,
     )
   })
 }
