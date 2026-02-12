@@ -316,6 +316,28 @@ class JaxIntegratorObstacleModel(
         )
         return JaxIntegratorObstacleStateSequences(result)
 
+    # TODO: Review!
+    def state_jacobian[T: int, D_o: int, K: int](
+        self,
+        *,
+        states: JaxIntegratorObstacleStateSequences[T, D_o, K],
+        inputs: JaxIntegratorObstacleControlInputSequences[T, D_o, K],
+    ) -> Float[JaxArray, "T D_o D_o K"]:
+        raise NotImplementedError(
+            "State Jacobian is not implemented for JaxIntegratorObstacleModel."
+        )
+
+    # TODO: Review!
+    def input_jacobian[T: int, D_o: int, K: int](
+        self,
+        *,
+        states: JaxIntegratorObstacleStateSequences[int, D_o, K],
+        inputs: JaxIntegratorObstacleControlInputSequences[int, D_o, K],
+    ) -> Float[JaxArray, "T D_o D_o K"]:
+        raise NotImplementedError(
+            "Input Jacobian is not implemented for JaxIntegratorObstacleModel."
+        )
+
 
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
     assert state_limits is not None, (

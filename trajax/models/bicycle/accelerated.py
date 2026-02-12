@@ -25,9 +25,12 @@ from trajax.types import (
     BICYCLE_D_U,
     BicycleD_o,
     BICYCLE_D_O,
+    BICYCLE_POSE_D_O,
+    BICYCLE_POSITION_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
+    CovarianceExtractor,
 )
 
 from jaxtyping import Array as JaxArray, Float, Scalar
@@ -47,6 +50,16 @@ type ControlInputBatchArray[T: int, M: int] = Float[JaxArray, f"T {BICYCLE_D_U} 
 
 type StatesAtTimeStep[M: int] = Float[JaxArray, f"{BICYCLE_D_X} M"]
 type ControlInputsAtTimeStep[M: int] = Float[JaxArray, f"{BICYCLE_D_U} M"]
+
+type BicycleObstacleStateCovarianceArray[T: int, K: int] = Float[
+    JaxArray, f"T {BICYCLE_D_O} {BICYCLE_D_O} K"
+]
+type BicycleObstaclePoseCovarianceArray[T: int, K: int] = Float[
+    JaxArray, f"T {BICYCLE_POSE_D_O} {BICYCLE_POSE_D_O} K"
+]
+type BicycleObstaclePositionCovarianceArray[T: int, K: int] = Float[
+    JaxArray, f"T {BICYCLE_POSITION_D_O} {BICYCLE_POSITION_D_O} K"
+]
 
 
 @jaxtyped
@@ -383,6 +396,12 @@ class JaxBicycleObstacleStates[K: int]:
     array: Float[JaxArray, f"{BICYCLE_D_O} K"]
 
     @staticmethod
+    def wrap[K_: int](
+        array: Array[Dims[BicycleD_o, K_]] | Float[JaxArray, f"{BICYCLE_D_O} K"],
+    ) -> "JaxBicycleObstacleStates[K_]":
+        return JaxBicycleObstacleStates(jnp.asarray(array))
+
+    @staticmethod
     def create[K_: int](
         *,
         x: Float[JaxArray, "K"],
@@ -517,6 +536,12 @@ class JaxBicycleObstacleVelocities[K: int]:
 @dataclass(frozen=True)
 class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
     array: Float[JaxArray, f"T {BICYCLE_D_U} K"]
+
+    @staticmethod
+    def wrap[T_: int, K_: int](
+        array: Array[Dims[T_, BicycleD_u, K_]] | Float[JaxArray, f"{BICYCLE_D_U} K"],
+    ) -> "JaxBicycleObstacleControlInputSequences[T_, K_]":
+        return JaxBicycleObstacleControlInputSequences(jnp.asarray(array))
 
     @staticmethod
     def create(
@@ -720,6 +745,50 @@ class JaxBicycleObstacleModel(
             )
         )
 
+    def state_jacobian[T: int, K: int](
+        self,
+        *,
+        states: JaxBicycleObstacleStateSequences[T, K],
+        inputs: JaxBicycleObstacleControlInputSequences[T, K],
+    ) -> Float[JaxArray, "T 4 4 K"]:
+        return bicycle_state_jacobian(
+            states.array,
+            inputs.array,
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
+
+    def input_jacobian[T: int, K: int](
+        self,
+        *,
+        states: JaxBicycleObstacleStateSequences[T, K],
+        inputs: JaxBicycleObstacleControlInputSequences[T, K],
+    ) -> Float[JaxArray, "T 4 2 K"]:
+        return bicycle_input_jacobian(
+            states.array,
+            inputs.array,
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
+
+
+class JaxBicyclePoseCovarianceExtractor(CovarianceExtractor):
+    """Extracts the pose-related state covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePoseCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSE_D_O, :BICYCLE_POSE_D_O, :]
+
+
+class JaxBicyclePositionCovarianceExtractor(CovarianceExtractor):
+    """Extracts the x and y covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePositionCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
+
 
 def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
     return (jnp.asarray(limits[0]), jnp.asarray(limits[1]))
@@ -778,6 +847,69 @@ def step(
     new_v = jnp.clip(v + acceleration * time_step_size, *speed_limits)
 
     return jnp.stack([new_x, new_y, new_theta, new_v])
+
+
+@jax.jit
+@jaxtyped
+def bicycle_state_jacobian(
+    states: Float[JaxArray, "T 4 K"],
+    controls: Float[JaxArray, "T 2 K"],
+    *,
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> Float[JaxArray, "T 4 4 K"]:
+    """Analytical state Jacobian F = ∂f/∂x of the bicycle dynamics."""
+    theta = states[:, 2, :]
+    v = states[:, 3, :]
+    delta = controls[:, 1, :]
+
+    T, K = theta.shape
+    dt = time_step_size
+
+    F = jnp.zeros((T, BICYCLE_D_X, BICYCLE_D_X, K))
+    F = F.at[:, 0, 0, :].set(1.0)
+    F = F.at[:, 1, 1, :].set(1.0)
+    F = F.at[:, 2, 2, :].set(1.0)
+    F = F.at[:, 3, 3, :].set(1.0)
+
+    F = F.at[:, 0, 2, :].set(-v * jnp.sin(theta) * dt)
+    F = F.at[:, 0, 3, :].set(jnp.cos(theta) * dt)
+    F = F.at[:, 1, 2, :].set(v * jnp.cos(theta) * dt)
+    F = F.at[:, 1, 3, :].set(jnp.sin(theta) * dt)
+    F = F.at[:, 2, 3, :].set(jnp.tan(delta) / wheelbase * dt)
+
+    return F
+
+
+@jax.jit
+@jaxtyped
+def bicycle_input_jacobian(
+    states: Float[JaxArray, "T 4 K"],
+    controls: Float[JaxArray, "T 2 K"],
+    *,
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> Float[JaxArray, "T 4 2 K"]:
+    """Analytical input Jacobian G = ∂f/∂u of the bicycle dynamics.
+
+    For bicycle model: u = [acceleration, steering_angle]
+    G describes how control input uncertainty enters the state dynamics.
+    """
+    v = states[:, 3, :]
+    delta = controls[:, 1, :]
+
+    T, K = v.shape
+    dt = time_step_size
+
+    G = jnp.zeros((T, BICYCLE_D_X, BICYCLE_D_U, K))
+
+    # ∂θ/∂δ = v / (L * cos²(δ)) * dt
+    G = G.at[:, 2, 1, :].set(v / (wheelbase * jnp.cos(delta) ** 2) * dt)
+
+    # ∂v/∂a = dt
+    G = G.at[:, 3, 0, :].set(dt)
+
+    return G
 
 
 @jax.jit

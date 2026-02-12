@@ -25,14 +25,14 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
             (
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 5),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=np.random.rand(H := 4, K),
                                 y=np.random.rand(H, K),
                                 heading=np.random.rand(H, K),
@@ -55,14 +55,14 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                 (  # No History
                     provider := obstacles.provider.predicting(
                         predictor=stubs.ObstacleMotionPredictor.returns(
-                            prediction := data.obstacle_states(
+                            prediction := data.obstacle_2d_poses(
                                 x=np.random.rand(T := 10, K := 3),
                                 y=np.random.rand(T, K),
                                 heading=np.random.rand(T, K),
                                 covariance=np.random.rand(T, 3, 3, K),
                             ),
                             when_history_is=(
-                                history := data.obstacle_states(
+                                history := data.obstacle_2d_poses(
                                     x=np.full(output_shape, np.nan),
                                     y=np.full(output_shape, np.nan),
                                     heading=np.full(output_shape, np.nan),
@@ -88,14 +88,14 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
             (  # Old observations should be dropped when horizon is exceeded
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 5),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=np.random.rand(H := 4, K),
                                 y=np.random.rand(H, K),
                                 heading=np.random.rand(H, K),
@@ -108,7 +108,7 @@ class test_that_obstacle_state_provider_provides_forecasts_from_obstacle_motion_
                 ),
                 states_sequence := [
                     *[
-                        data.obstacle_states_for_time_step(
+                        data.obstacle_2d_poses_for_time_step(
                             x=np.random.rand(K := 5),
                             y=np.random.rand(K),
                             heading=np.random.rand(K),
@@ -152,14 +152,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 3),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=(
                                     x := array(
                                         [
@@ -254,7 +254,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ids(
                                     data.obstacle_ids([6, 2, 3]),
                                     when_observing=observation_0,
-                                    and_history=data.obstacle_states(
+                                    and_history=data.obstacle_2d_poses(
                                         x=np.empty((0, 0)),
                                         y=np.empty((0, 0)),
                                         heading=np.empty((0, 0)),
@@ -264,7 +264,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ids(
                                     data.obstacle_ids([3, 6, 2]),
                                     when_observing=observation_1,
-                                    and_history=data.obstacle_states(
+                                    and_history=data.obstacle_2d_poses(
                                         x=x[:1], y=y[:1], heading=heading[:1]
                                     ),
                                     and_ids=data.obstacle_ids([2, 3, 6]),
@@ -272,7 +272,7 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ids(
                                     data.obstacle_ids([2, 3, 6]),
                                     when_observing=observation_2,
-                                    and_history=data.obstacle_states(
+                                    and_history=data.obstacle_2d_poses(
                                         x=x[:2], y=y[:2], heading=heading[:2]
                                     ),
                                     and_ids=data.obstacle_ids([2, 3, 6]),
@@ -280,28 +280,28 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ids(
                                     data.obstacle_ids([3, 2, 6]),
                                     when_observing=observation_3,
-                                    and_history=data.obstacle_states(
+                                    and_history=data.obstacle_2d_poses(
                                         x=x[:3], y=y[:3], heading=heading[:3]
                                     ),
                                     and_ids=data.obstacle_ids([2, 3, 6]),
                                 ),
                             ),
-                            observation_0 := data.obstacle_states_for_time_step(
+                            observation_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_06, x_02, x_03], shape=(K,)),
                                 y=array([y_06, y_02, y_03], shape=(K,)),
                                 heading=array([h_06, h_02, h_03], shape=(K,)),
                             ),
-                            observation_1 := data.obstacle_states_for_time_step(
+                            observation_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_13, x_16, x_12], shape=(K,)),
                                 y=array([y_13, y_16, y_12], shape=(K,)),
                                 heading=array([h_13, h_16, h_12], shape=(K,)),
                             ),
-                            observation_2 := data.obstacle_states_for_time_step(
+                            observation_2 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_22, x_23, x_26], shape=(K,)),
                                 y=array([y_22, y_23, y_26], shape=(K,)),
                                 heading=array([h_22, h_23, h_26], shape=(K,)),
                             ),
-                            observation_3 := data.obstacle_states_for_time_step(
+                            observation_3 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_33, x_32, x_36], shape=(K,)),
                                 y=array([y_33, y_32, y_36], shape=(K,)),
                                 heading=array([h_33, h_32, h_36], shape=(K,)),
@@ -323,14 +323,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (  # Obstacle disappears then reappears
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 4),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         # IDs: (2, 3, 5, 6).
@@ -396,24 +396,24 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     and_ids=ids_3,
                                 ),
                             ),
-                            observation_0 := data.obstacle_states_for_time_step(
+                            observation_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_06, x_03, x_02], shape=(K_0 := 3,)),
                                 y=array([y_06, y_03, y_02], shape=(K_0,)),
                                 heading=array([h_06, h_03, h_02], shape=(K_0,)),
                             ),
-                            history_0 := data.obstacle_states(
+                            history_0 := data.obstacle_2d_poses(
                                 x=np.empty((0, K)),
                                 y=np.empty((0, K)),
                                 heading=np.empty((0, K)),
                             ),
                             ids_0 := data.obstacle_ids([]),
-                            observation_1 := data.obstacle_states_for_time_step(
+                            observation_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_12], shape=(K_1 := 1,)),
                                 y=array([y_12], shape=(K_1,)),
                                 heading=array([h_12], shape=(K_1,)),
                             ),
                             # Obstacle indices always match ID indices.
-                            history_1 := data.obstacle_states(
+                            history_1 := data.obstacle_2d_poses(
                                 x=array([[x_02, x_03, x_06, np.nan]], shape=(1, K)),
                                 y=array([[y_02, y_03, y_06, np.nan]], shape=(1, K)),
                                 heading=array(
@@ -421,12 +421,12 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ),
                             ),
                             ids_1 := data.obstacle_ids([2, 3, 6]),
-                            observation_2 := data.obstacle_states_for_time_step(
+                            observation_2 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_25, x_22], shape=(K_2 := 2,)),
                                 y=array([y_25, y_22], shape=(K_2,)),
                                 heading=array([h_25, h_22], shape=(K_2,)),
                             ),
-                            history_2 := data.obstacle_states(
+                            history_2 := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         [x_02, x_03, x_06, np.nan],
@@ -450,13 +450,13 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ),
                             ),
                             ids_2 := data.obstacle_ids([2, 3, 6]),
-                            observation_3 := data.obstacle_states_for_time_step(
+                            observation_3 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_32, x_35, x_36], shape=(K_3 := 3,)),
                                 y=array([y_32, y_35, y_36], shape=(K_3,)),
                                 heading=array([h_32, h_35, h_36], shape=(K_3,)),
                             ),
                             # Some historical data will be shifted to match ID indices.
-                            history_3 := data.obstacle_states(
+                            history_3 := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         [x_02, x_03, np.nan, x_06],
@@ -497,14 +497,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (  # Total number of IDs is less than expected.
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 4),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         # IDs: (2, 3).
@@ -555,17 +555,17 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     and_ids=data.obstacle_ids([2, 3]),
                                 ),
                             ),
-                            observation_0 := data.obstacle_states_for_time_step(
+                            observation_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_03, x_02], shape=(K_0 := 2,)),
                                 y=array([y_03, y_02], shape=(K_0,)),
                                 heading=array([h_03, h_02], shape=(K_0,)),
                             ),
-                            observation_1 := data.obstacle_states_for_time_step(
+                            observation_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_12], shape=(K_1 := 1,)),
                                 y=array([y_12], shape=(K_1,)),
                                 heading=array([h_12], shape=(K_1,)),
                             ),
-                            observation_2 := data.obstacle_states_for_time_step(
+                            observation_2 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_23], shape=(K_2 := 1,)),
                                 y=array([y_23], shape=(K_2,)),
                                 heading=array([h_23], shape=(K_2,)),
@@ -579,14 +579,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (  # Total number of IDs exceeds expected. Older IDs are dropped.
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 3),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         # Final tracked IDs: [2, 4, 5] (IDs 3 & 6 dropped)
@@ -649,18 +649,18 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     and_ids=ids_3,
                                 ),
                             ),
-                            observation_0 := data.obstacle_states_for_time_step(
+                            observation_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_03 := 0.2, x_06 := 0.1], shape=(K_0 := 2,)),
                                 y=array([y_03 := 0.4, y_06 := 0.5], shape=(K_0,)),
                                 heading=array([h_03 := 0.6, h_06 := 0.7], shape=(K_0,)),
                             ),
-                            history_0 := data.obstacle_states(
+                            history_0 := data.obstacle_2d_poses(
                                 x=np.empty((0, K)),
                                 y=np.empty((0, K)),
                                 heading=np.empty((0, K)),
                             ),
                             ids_0 := data.obstacle_ids([]),
-                            observation_1 := data.obstacle_states_for_time_step(
+                            observation_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array(
                                     [x_16 := 0.1, x_12, x_13 := 0.3], shape=(K_1 := 3,)
                                 ),
@@ -669,18 +669,18 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     [h_16 := 2.1, h_12, h_13 := 0.2], shape=(K_1,)
                                 ),
                             ),
-                            history_1 := data.obstacle_states(
+                            history_1 := data.obstacle_2d_poses(
                                 x=array([[x_03, x_06, np.nan]], shape=(1, K)),
                                 y=array([[y_03, y_06, np.nan]], shape=(1, K)),
                                 heading=array([[h_03, h_06, np.nan]], shape=(1, K)),
                             ),
                             ids_1 := data.obstacle_ids([3, 6]),
-                            observation_2 := data.obstacle_states_for_time_step(
+                            observation_2 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_24, x_22], shape=(K_2 := 2,)),
                                 y=array([y_24, y_22], shape=(K_2,)),
                                 heading=array([h_24, h_22], shape=(K_2,)),
                             ),
-                            history_2 := data.obstacle_states(
+                            history_2 := data.obstacle_2d_poses(
                                 x=array(
                                     [[np.nan, x_03, x_06], [x_12, x_13, x_16]],
                                     shape=(2, K),
@@ -695,12 +695,12 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                 ),
                             ),
                             ids_2 := data.obstacle_ids([2, 3, 6]),
-                            observation_3 := data.obstacle_states_for_time_step(
+                            observation_3 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_35, x_34], shape=(K_3 := 2,)),
                                 y=array([y_35, y_34], shape=(K_3,)),
                                 heading=array([h_35, h_34], shape=(K_3,)),
                             ),
-                            history_3 := data.obstacle_states(
+                            history_3 := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         [np.nan, np.nan, x_06],
@@ -741,14 +741,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (  # No limit on total number of IDs.
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 4),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         # All 4 IDs should be tracked: [2, 3, 4, 5]
@@ -792,12 +792,12 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     and_ids=data.obstacle_ids([2, 3]),
                                 ),
                             ),
-                            history_0 := data.obstacle_states_for_time_step(
+                            history_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_02, x_03], shape=(2,)),
                                 y=array([y_02, y_03], shape=(2,)),
                                 heading=array([h_02, h_03], shape=(2,)),
                             ),
-                            history_1 := data.obstacle_states_for_time_step(
+                            history_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_14, x_15], shape=(2,)),
                                 y=array([y_14, y_15], shape=(2,)),
                                 heading=array([h_14, h_15], shape=(2,)),
@@ -811,14 +811,14 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
             (  # Not enough history to fill horizon.
                 provider := obstacles.provider.predicting(
                     predictor=stubs.ObstacleMotionPredictor.returns(
-                        prediction := data.obstacle_states(
+                        prediction := data.obstacle_2d_poses(
                             x=np.random.rand(T := 15, K := 2),
                             y=np.random.rand(T, K),
                             heading=np.random.rand(T, K),
                             covariance=np.random.rand(T, 3, 3, K),
                         ),
                         when_history_is=(
-                            history := data.obstacle_states(
+                            history := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         # Fixed horizon is 4, but only 2 observations made.
@@ -870,23 +870,23 @@ class test_that_obstacle_state_provider_uses_specified_id_assignment:
                                     and_ids=ids_1,
                                 ),
                             ),
-                            observation_0 := data.obstacle_states_for_time_step(
+                            observation_0 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_02, x_03], shape=(K,)),
                                 y=array([y_02, y_03], shape=(K,)),
                                 heading=array([h_02, h_03], shape=(K,)),
                             ),
-                            history_0 := data.obstacle_states(
+                            history_0 := data.obstacle_2d_poses(
                                 x=array(np.full((H, K), np.nan), shape=(H, K)),
                                 y=array(np.full((H, K), np.nan), shape=(H, K)),
                                 heading=array(np.full((H, K), np.nan), shape=(H, K)),
                             ),
                             ids_0 := data.obstacle_ids([]),
-                            observation_1 := data.obstacle_states_for_time_step(
+                            observation_1 := data.obstacle_2d_poses_for_time_step(
                                 x=array([x_12, x_13], shape=(K,)),
                                 y=array([y_12, y_13], shape=(K,)),
                                 heading=array([h_12, h_13], shape=(K,)),
                             ),
-                            history_1 := data.obstacle_states(
+                            history_1 := data.obstacle_2d_poses(
                                 x=array(
                                     [
                                         [np.nan, np.nan],
@@ -954,7 +954,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     creator=types.obstacle_2d_poses, obstacle_count=2
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([5.0, 100.0], shape=(2,)),
                         y=array([5.0, 0.0], shape=(2,)),
                         heading=array([0.0, 0.0], shape=(2,)),
@@ -962,7 +962,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     ids=data.obstacle_ids([10, 20]),
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([5.1, 200.0], shape=(2,)),
                         y=array([5.1, 0.0], shape=(2,)),
                         heading=array([0.0, 0.0], shape=(2,)),
@@ -970,7 +970,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     ids=data.obstacle_ids([10, 30]),  # 20 disappears, 30 appears
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([5.2, 300.0], shape=(2,)),
                         y=array([5.2, 0.0], shape=(2,)),
                         heading=array([0.0, 0.0], shape=(2,)),
@@ -978,7 +978,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     ids=data.obstacle_ids([10, 40]),  # 30 disappears, 40 appears
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([5.3, 400.0], shape=(2,)),
                         y=array([5.3, 0.0], shape=(2,)),
                         heading=array([0.0, 0.0], shape=(2,)),
@@ -993,7 +993,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     creator=types.obstacle_2d_poses, obstacle_count=3
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([0.0, 10.0, 20.0], shape=(3,)),
                         y=array([0.0, 0.0, 0.0], shape=(3,)),
                         heading=array([0.0, 0.0, 0.0], shape=(3,)),
@@ -1001,7 +1001,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     ids=data.obstacle_ids([1, 2, 3]),
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([0.1, 10.1, 30.0], shape=(3,)),
                         y=array([0.0, 0.0, 0.0], shape=(3,)),
                         heading=array([0.0, 0.0, 0.0], shape=(3,)),
@@ -1009,7 +1009,7 @@ class test_that_running_history_tracks_active_ids_when_obstacle_count_is_exceede
                     ids=data.obstacle_ids([1, 2, 4]),  # 3 disappears, 4 appears
                 )
                 .append(
-                    data.obstacle_states_for_time_step(
+                    data.obstacle_2d_poses_for_time_step(
                         x=array([0.2, 10.2, 40.0], shape=(3,)),
                         y=array([0.0, 0.0, 0.0], shape=(3,)),
                         heading=array([0.0, 0.0, 0.0], shape=(3,)),

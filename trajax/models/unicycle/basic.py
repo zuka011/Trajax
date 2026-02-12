@@ -333,6 +333,12 @@ class NumPyUnicycleObstacleStates[K: int]:
     array: Array[Dims[UnicycleD_o, K]]
 
     @staticmethod
+    def wrap[K_: int](
+        array: Array[Dims[UnicycleD_o, K_]],
+    ) -> "NumPyUnicycleObstacleStates[K_]":
+        return NumPyUnicycleObstacleStates(array)
+
+    @staticmethod
     def create(
         *,
         x: Array[Dims[K]],
@@ -347,6 +353,9 @@ class NumPyUnicycleObstacleStates[K: int]:
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
         return self.array
+
+    def heading(self) -> Array[Dims[K]]:
+        return self.array[2, :]
 
     @property
     def dimension(self) -> UnicycleD_o:
@@ -437,6 +446,12 @@ class NumPyUnicycleObstacleControlInputSequences[T: int, K: int]:
     array: Array[Dims[T, UnicycleD_u, K]]
 
     @staticmethod
+    def wrap[T_: int, K_: int](
+        array: Array[Dims[T_, UnicycleD_u, K_]],
+    ) -> "NumPyUnicycleObstacleControlInputSequences[T_, K_]":
+        return NumPyUnicycleObstacleControlInputSequences(array)
+
+    @staticmethod
     def create(
         *,
         linear_velocities: Array[Dims[T, K]],
@@ -453,6 +468,9 @@ class NumPyUnicycleObstacleControlInputSequences[T: int, K: int]:
         self, dtype: DataType | None = None
     ) -> Array[Dims[T, UnicycleD_u, K]]:
         return self.array
+
+    def linear_velocities(self) -> Array[Dims[T, K]]:
+        return self.array[:, 0, :]
 
     @property
     def horizon(self) -> T:
@@ -649,6 +667,29 @@ class NumPyUnicycleObstacleModel(
             heading=result[:, 2, :],
         )
 
+    def state_jacobian[T: int, K: int](
+        self,
+        *,
+        states: NumPyUnicycleObstacleStateSequences[T, K],
+        inputs: NumPyUnicycleObstacleControlInputSequences[T, K],
+    ) -> Array[Dims[T, UnicycleD_o, UnicycleD_o, K]]:
+        return state_jacobian(
+            heading=states.heading(),
+            speed=inputs.linear_velocities(),
+            time_step_size=self.time_step_size,
+        )
+
+    def input_jacobian[T: int, K: int](
+        self,
+        *,
+        states: NumPyUnicycleObstacleStateSequences[T, K],
+        inputs: NumPyUnicycleObstacleControlInputSequences[T, K],
+    ) -> Array[Dims[T, UnicycleD_o, UnicycleD_u, K]]:
+        return input_jacobian(
+            heading=states.heading(),
+            time_step_size=self.time_step_size,
+        )
+
 
 def simulate[T: int, N: int](
     inputs: ControlInputBatchArray[T, N],
@@ -698,6 +739,67 @@ def step[M: int](
     new_theta = theta + angular_velocity * time_step_size
 
     return np.stack([new_x, new_y, new_theta])
+
+
+def state_jacobian[T: int, K: int](
+    heading: Array[Dims[T, K]],
+    speed: Array[Dims[T, K]],
+    *,
+    time_step_size: float,
+) -> Array[Dims[T, UnicycleD_o, UnicycleD_o, K]]:
+    """Computes the state Jacobian F = ∂f/∂x for the unicycle model."""
+    v, theta = speed, heading
+
+    T, K = heading.shape
+    F = np.zeros((T, UNICYCLE_D_O, UNICYCLE_D_O, K))
+
+    dt = time_step_size
+
+    F[:, 0, 0, :] = 1.0
+    F[:, 1, 1, :] = 1.0
+    F[:, 2, 2, :] = 1.0
+
+    F[:, 0, 2, :] = -v * np.sin(theta) * dt
+    F[:, 1, 2, :] = v * np.cos(theta) * dt
+
+    assert shape_of(
+        F, matches=(T, UNICYCLE_D_O, UNICYCLE_D_O, K), name="state_jacobian"
+    )
+
+    return F
+
+
+def input_jacobian[T: int, K: int](
+    heading: Array[Dims[T, K]],
+    *,
+    time_step_size: float,
+) -> Array[Dims[T, UnicycleD_o, UnicycleD_u, K]]:
+    """Computes the input Jacobian G = ∂f/∂u for the unicycle model.
+
+    For unicycle model: u = [linear_velocity, angular_velocity]
+    G describes how control input uncertainty enters the state dynamics.
+    """
+    theta = heading
+
+    T, K = heading.shape
+    G = np.zeros((T, UNICYCLE_D_O, UNICYCLE_D_U, K))
+
+    dt = time_step_size
+
+    # ∂x/∂v = cos(θ) * dt
+    G[:, 0, 0, :] = np.cos(theta) * dt
+
+    # ∂y/∂v = sin(θ) * dt
+    G[:, 1, 0, :] = np.sin(theta) * dt
+
+    # ∂θ/∂ω = dt
+    G[:, 2, 1, :] = dt
+
+    assert shape_of(
+        G, matches=(T, UNICYCLE_D_O, UNICYCLE_D_U, K), name="input_jacobian"
+    )
+
+    return G
 
 
 def estimate_speeds_from[K: int](

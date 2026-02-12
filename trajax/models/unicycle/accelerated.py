@@ -399,6 +399,12 @@ class JaxUnicycleObstacleStates[K: int]:
     array: Float[JaxArray, f"{UNICYCLE_D_O} K"]
 
     @staticmethod
+    def wrap[K_: int](
+        array: Array[Dims[UnicycleD_o, K_]] | Float[JaxArray, f"{UNICYCLE_D_O} K"],
+    ) -> "JaxUnicycleObstacleStates[K_]":
+        return JaxUnicycleObstacleStates(jnp.asarray(array))
+
+    @staticmethod
     def create(
         *,
         x: Float[JaxArray, "K"],
@@ -515,6 +521,12 @@ class JaxUnicycleObstacleVelocities[K: int]:
 @dataclass(frozen=True)
 class JaxUnicycleObstacleControlInputSequences[T: int, K: int]:
     array: Float[JaxArray, f"T {UNICYCLE_D_U} K"]
+
+    @staticmethod
+    def wrap[T_: int, K_: int](
+        array: Array[Dims[T_, UnicycleD_u, K_]] | Float[JaxArray, f"{UNICYCLE_D_U} K"],
+    ) -> "JaxUnicycleObstacleControlInputSequences[T_, K_]":
+        return JaxUnicycleObstacleControlInputSequences(jnp.asarray(array))
 
     @staticmethod
     def create(
@@ -707,6 +719,29 @@ class JaxUnicycleObstacleModel(
             )
         )
 
+    def state_jacobian[T: int, K: int](
+        self,
+        *,
+        states: JaxUnicycleObstacleStateSequences[T, K],
+        inputs: JaxUnicycleObstacleControlInputSequences[T, K],
+    ) -> Float[JaxArray, "T 3 3 K"]:
+        return unicycle_state_jacobian(
+            states.array,
+            inputs.array,
+            time_step_size=self.time_step_size,
+        )
+
+    def input_jacobian[T: int, K: int](
+        self,
+        *,
+        states: JaxUnicycleObstacleStateSequences[T, K],
+        inputs: JaxUnicycleObstacleControlInputSequences[T, K],
+    ) -> Float[JaxArray, "T 3 2 K"]:
+        return unicycle_input_jacobian(
+            states.array,
+            time_step_size=self.time_step_size,
+        )
+
 
 def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
     return (jnp.asarray(limits[0]), jnp.asarray(limits[1]))
@@ -758,6 +793,63 @@ def step(
     new_theta = theta + angular_velocity * time_step_size
 
     return jnp.stack([new_x, new_y, new_theta])
+
+
+@jax.jit
+@jaxtyped
+def unicycle_state_jacobian(
+    states: Float[JaxArray, "T 3 K"],
+    controls: Float[JaxArray, "T 2 K"],
+    *,
+    time_step_size: Scalar,
+) -> Float[JaxArray, "T 3 3 K"]:
+    """Analytical state Jacobian F = ∂f/∂x of the unicycle dynamics."""
+    theta = states[:, 2, :]
+    v = controls[:, 0, :]
+
+    T, K = theta.shape
+    dt = time_step_size
+
+    F = jnp.zeros((T, UNICYCLE_D_X, UNICYCLE_D_X, K))
+    F = F.at[:, 0, 0, :].set(1.0)
+    F = F.at[:, 1, 1, :].set(1.0)
+    F = F.at[:, 2, 2, :].set(1.0)
+
+    F = F.at[:, 0, 2, :].set(-v * jnp.sin(theta) * dt)
+    F = F.at[:, 1, 2, :].set(v * jnp.cos(theta) * dt)
+
+    return F
+
+
+@jax.jit
+@jaxtyped
+def unicycle_input_jacobian(
+    states: Float[JaxArray, "T 3 K"],
+    *,
+    time_step_size: Scalar,
+) -> Float[JaxArray, "T 3 2 K"]:
+    """Analytical input Jacobian G = ∂f/∂u of the unicycle dynamics.
+
+    For unicycle model: u = [linear_velocity, angular_velocity]
+    G describes how control input uncertainty enters the state dynamics.
+    """
+    theta = states[:, 2, :]
+
+    T, K = theta.shape
+    dt = time_step_size
+
+    G = jnp.zeros((T, UNICYCLE_D_X, UNICYCLE_D_U, K))
+
+    # ∂x/∂v = cos(θ) * dt
+    G = G.at[:, 0, 0, :].set(jnp.cos(theta) * dt)
+
+    # ∂y/∂v = sin(θ) * dt
+    G = G.at[:, 1, 0, :].set(jnp.sin(theta) * dt)
+
+    # ∂θ/∂ω = dt
+    G = G.at[:, 2, 1, :].set(dt)
+
+    return G
 
 
 @jax.jit

@@ -81,6 +81,7 @@ from trajax.types import (
     NumPySampledObstacleHeadingExtractor,
     NumPyObstacleStates,
     NumPyObstacleStatesForTimeStep,
+    NumPyObstacleStateSequences,
     NumPyObstacleStateProvider,
     NumPyObstaclePositionExtractor,
     JaxSampledObstacleStates,
@@ -90,6 +91,7 @@ from trajax.types import (
     JaxSampledObstacleHeadingExtractor,
     JaxObstacleStates,
     JaxObstacleStatesForTimeStep,
+    JaxObstacleStateSequences,
     JaxObstacleStateProvider,
     JaxObstaclePositionExtractor,
     AugmentedState,
@@ -97,14 +99,16 @@ from trajax.types import (
     AugmentedStateBatch,
     AugmentedControlInputSequence,
     AugmentedControlInputBatch,
+    NumPyCovariance,
     NumPyInitialPositionCovariance,
     NumPyInitialVelocityCovariance,
-    NumPyInitialCovarianceProvider,
-    NumPyPositionCovariance,
+    NumPyCovarianceProvider,
+    NumPyPoseCovariance,
+    JaxCovariance,
     JaxInitialPositionCovariance,
     JaxInitialVelocityCovariance,
-    JaxInitialCovarianceProvider,
-    JaxPositionCovariance,
+    JaxCovarianceProvider,
+    JaxPoseCovariance,
     NumPyBoundaryDistance,
     NumPyBoundaryDistanceExtractor,
     JaxBoundaryDistance,
@@ -117,7 +121,9 @@ from trajax.models import (
     NumPyBicyclePositions,
     NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch,
+    NumPyBicycleObstacleStates,
     NumPyBicycleObstacleStateSequences,
+    NumPyBicycleObstacleControlInputSequences,
     NumPyIntegratorObstacleStateSequences,
     JaxBicycleState,
     JaxBicycleStateSequence,
@@ -125,7 +131,9 @@ from trajax.models import (
     JaxBicyclePositions,
     JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStates,
     JaxBicycleObstacleStateSequences,
+    JaxBicycleObstacleControlInputSequences,
     JaxIntegratorObstacleStateSequences,
     NumPyUnicycleState,
     NumPyUnicycleStateSequence,
@@ -133,14 +141,18 @@ from trajax.models import (
     NumPyUnicyclePositions,
     NumPyUnicycleControlInputSequence,
     NumPyUnicycleControlInputBatch,
+    NumPyUnicycleObstacleStates,
     NumPyUnicycleObstacleStateSequences,
+    NumPyUnicycleObstacleControlInputSequences,
     JaxUnicycleState,
     JaxUnicycleStateSequence,
     JaxUnicycleStateBatch,
     JaxUnicyclePositions,
     JaxUnicycleControlInputSequence,
     JaxUnicycleControlInputBatch,
+    JaxUnicycleObstacleStates,
     JaxUnicycleObstacleStateSequences,
+    JaxUnicycleObstacleControlInputSequences,
 )
 from trajax.costs import (
     NumPyContouringCost,
@@ -171,12 +183,18 @@ from trajax.states import (
     NumPySimpleControlInputSequence,
     NumPySimpleControlInputBatch,
     NumPySimpleCosts,
+    NumPySimpleSampledObstacleStates,
+    NumPySimpleObstacleStatesForTimeStep,
+    NumPySimpleObstacleStates,
     JaxSimpleState,
     JaxSimpleStateSequence,
     JaxSimpleStateBatch,
     JaxSimpleControlInputSequence,
     JaxSimpleControlInputBatch,
     JaxSimpleCosts,
+    JaxSimpleSampledObstacleStates,
+    JaxSimpleObstacleStatesForTimeStep,
+    JaxSimpleObstacleStates,
     NumPyAugmentedState,
     NumPyAugmentedStateSequence,
     NumPyAugmentedStateBatch,
@@ -315,6 +333,12 @@ class types:
             K: int = Any,
             ObstacleStatesT = Any,
         ] = NumPyObstacleStatesForTimeStep[D_o, K, ObstacleStatesT]
+        type ObstacleStateSequences[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            SingleSampleT = Any,
+        ] = NumPyObstacleStateSequences[T, D_o, K, SingleSampleT]
         type ObstaclePositionExtractor[
             ObstacleStatesForTimeStepT,
             ObstacleStatesT,
@@ -348,11 +372,12 @@ class types:
         )
         type BoundaryDistance[T: int = Any, M: int = Any] = NumPyBoundaryDistance[T, M]
         type Risk[T: int = Any, M: int = Any] = NumPyRisk[T, M]
+        type Covariance[T: int = Any, D_o: int = Any, K: int = Any] = NumPyCovariance[
+            T, D_o, K
+        ]
         type InitialPositionCovariance[K: int = Any] = NumPyInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = NumPyInitialVelocityCovariance[K]
-        type PositionCovariance[T: int = Any, K: int = Any] = NumPyPositionCovariance[
-            T, K
-        ]
+        type PoseCovariance[T: int = Any, K: int = Any] = NumPyPoseCovariance[T, K]
 
         type CostFunction[
             T: int = Any,
@@ -384,8 +409,8 @@ class types:
         type ObstacleStateProvider[ObstacleStatesT] = NumPyObstacleStateProvider[
             ObstacleStatesT
         ]
-        type InitialCovarianceProvider[StateSequencesT] = (
-            NumPyInitialCovarianceProvider[StateSequencesT]
+        type CovarianceProvider[StateSequencesT, StateCovarianceT, InputCovarianceT] = (
+            NumPyCovarianceProvider[StateSequencesT, StateCovarianceT, InputCovarianceT]
         )
 
         path_parameters: Final = NumPyPathParameters
@@ -417,6 +442,18 @@ class types:
                 NumPySimpleControlInputBatch[T, D_u, M]
             )
             type Costs[T: int = Any, M: int = Any] = NumPySimpleCosts[T, M]
+            type SampledObstacleStates[
+                T: int = Any,
+                D_o: int = Any,
+                K: int = Any,
+                N: int = Any,
+            ] = NumPySimpleSampledObstacleStates[T, D_o, K, N]
+            type ObstacleStatesForTimeStep[D_o: int = Any, K: int = Any] = (
+                NumPySimpleObstacleStatesForTimeStep[D_o, K]
+            )
+            type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
+                NumPySimpleObstacleStates[T, D_o, K]
+            )
 
             state: Final = NumPySimpleState
             state_sequence: Final = NumPySimpleStateSequence
@@ -424,6 +461,7 @@ class types:
             control_input_sequence: Final = NumPySimpleControlInputSequence
             control_input_batch: Final = NumPySimpleControlInputBatch
             costs: Final = NumPySimpleCosts
+            obstacle_states: Final = NumPySimpleObstacleStates
 
         class integrator:
             type ObstacleStateSequences[T: int = Any, D_o: int = Any, K: int = Any] = (
@@ -441,8 +479,12 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 NumPyBicycleControlInputBatch[T, M]
             )
+            type ObstacleStates[K: int = Any] = NumPyBicycleObstacleStates[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 NumPyBicycleObstacleStateSequences[T, K]
+            )
+            type ObstacleControlInputSequences[T: int = Any, K: int = Any] = (
+                NumPyBicycleObstacleControlInputSequences[T, K]
             )
 
             state: Final = NumPyBicycleState
@@ -451,6 +493,11 @@ class types:
             positions: Final = NumPyBicyclePositions
             control_input_sequence: Final = NumPyBicycleControlInputSequence
             control_input_batch: Final = NumPyBicycleControlInputBatch
+            obstacle_states: Final = NumPyBicycleObstacleStates
+            obstacle_state_sequences: Final = NumPyBicycleObstacleStateSequences
+            obstacle_control_input_sequences: Final = (
+                NumPyBicycleObstacleControlInputSequences
+            )
 
         class unicycle:
             type State = NumPyUnicycleState
@@ -463,8 +510,12 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 NumPyUnicycleControlInputBatch[T, M]
             )
+            type ObstacleStates[K: int = Any] = NumPyUnicycleObstacleStates[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 NumPyUnicycleObstacleStateSequences[T, K]
+            )
+            type ObstacleControlInputSequences[T: int = Any, K: int = Any] = (
+                NumPyUnicycleObstacleControlInputSequences[T, K]
             )
 
             state: Final = NumPyUnicycleState
@@ -473,6 +524,11 @@ class types:
             positions: Final = NumPyUnicyclePositions
             control_input_sequence: Final = NumPyUnicycleControlInputSequence
             control_input_batch: Final = NumPyUnicycleControlInputBatch
+            obstacle_states: Final = NumPyUnicycleObstacleStates
+            obstacle_state_sequences: Final = NumPyUnicycleObstacleStateSequences
+            obstacle_control_input_sequences: Final = (
+                NumPyUnicycleObstacleControlInputSequences
+            )
 
         class augmented:
             type State[P: NumPyState, V: NumPyState] = NumPyAugmentedState[P, V]
@@ -550,6 +606,12 @@ class types:
             ObstacleStatesT = Any,
             NumPyT = Any,
         ] = JaxObstacleStatesForTimeStep[D_o, K, ObstacleStatesT, NumPyT]
+        type ObstacleStateSequences[
+            T: int = Any,
+            D_o: int = Any,
+            K: int = Any,
+            SingleSampleT = Any,
+        ] = JaxObstacleStateSequences[T, D_o, K, SingleSampleT]
         type ObstaclePositionExtractor[
             ObstacleStatesForTimeStepT,
             ObstacleStatesT,
@@ -581,11 +643,12 @@ class types:
         )
         type BoundaryDistance[T: int = Any, M: int = Any] = JaxBoundaryDistance[T, M]
         type Risk[T: int = Any, M: int = Any] = JaxRisk[T, M]
+        type Covariance[T: int = Any, D_o: int = Any, K: int = Any] = JaxCovariance[
+            T, D_o, K
+        ]
         type InitialPositionCovariance[K: int = Any] = JaxInitialPositionCovariance[K]
         type InitialVelocityCovariance[K: int = Any] = JaxInitialVelocityCovariance[K]
-        type PositionCovariance[T: int = Any, K: int = Any] = JaxPositionCovariance[
-            T, K
-        ]
+        type PoseCovariance[T: int = Any, K: int = Any] = JaxPoseCovariance[T, K]
 
         type CostFunction[
             T: int = Any,
@@ -613,9 +676,9 @@ class types:
         type ObstacleStateProvider[ObstacleStatesT] = JaxObstacleStateProvider[
             ObstacleStatesT
         ]
-        type InitialCovarianceProvider[StateSequencesT] = JaxInitialCovarianceProvider[
-            StateSequencesT
-        ]
+        type CovarianceProvider[StateSequencesT, StateCovarianceT, InputCovarianceT] = (
+            JaxCovarianceProvider[StateSequencesT, StateCovarianceT, InputCovarianceT]
+        )
 
         path_parameters: Final = JaxPathParameters.create
         reference_points: Final = JaxReferencePoints.create
@@ -646,6 +709,18 @@ class types:
                 JaxSimpleControlInputBatch[T, D_u, M]
             )
             type Costs[T: int = Any, M: int = Any] = JaxSimpleCosts[T, M]
+            type SampledObstacleStates[
+                T: int = Any,
+                D_o: int = Any,
+                K: int = Any,
+                N: int = Any,
+            ] = JaxSimpleSampledObstacleStates[T, D_o, K, N]
+            type ObstacleStatesForTimeStep[D_o: int = Any, K: int = Any] = (
+                JaxSimpleObstacleStatesForTimeStep[D_o, K]
+            )
+            type ObstacleStates[T: int = Any, D_o: int = Any, K: int = Any] = (
+                JaxSimpleObstacleStates[T, D_o, K]
+            )
 
             state: Final = JaxSimpleState
             state_sequence: Final = JaxSimpleStateSequence
@@ -653,6 +728,7 @@ class types:
             control_input_sequence: Final = JaxSimpleControlInputSequence
             control_input_batch: Final = JaxSimpleControlInputBatch
             costs: Final = JaxSimpleCosts
+            obstacle_states: Final = JaxSimpleObstacleStates
 
         class integrator:
             type ObstacleStateSequences[T: int = Any, D_o: int = Any, K: int = Any] = (
@@ -668,8 +744,12 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 JaxBicycleControlInputBatch[T, M]
             )
+            type ObstacleStates[K: int = Any] = JaxBicycleObstacleStates[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 JaxBicycleObstacleStateSequences[T, K]
+            )
+            type ObstacleControlInputSequences[T: int = Any, K: int = Any] = (
+                JaxBicycleObstacleControlInputSequences[T, K]
             )
 
             state: Final = JaxBicycleState
@@ -678,6 +758,11 @@ class types:
             positions: Final = JaxBicyclePositions
             control_input_sequence: Final = JaxBicycleControlInputSequence
             control_input_batch: Final = JaxBicycleControlInputBatch
+            obstacle_states: Final = JaxBicycleObstacleStates
+            obstacle_state_sequences: Final = JaxBicycleObstacleStateSequences
+            obstacle_control_input_sequences: Final = (
+                JaxBicycleObstacleControlInputSequences
+            )
 
         class unicycle:
             type State = JaxUnicycleState
@@ -688,8 +773,12 @@ class types:
             type ControlInputBatch[T: int = Any, M: int = Any] = (
                 JaxUnicycleControlInputBatch[T, M]
             )
+            type ObstacleStates[K: int = Any] = JaxUnicycleObstacleStates[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 JaxUnicycleObstacleStateSequences[T, K]
+            )
+            type ObstacleControlInputSequences[T: int = Any, K: int = Any] = (
+                JaxUnicycleObstacleControlInputSequences[T, K]
             )
 
             state: Final = JaxUnicycleState
@@ -698,6 +787,11 @@ class types:
             positions: Final = JaxUnicyclePositions
             control_input_sequence: Final = JaxUnicycleControlInputSequence
             control_input_batch: Final = JaxUnicycleControlInputBatch
+            obstacle_states: Final = JaxUnicycleObstacleStates
+            obstacle_state_sequences: Final = JaxUnicycleObstacleStateSequences
+            obstacle_control_input_sequences: Final = (
+                JaxUnicycleObstacleControlInputSequences
+            )
 
         class augmented:
             type State[P: JaxState, V: JaxState] = JaxAugmentedState[P, V]
@@ -793,7 +887,7 @@ class classes:
         Risk: Final = NumPyRisk
         InitialPositionCovariance: Final = NumPyInitialPositionCovariance
         InitialVelocityCovariance: Final = NumPyInitialVelocityCovariance
-        PositionCovariance: Final = NumPyPositionCovariance
+        PositionCovariance: Final = NumPyPoseCovariance
         CostFunction: Final = NumPyCostFunction
         PathParameterExtractor: Final = NumPyPathParameterExtractor
         PathVelocityExtractor: Final = NumPyPathVelocityExtractor
@@ -803,7 +897,7 @@ class classes:
         RiskMetric: Final = NumPyRiskMetric
         ContouringCost: Final = NumPyContouringCost
         ObstacleStateProvider: Final = NumPyObstacleStateProvider
-        InitialCovarianceProvider: Final = NumPyInitialCovarianceProvider
+        CovarianceProvider: Final = NumPyCovarianceProvider
 
         class simple:
             State: Final = NumPySimpleState
@@ -812,6 +906,9 @@ class classes:
             ControlInputSequence: Final = NumPySimpleControlInputSequence
             ControlInputBatch: Final = NumPySimpleControlInputBatch
             Costs: Final = NumPySimpleCosts
+            SampledObstacleStates: Final = NumPySimpleSampledObstacleStates
+            ObstacleStatesForTimeStep: Final = NumPySimpleObstacleStatesForTimeStep
+            ObstacleStates: Final = NumPySimpleObstacleStates
 
         class integrator:
             ObstacleStateSequences: Final = NumPyIntegratorObstacleStateSequences
@@ -874,7 +971,7 @@ class classes:
         Risk: Final = JaxRisk
         InitialPositionCovariance: Final = JaxInitialPositionCovariance
         InitialVelocityCovariance: Final = JaxInitialVelocityCovariance
-        PositionCovariance: Final = JaxPositionCovariance
+        PositionCovariance: Final = JaxPoseCovariance
         CostFunction: Final = JaxCostFunction
         PathParameterExtractor: Final = JaxPathParameterExtractor
         PathVelocityExtractor: Final = JaxPathVelocityExtractor
@@ -884,7 +981,7 @@ class classes:
         RiskMetric: Final = JaxRiskMetric
         ContouringCost: Final = JaxContouringCost
         ObstacleStateProvider: Final = JaxObstacleStateProvider
-        InitialCovarianceProvider: Final = JaxInitialCovarianceProvider
+        CovarianceProvider: Final = JaxCovarianceProvider
 
         class simple:
             State: Final = JaxSimpleState
@@ -893,6 +990,9 @@ class classes:
             ControlInputSequence: Final = JaxSimpleControlInputSequence
             ControlInputBatch: Final = JaxSimpleControlInputBatch
             Costs: Final = JaxSimpleCosts
+            SampledObstacleStates: Final = JaxSimpleSampledObstacleStates
+            ObstacleStatesForTimeStep: Final = JaxSimpleObstacleStatesForTimeStep
+            ObstacleStates: Final = JaxSimpleObstacleStates
 
         class integrator:
             ObstacleStateSequences: Final = JaxIntegratorObstacleStateSequences

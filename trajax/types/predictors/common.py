@@ -1,4 +1,4 @@
-from typing import Protocol, Self, Any
+from typing import Protocol, Self, Any, runtime_checkable
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
@@ -81,6 +81,7 @@ class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT](Pr
         ...
 
 
+# TODO: Check if this can be removed and replaced with ObstacleStates.
 class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the obstacle state sequences as a NumPy array."""
@@ -106,8 +107,8 @@ class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Prot
         ...
 
 
-class CovarianceSequences[T: int, D_c: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_c, D_c, K]]:
+class CovarianceSequences[T: int, D_o: int, K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, D_o, K]]:
         """Returns the covariance sequences as a NumPy array."""
         ...
 
@@ -117,7 +118,7 @@ class CovarianceSequences[T: int, D_c: int, K: int](Protocol):
         ...
 
     @property
-    def dimension(self) -> D_c:
+    def dimension(self) -> D_o:
         """The dimension of the covariance matrices."""
         ...
 
@@ -127,9 +128,35 @@ class CovarianceSequences[T: int, D_c: int, K: int](Protocol):
         ...
 
 
-class ObstacleModel[HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequencesT](
-    Protocol
-):
+class ObstacleControlInputSequences[T: int, D_u: int, K: int](Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, K]]:
+        """Returns the control input sequences as a NumPy array."""
+        ...
+
+    @property
+    def horizon(self) -> T:
+        """The time horizon of the control input sequences."""
+        ...
+
+    @property
+    def dimension(self) -> D_u:
+        """The dimension of the control inputs."""
+        ...
+
+    @property
+    def count(self) -> K:
+        """The number of obstacles."""
+        ...
+
+
+class ObstacleModel[
+    HistoryT,
+    StatesT,
+    VelocitiesT,
+    InputSequencesT,
+    StateSequencesT,
+    JacobianT = Any,
+](Protocol):
     def estimate_state_from(
         self, history: HistoryT
     ) -> EstimatedObstacleStates[StatesT, VelocitiesT]:
@@ -144,6 +171,26 @@ class ObstacleModel[HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequen
 
     def forward(self, *, current: StatesT, inputs: InputSequencesT) -> StateSequencesT:
         """Simulates the objects forward in time given the current states and control inputs."""
+        ...
+
+    # TODO: Review!
+    def state_jacobian(
+        self, *, states: StateSequencesT, inputs: InputSequencesT
+    ) -> JacobianT:
+        """Computes the state Jacobian F = ∂f/∂x of the model's forward function.
+
+        This describes how state uncertainty propagates through the dynamics.
+        """
+        ...
+
+    # TODO: Review!
+    def input_jacobian(
+        self, *, states: StateSequencesT, inputs: InputSequencesT
+    ) -> JacobianT:
+        """Computes the input Jacobian G = ∂f/∂u of the model's forward function.
+
+        This describes how input uncertainty enters the state dynamics.
+        """
         ...
 
 
@@ -166,8 +213,26 @@ class VelocityAssumptionProvider[VelocitiesT](Protocol):
 
 
 class CovariancePropagator[StateSequencesT, CovarianceSequencesT](Protocol):
-    def propagate(self, *, states: StateSequencesT) -> CovarianceSequencesT:
-        """Propagates the covariance of obstacle states over time."""
+    def propagate(
+        self, *, states: StateSequencesT, inputs: Any = None
+    ) -> CovarianceSequencesT:
+        """Propagates the covariance of obstacle states over time.
+
+        Args:
+            states: The predicted obstacle state sequences.
+            inputs: Optional control input sequences, required by state-dependent
+                propagators such as EKF.
+        """
+        ...
+
+
+# NOTE: Simplifies JAX type checking.
+@runtime_checkable
+class CovarianceExtractor[InputCovarianceT, OutputCovarianceT](Protocol):
+    def __call__(self, covariance: InputCovarianceT, /) -> OutputCovarianceT:
+        """Extracts parts of the input covariance to produce the output covariance.
+
+        For example, an extractor may take only the position part of a full state covariance."""
         ...
 
 

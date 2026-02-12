@@ -1,5 +1,7 @@
-from typing import cast
+from typing import Any, Protocol, cast
 from dataclasses import dataclass
+
+from trajax import ObstacleModel, ObstacleStateSequences, ObstacleControlInputSequences
 
 from numtypes import Array, Shape, Dims, shape_of
 
@@ -12,7 +14,134 @@ class DisplacementEstimates[ShapeT: Shape]:
     delta_y: Array[ShapeT]
 
 
+class ObstacleStatesWrapper[StatesT, D_o: int = Any, K: int = Any](Protocol):
+    def __call__(self, states: Array[Dims[D_o, K]]) -> StatesT:
+        """Wraps a raw obstacle state array into the type expected by the obstacle model."""
+        ...
+
+
+class ObstacleControlInputSequencesWrapper[
+    InputSequencesT,
+    T: int = Any,
+    D_u: int = Any,
+    K: int = Any,
+](Protocol):
+    def __call__(self, inputs: Array[Dims[T, D_u, K]]) -> InputSequencesT:
+        """Wraps a raw control input array into the type expected by the obstacle model."""
+        ...
+
+
 class estimate:
+    @staticmethod
+    def state_jacobian[
+        T: int,
+        D_o: int,
+        K: int,
+        D_u: int,
+        StatesT,
+        StateSequencesT: ObstacleStateSequences,
+        InputSequencesT: ObstacleControlInputSequences,
+    ](
+        obstacle_model: ObstacleModel[
+            Any, StatesT, Any, InputSequencesT, StateSequencesT, Any
+        ],
+        *,
+        states: StateSequencesT,
+        inputs: InputSequencesT,
+        to_states: ObstacleStatesWrapper[StatesT, D_o, K],
+        to_inputs: ObstacleControlInputSequencesWrapper[InputSequencesT, T, D_u, K],
+        epsilon: float = 1e-6,
+    ) -> Array[Dims[T, D_o, D_o, K]]:
+        """Computes the state Jacobian F = ∂f/∂x via central finite differences.
+
+        For each time step t, computes the Jacobian ∂f/∂x by perturbing states[t]
+        and measuring the change in the forward model's output.
+        """
+        state_array = np.asarray(states)
+        input_array = np.asarray(inputs)
+        T, D_o, K = state_array.shape
+
+        jacobians = np.zeros((T, D_o, D_o, K))
+        perturbations = np.tile(np.eye(D_o) * epsilon, (1, K))
+
+        for t in range(T):
+            base_tiled = np.repeat(state_array[t], D_o, axis=1)
+            input_tiled = np.repeat(input_array[t : t + 1], D_o, axis=2)
+
+            results_plus = np.asarray(
+                obstacle_model.forward(
+                    current=to_states(base_tiled + perturbations),
+                    inputs=to_inputs(input_tiled),
+                )
+            )
+            results_minus = np.asarray(
+                obstacle_model.forward(
+                    current=to_states(base_tiled - perturbations),
+                    inputs=to_inputs(input_tiled),
+                )
+            )
+
+            diff = (results_plus[0] - results_minus[0]) / (2 * epsilon)
+            jacobians[t] = diff.reshape(D_o, K, D_o).transpose(0, 2, 1)
+
+        return jacobians
+
+    # TODO: Review!
+    @staticmethod
+    def input_jacobian[
+        T: int,
+        D_o: int,
+        K: int,
+        D_u: int,
+        StatesT,
+        StateSequencesT: ObstacleStateSequences,
+        InputSequencesT: ObstacleControlInputSequences,
+    ](
+        obstacle_model: ObstacleModel[
+            Any, StatesT, Any, InputSequencesT, StateSequencesT, Any
+        ],
+        *,
+        states: StateSequencesT,
+        inputs: InputSequencesT,
+        to_states: ObstacleStatesWrapper[StatesT, D_o, K],
+        to_inputs: ObstacleControlInputSequencesWrapper[InputSequencesT, T, D_u, K],
+        epsilon: float = 1e-6,
+    ) -> Array[Dims[T, D_o, D_u, K]]:
+        """Computes the input Jacobian G = ∂f/∂u via central finite differences.
+
+        For each time step t, computes the Jacobian ∂f/∂u by perturbing inputs[t]
+        and measuring the change in the forward model's output.
+        """
+        state_array = np.asarray(states)
+        input_array = np.asarray(inputs)
+        T, D_o, K = state_array.shape
+        _, D_u, _ = input_array.shape
+
+        jacobians = np.zeros((T, D_o, D_u, K))
+
+        for t in range(T):
+            for u in range(D_u):
+                perturbation = np.zeros((1, D_u, K))
+                perturbation[0, u, :] = epsilon
+
+                results_plus = np.asarray(
+                    obstacle_model.forward(
+                        current=to_states(state_array[t]),
+                        inputs=to_inputs(input_array[t : t + 1] + perturbation),
+                    )
+                )
+                results_minus = np.asarray(
+                    obstacle_model.forward(
+                        current=to_states(state_array[t]),
+                        inputs=to_inputs(input_array[t : t + 1] - perturbation),
+                    )
+                )
+
+                diff = (results_plus[0] - results_minus[0]) / (2 * epsilon)
+                jacobians[t, :, u, :] = diff
+
+        return jacobians
+
     @staticmethod
     def displacements[T: int, M: int](
         *,
@@ -42,6 +171,14 @@ class estimate:
 
 class compute:
     @staticmethod
+    def condition_number[D: int = int](
+        matrix: Array[Dims[D, D]],
+    ) -> float:
+        """Computes the condition number (ratio of max to min eigenvalue) of a symmetric matrix."""
+        eigenvalues = np.linalg.eigvalsh(matrix)
+        return eigenvalues.max() / eigenvalues.min()
+
+    @staticmethod
     def angular_distance[ShapeT: Shape](
         theta_1: float | Array[ShapeT], theta_2: float | Array[ShapeT]
     ) -> float | Array[ShapeT]:
@@ -50,7 +187,7 @@ class compute:
         Always returns a positive value in [0, π].
 
         Example:
-            angular_distance(0.1, 6.18) -> 0.1
+            angular_distance(0.1, 2*np.pi) -> 0.1
         """
         theta_1 = cast(Array[ShapeT], np.asarray(theta_1))
         theta_2 = cast(Array[ShapeT], np.asarray(theta_2))
@@ -61,3 +198,87 @@ class compute:
         assert shape_of(wrapped, matches=theta_1.shape, name="angular distance")
 
         return wrapped
+
+
+class check:
+    @staticmethod
+    def is_spd[T: int = int, D: int = int, K: int = int](
+        matrices: Array[Dims[T, D, D, K]], atol: float = 1e-6
+    ) -> bool:
+        """Check if matrices are symmetric positive semi-definite."""
+        T, D1, D2, K = matrices.shape
+
+        assert D1 == D2, "Covariance matrices must be square."
+
+        flat = matrices.transpose(0, 3, 1, 2).reshape(-1, D1, D1)
+
+        assert np.abs(flat - flat.swapaxes(-1, -2)).max() <= atol, (
+            f"Matrices are not symmetric within tolerance {atol}."
+        )
+
+        assert np.linalg.eigvalsh(flat).min() > -atol, (
+            f"Matrices are not positive semi-definite within tolerance {atol}."
+        )
+
+        return True
+
+    @staticmethod
+    def has_diagonal_padding[T: int = int, D: int = int, K: int = int](
+        matrices: Array[Dims[T, D, D, K]],
+        *,
+        from_dimension: int,
+        epsilon: float,
+        atol: float = 1e-9,
+    ) -> bool:
+        """Check that padded region has diagonal values = epsilon and off-diagonals = 0.
+
+        For a matrix padded from D_m to D_p:
+            [A B]   A is D_m x D_m (original matrix)
+            [C D]   B is D_m x (D_p - D_m) (upper rectangle, should be 0)
+                    C is (D_p - D_m) x D_m (lower rectangle, should be 0)
+                    D is (D_p - D_m) x (D_p - D_m) (diagonal with epsilon)
+
+        Args:
+            matrices: Matrices with shape (T, D, D, K).
+            from_dimension: The original (non-padded) dimension.
+            epsilon: Expected value on the diagonal of the padded region.
+            atol: Absolute tolerance for floating point comparisons.
+        """
+        D = matrices.shape[1]
+        D_m = from_dimension
+
+        if (D_pad := D - D_m) <= 0:
+            return True  # NOTE: No padding, nothing to check
+
+        assert np.allclose(
+            upper_rectangle := matrices[:, :D_m, D_m:, :], 0, atol=atol
+        ), (
+            f"Upper rectangle (cross-covariance with padded dimensions) should be 0. Got: {upper_rectangle}"
+        )
+
+        assert np.allclose(
+            lower_rectangle := matrices[:, D_m:, :D_m, :], 0, atol=atol
+        ), (
+            f"Lower rectangle (cross-covariance with padded dimensions) should be 0. Got: {lower_rectangle}"
+        )
+
+        # NOTE: Transpose so triu/tril apply to matrix dimensions
+        padded_region = np.moveaxis(matrices[:, D_m:, D_m:, :], -1, 1)
+
+        assert np.allclose(
+            off_diagonals_upper := np.triu(padded_region, k=1), 0, atol=atol
+        ) and np.allclose(
+            off_diagonals_lower := np.tril(padded_region, k=-1), 0, atol=atol
+        ), (
+            f"Off-diagonal elements in padded region should be exactly 0. Got upper: {off_diagonals_upper}, lower: {off_diagonals_lower}"
+        )
+
+        assert np.allclose(
+            diagonals := np.array(
+                [matrices[:, D_m + i, D_m + i, :] for i in range(D_pad)]
+            ),
+            epsilon,
+            atol=atol,
+        ), f"Diagonal elements in padded region should be {epsilon}. Got: {diagonals}"
+
+        return True

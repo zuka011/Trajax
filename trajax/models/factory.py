@@ -9,8 +9,12 @@ from trajax.models.integrator import (
 from trajax.models.bicycle import (
     NumPyBicycleModel,
     NumPyBicycleObstacleModel,
+    NumPyBicyclePoseCovarianceExtractor,
+    NumPyBicyclePositionCovarianceExtractor,
     JaxBicycleModel,
     JaxBicycleObstacleModel,
+    JaxBicyclePoseCovarianceExtractor,
+    JaxBicyclePositionCovarianceExtractor,
 )
 from trajax.models.unicycle import (
     NumPyUnicycleModel,
@@ -30,6 +34,10 @@ class model:
             dynamical: Final = NumPyBicycleModel.create
             obstacle: Final = NumPyBicycleObstacleModel.create
 
+            class covariance_of:
+                pose: Final = NumPyBicyclePoseCovarianceExtractor
+                position: Final = NumPyBicyclePositionCovarianceExtractor
+
         class unicycle:
             dynamical: Final = NumPyUnicycleModel.create
             obstacle: Final = NumPyUnicycleObstacleModel.create
@@ -42,6 +50,10 @@ class model:
         class bicycle:
             dynamical: Final = JaxBicycleModel.create
             obstacle: Final = JaxBicycleObstacleModel.create
+
+            class covariance_of:
+                pose: Final = JaxBicyclePoseCovarianceExtractor
+                position: Final = JaxBicyclePositionCovarianceExtractor
 
         class unicycle:
             dynamical: Final = JaxUnicycleModel.create

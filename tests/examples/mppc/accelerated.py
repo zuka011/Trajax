@@ -627,12 +627,17 @@ class configure:
                                     prediction=bicycle_to_obstacle_states,
                                     propagator=propagator.linear(
                                         time_step_size=dt,
-                                        initial_covariance=propagator.covariance.constant_variance(
-                                            position_variance=0.01,
-                                            velocity_variance=1.0,
+                                        # TODO: Review!
+                                        covariance=propagator.covariance.composite(
+                                            state_provider=propagator.covariance.constant_variance(
+                                                variance=0.01, dimension=2
+                                            ),
+                                            input_provider=propagator.covariance.constant_variance(
+                                                variance=1.0, dimension=2
+                                            ),
                                         ),
-                                        padding=propagator.padding(
-                                            to_dimension=3, epsilon=1e-9
+                                        resizing=propagator.covariance.resize(
+                                            pad_to=3, epsilon=1e-9
                                         ),
                                     )
                                     if use_covariance_propagation
@@ -806,12 +811,17 @@ class configure:
                                     prediction=bicycle_to_obstacle_states,
                                     propagator=propagator.linear(
                                         time_step_size=dt,
-                                        initial_covariance=propagator.covariance.constant_variance(
-                                            position_variance=0.01,
-                                            velocity_variance=1.0,
+                                        # TODO: Review!
+                                        covariance=propagator.covariance.composite(
+                                            state_provider=propagator.covariance.constant_variance(
+                                                variance=0.01, dimension=2
+                                            ),
+                                            input_provider=propagator.covariance.constant_variance(
+                                                variance=1.0, dimension=2
+                                            ),
                                         ),
-                                        padding=propagator.padding(
-                                            to_dimension=3, epsilon=1e-9
+                                        resizing=propagator.covariance.resize(
+                                            pad_to=3, epsilon=1e-9
                                         ),
                                     )
                                     if use_covariance_propagation

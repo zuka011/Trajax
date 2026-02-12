@@ -5,6 +5,7 @@ from trajax.types import (
     ObstacleStatesForTimeStep,
     ObstacleStatesHistory,
     CovariancePropagator,
+    CovarianceExtractor,
     ObstacleModel,
     PredictionCreator,
     VelocityAssumptionProvider,
@@ -18,20 +19,50 @@ class NoCovariance:
         return None
 
 
-@dataclass(kw_only=True, frozen=True)
-class CovariancePadding:
-    """Pads a covariance matrix to a target dimension with a small epsilon diagonal."""
+class KeepFullCovariance:
+    """Covariance extractor that keeps the full covariance matrix unchanged."""
 
-    to_dimension: int
+    def __call__(self, covariance: Any, /) -> Any:
+        return covariance
+
+
+@dataclass(kw_only=True, frozen=True)
+class CovarianceResizing[InputCovarianceT, OutputCovarianceT]:
+    """Extracts state dimensions and pads a covariance matrix to a target dimension with a small epsilon diagonal."""
+
+    keep: CovarianceExtractor[InputCovarianceT, OutputCovarianceT]
+    pad_to: int | None
     epsilon: float
 
     @staticmethod
-    def create(*, to_dimension: int, epsilon: float) -> "CovariancePadding":
-        return CovariancePadding(to_dimension=to_dimension, epsilon=epsilon)
+    def identity() -> "CovarianceResizing[Any, Any]":
+        """Returns a covariance resizing that leaves the covariance unchanged."""
+        return CovarianceResizing.create()
 
-    def __post_init__(self):
-        assert self.to_dimension > 0, (
-            f"Covariance target dimension must be positive, got {self.to_dimension}."
+    @staticmethod
+    def create[I, O](
+        *,
+        keep: CovarianceExtractor[I, O] | None = None,
+        pad_to: int | None = None,
+        epsilon: float = 1e-13,
+    ) -> "CovarianceResizing[I, O]":
+        """Creates a covariance resizing description.
+
+        A covariance resizing consists of two parts:
+        1. An extractor that extracts the relevant covariance submatrix.
+        2. A padding specification that pads the extracted covariance to the desired dimension.
+
+        Both of the parts are optional, so a resizing can also leave the covariance unchanged.
+        """
+        return CovarianceResizing(
+            keep=keep or cast(CovarianceExtractor[I, O], KeepFullCovariance()),
+            pad_to=pad_to,
+            epsilon=epsilon,
+        )
+
+    def __post_init__(self) -> None:
+        assert self.pad_to is None or self.pad_to > 0, (
+            f"Covariance target dimension after padding must be positive, got {self.pad_to}."
         )
         assert self.epsilon > 0, (
             f"Covariance padding epsilon must be positive, got {self.epsilon}."
@@ -45,7 +76,7 @@ class StaticPredictor:
     horizon: int
 
     @staticmethod
-    def create(*, horizon: int) -> "StaticPredictor ":
+    def create(*, horizon: int) -> "StaticPredictor":
         return StaticPredictor(horizon=horizon)
 
     def predict[PredictionT](
@@ -120,6 +151,6 @@ class CurvilinearPredictor[
             velocities, states=estimated.states, horizon=self.horizon
         )
         states = self.model.forward(current=estimated.states, inputs=inputs)
-        covariances = self.propagator.propagate(states=states)
+        covariances = self.propagator.propagate(states=states, inputs=inputs)
 
         return self.prediction(states=states, covariances=covariances)

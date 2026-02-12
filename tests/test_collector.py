@@ -26,7 +26,7 @@ class test_that_collector_registry_discards_incomplete_data_for_time_step:
         states = data.state_batch(
             np.random.rand(T := 4, D_x := 5, M := 1),
         )
-        obstacle_states = data.obstacle_states(
+        obstacle_states = data.obstacle_2d_poses(
             x=(x_data := np.random.rand(T, K := 3)),
             y=(y_data := np.random.rand(T, K)),
             heading=(heading_data := np.random.rand(T, K)),
@@ -194,22 +194,22 @@ class test_that_obstacle_state_collector_works_when_number_of_obstacles_varies:
     @staticmethod
     def cases(data, types) -> Sequence[tuple]:
         obstacle_states = [
-            data.obstacle_states_for_time_step(
+            data.obstacle_2d_poses_for_time_step(
                 x=array([0.0, 1.0], shape=(K_0 := 2,)),
                 y=array([1.0, 2.0], shape=(K_0,)),
                 heading=array([0.0, 3.0], shape=(K_0,)),
             ),
-            data.obstacle_states_for_time_step(
+            data.obstacle_2d_poses_for_time_step(
                 x=array([0.0, 1.0, 2.0], shape=(K_1 := 3,)),
                 y=array([1.0, 2.0, 3.0], shape=(K_1,)),
                 heading=array([0.0, 3.0, 6.0], shape=(K_1,)),
             ),
-            data.obstacle_states_for_time_step(
+            data.obstacle_2d_poses_for_time_step(
                 x=array([0.0], shape=(K_2 := 1,)),
                 y=array([1.0], shape=(K_2,)),
                 heading=array([0.0], shape=(K_2,)),
             ),
-            data.obstacle_states_for_time_step(
+            data.obstacle_2d_poses_for_time_step(
                 x=array([], shape=(K_3 := 0,)),
                 y=array([], shape=(K_3,)),
                 heading=array([], shape=(K_3,)),

@@ -295,6 +295,28 @@ class NumPyIntegratorObstacleModel(
 
         return NumPyIntegratorObstacleStateSequences(result)
 
+    # TODO: Review!
+    def state_jacobian[T: int, D_o: int, K: int](
+        self,
+        *,
+        states: NumPyIntegratorObstacleStateSequences[int, D_o, K],
+        inputs: NumPyIntegratorObstacleControlInputSequences[T, D_o, K],
+    ) -> Array[Dims[T, D_o, D_o, K]]:
+        raise NotImplementedError(
+            "State Jacobian is not implemented for NumPyIntegratorObstacleModel."
+        )
+
+    # TODO: Review!
+    def input_jacobian[T: int, D_o: int, K: int](
+        self,
+        *,
+        states: NumPyIntegratorObstacleStateSequences[T, D_o, K],
+        inputs: NumPyIntegratorObstacleControlInputSequences[T, D_o, K],
+    ) -> Array[Dims[T, D_o, D_o, K]]:
+        raise NotImplementedError(
+            "Input Jacobian is not implemented for NumPyIntegratorObstacleModel."
+        )
+
 
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
     assert state_limits is not None, (

@@ -24,9 +24,14 @@ from trajax.types import (
     BICYCLE_D_U,
     BicycleD_o,
     BICYCLE_D_O,
+    BicyclePoseD_o,
+    BICYCLE_POSE_D_O,
+    BicyclePositionD_o,
+    BICYCLE_POSITION_D_O,
     DynamicalModel,
     ObstacleModel,
     EstimatedObstacleStates,
+    CovarianceExtractor,
 )
 
 from numtypes import Array, Dims, D, shape_of, array
@@ -42,6 +47,16 @@ type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, BicycleD_u, M]]
 
 type StatesAtTimeStep[M: int] = Array[Dims[BicycleD_x, M]]
 type ControlInputsAtTimeStep[M: int] = Array[Dims[BicycleD_u, M]]
+
+type BicycleObstacleStateCovarianceArray[T: int, K: int] = Array[
+    Dims[T, BicycleD_o, BicycleD_o, K]
+]
+type BicycleObstaclePoseCovarianceArray[T: int, K: int] = Array[
+    Dims[T, BicyclePoseD_o, BicyclePoseD_o, K]
+]
+type BicycleObstaclePositionCovarianceArray[T: int, K: int] = Array[
+    Dims[T, BicyclePositionD_o, BicyclePositionD_o, K]
+]
 
 
 @dataclass(frozen=True)
@@ -341,6 +356,12 @@ class NumPyBicycleObstacleStates[K: int]:
     array: Array[Dims[BicycleD_o, K]]
 
     @staticmethod
+    def wrap[K_: int](
+        array: Array[Dims[BicycleD_o, K_]],
+    ) -> "NumPyBicycleObstacleStates[K_]":
+        return NumPyBicycleObstacleStates(array)
+
+    @staticmethod
     def create(
         *,
         x: Array[Dims[K]],
@@ -356,6 +377,12 @@ class NumPyBicycleObstacleStates[K: int]:
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
         return self.array
+
+    def heading(self) -> Array[Dims[K]]:
+        return self.array[2, :]
+
+    def speed(self) -> Array[Dims[K]]:
+        return self.array[3, :]
 
     @property
     def dimension(self) -> BicycleD_o:
@@ -456,6 +483,12 @@ class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
     array: Array[Dims[T, BicycleD_u, K]]
 
     @staticmethod
+    def wrap[T_: int, K_: int](
+        array: Array[Dims[T_, BicycleD_u, K_]],
+    ) -> "NumPyBicycleObstacleControlInputSequences[T_, K_]":
+        return NumPyBicycleObstacleControlInputSequences(array)
+
+    @staticmethod
     def create(
         *,
         accelerations: Array[Dims[T, K]],
@@ -471,6 +504,9 @@ class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, K]]:
         return self.array
+
+    def steering_angles(self) -> Array[Dims[T, K]]:
+        return self.array[:, 1, :]
 
     @property
     def horizon(self) -> T:
@@ -686,6 +722,51 @@ class NumPyBicycleObstacleModel(
             speed=result[:, 3, :],
         )
 
+    def state_jacobian[T: int, K: int](
+        self,
+        *,
+        states: NumPyBicycleObstacleStateSequences[T, K],
+        inputs: NumPyBicycleObstacleControlInputSequences[T, K],
+    ) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
+        return state_jacobian(
+            heading=states.heading(),
+            speed=states.speed(),
+            steering_angle=inputs.steering_angles(),
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
+
+    def input_jacobian[T: int, K: int](
+        self,
+        *,
+        states: NumPyBicycleObstacleStateSequences[T, K],
+        inputs: NumPyBicycleObstacleControlInputSequences[T, K],
+    ) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
+        return input_jacobian(
+            speed=states.speed(),
+            steering_angle=inputs.steering_angles(),
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
+
+
+class NumPyBicyclePoseCovarianceExtractor(CovarianceExtractor):
+    """Extracts the pose-related state covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePoseCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSE_D_O, :BICYCLE_POSE_D_O, :]
+
+
+class NumPyBicyclePositionCovarianceExtractor(CovarianceExtractor):
+    """Extracts x and y covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePositionCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
+
 
 def simulate[T: int, N: int](
     inputs: ControlInputBatchArray[T, N],
@@ -742,6 +823,68 @@ def step[M: int](
     new_v = np.clip(v + acceleration * time_step_size, *speed_limits)
 
     return np.stack([new_x, new_y, new_theta, new_v])
+
+
+def state_jacobian[T: int, K: int](
+    heading: Array[Dims[T, K]],
+    speed: Array[Dims[T, K]],
+    steering_angle: Array[Dims[T, K]],
+    *,
+    time_step_size: float,
+    wheelbase: float,
+) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
+    """Computes the state Jacobian F = ∂f/∂x for the bicycle model."""
+    v, theta, delta = speed, heading, steering_angle
+
+    T, K = heading.shape
+    F = np.zeros((T, BICYCLE_D_O, BICYCLE_D_O, K))
+
+    dt = time_step_size
+
+    F[:, 0, 0, :] = 1.0
+    F[:, 1, 1, :] = 1.0
+    F[:, 2, 2, :] = 1.0
+    F[:, 3, 3, :] = 1.0
+
+    F[:, 0, 2, :] = -v * np.sin(theta) * dt
+    F[:, 0, 3, :] = np.cos(theta) * dt
+    F[:, 1, 2, :] = v * np.cos(theta) * dt
+    F[:, 1, 3, :] = np.sin(theta) * dt
+    F[:, 2, 3, :] = np.tan(delta) / wheelbase * dt
+
+    assert shape_of(F, matches=(T, BICYCLE_D_O, BICYCLE_D_O, K), name="state_jacobian")
+
+    return F
+
+
+def input_jacobian[T: int, K: int](
+    speed: Array[Dims[T, K]],
+    steering_angle: Array[Dims[T, K]],
+    *,
+    time_step_size: float,
+    wheelbase: float,
+) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
+    """Computes the input Jacobian G = ∂f/∂u for the bicycle model.
+
+    For bicycle model: u = [acceleration, steering_angle]
+    G describes how control input uncertainty enters the state dynamics.
+    """
+    v, delta = speed, steering_angle
+
+    T, K = speed.shape
+    G = np.zeros((T, BICYCLE_D_O, BICYCLE_D_U, K))
+
+    dt = time_step_size
+
+    # ∂θ/∂δ = v / (L * cos²(δ)) * dt
+    G[:, 2, 1, :] = v / (wheelbase * np.cos(delta) ** 2) * dt
+
+    # ∂v/∂a = dt
+    G[:, 3, 0, :] = dt
+
+    assert shape_of(G, matches=(T, BICYCLE_D_O, BICYCLE_D_U, K), name="input_jacobian")
+
+    return G
 
 
 def estimate_speeds_from[K: int](

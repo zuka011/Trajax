@@ -5,9 +5,13 @@ from .basic import (
     NumPyBicyclePositions as NumPyBicyclePositions,
     NumPyBicycleControlInputSequence as NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch as NumPyBicycleControlInputBatch,
+    NumPyBicycleObstacleStates as NumPyBicycleObstacleStates,
     NumPyBicycleObstacleStateSequences as NumPyBicycleObstacleStateSequences,
+    NumPyBicycleObstacleControlInputSequences as NumPyBicycleObstacleControlInputSequences,
     NumPyBicycleModel as NumPyBicycleModel,
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
+    NumPyBicyclePoseCovarianceExtractor as NumPyBicyclePoseCovarianceExtractor,
+    NumPyBicyclePositionCovarianceExtractor as NumPyBicyclePositionCovarianceExtractor,
 )
 from .accelerated import (
     JaxBicycleState as JaxBicycleState,
@@ -16,7 +20,11 @@ from .accelerated import (
     JaxBicyclePositions as JaxBicyclePositions,
     JaxBicycleControlInputSequence as JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch as JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStates as JaxBicycleObstacleStates,
     JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
+    JaxBicycleObstacleControlInputSequences as JaxBicycleObstacleControlInputSequences,
     JaxBicycleModel as JaxBicycleModel,
     JaxBicycleObstacleModel as JaxBicycleObstacleModel,
+    JaxBicyclePoseCovarianceExtractor as JaxBicyclePoseCovarianceExtractor,
+    JaxBicyclePositionCovarianceExtractor as JaxBicyclePositionCovarianceExtractor,
 )
