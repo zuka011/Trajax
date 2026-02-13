@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from trajax.types import (
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     NumPyIntegratorState,
     NumPyIntegratorStateSequence,
     NumPyIntegratorStateBatch,
@@ -31,7 +32,7 @@ NO_LIMITS: Final = (float("-inf"), float("inf"))
 class NumPyIntegratorObstacleStates[D_o: int, K: int]:
     """Obstacle states represented in integrator model coordinates."""
 
-    array: Array[Dims[D_o, K]]
+    _array: Array[Dims[D_o, K]]
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self.array
@@ -43,6 +44,10 @@ class NumPyIntegratorObstacleStates[D_o: int, K: int]:
     @property
     def count(self) -> K:
         return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[D_o, K]]:
+        return self._array
 
 
 @dataclass(frozen=True)
@@ -296,7 +301,13 @@ class NumPyIntegratorObstacleModel(
 
 
 @dataclass(frozen=True)
-class NumPyFiniteDifferenceIntegratorStateEstimator:
+class NumPyFiniteDifferenceIntegratorStateEstimator(
+    ObstacleStateEstimator[
+        NumPyIntegratorObstacleStatesHistory,
+        NumPyIntegratorObstacleStates,
+        NumPyIntegratorObstacleInputs,
+    ]
+):
     time_step_size: float
 
     @staticmethod

@@ -27,6 +27,7 @@ from trajax.types import (
     BICYCLE_POSITION_D_O,
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     EstimatedObstacleStates,
     CovarianceExtractor,
 )
@@ -402,10 +403,10 @@ class JaxBicycleObstacleStates[K: int]:
     @staticmethod
     def create[K_: int](
         *,
-        x: Float[JaxArray, "K"],
-        y: Float[JaxArray, "K"],
-        heading: Float[JaxArray, "K"],
-        speed: Float[JaxArray, "K"],
+        x: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        y: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        heading: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        speed: Array[Dims[K_]] | Float[JaxArray, "K_"],
         count: K_ | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
         array = jnp.stack([x, y, heading, speed], axis=0)
@@ -413,6 +414,18 @@ class JaxBicycleObstacleStates[K: int]:
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
         return self._numpy_array
+
+    def x(self) -> Array[Dims[K]]:
+        return self._numpy_array[0, :]
+
+    def y(self) -> Array[Dims[K]]:
+        return self._numpy_array[1, :]
+
+    def heading(self) -> Array[Dims[K]]:
+        return self._numpy_array[2, :]
+
+    def speed(self) -> Array[Dims[K]]:
+        return self._numpy_array[3, :]
 
     @property
     def dimension(self) -> BicycleD_o:
@@ -500,28 +513,27 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleInputs[K: int]:
-    accelerations: Float[JaxArray, "K"]
-    steering_angles: Float[JaxArray, "K"]
+    _accelerations: Float[JaxArray, "K"]
+    _steering_angles: Float[JaxArray, "K"]
 
     @staticmethod
     def wrap[K_: int](
-        inputs: Float[JaxArray, f"{BICYCLE_D_U} K"] | Array[Dims[BicycleD_u, K_]],
+        inputs: Array[Dims[BicycleD_u, K_]] | Float[JaxArray, f"{BICYCLE_D_U} K"],
     ) -> "JaxBicycleObstacleInputs[K_]":
         inputs = jnp.asarray(inputs)
         return JaxBicycleObstacleInputs(
-            accelerations=inputs[0],
-            steering_angles=inputs[1],
+            _accelerations=inputs[0], _steering_angles=inputs[1]
         )
 
     @staticmethod
-    def create(
+    def create[K_: int](
         *,
-        accelerations: Float[JaxArray, "K"],
-        steering_angles: Float[JaxArray, "K"],
+        accelerations: Array[Dims[K_]] | Float[JaxArray, "K"],
+        steering_angles: Array[Dims[K_]] | Float[JaxArray, "K"],
     ) -> "JaxBicycleObstacleInputs[int]":
         return JaxBicycleObstacleInputs(
-            accelerations=jnp.asarray(accelerations),
-            steering_angles=jnp.asarray(steering_angles),
+            _accelerations=jnp.asarray(accelerations),
+            _steering_angles=jnp.asarray(steering_angles),
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
@@ -532,13 +544,19 @@ class JaxBicycleObstacleInputs[K: int]:
     ) -> "JaxBicycleObstacleInputs[K]":
         """Returns a version of the inputs with the specified components zeroed out."""
         return JaxBicycleObstacleInputs(
-            accelerations=jnp.zeros_like(self.accelerations)
+            _accelerations=jnp.zeros_like(self._accelerations)
             if acceleration
-            else self.accelerations,
-            steering_angles=jnp.zeros_like(self.steering_angles)
+            else self._accelerations,
+            _steering_angles=jnp.zeros_like(self._steering_angles)
             if steering_angle
-            else self.steering_angles,
+            else self._steering_angles,
         )
+
+    def accelerations(self) -> Array[Dims[K]]:
+        return self._numpy_array[0, :]
+
+    def steering_angles(self) -> Array[Dims[K]]:
+        return self._numpy_array[1, :]
 
     @property
     def dimension(self) -> BicycleD_u:
@@ -546,12 +564,20 @@ class JaxBicycleObstacleInputs[K: int]:
 
     @property
     def count(self) -> K:
-        return cast(K, self.steering_angles.shape[0])
+        return cast(K, self._steering_angles.shape[0])
+
+    @property
+    def accelerations_array(self) -> Float[JaxArray, "K"]:
+        return self._accelerations
+
+    @property
+    def steering_angles_array(self) -> Float[JaxArray, "K"]:
+        return self._steering_angles
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[BicycleD_u, K]]:
         array = np.stack(
-            [np.asarray(self.accelerations), np.asarray(self.steering_angles)], axis=0
+            [np.asarray(self._accelerations), np.asarray(self._steering_angles)], axis=0
         )
 
         assert shape_of(array, matches=(BICYCLE_D_U, self.count))
@@ -571,11 +597,11 @@ class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
         return JaxBicycleObstacleControlInputSequences(jnp.asarray(array))
 
     @staticmethod
-    def create(
+    def create[T_: int, K_: int](
         *,
-        accelerations: Float[JaxArray, "T K"],
-        steering_angles: Float[JaxArray, "T K"],
-    ) -> "JaxBicycleObstacleControlInputSequences[int, int]":
+        accelerations: Array[Dims[T_, K_]] | Float[JaxArray, "T K"],
+        steering_angles: Array[Dims[T_, K_]] | Float[JaxArray, "T K"],
+    ) -> "JaxBicycleObstacleControlInputSequences[T_, K_]":
         array = jnp.stack([accelerations, steering_angles], axis=1)
         return JaxBicycleObstacleControlInputSequences(array)
 
@@ -769,16 +795,24 @@ class JaxBicycleObstacleModel(
     def _input_to_maintain[T: int, K: int](
         self, inputs: JaxBicycleObstacleInputs[K], *, horizon: T
     ) -> JaxBicycleObstacleControlInputSequences[T, K]:
-        return JaxBicycleObstacleControlInputSequences.create(  # type: ignore[return-value]
-            accelerations=jnp.tile(inputs.accelerations[jnp.newaxis, :], (horizon, 1)),
+        return JaxBicycleObstacleControlInputSequences.create(
+            accelerations=jnp.tile(
+                inputs.accelerations_array[jnp.newaxis, :], (horizon, 1)
+            ),
             steering_angles=jnp.tile(
-                inputs.steering_angles[jnp.newaxis, :], (horizon, 1)
+                inputs.steering_angles_array[jnp.newaxis, :], (horizon, 1)
             ),
         )
 
 
 @dataclass(frozen=True)
-class JaxFiniteDifferenceBicycleStateEstimator:
+class JaxFiniteDifferenceBicycleStateEstimator(
+    ObstacleStateEstimator[
+        JaxBicycleObstacleStatesHistory,
+        JaxBicycleObstacleStates,
+        JaxBicycleObstacleInputs,
+    ]
+):
     time_step_size: Scalar
     wheelbase: Scalar
 
@@ -787,8 +821,7 @@ class JaxFiniteDifferenceBicycleStateEstimator:
         *, time_step_size: float, wheelbase: float
     ) -> "JaxFiniteDifferenceBicycleStateEstimator":
         return JaxFiniteDifferenceBicycleStateEstimator(
-            time_step_size=jnp.asarray(time_step_size),
-            wheelbase=jnp.asarray(wheelbase),
+            time_step_size=jnp.asarray(time_step_size), wheelbase=jnp.asarray(wheelbase)
         )
 
     def estimate_from[K: int, T: int = int](
@@ -834,9 +867,12 @@ class JaxFiniteDifferenceBicycleStateEstimator:
                 heading=history.heading_array[-1],
                 speed=estimated.speed,
             ),
-            inputs=JaxBicycleObstacleInputs(
-                accelerations=estimated.accelerations,
-                steering_angles=estimated.steering_angles,
+            inputs=cast(
+                JaxBicycleObstacleInputs[K],
+                JaxBicycleObstacleInputs.create(
+                    accelerations=estimated.accelerations,
+                    steering_angles=estimated.steering_angles,
+                ),
             ),
         )
 

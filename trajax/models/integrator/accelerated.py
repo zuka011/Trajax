@@ -7,6 +7,7 @@ from trajax.types import (
     jaxtyped,
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     JaxIntegratorState,
     JaxIntegratorStateSequence,
     JaxIntegratorStateBatch,
@@ -37,7 +38,7 @@ NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 class JaxIntegratorObstacleStates[D_o: int, K: int]:
     """Obstacle states represented in integrator model coordinates."""
 
-    array: Float[JaxArray, "D_o K"]
+    _array: Float[JaxArray, "D_o K"]
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self._numpy_array
@@ -49,6 +50,10 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "D_o K"]:
+        return self._array
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[D_o, K]]:
@@ -318,7 +323,13 @@ class JaxIntegratorObstacleModel(
 
 
 @dataclass(frozen=True)
-class JaxFiniteDifferenceIntegratorStateEstimator:
+class JaxFiniteDifferenceIntegratorStateEstimator(
+    ObstacleStateEstimator[
+        JaxIntegratorObstacleStatesHistory,
+        JaxIntegratorObstacleStates,
+        JaxIntegratorObstacleInputs,
+    ]
+):
     time_step_size: Scalar
 
     @staticmethod

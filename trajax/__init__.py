@@ -84,6 +84,8 @@ from .types import (
     CovarianceExtractor as CovarianceExtractor,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
     InputAssumptionProvider as InputAssumptionProvider,
+    EstimatedObstacleStates as EstimatedObstacleStates,
+    ObstacleStateEstimator as ObstacleStateEstimator,
     PredictionCreator as PredictionCreator,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,

@@ -88,7 +88,7 @@ class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Prot
         ...
 
     def single(self) -> SingleSampleT:
-        """Returns the state sequences as a sampled obstacle states with one sample."""
+        """Returns the state sequences as sampled obstacle states with one sample."""
         ...
 
     @property
@@ -157,13 +157,9 @@ class ObstacleStateEstimator[HistoryT, StatesT, InputsT](Protocol):
         ...
 
 
-class ObstacleModel[
-    HistoryT,
-    StatesT,
-    InputsT,
-    StateSequencesT,
-    JacobianT = Any,
-](Protocol):
+class ObstacleModel[HistoryT, StatesT, InputsT, StateSequencesT, JacobianT = Any](
+    Protocol
+):
     def forward(
         self, *, current: StatesT, inputs: InputsT, horizon: int
     ) -> StateSequencesT:

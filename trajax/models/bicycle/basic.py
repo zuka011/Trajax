@@ -28,6 +28,7 @@ from trajax.types import (
     BICYCLE_POSITION_D_O,
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     EstimatedObstacleStates,
     CovarianceExtractor,
 )
@@ -376,6 +377,12 @@ class NumPyBicycleObstacleStates[K: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
         return self.array
 
+    def x(self) -> Array[Dims[K]]:
+        return self.array[0, :]
+
+    def y(self) -> Array[Dims[K]]:
+        return self.array[1, :]
+
     def heading(self) -> Array[Dims[K]]:
         return self.array[2, :]
 
@@ -446,15 +453,15 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleInputs[K: int]:
-    accelerations: Array[Dims[K]]
-    steering_angles: Array[Dims[K]]
+    _accelerations: Array[Dims[K]]
+    _steering_angles: Array[Dims[K]]
 
     @staticmethod
     def wrap[K_: int](
         inputs: Array[Dims[BicycleD_u, K_]],
     ) -> "NumPyBicycleObstacleInputs[K_]":
         return NumPyBicycleObstacleInputs(
-            accelerations=inputs[0], steering_angles=inputs[1]
+            _accelerations=inputs[0], _steering_angles=inputs[1]
         )
 
     @staticmethod
@@ -462,7 +469,7 @@ class NumPyBicycleObstacleInputs[K: int]:
         *, accelerations: Array[Dims[K]], steering_angles: Array[Dims[K]]
     ) -> "NumPyBicycleObstacleInputs[K]":
         return NumPyBicycleObstacleInputs(
-            accelerations=accelerations, steering_angles=steering_angles
+            _accelerations=accelerations, _steering_angles=steering_angles
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
@@ -473,13 +480,19 @@ class NumPyBicycleObstacleInputs[K: int]:
     ) -> "NumPyBicycleObstacleInputs[K]":
         """Returns a version of the inputs with the specified components zeroed out."""
         return NumPyBicycleObstacleInputs(
-            accelerations=np.zeros_like(self.accelerations)
+            _accelerations=np.zeros_like(self._accelerations)
             if acceleration
-            else self.accelerations,
-            steering_angles=np.zeros_like(self.steering_angles)
+            else self._accelerations,
+            _steering_angles=np.zeros_like(self._steering_angles)
             if steering_angle
-            else self.steering_angles,
+            else self._steering_angles,
         )
+
+    def accelerations(self) -> Array[Dims[K]]:
+        return self._accelerations
+
+    def steering_angles(self) -> Array[Dims[K]]:
+        return self._steering_angles
 
     @property
     def dimension(self) -> BicycleD_u:
@@ -487,11 +500,11 @@ class NumPyBicycleObstacleInputs[K: int]:
 
     @property
     def count(self) -> K:
-        return self.steering_angles.shape[0]
+        return self._steering_angles.shape[0]
 
     @cached_property
     def _array(self) -> Array[Dims[BicycleD_u, K]]:
-        array = np.stack([self.accelerations, self.steering_angles], axis=0)
+        array = np.stack([self._accelerations, self._steering_angles], axis=0)
 
         assert shape_of(array, matches=(BICYCLE_D_U, self.count))
 
@@ -730,15 +743,21 @@ class NumPyBicycleObstacleModel(
         self, inputs: NumPyBicycleObstacleInputs[K], *, horizon: T
     ) -> NumPyBicycleObstacleControlInputSequences[T, K]:
         return NumPyBicycleObstacleControlInputSequences.create(
-            accelerations=np.tile(inputs.accelerations[np.newaxis, :], (horizon, 1)),
+            accelerations=np.tile(inputs.accelerations()[np.newaxis, :], (horizon, 1)),
             steering_angles=np.tile(
-                inputs.steering_angles[np.newaxis, :], (horizon, 1)
+                inputs.steering_angles()[np.newaxis, :], (horizon, 1)
             ),
         )
 
 
 @dataclass(frozen=True)
-class NumPyFiniteDifferenceBicycleStateEstimator:
+class NumPyFiniteDifferenceBicycleStateEstimator(
+    ObstacleStateEstimator[
+        NumPyBicycleObstacleStatesHistory,
+        NumPyBicycleObstacleStates,
+        NumPyBicycleObstacleInputs,
+    ]
+):
     time_step_size: float
     wheelbase: float
 
@@ -789,7 +808,7 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
                 heading=history.heading()[-1, :],
                 speed=speeds,
             ),
-            inputs=NumPyBicycleObstacleInputs(
+            inputs=NumPyBicycleObstacleInputs.create(
                 accelerations=accelerations, steering_angles=steering_angles
             ),
         )

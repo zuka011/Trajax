@@ -14,6 +14,19 @@ class DisplacementEstimates[ShapeT: Shape]:
     delta_y: Array[ShapeT]
 
 
+class ArrayConvertible(Protocol):
+    def __array__(self, dtype: Any | None = None) -> Array:
+        """Returns a representation of this object as a NumPy array."""
+        ...
+
+
+class HasObstacleCount(ArrayConvertible, Protocol):
+    @property
+    def count(self) -> int:
+        """Returns the number of obstacles represented by this object."""
+        ...
+
+
 class ObstacleStatesWrapper[StatesT, D_o: int = Any, K: int = Any](Protocol):
     def __call__(self, states: Array[Dims[D_o, K]]) -> StatesT:
         """Wraps a raw obstacle state array into the type expected by the obstacle model."""

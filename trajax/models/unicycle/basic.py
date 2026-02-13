@@ -24,6 +24,7 @@ from trajax.types import (
     UNICYCLE_D_O,
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     EstimatedObstacleStates,
 )
 
@@ -352,6 +353,12 @@ class NumPyUnicycleObstacleStates[K: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
         return self.array
 
+    def x(self) -> Array[Dims[K]]:
+        return self.array[0, :]
+
+    def y(self) -> Array[Dims[K]]:
+        return self.array[1, :]
+
     def heading(self) -> Array[Dims[K]]:
         return self.array[2, :]
 
@@ -411,15 +418,15 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
 
 @dataclass(frozen=True)
 class NumPyUnicycleObstacleInputs[K: int]:
-    linear_velocities: Array[Dims[K]]
-    angular_velocities: Array[Dims[K]]
+    _linear_velocities: Array[Dims[K]]
+    _angular_velocities: Array[Dims[K]]
 
     @staticmethod
     def wrap[K_: int](
         inputs: Array[Dims[UnicycleD_u, K_]],
     ) -> "NumPyUnicycleObstacleInputs[K_]":
         return NumPyUnicycleObstacleInputs(
-            linear_velocities=inputs[0], angular_velocities=inputs[1]
+            _linear_velocities=inputs[0], _angular_velocities=inputs[1]
         )
 
     @staticmethod
@@ -427,7 +434,7 @@ class NumPyUnicycleObstacleInputs[K: int]:
         *, linear_velocities: Array[Dims[K]], angular_velocities: Array[Dims[K]]
     ) -> "NumPyUnicycleObstacleInputs[K]":
         return NumPyUnicycleObstacleInputs(
-            linear_velocities=linear_velocities, angular_velocities=angular_velocities
+            _linear_velocities=linear_velocities, _angular_velocities=angular_velocities
         )
 
     def zeroed(
@@ -435,16 +442,22 @@ class NumPyUnicycleObstacleInputs[K: int]:
     ) -> "NumPyUnicycleObstacleInputs[K]":
         """Returns a version of the inputs with the specified components zeroed out."""
         return NumPyUnicycleObstacleInputs(
-            linear_velocities=np.zeros_like(self.linear_velocities)
+            _linear_velocities=np.zeros_like(self._linear_velocities)
             if linear_velocity
-            else self.linear_velocities,
-            angular_velocities=np.zeros_like(self.angular_velocities)
+            else self._linear_velocities,
+            _angular_velocities=np.zeros_like(self._angular_velocities)
             if angular_velocity
-            else self.angular_velocities,
+            else self._angular_velocities,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_u, K]]:
         return self._array
+
+    def linear_velocities(self) -> Array[Dims[K]]:
+        return self._linear_velocities
+
+    def angular_velocities(self) -> Array[Dims[K]]:
+        return self._angular_velocities
 
     @property
     def dimension(self) -> UnicycleD_u:
@@ -452,11 +465,11 @@ class NumPyUnicycleObstacleInputs[K: int]:
 
     @property
     def count(self) -> K:
-        return self.linear_velocities.shape[0]
+        return self._linear_velocities.shape[0]
 
     @cached_property
     def _array(self) -> Array[Dims[UnicycleD_u, K]]:
-        return np.stack([self.linear_velocities, self.angular_velocities], axis=0)
+        return np.stack([self._linear_velocities, self._angular_velocities], axis=0)
 
 
 @dataclass(frozen=True)
@@ -668,16 +681,22 @@ class NumPyUnicycleObstacleModel(
     ) -> NumPyUnicycleObstacleControlInputSequences[T, K]:
         return NumPyUnicycleObstacleControlInputSequences.create(
             linear_velocities=np.tile(
-                inputs.linear_velocities[np.newaxis, :], (horizon, 1)
+                inputs.linear_velocities()[np.newaxis, :], (horizon, 1)
             ),
             angular_velocities=np.tile(
-                inputs.angular_velocities[np.newaxis, :], (horizon, 1)
+                inputs.angular_velocities()[np.newaxis, :], (horizon, 1)
             ),
         )
 
 
 @dataclass(frozen=True)
-class NumPyFiniteDifferenceUnicycleStateEstimator:
+class NumPyFiniteDifferenceUnicycleStateEstimator(
+    ObstacleStateEstimator[
+        NumPyUnicycleObstacleStatesHistory,
+        NumPyUnicycleObstacleStates,
+        NumPyUnicycleObstacleInputs,
+    ]
+):
     time_step_size: float
 
     @staticmethod
@@ -717,7 +736,7 @@ class NumPyFiniteDifferenceUnicycleStateEstimator:
                 y=history.y()[-1],
                 heading=history.heading()[-1],
             ),
-            inputs=NumPyUnicycleObstacleInputs(
+            inputs=NumPyUnicycleObstacleInputs.create(
                 linear_velocities=linear_velocities,
                 angular_velocities=angular_velocities,
             ),
