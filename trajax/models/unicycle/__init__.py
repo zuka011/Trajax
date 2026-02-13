@@ -10,6 +10,7 @@ from .basic import (
     NumPyUnicycleObstacleControlInputSequences as NumPyUnicycleObstacleControlInputSequences,
     NumPyUnicycleModel as NumPyUnicycleModel,
     NumPyUnicycleObstacleModel as NumPyUnicycleObstacleModel,
+    NumPyFiniteDifferenceUnicycleStateEstimator as NumPyFiniteDifferenceUnicycleStateEstimator,
 )
 from .accelerated import (
     JaxUnicycleState as JaxUnicycleState,
@@ -23,4 +24,5 @@ from .accelerated import (
     JaxUnicycleObstacleControlInputSequences as JaxUnicycleObstacleControlInputSequences,
     JaxUnicycleModel as JaxUnicycleModel,
     JaxUnicycleObstacleModel as JaxUnicycleObstacleModel,
+    JaxFiniteDifferenceUnicycleStateEstimator as JaxFiniteDifferenceUnicycleStateEstimator,
 )

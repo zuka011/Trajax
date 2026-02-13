@@ -149,6 +149,14 @@ class ObstacleControlInputSequences[T: int, D_u: int, K: int](Protocol):
         ...
 
 
+class ObstacleStateEstimator[HistoryT, StatesT, InputsT](Protocol):
+    def estimate_from(
+        self, history: HistoryT
+    ) -> EstimatedObstacleStates[StatesT, InputsT]:
+        """Estimates the current states and inputs of obstacles given their history."""
+        ...
+
+
 class ObstacleModel[
     HistoryT,
     StatesT,
@@ -157,12 +165,6 @@ class ObstacleModel[
     StateSequencesT,
     JacobianT = Any,
 ](Protocol):
-    def estimate_state_from(
-        self, history: HistoryT
-    ) -> EstimatedObstacleStates[StatesT, InputsT]:
-        """Estimates the current states and inputs of objects given their history."""
-        ...
-
     def input_to_maintain(
         self, inputs: InputsT, *, states: StatesT, horizon: int
     ) -> InputSequencesT:

@@ -236,10 +236,9 @@ class NumPyIntegratorObstacleModel(
         NumPyIntegratorObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle inputs from position history and propagates with constant velocity."""
+    """Propagates integrator dynamics forward with constant velocity."""
 
     time_step: float
-    estimator: "NumPyFiniteDifferenceIntegratorStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "NumPyIntegratorObstacleModel":
@@ -247,21 +246,7 @@ class NumPyIntegratorObstacleModel(
 
         See `NumPyIntegratorModel.create` for details on the integrator dynamics.
         """
-        return NumPyIntegratorObstacleModel(
-            time_step=time_step_size,
-            estimator=NumPyFiniteDifferenceIntegratorStateEstimator.create(
-                time_step_size=time_step_size
-            ),
-        )
-
-    def estimate_state_from[D_o: int, K: int](
-        self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
-    ) -> EstimatedObstacleStates[
-        NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleInputs[D_o, K]
-    ]:
-        assert history.horizon > 0, "History must have at least one time step."
-
-        return self.estimator.estimate_from(history)
+        return NumPyIntegratorObstacleModel(time_step=time_step_size)
 
     def input_to_maintain[T: int, D_o: int, K: int](
         self,

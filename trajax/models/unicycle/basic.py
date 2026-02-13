@@ -591,29 +591,14 @@ class NumPyUnicycleObstacleModel(
         NumPyUnicycleObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle inputs from history and propagates unicycle kinematics forward."""
+    """Propagates unicycle kinematics forward given states and control inputs."""
 
     time_step_size: float
-    estimator: "NumPyFiniteDifferenceUnicycleStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "NumPyUnicycleObstacleModel":
         """Creates a NumPy unicycle obstacle model."""
-        return NumPyUnicycleObstacleModel(
-            time_step_size=time_step_size,
-            estimator=NumPyFiniteDifferenceUnicycleStateEstimator.create(
-                time_step_size=time_step_size
-            ),
-        )
-
-    def estimate_state_from[K: int](
-        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
-    ) -> EstimatedObstacleStates[
-        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K]
-    ]:
-        assert history.horizon > 0, "History must have at least one time step."
-
-        return self.estimator.estimate_from(history)
+        return NumPyUnicycleObstacleModel(time_step_size=time_step_size)
 
     def input_to_maintain[K: int](
         self,

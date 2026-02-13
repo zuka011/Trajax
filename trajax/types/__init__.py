@@ -213,6 +213,7 @@ from .predictors import (
     ObstacleStateSequences as ObstacleStateSequences,
     CovarianceSequences as CovarianceSequences,
     ObstacleControlInputSequences as ObstacleControlInputSequences,
+    ObstacleStateEstimator as ObstacleStateEstimator,
     ObstacleModel as ObstacleModel,
     PredictionCreator as PredictionCreator,
     InputAssumptionProvider as InputAssumptionProvider,

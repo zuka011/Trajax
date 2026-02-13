@@ -7,6 +7,7 @@ from trajax.types import (
     CovariancePropagator,
     CovarianceExtractor,
     ObstacleModel,
+    ObstacleStateEstimator,
     PredictionCreator,
     InputAssumptionProvider,
 )
@@ -114,6 +115,7 @@ class CurvilinearPredictor[
 
     horizon: int
     model: ObstacleModel[HistoryT, StatesT, InputsT, InputSequencesT, StateSequencesT]
+    estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT]
     propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT]
     prediction: PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT]
     assumptions: InputAssumptionProvider[InputsT]
@@ -123,6 +125,7 @@ class CurvilinearPredictor[
         *,
         horizon: int,
         model: ObstacleModel[H, S, I, IS, SS],
+        estimator: ObstacleStateEstimator[H, S, I],
         prediction: PredictionCreator[SS, CS, P],
         propagator: CovariancePropagator[SS, CS] | None = None,
         assumptions: InputAssumptionProvider[I] | None = None,
@@ -130,6 +133,7 @@ class CurvilinearPredictor[
         return CurvilinearPredictor(
             horizon=horizon,
             model=model,
+            estimator=estimator,
             prediction=prediction,
             propagator=propagator
             if propagator is not None
@@ -143,7 +147,7 @@ class CurvilinearPredictor[
         if history.horizon == 0:
             return self.prediction.empty(horizon=self.horizon)
 
-        estimated = self.model.estimate_state_from(history)
+        estimated = self.estimator.estimate_from(history)
         inputs = self.model.input_to_maintain(
             self.assumptions(estimated.inputs),
             states=estimated.states,

@@ -25,6 +25,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.integrator.estimator(time_step_size=dt),
                         prediction=prediction_creator.integrator(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -42,6 +43,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.integrator.estimator(time_step_size=dt),
                         prediction=prediction_creator.integrator(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -61,6 +63,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.integrator.estimator(time_step_size=dt),
                         prediction=prediction_creator.integrator(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -99,6 +102,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.integrator.estimator(time_step_size=dt),
                         prediction=prediction_creator.integrator(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -138,7 +142,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -157,7 +164,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -176,7 +186,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -196,7 +209,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -216,7 +232,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -236,7 +255,10 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 3),
                         model=model.bicycle.obstacle(
-                            time_step_size=(dt := 0.1), wheelbase=1.0
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -273,6 +295,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -340,6 +365,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                         ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
+                        ),
                         prediction=prediction_creator.bicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -368,6 +396,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -400,6 +431,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                         ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
+                        ),
                         prediction=prediction_creator.bicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -427,6 +461,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -458,6 +495,9 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         horizon=(T_p := 4),
                         model=model.bicycle.obstacle(
                             time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        estimator=model.bicycle.estimator(
+                            time_step_size=dt, wheelbase=L
                         ),
                         prediction=prediction_creator.bicycle(),
                     ),
@@ -531,6 +571,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -548,6 +589,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 5),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -565,6 +607,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -583,6 +626,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -600,6 +644,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 3),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -632,6 +677,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -704,6 +750,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -726,6 +773,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     predictor := create_predictor.curvilinear(
                         horizon=(T_p := 4),
                         model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        estimator=model.unicycle.estimator(time_step_size=dt),
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
@@ -791,8 +839,9 @@ class test_that_no_covariance_information_is_provided_when_propagator_is_not_ava
                 predictor := create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.bicycle.obstacle(
-                        time_step_size=(dt := 0.1), wheelbase=1.0
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                 ),
                 history := data.obstacle_2d_poses(
@@ -838,8 +887,9 @@ class test_that_position_covariance_information_is_provided_when_propagator_is_a
                 predictor := create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.bicycle.obstacle(
-                        time_step_size=(dt := 0.1), wheelbase=1.0
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     propagator=propagator.linear(
                         time_step_size=dt,
                         # TODO: Review!
@@ -908,6 +958,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                 create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
+                    estimator=model.integrator.estimator(time_step_size=dt),
                     prediction=prediction_creator.integrator(),
                     assumptions=lambda inputs: inputs.zeroed(at=(2,)),
                 ),
@@ -933,6 +984,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                     model=model.bicycle.obstacle(
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     assumptions=lambda inputs: inputs.zeroed(steering_angle=True),
                 ),
@@ -972,6 +1024,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                     model=model.bicycle.obstacle(
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     assumptions=lambda inputs: inputs.zeroed(acceleration=True),
                 ),
@@ -1003,6 +1056,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                     model=model.bicycle.obstacle(
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     assumptions=lambda inputs: inputs.zeroed(
                         acceleration=True, steering_angle=True
@@ -1046,6 +1100,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                 create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    estimator=model.unicycle.estimator(time_step_size=dt),
                     prediction=prediction_creator.unicycle(),
                     assumptions=lambda inputs: inputs.zeroed(angular_velocity=True),
                 ),
@@ -1087,6 +1142,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                 create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    estimator=model.unicycle.estimator(time_step_size=dt),
                     prediction=prediction_creator.unicycle(),
                     assumptions=lambda inputs: inputs.zeroed(linear_velocity=True),
                 ),
@@ -1115,6 +1171,7 @@ class test_that_input_assumptions_are_applied_during_prediction:
                 create_predictor.curvilinear(
                     horizon=(T_p := 4),
                     model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    estimator=model.unicycle.estimator(time_step_size=dt),
                     prediction=prediction_creator.unicycle(),
                     assumptions=lambda inputs: inputs.zeroed(
                         linear_velocity=True, angular_velocity=True

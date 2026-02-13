@@ -8,6 +8,7 @@ from .common import (
     CovarianceSequences as CovarianceSequences,
     ObstacleControlInputSequences as ObstacleControlInputSequences,
     ObstacleModel as ObstacleModel,
+    ObstacleStateEstimator as ObstacleStateEstimator,
     PredictionCreator as PredictionCreator,
     InputAssumptionProvider as InputAssumptionProvider,
     CovariancePropagator as CovariancePropagator,

@@ -681,11 +681,10 @@ class JaxBicycleObstacleModel(
         JaxBicycleObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle steering from history and propagates bicycle kinematics forward."""
+    """Propagates bicycle kinematics forward given states and control inputs."""
 
     time_step_size: Scalar
     wheelbase: Scalar
-    estimator: "JaxFiniteDifferenceBicycleStateEstimator"
 
     @staticmethod
     def create(
@@ -694,19 +693,7 @@ class JaxBicycleObstacleModel(
         return JaxBicycleObstacleModel(
             time_step_size=jnp.asarray(time_step_size),
             wheelbase=jnp.asarray(wheelbase),
-            estimator=JaxFiniteDifferenceBicycleStateEstimator.create(
-                time_step_size=time_step_size, wheelbase=wheelbase
-            ),
         )
-
-    def estimate_state_from[K: int](
-        self, history: JaxBicycleObstacleStatesHistory[int, K]
-    ) -> EstimatedObstacleStates[
-        JaxBicycleObstacleStates[K], JaxBicycleObstacleInputs[K]
-    ]:
-        assert history.horizon > 0, "History must have at least one time step."
-
-        return self.estimator.estimate_from(history)
 
     def input_to_maintain[K: int](
         self,

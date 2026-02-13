@@ -624,6 +624,9 @@ class configure:
                                     model=model.bicycle.obstacle(
                                         time_step_size=dt, wheelbase=L
                                     ),
+                                    estimator=model.bicycle.estimator(
+                                        time_step_size=dt, wheelbase=L
+                                    ),
                                     prediction=bicycle_to_obstacle_states,
                                     propagator=propagator.linear(
                                         time_step_size=dt,
@@ -806,6 +809,9 @@ class configure:
                                 predictor=predictor.curvilinear(
                                     horizon=horizon,
                                     model=model.bicycle.obstacle(
+                                        time_step_size=dt, wheelbase=L
+                                    ),
+                                    estimator=model.bicycle.estimator(
                                         time_step_size=dt, wheelbase=L
                                     ),
                                     prediction=bicycle_to_obstacle_states,

@@ -260,10 +260,9 @@ class JaxIntegratorObstacleModel(
         JaxIntegratorObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle inputs from position history and propagates with constant velocity."""
+    """Propagates integrator dynamics forward with constant velocity."""
 
     time_step: Scalar
-    estimator: "JaxFiniteDifferenceIntegratorStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "JaxIntegratorObstacleModel":
@@ -271,21 +270,7 @@ class JaxIntegratorObstacleModel(
 
         See `JaxIntegratorModel.create` for details on the integrator dynamics.
         """
-        return JaxIntegratorObstacleModel(
-            time_step=jnp.asarray(time_step_size),
-            estimator=JaxFiniteDifferenceIntegratorStateEstimator.create(
-                time_step_size=time_step_size
-            ),
-        )
-
-    def estimate_state_from[D_o: int, K: int](
-        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
-    ) -> EstimatedObstacleStates[
-        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K]
-    ]:
-        assert history.horizon > 0, "History must have at least one time step."
-
-        return self.estimator.estimate_from(history)
+        return JaxIntegratorObstacleModel(time_step=jnp.asarray(time_step_size))
 
     def input_to_maintain[D_o: int, K: int](
         self,

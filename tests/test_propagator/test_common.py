@@ -277,8 +277,9 @@ class test_that_covariance_is_resized:
                 predictor := create_predictor.curvilinear(
                     horizon=(T_p := 20),
                     model=model.bicycle.obstacle(
-                        time_step_size=(dt := 0.1), wheelbase=1.0
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.simple(
                         resize_states_to=original_dimension
                     ),
@@ -287,8 +288,9 @@ class test_that_covariance_is_resized:
                 padded_predictor := create_predictor.curvilinear(
                     horizon=(T_p := 20),
                     model=model.bicycle.obstacle(
-                        time_step_size=(dt := 0.1), wheelbase=1.0
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.simple(
                         resize_states_to=expected_dimension
                     ),
@@ -377,11 +379,13 @@ class test_that_covariance_is_always_symmetric_and_positive_semidefinite:
         create_predictor, model, create_propagator, prediction_creator, data
     ) -> Sequence[tuple]:
         dt = 0.1
+        L = 1.0
         return [
             (
                 create_predictor.curvilinear(
                     horizon=20,
-                    model=model.bicycle.obstacle(time_step_size=dt, wheelbase=1.0),
+                    model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     propagator=propagator,
                 ),
@@ -464,6 +468,7 @@ class test_that_different_backends_produce_matching_results:
                 create_predictor.curvilinear(
                     horizon=T_p,
                     model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     propagator=create_propagator.linear(
                         time_step_size=dt,
@@ -493,6 +498,7 @@ class test_that_different_backends_produce_matching_results:
                 create_predictor.curvilinear(
                     horizon=T_p,
                     model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),
+                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
                     prediction=prediction_creator.bicycle(),
                     propagator=create_propagator.ekf(
                         model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),

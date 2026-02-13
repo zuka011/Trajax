@@ -12,6 +12,7 @@ from .basic import (
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
     NumPyBicyclePoseCovarianceExtractor as NumPyBicyclePoseCovarianceExtractor,
     NumPyBicyclePositionCovarianceExtractor as NumPyBicyclePositionCovarianceExtractor,
+    NumPyFiniteDifferenceBicycleStateEstimator as NumPyFiniteDifferenceBicycleStateEstimator,
 )
 from .accelerated import (
     JaxBicycleState as JaxBicycleState,
@@ -27,4 +28,5 @@ from .accelerated import (
     JaxBicycleObstacleModel as JaxBicycleObstacleModel,
     JaxBicyclePoseCovarianceExtractor as JaxBicyclePoseCovarianceExtractor,
     JaxBicyclePositionCovarianceExtractor as JaxBicyclePositionCovarianceExtractor,
+    JaxFiniteDifferenceBicycleStateEstimator as JaxFiniteDifferenceBicycleStateEstimator,
 )
