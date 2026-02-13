@@ -17,7 +17,9 @@ class test_that_velocity_estimates_are_zero_for_single_state_history:
         tolerance = 1e-10
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[5.0, 10.0]], shape=(1, 2)),
                     y=array([[3.0, 7.0]], shape=(1, 2)),
@@ -27,7 +29,9 @@ class test_that_velocity_estimates_are_zero_for_single_state_history:
                 tolerance,
             ),
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[5.0, 10.0]], shape=(1, 2)),
                     y=array([[3.0, 7.0]], shape=(1, 2)),
@@ -37,7 +41,9 @@ class test_that_velocity_estimates_are_zero_for_single_state_history:
                 tolerance,
             ),
             (
-                estimator := model.integrator.estimator(time_step_size=dt),
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.simple_obstacle_states(
                     states=array([[[5.0, 10.0], [3.0, 7.0]]], shape=(1, 2, 2)),
                 ),
@@ -71,7 +77,9 @@ class test_that_acceleration_is_zero_for_fewer_than_three_states:
         tolerance = 1e-10
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0]], shape=(1, 1)),
                     y=array([[0.0]], shape=(1, 1)),
@@ -81,7 +89,9 @@ class test_that_acceleration_is_zero_for_fewer_than_three_states:
                 tolerance,
             ),
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [0.0]], shape=(2, 1)),

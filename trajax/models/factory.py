@@ -35,12 +35,20 @@ class model:
         class integrator:
             dynamical: Final = NumPyIntegratorModel.create
             obstacle: Final = NumPyIntegratorObstacleModel.create
-            estimator: Final = NumPyFiniteDifferenceIntegratorStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    NumPyFiniteDifferenceIntegratorStateEstimator.create
+                )
 
         class bicycle:
             dynamical: Final = NumPyBicycleModel.create
             obstacle: Final = NumPyBicycleObstacleModel.create
-            estimator: Final = NumPyFiniteDifferenceBicycleStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    NumPyFiniteDifferenceBicycleStateEstimator.create
+                )
 
             class covariance_of:
                 pose: Final = NumPyBicyclePoseCovarianceExtractor
@@ -49,18 +57,30 @@ class model:
         class unicycle:
             dynamical: Final = NumPyUnicycleModel.create
             obstacle: Final = NumPyUnicycleObstacleModel.create
-            estimator: Final = NumPyFiniteDifferenceUnicycleStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    NumPyFiniteDifferenceUnicycleStateEstimator.create
+                )
 
     class jax:
         class integrator:
             dynamical: Final = JaxIntegratorModel.create
             obstacle: Final = JaxIntegratorObstacleModel.create
-            estimator: Final = JaxFiniteDifferenceIntegratorStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    JaxFiniteDifferenceIntegratorStateEstimator.create
+                )
 
         class bicycle:
             dynamical: Final = JaxBicycleModel.create
             obstacle: Final = JaxBicycleObstacleModel.create
-            estimator: Final = JaxFiniteDifferenceBicycleStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    JaxFiniteDifferenceBicycleStateEstimator.create
+                )
 
             class covariance_of:
                 pose: Final = JaxBicyclePoseCovarianceExtractor
@@ -69,4 +89,8 @@ class model:
         class unicycle:
             dynamical: Final = JaxUnicycleModel.create
             obstacle: Final = JaxUnicycleObstacleModel.create
-            estimator: Final = JaxFiniteDifferenceUnicycleStateEstimator.create
+
+            class estimator:
+                finite_difference: Final = (
+                    JaxFiniteDifferenceUnicycleStateEstimator.create
+                )

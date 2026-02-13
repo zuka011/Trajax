@@ -173,7 +173,9 @@ class test_that_ekf_covariance_is_more_isotropic_when_turning_sharply:
                     model=model.bicycle.obstacle(
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
-                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
+                    estimator=model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=L
+                    ),
                     prediction=bicycle_prediction_creator(),
                     propagator=create_propagator.ekf(
                         model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),
@@ -251,7 +253,9 @@ class test_that_ekf_matches_linear_for_stationary_obstacles:
                 ekf := create_predictor.curvilinear(
                     horizon=(T_p := 5),
                     model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
-                    estimator=model.unicycle.estimator(time_step_size=dt),
+                    estimator=model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     prediction=unicycle_prediction_creator(),
                     propagator=create_propagator.ekf(
                         model=model.unicycle.obstacle(time_step_size=dt),
@@ -271,7 +275,9 @@ class test_that_ekf_matches_linear_for_stationary_obstacles:
                 linear := create_predictor.curvilinear(
                     horizon=T_p,
                     model=model.unicycle.obstacle(time_step_size=dt),
-                    estimator=model.unicycle.estimator(time_step_size=dt),
+                    estimator=model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     prediction=unicycle_prediction_creator(),
                     propagator=create_propagator.linear(
                         time_step_size=dt,
@@ -345,7 +351,9 @@ class test_that_ekf_covariance_depends_on_obstacle_heading:
                     model=model.bicycle.obstacle(
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
-                    estimator=model.bicycle.estimator(time_step_size=dt, wheelbase=L),
+                    estimator=model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=L
+                    ),
                     prediction=bicycle_prediction_creator(),
                     propagator=create_propagator.ekf(
                         model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),

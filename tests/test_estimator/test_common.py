@@ -22,7 +22,7 @@ class test_that_obstacle_count_in_estimated_states_matches_historical_obstacle_c
         return [
             *[
                 (
-                    estimator := model.bicycle.estimator(
+                    estimator := model.bicycle.estimator.finite_difference(
                         time_step_size=dt, wheelbase=1.0
                     ),
                     history := data.obstacle_2d_poses(
@@ -36,7 +36,9 @@ class test_that_obstacle_count_in_estimated_states_matches_historical_obstacle_c
             ],
             *[
                 (
-                    estimator := model.unicycle.estimator(time_step_size=dt),
+                    estimator := model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.obstacle_2d_poses(
                         x=array(np.random.randn(T, K), shape=(T, K)),
                         y=array(np.random.randn(T, K), shape=(T, K)),
@@ -48,7 +50,9 @@ class test_that_obstacle_count_in_estimated_states_matches_historical_obstacle_c
             ],
             *[
                 (
-                    estimator := model.integrator.estimator(time_step_size=dt),
+                    estimator := model.integrator.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.simple_obstacle_states(
                         states=array(np.random.randn(T, D_o, K), shape=(T, D_o, K)),
                     ),
@@ -82,7 +86,7 @@ class test_that_estimated_positions_are_close_to_final_historical_positions:
         return [
             *[
                 (
-                    estimator := model.bicycle.estimator(
+                    estimator := model.bicycle.estimator.finite_difference(
                         time_step_size=dt, wheelbase=1.0
                     ),
                     history := data.obstacle_2d_poses(
@@ -100,7 +104,9 @@ class test_that_estimated_positions_are_close_to_final_historical_positions:
             ],
             *[
                 (
-                    estimator := model.unicycle.estimator(time_step_size=dt),
+                    estimator := model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.obstacle_2d_poses(
                         x=array([[1.0, 2.0], [1.5, 2.5], [2.0, 3.0]], shape=(3, 2)),
                         y=array([[0.0, 1.0], [0.5, 1.5], [1.0, 2.0]], shape=(3, 2)),
@@ -116,7 +122,9 @@ class test_that_estimated_positions_are_close_to_final_historical_positions:
             ],
             *[
                 (
-                    estimator := model.integrator.estimator(time_step_size=dt),
+                    estimator := model.integrator.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.simple_obstacle_states(
                         states=array(
                             [
@@ -163,7 +171,7 @@ class test_that_estimated_heading_is_close_to_final_historical_heading:
         return [
             *[
                 (
-                    estimator := model.bicycle.estimator(
+                    estimator := model.bicycle.estimator.finite_difference(
                         time_step_size=dt, wheelbase=1.0
                     ),
                     history := data.obstacle_2d_poses(
@@ -177,7 +185,9 @@ class test_that_estimated_heading_is_close_to_final_historical_heading:
             ],
             *[
                 (
-                    estimator := model.unicycle.estimator(time_step_size=dt),
+                    estimator := model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.obstacle_2d_poses(
                         x=array([[1.0, 2.0], [1.5, 2.5]], shape=(2, 2)),
                         y=array([[0.0, 1.0], [0.5, 1.5]], shape=(2, 2)),
@@ -214,7 +224,7 @@ class test_that_all_estimates_are_finite:
         return [
             *[
                 (
-                    estimator := model.bicycle.estimator(
+                    estimator := model.bicycle.estimator.finite_difference(
                         time_step_size=dt, wheelbase=1.0
                     ),
                     history := data.obstacle_2d_poses(
@@ -227,7 +237,9 @@ class test_that_all_estimates_are_finite:
             ],
             *[
                 (
-                    estimator := model.unicycle.estimator(time_step_size=dt),
+                    estimator := model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.obstacle_2d_poses(
                         x=array(np.random.randn(T, K), shape=(T, K)),
                         y=array(np.random.randn(T, K), shape=(T, K)),
@@ -238,7 +250,9 @@ class test_that_all_estimates_are_finite:
             ],
             *[
                 (
-                    estimator := model.integrator.estimator(time_step_size=dt),
+                    estimator := model.integrator.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
                     history := data.simple_obstacle_states(
                         states=array(
                             np.random.randn(T, D_o, K) * 10, shape=(T, D_o, K)
@@ -273,7 +287,9 @@ class test_that_velocity_is_near_zero_for_stationary_obstacles:
         tolerance = 1e-6
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[1.0, 2.0], [1.0, 2.0], [1.0, 2.0]], shape=(3, 2)),
                     y=array([[3.0, 4.0], [3.0, 4.0], [3.0, 4.0]], shape=(3, 2)),
@@ -283,7 +299,9 @@ class test_that_velocity_is_near_zero_for_stationary_obstacles:
                 tolerance,
             ),
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[1.0, 2.0], [1.0, 2.0], [1.0, 2.0]], shape=(3, 2)),
                     y=array([[3.0, 4.0], [3.0, 4.0], [3.0, 4.0]], shape=(3, 2)),
@@ -293,7 +311,9 @@ class test_that_velocity_is_near_zero_for_stationary_obstacles:
                 tolerance,
             ),
             (
-                estimator := model.integrator.estimator(time_step_size=dt),
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.simple_obstacle_states(
                     states=array(
                         [[[1.0, 2.0], [3.0, 4.0], [0.5, 1.0]]] * 3, shape=(3, 3, 2)
@@ -328,7 +348,9 @@ class test_that_velocity_direction_matches_motion_direction:
         dt = 0.1
         return [
             (  # Forward motion for bicycle model
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [0.0]], shape=(2, 1)),
@@ -338,7 +360,9 @@ class test_that_velocity_direction_matches_motion_direction:
                 expected_direction := "forward",
             ),
             (  # Backward motion for bicycle model
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [1.0]], shape=(2, 1)),
@@ -348,7 +372,9 @@ class test_that_velocity_direction_matches_motion_direction:
                 expected_direction := "backward",
             ),
             (  # Forward motion for unicycle model
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [0.0]], shape=(2, 1)),
@@ -358,7 +384,9 @@ class test_that_velocity_direction_matches_motion_direction:
                 expected_direction := "forward",
             ),
             (  # Backward motion for unicycle model
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [1.0]], shape=(2, 1)),
@@ -402,7 +430,9 @@ class test_that_estimates_for_constant_velocity_motion_are_close_to_true_velocit
         tolerance = 1e-6
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array(
                         [[0.0], [velocity * dt], [velocity * dt * 2]], shape=(3, 1)
@@ -415,7 +445,9 @@ class test_that_estimates_for_constant_velocity_motion_are_close_to_true_velocit
                 tolerance,
             ),
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array(
                         [[0.0], [velocity * dt], [velocity * dt * 2]], shape=(3, 1)
@@ -428,7 +460,9 @@ class test_that_estimates_for_constant_velocity_motion_are_close_to_true_velocit
                 tolerance,
             ),
             (
-                estimator := model.integrator.estimator(time_step_size=dt),
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.simple_obstacle_states(
                     states=array(
                         [
@@ -471,7 +505,9 @@ class test_that_estimates_are_independent_across_obstacles:
         tolerance = 1e-6
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 base_history := data.obstacle_2d_poses(
                     x=array([[0.0, 10.0], [1.0, 10.0]], shape=(2, 2)),
                     y=array([[0.0, 0.0], [0.0, 0.0]], shape=(2, 2)),
@@ -486,7 +522,9 @@ class test_that_estimates_are_independent_across_obstacles:
                 tolerance,
             ),
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 base_history := data.obstacle_2d_poses(
                     x=array([[0.0, 10.0], [1.0, 10.0]], shape=(2, 2)),
                     y=array([[0.0, 0.0], [0.0, 0.0]], shape=(2, 2)),
@@ -501,7 +539,9 @@ class test_that_estimates_are_independent_across_obstacles:
                 tolerance,
             ),
             (
-                estimator := model.integrator.estimator(time_step_size=dt),
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 base_history := data.simple_obstacle_states(
                     states=array(
                         [[[0.0, 10.0], [0.0, 0.0]], [[1.0, 10.0], [0.0, 0.0]]],
@@ -561,7 +601,9 @@ class test_that_steering_is_zero_for_constant_heading:
         tolerance = 1e-6
         return [
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=1.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0], [2.0]], shape=(3, 1)),
                     y=array([[0.0], [0.0], [0.0]], shape=(3, 1)),
@@ -571,7 +613,9 @@ class test_that_steering_is_zero_for_constant_heading:
                 tolerance,
             ),
             (
-                estimator := model.bicycle.estimator(time_step_size=dt, wheelbase=2.0),
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=2.0
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0], [2.0]], shape=(3, 1)),
                     y=array([[0.0], [0.0], [0.0]], shape=(3, 1)),
@@ -607,7 +651,9 @@ class test_that_angular_velocity_is_zero_for_constant_heading:
         tolerance = 1e-6
         return [
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [0.0]], shape=(2, 1)),
@@ -619,7 +665,9 @@ class test_that_angular_velocity_is_zero_for_constant_heading:
                 tolerance,
             ),
             (
-                estimator := model.unicycle.estimator(time_step_size=dt),
+                estimator := model.unicycle.estimator.finite_difference(
+                    time_step_size=dt
+                ),
                 history := data.obstacle_2d_poses(
                     x=array([[0.0], [1.0]], shape=(2, 1)),
                     y=array([[0.0], [0.0]], shape=(2, 1)),
@@ -660,10 +708,10 @@ class test_that_steering_scales_with_wheelbase:
         delta_heading = 0.1
         return [
             (
-                small_estimator := model.bicycle.estimator(
+                small_estimator := model.bicycle.estimator.finite_difference(
                     time_step_size=dt, wheelbase=small_wheelbase
                 ),
-                large_estimator := model.bicycle.estimator(
+                large_estimator := model.bicycle.estimator.finite_difference(
                     time_step_size=dt, wheelbase=large_wheelbase
                 ),
                 history := data.obstacle_2d_poses(
