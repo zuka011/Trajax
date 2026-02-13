@@ -232,7 +232,6 @@ class NumPyIntegratorObstacleModel(
         NumPyIntegratorObstacleStatesHistory,
         NumPyIntegratorObstacleStates,
         NumPyIntegratorObstacleInputs,
-        NumPyIntegratorObstacleControlInputSequences,
         NumPyIntegratorObstacleStateSequences,
     ]
 ):
@@ -248,49 +247,51 @@ class NumPyIntegratorObstacleModel(
         """
         return NumPyIntegratorObstacleModel(time_step=time_step_size)
 
-    def input_to_maintain[T: int, D_o: int, K: int](
-        self,
-        inputs: NumPyIntegratorObstacleInputs[D_o, K],
-        *,
-        states: NumPyIntegratorObstacleStates[D_o, K],
-        horizon: T,
-    ) -> NumPyIntegratorObstacleControlInputSequences[T, D_o, K]:
-        return NumPyIntegratorObstacleControlInputSequences(
-            np.tile(inputs.array[np.newaxis, :, :], (horizon, 1, 1))
-        )
-
     def forward[T: int, D_o: int, K: int](
         self,
         *,
         current: NumPyIntegratorObstacleStates[D_o, K],
-        inputs: NumPyIntegratorObstacleControlInputSequences[T, D_o, K],
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
+        horizon: T,
     ) -> NumPyIntegratorObstacleStateSequences[T, D_o, K]:
+        input_sequences = self._input_to_maintain(inputs, horizon=horizon)
+
         result = simulate(
-            inputs=inputs.array, initial_states=current.array, time_step=self.time_step
+            inputs=input_sequences.array,
+            initial_states=current.array,
+            time_step=self.time_step,
         )
 
         return NumPyIntegratorObstacleStateSequences(result)
 
-    # TODO: Review!
     def state_jacobian[T: int, D_o: int, K: int](
         self,
         *,
-        states: NumPyIntegratorObstacleStateSequences[int, D_o, K],
-        inputs: NumPyIntegratorObstacleControlInputSequences[T, D_o, K],
+        states: NumPyIntegratorObstacleStateSequences[T, D_o, K],
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
     ) -> Array[Dims[T, D_o, D_o, K]]:
         raise NotImplementedError(
             "State Jacobian is not implemented for NumPyIntegratorObstacleModel."
         )
 
-    # TODO: Review!
     def input_jacobian[T: int, D_o: int, K: int](
         self,
         *,
         states: NumPyIntegratorObstacleStateSequences[T, D_o, K],
-        inputs: NumPyIntegratorObstacleControlInputSequences[T, D_o, K],
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
     ) -> Array[Dims[T, D_o, D_o, K]]:
         raise NotImplementedError(
             "Input Jacobian is not implemented for NumPyIntegratorObstacleModel."
+        )
+
+    def _input_to_maintain[T: int, D_o: int, K: int](
+        self,
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
+        *,
+        horizon: T,
+    ) -> NumPyIntegratorObstacleControlInputSequences[T, D_o, K]:
+        return NumPyIntegratorObstacleControlInputSequences(
+            np.tile(inputs.array[np.newaxis, :, :], (horizon, 1, 1))
         )
 
 
@@ -306,8 +307,8 @@ class NumPyFiniteDifferenceIntegratorStateEstimator:
             time_step_size=time_step_size
         )
 
-    def estimate_from[D_o: int, K: int](
-        self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
+    def estimate_from[D_o: int, K: int, T: int = int](
+        self, history: NumPyIntegratorObstacleStatesHistory[T, D_o, K]
     ) -> EstimatedObstacleStates[
         NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleInputs[D_o, K]
     ]:
@@ -318,8 +319,8 @@ class NumPyFiniteDifferenceIntegratorStateEstimator:
             inputs=NumPyIntegratorObstacleInputs(velocities),
         )
 
-    def estimate_velocities_from[D_o: int, K: int](
-        self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
+    def estimate_velocities_from[D_o: int, K: int, T: int = int](
+        self, history: NumPyIntegratorObstacleStatesHistory[T, D_o, K]
     ) -> Array[Dims[D_o, K]]:
         """Estimates velocities from position history using finite differences.
 

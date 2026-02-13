@@ -106,7 +106,6 @@ class CurvilinearPredictor[
     HistoryT: ObstacleStatesHistory,
     StatesT,
     InputsT,
-    InputSequencesT,
     StateSequencesT,
     CovarianceSequencesT,
     PredictionT,
@@ -114,22 +113,22 @@ class CurvilinearPredictor[
     """Predicts obstacle motion by estimating inputs and propagating forward with a dynamical model."""
 
     horizon: int
-    model: ObstacleModel[HistoryT, StatesT, InputsT, InputSequencesT, StateSequencesT]
+    model: ObstacleModel[HistoryT, StatesT, InputsT, StateSequencesT]
     estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT]
     propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT]
     prediction: PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT]
     assumptions: InputAssumptionProvider[InputsT]
 
     @staticmethod
-    def create[H: ObstacleStatesHistory, S, I, IS, SS, CS, P](
+    def create[H: ObstacleStatesHistory, S, I, SS, CS, P](
         *,
         horizon: int,
-        model: ObstacleModel[H, S, I, IS, SS],
+        model: ObstacleModel[H, S, I, SS],
         estimator: ObstacleStateEstimator[H, S, I],
         prediction: PredictionCreator[SS, CS, P],
         propagator: CovariancePropagator[SS, CS] | None = None,
         assumptions: InputAssumptionProvider[I] | None = None,
-    ) -> "CurvilinearPredictor[H, S, I, IS, SS, CS, P]":
+    ) -> "CurvilinearPredictor[H, S, I, SS, CS, P]":
         return CurvilinearPredictor(
             horizon=horizon,
             model=model,
@@ -148,12 +147,10 @@ class CurvilinearPredictor[
             return self.prediction.empty(horizon=self.horizon)
 
         estimated = self.estimator.estimate_from(history)
-        inputs = self.model.input_to_maintain(
-            self.assumptions(estimated.inputs),
-            states=estimated.states,
-            horizon=self.horizon,
+        inputs = self.assumptions(estimated.inputs)
+        states = self.model.forward(
+            current=estimated.states, inputs=inputs, horizon=self.horizon
         )
-        states = self.model.forward(current=estimated.states, inputs=inputs)
         covariances = self.propagator.propagate(states=states, inputs=inputs)
 
         return self.prediction(states=states, covariances=covariances)

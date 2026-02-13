@@ -449,6 +449,22 @@ class NumPyBicycleObstacleInputs[K: int]:
     accelerations: Array[Dims[K]]
     steering_angles: Array[Dims[K]]
 
+    @staticmethod
+    def wrap[K_: int](
+        inputs: Array[Dims[BicycleD_u, K_]],
+    ) -> "NumPyBicycleObstacleInputs[K_]":
+        return NumPyBicycleObstacleInputs(
+            accelerations=inputs[0], steering_angles=inputs[1]
+        )
+
+    @staticmethod
+    def create(
+        *, accelerations: Array[Dims[K]], steering_angles: Array[Dims[K]]
+    ) -> "NumPyBicycleObstacleInputs[K]":
+        return NumPyBicycleObstacleInputs(
+            accelerations=accelerations, steering_angles=steering_angles
+        )
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
         return self._array
 
@@ -636,7 +652,6 @@ class NumPyBicycleObstacleModel(
         NumPyBicycleObstacleStatesHistory,
         NumPyBicycleObstacleStates,
         NumPyBicycleObstacleInputs,
-        NumPyBicycleObstacleControlInputSequences,
         NumPyBicycleObstacleStateSequences,
     ]
 ):
@@ -654,28 +669,17 @@ class NumPyBicycleObstacleModel(
             wheelbase=wheelbase,
         )
 
-    def input_to_maintain[K: int](
-        self,
-        inputs: NumPyBicycleObstacleInputs[K],
-        *,
-        states: NumPyBicycleObstacleStates[K],
-        horizon: int,
-    ) -> NumPyBicycleObstacleControlInputSequences[int, K]:
-        return NumPyBicycleObstacleControlInputSequences.create(
-            accelerations=np.tile(inputs.accelerations[np.newaxis, :], (horizon, 1)),
-            steering_angles=np.tile(
-                inputs.steering_angles[np.newaxis, :], (horizon, 1)
-            ),
-        )
-
     def forward[T: int, K: int](
         self,
         *,
         current: NumPyBicycleObstacleStates[K],
-        inputs: NumPyBicycleObstacleControlInputSequences[T, K],
+        inputs: NumPyBicycleObstacleInputs[K],
+        horizon: T,
     ) -> NumPyBicycleObstacleStateSequences[T, K]:
+        input_sequences = self._input_to_maintain(inputs, horizon=horizon)
+
         result = simulate(
-            inputs.array,
+            input_sequences.array,
             current.array,
             time_step_size=self.time_step_size,
             wheelbase=self.wheelbase,
@@ -695,12 +699,14 @@ class NumPyBicycleObstacleModel(
         self,
         *,
         states: NumPyBicycleObstacleStateSequences[T, K],
-        inputs: NumPyBicycleObstacleControlInputSequences[T, K],
+        inputs: NumPyBicycleObstacleInputs[K],
     ) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
+        input_sequences = self._input_to_maintain(inputs, horizon=states.horizon)
+
         return state_jacobian(
             heading=states.heading(),
             speed=states.speed(),
-            steering_angle=inputs.steering_angles(),
+            steering_angle=input_sequences.steering_angles(),
             time_step_size=self.time_step_size,
             wheelbase=self.wheelbase,
         )
@@ -709,32 +715,26 @@ class NumPyBicycleObstacleModel(
         self,
         *,
         states: NumPyBicycleObstacleStateSequences[T, K],
-        inputs: NumPyBicycleObstacleControlInputSequences[T, K],
+        inputs: NumPyBicycleObstacleInputs[K],
     ) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
+        input_sequences = self._input_to_maintain(inputs, horizon=states.horizon)
+
         return input_jacobian(
             speed=states.speed(),
-            steering_angle=inputs.steering_angles(),
+            steering_angle=input_sequences.steering_angles(),
             time_step_size=self.time_step_size,
             wheelbase=self.wheelbase,
         )
 
-
-class NumPyBicyclePoseCovarianceExtractor(CovarianceExtractor):
-    """Extracts the pose-related state covariance from the full state covariance for bicycle obstacles."""
-
-    def __call__[T: int, K: int](
-        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
-    ) -> BicycleObstaclePoseCovarianceArray[T, K]:
-        return covariance[:, :BICYCLE_POSE_D_O, :BICYCLE_POSE_D_O, :]
-
-
-class NumPyBicyclePositionCovarianceExtractor(CovarianceExtractor):
-    """Extracts x and y covariance from the full state covariance for bicycle obstacles."""
-
-    def __call__[T: int, K: int](
-        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
-    ) -> BicycleObstaclePositionCovarianceArray[T, K]:
-        return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
+    def _input_to_maintain[T: int, K: int](
+        self, inputs: NumPyBicycleObstacleInputs[K], *, horizon: T
+    ) -> NumPyBicycleObstacleControlInputSequences[T, K]:
+        return NumPyBicycleObstacleControlInputSequences.create(
+            accelerations=np.tile(inputs.accelerations[np.newaxis, :], (horizon, 1)),
+            steering_angles=np.tile(
+                inputs.steering_angles[np.newaxis, :], (horizon, 1)
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -750,11 +750,34 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
             time_step_size=time_step_size, wheelbase=wheelbase
         )
 
-    def estimate_from[K: int](
-        self, history: NumPyBicycleObstacleStatesHistory[int, K]
+    def estimate_from[K: int, T: int = int](
+        self, history: NumPyBicycleObstacleStatesHistory[T, K]
     ) -> EstimatedObstacleStates[
         NumPyBicycleObstacleStates[K], NumPyBicycleObstacleInputs[K]
     ]:
+        """Estimates current states and inputs from pose history using finite differences. Zeros
+        are assumed for states that cannot be estimated due to insufficient history length.
+
+        Computes the following quantities from the kinematic bicycle model:
+
+        **Speed** (requires T ≥ 2):
+            Projection of displacement onto the heading direction (negative for reverse):
+            $$v_t = \\frac{(x_t - x_{t-1}) \\cos(\\theta_t) + (y_t - y_{t-1}) \\sin(\\theta_t)}{\\Delta t}$$
+
+        **Acceleration** (requires T ≥ 3):
+            Change in speed over time:
+            $$a_t = \\frac{v_t - v_{t-1}}{\\Delta t}$$
+
+        **Steering angle** (requires T ≥ 2):
+            Derived from the kinematic bicycle model, where $\\omega = \\frac{d\\theta}{dt}$ is the heading rate:
+            $$\\delta_t = \\arctan\\left(\\frac{L \\cdot \\omega_t}{v_t}\\right)$$
+            Zero when $|v_t| < \\epsilon$ (estimate becomes unreliable).
+
+        Args:
+            history: Obstacle pose history containing at least one entry.
+        """
+        assert history.horizon > 0, "History must contain at least one state."
+
         speeds = self.estimate_speeds_from(history)
         accelerations = self.estimate_accelerations_from(history, speeds=speeds)
         steering_angles = self.estimate_steering_angles_from(history, speeds=speeds)
@@ -771,17 +794,9 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
             ),
         )
 
-    def estimate_speeds_from[K: int](
-        self, history: NumPyBicycleObstacleStatesHistory[int, K]
+    def estimate_speeds_from[K: int, T: int = int](
+        self, history: NumPyBicycleObstacleStatesHistory[T, K]
     ) -> Array[Dims[K]]:
-        """Estimates speeds from position history using finite differences.
-
-        Speed is computed as the projection of the displacement onto the heading direction,
-        which can be negative for reverse motion:
-
-        # TODO: Fix KaTeX formatting.
-        $$v_t = ((x_t - x_{t-1}) * cos(\\theta_t) + (y_t - y_{t-1}) * sin(\\theta_t)) / (\\Delta t)$$
-        """
         if history.horizon < 2:
             return cast(Array[Dims[K]], np.zeros((history.count,)))
 
@@ -797,18 +812,12 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
             heading_current=heading[-1],
         )
 
-    def estimate_accelerations_from[K: int](
+    def estimate_accelerations_from[K: int, T: int = int](
         self,
-        history: NumPyBicycleObstacleStatesHistory[int, K],
+        history: NumPyBicycleObstacleStatesHistory[T, K],
         *,
         speeds: Array[Dims[K]],
     ) -> Array[Dims[K]]:
-        """Estimates accelerations from speed history using finite differences.
-
-        Acceleration is computed as the change in speed over time:
-
-        $$a_t = (v_t - v_{t-1}) / (\\Delta t)$$
-        """
         if history.horizon < 3:
             return cast(Array[Dims[K]], np.zeros((history.count,)))
 
@@ -827,20 +836,12 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
             ),
         )
 
-    def estimate_steering_angles_from[K: int](
+    def estimate_steering_angles_from[K: int, T: int = int](
         self,
-        history: NumPyBicycleObstacleStatesHistory[int, K],
+        history: NumPyBicycleObstacleStatesHistory[T, K],
         *,
         speeds: Array[Dims[K]],
     ) -> Array[Dims[K]]:
-        """Estimates steering angles from heading change and speed.
-
-        From the kinematic bicycle model: δ = arctan(L * ω / v)
-        where ω = dθ/dt is the heading rate.
-
-        When speed is very small, the steering angle estimate is unreliable,
-        so we return zero in those cases.
-        """
         if history.horizon < 2:
             return cast(Array[Dims[K]], np.zeros((history.count,)))
 
@@ -908,6 +909,24 @@ class NumPyFiniteDifferenceBicycleStateEstimator:
         return steering_angles
 
 
+class NumPyBicyclePoseCovarianceExtractor(CovarianceExtractor):
+    """Extracts the pose-related state covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePoseCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSE_D_O, :BICYCLE_POSE_D_O, :]
+
+
+class NumPyBicyclePositionCovarianceExtractor(CovarianceExtractor):
+    """Extracts x and y covariance from the full state covariance for bicycle obstacles."""
+
+    def __call__[T: int, K: int](
+        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
+    ) -> BicycleObstaclePositionCovarianceArray[T, K]:
+        return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
+
+
 def simulate[T: int, N: int](
     inputs: ControlInputBatchArray[T, N],
     initial: StatesAtTimeStep[N],
@@ -973,7 +992,6 @@ def state_jacobian[T: int, K: int](
     time_step_size: float,
     wheelbase: float,
 ) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
-    """Computes the state Jacobian F = ∂f/∂x for the bicycle model."""
     v, theta, delta = speed, heading, steering_angle
 
     T, K = heading.shape
@@ -1004,11 +1022,6 @@ def input_jacobian[T: int, K: int](
     time_step_size: float,
     wheelbase: float,
 ) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
-    """Computes the input Jacobian G = ∂f/∂u for the bicycle model.
-
-    For bicycle model: u = [acceleration, steering_angle]
-    G describes how control input uncertainty enters the state dynamics.
-    """
     v, delta = speed, steering_angle
 
     T, K = speed.shape

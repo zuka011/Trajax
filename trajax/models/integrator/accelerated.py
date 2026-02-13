@@ -256,7 +256,6 @@ class JaxIntegratorObstacleModel(
         JaxIntegratorObstacleStatesHistory,
         JaxIntegratorObstacleStates,
         JaxIntegratorObstacleInputs,
-        JaxIntegratorObstacleControlInputSequences,
         JaxIntegratorObstacleStateSequences,
     ]
 ):
@@ -272,25 +271,17 @@ class JaxIntegratorObstacleModel(
         """
         return JaxIntegratorObstacleModel(time_step=jnp.asarray(time_step_size))
 
-    def input_to_maintain[D_o: int, K: int](
-        self,
-        inputs: JaxIntegratorObstacleInputs[D_o, K],
-        *,
-        states: JaxIntegratorObstacleStates[D_o, K],
-        horizon: int,
-    ) -> JaxIntegratorObstacleControlInputSequences[int, D_o, K]:
-        return JaxIntegratorObstacleControlInputSequences(
-            jnp.tile(inputs.array[jnp.newaxis, :, :], (horizon, 1, 1))
-        )
-
     def forward[T: int, D_o: int, K: int](
         self,
         *,
         current: JaxIntegratorObstacleStates[D_o, K],
-        inputs: JaxIntegratorObstacleControlInputSequences[T, D_o, K],
+        inputs: JaxIntegratorObstacleInputs[D_o, K],
+        horizon: T,
     ) -> JaxIntegratorObstacleStateSequences[T, D_o, K]:
+        input_sequences = self._input_to_maintain(inputs, horizon=horizon)
+
         result = simulate(
-            controls=inputs.array,
+            controls=input_sequences.array,
             initial_state=current.array,
             time_step=self.time_step,
             state_limits=NO_LIMITS,
@@ -298,26 +289,31 @@ class JaxIntegratorObstacleModel(
         )
         return JaxIntegratorObstacleStateSequences(result)
 
-    # TODO: Review!
     def state_jacobian[T: int, D_o: int, K: int](
         self,
         *,
         states: JaxIntegratorObstacleStateSequences[T, D_o, K],
-        inputs: JaxIntegratorObstacleControlInputSequences[T, D_o, K],
+        inputs: JaxIntegratorObstacleInputs[D_o, K],
     ) -> Float[JaxArray, "T D_o D_o K"]:
         raise NotImplementedError(
             "State Jacobian is not implemented for JaxIntegratorObstacleModel."
         )
 
-    # TODO: Review!
     def input_jacobian[T: int, D_o: int, K: int](
         self,
         *,
-        states: JaxIntegratorObstacleStateSequences[int, D_o, K],
-        inputs: JaxIntegratorObstacleControlInputSequences[int, D_o, K],
+        states: JaxIntegratorObstacleStateSequences[T, D_o, K],
+        inputs: JaxIntegratorObstacleInputs[D_o, K],
     ) -> Float[JaxArray, "T D_o D_o K"]:
         raise NotImplementedError(
             "Input Jacobian is not implemented for JaxIntegratorObstacleModel."
+        )
+
+    def _input_to_maintain[T: int, D_o: int, K: int](
+        self, inputs: JaxIntegratorObstacleInputs[D_o, K], *, horizon: T
+    ) -> JaxIntegratorObstacleControlInputSequences[T, D_o, K]:
+        return JaxIntegratorObstacleControlInputSequences(
+            jnp.tile(inputs.array[jnp.newaxis, :, :], (horizon, 1, 1))
         )
 
 
@@ -333,8 +329,8 @@ class JaxFiniteDifferenceIntegratorStateEstimator:
             time_step_size=jnp.asarray(time_step_size)
         )
 
-    def estimate_from[D_o: int, K: int](
-        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
+    def estimate_from[D_o: int, K: int, T: int = int](
+        self, history: JaxIntegratorObstacleStatesHistory[T, D_o, K]
     ) -> EstimatedObstacleStates[
         JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K]
     ]:
@@ -345,8 +341,8 @@ class JaxFiniteDifferenceIntegratorStateEstimator:
             inputs=JaxIntegratorObstacleInputs(velocities),
         )
 
-    def estimate_velocities_from[D_o: int, K: int](
-        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
+    def estimate_velocities_from[D_o: int, K: int, T: int = int](
+        self, history: JaxIntegratorObstacleStatesHistory[T, D_o, K]
     ) -> Float[JaxArray, "D_o K"]:
         """Estimates velocities from position history using finite differences."""
         return estimate_velocities(history=history.array, time_step=self.time_step_size)

@@ -161,34 +161,23 @@ class ObstacleModel[
     HistoryT,
     StatesT,
     InputsT,
-    InputSequencesT,
     StateSequencesT,
     JacobianT = Any,
 ](Protocol):
-    def input_to_maintain(
-        self, inputs: InputsT, *, states: StatesT, horizon: int
-    ) -> InputSequencesT:
-        """Generates control input sequences that maintain the given inputs over the specified horizon."""
+    def forward(
+        self, *, current: StatesT, inputs: InputsT, horizon: int
+    ) -> StateSequencesT:
+        """Simulates the objects forward in time given the current states, assumed inputs, and horizon."""
         ...
 
-    def forward(self, *, current: StatesT, inputs: InputSequencesT) -> StateSequencesT:
-        """Simulates the objects forward in time given the current states and control inputs."""
-        ...
-
-    # TODO: Review!
-    def state_jacobian(
-        self, *, states: StateSequencesT, inputs: InputSequencesT
-    ) -> JacobianT:
+    def state_jacobian(self, *, states: StateSequencesT, inputs: InputsT) -> JacobianT:
         """Computes the state Jacobian F = ∂f/∂x of the model's forward function.
 
         This describes how state uncertainty propagates through the dynamics.
         """
         ...
 
-    # TODO: Review!
-    def input_jacobian(
-        self, *, states: StateSequencesT, inputs: InputSequencesT
-    ) -> JacobianT:
+    def input_jacobian(self, *, states: StateSequencesT, inputs: InputsT) -> JacobianT:
         """Computes the input Jacobian G = ∂f/∂u of the model's forward function.
 
         This describes how input uncertainty enters the state dynamics.

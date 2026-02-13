@@ -122,6 +122,7 @@ from trajax.models import (
     NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch,
     NumPyBicycleObstacleStates,
+    NumPyBicycleObstacleInputs,
     NumPyBicycleObstacleStateSequences,
     NumPyBicycleObstacleControlInputSequences,
     NumPyIntegratorObstacleStateSequences,
@@ -132,6 +133,7 @@ from trajax.models import (
     JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch,
     JaxBicycleObstacleStates,
+    JaxBicycleObstacleInputs,
     JaxBicycleObstacleStateSequences,
     JaxBicycleObstacleControlInputSequences,
     JaxIntegratorObstacleStateSequences,
@@ -142,6 +144,7 @@ from trajax.models import (
     NumPyUnicycleControlInputSequence,
     NumPyUnicycleControlInputBatch,
     NumPyUnicycleObstacleStates,
+    NumPyUnicycleObstacleInputs,
     NumPyUnicycleObstacleStateSequences,
     NumPyUnicycleObstacleControlInputSequences,
     JaxUnicycleState,
@@ -151,6 +154,7 @@ from trajax.models import (
     JaxUnicycleControlInputSequence,
     JaxUnicycleControlInputBatch,
     JaxUnicycleObstacleStates,
+    JaxUnicycleObstacleInputs,
     JaxUnicycleObstacleStateSequences,
     JaxUnicycleObstacleControlInputSequences,
 )
@@ -480,6 +484,7 @@ class types:
                 NumPyBicycleControlInputBatch[T, M]
             )
             type ObstacleStates[K: int = Any] = NumPyBicycleObstacleStates[K]
+            type ObstacleInputs[K: int = Any] = NumPyBicycleObstacleInputs[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 NumPyBicycleObstacleStateSequences[T, K]
             )
@@ -494,6 +499,7 @@ class types:
             control_input_sequence: Final = NumPyBicycleControlInputSequence
             control_input_batch: Final = NumPyBicycleControlInputBatch
             obstacle_states: Final = NumPyBicycleObstacleStates
+            obstacle_inputs: Final = NumPyBicycleObstacleInputs
             obstacle_state_sequences: Final = NumPyBicycleObstacleStateSequences
             obstacle_control_input_sequences: Final = (
                 NumPyBicycleObstacleControlInputSequences
@@ -511,6 +517,7 @@ class types:
                 NumPyUnicycleControlInputBatch[T, M]
             )
             type ObstacleStates[K: int = Any] = NumPyUnicycleObstacleStates[K]
+            type ObstacleInputs[K: int = Any] = NumPyUnicycleObstacleInputs[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 NumPyUnicycleObstacleStateSequences[T, K]
             )
@@ -525,6 +532,7 @@ class types:
             control_input_sequence: Final = NumPyUnicycleControlInputSequence
             control_input_batch: Final = NumPyUnicycleControlInputBatch
             obstacle_states: Final = NumPyUnicycleObstacleStates
+            obstacle_inputs: Final = NumPyUnicycleObstacleInputs
             obstacle_state_sequences: Final = NumPyUnicycleObstacleStateSequences
             obstacle_control_input_sequences: Final = (
                 NumPyUnicycleObstacleControlInputSequences
@@ -745,6 +753,7 @@ class types:
                 JaxBicycleControlInputBatch[T, M]
             )
             type ObstacleStates[K: int = Any] = JaxBicycleObstacleStates[K]
+            type ObstacleInputs[K: int = Any] = JaxBicycleObstacleInputs[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 JaxBicycleObstacleStateSequences[T, K]
             )
@@ -759,6 +768,7 @@ class types:
             control_input_sequence: Final = JaxBicycleControlInputSequence
             control_input_batch: Final = JaxBicycleControlInputBatch
             obstacle_states: Final = JaxBicycleObstacleStates
+            obstacle_inputs: Final = JaxBicycleObstacleInputs
             obstacle_state_sequences: Final = JaxBicycleObstacleStateSequences
             obstacle_control_input_sequences: Final = (
                 JaxBicycleObstacleControlInputSequences
@@ -774,6 +784,7 @@ class types:
                 JaxUnicycleControlInputBatch[T, M]
             )
             type ObstacleStates[K: int = Any] = JaxUnicycleObstacleStates[K]
+            type ObstacleInputs[K: int = Any] = JaxUnicycleObstacleInputs[K]
             type ObstacleStateSequences[T: int = Any, K: int = Any] = (
                 JaxUnicycleObstacleStateSequences[T, K]
             )
@@ -788,6 +799,7 @@ class types:
             control_input_sequence: Final = JaxUnicycleControlInputSequence
             control_input_batch: Final = JaxUnicycleControlInputBatch
             obstacle_states: Final = JaxUnicycleObstacleStates
+            obstacle_inputs: Final = JaxUnicycleObstacleInputs
             obstacle_state_sequences: Final = JaxUnicycleObstacleStateSequences
             obstacle_control_input_sequences: Final = (
                 JaxUnicycleObstacleControlInputSequences

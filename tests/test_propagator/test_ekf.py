@@ -18,7 +18,7 @@ import numpy as np
 from tests.dsl import mppi as data, prediction_creator
 from tests.dsl.numeric import (
     ObstacleStatesWrapper,
-    ObstacleControlInputSequencesWrapper,
+    ObstacleInputsWrapper,
     compute,
     estimate,
 )
@@ -33,13 +33,13 @@ class test_that_jacobians_match_finite_differences:
             return types.bicycle.obstacle_states.wrap(states)
 
         def bicycle_to_inputs(inputs):
-            return types.bicycle.obstacle_control_input_sequences.wrap(inputs)
+            return types.bicycle.obstacle_inputs.wrap(inputs)
 
         def unicycle_to_states(states):
             return types.unicycle.obstacle_states.wrap(states)
 
         def unicycle_to_inputs(inputs):
-            return types.unicycle.obstacle_control_input_sequences.wrap(inputs)
+            return types.unicycle.obstacle_inputs.wrap(inputs)
 
         return [
             (  # Bicycle: single obstacle
@@ -50,9 +50,9 @@ class test_that_jacobians_match_finite_differences:
                     heading=array([[0.3]], shape=(T, K)),
                     speed=array([[5.0]], shape=(T, K)),
                 ),
-                types.bicycle.obstacle_control_input_sequences.create(
-                    accelerations=array([[0.0]], shape=(T, K)),
-                    steering_angles=array([[0.1]], shape=(T, K)),
+                types.bicycle.obstacle_inputs.create(
+                    accelerations=array([0.0], shape=(K,)),
+                    steering_angles=array([0.1], shape=(K,)),
                 ),
                 bicycle_to_states,
                 bicycle_to_inputs,
@@ -66,9 +66,9 @@ class test_that_jacobians_match_finite_differences:
                     heading=array([[0.0, np.pi / 4]], shape=(T, K)),
                     speed=array([[10.0, 3.0]], shape=(T, K)),
                 ),
-                types.bicycle.obstacle_control_input_sequences.create(
-                    accelerations=array([[0.0, 0.0]], shape=(T, K)),
-                    steering_angles=array([[0.2, -0.1]], shape=(T, K)),
+                types.bicycle.obstacle_inputs.create(
+                    accelerations=array([0.0, 0.0], shape=(K,)),
+                    steering_angles=array([0.2, -0.1], shape=(K,)),
                 ),
                 bicycle_to_states,
                 bicycle_to_inputs,
@@ -81,9 +81,9 @@ class test_that_jacobians_match_finite_differences:
                     y=array([[2.0]], shape=(T, K)),
                     heading=array([[0.3]], shape=(T, K)),
                 ),
-                types.unicycle.obstacle_control_input_sequences.create(
-                    linear_velocities=array([[5.0]], shape=(T, K)),
-                    angular_velocities=array([[0.1]], shape=(T, K)),
+                types.unicycle.obstacle_inputs.create(
+                    linear_velocities=array([5.0], shape=(K,)),
+                    angular_velocities=array([0.1], shape=(K,)),
                 ),
                 unicycle_to_states,
                 unicycle_to_inputs,
@@ -96,9 +96,9 @@ class test_that_jacobians_match_finite_differences:
                     y=array([[0.0, 3.0]], shape=(T, K)),
                     heading=array([[0.0, np.pi / 4]], shape=(T, K)),
                 ),
-                types.unicycle.obstacle_control_input_sequences.create(
-                    linear_velocities=array([[10.0, 3.0]], shape=(T, K)),
-                    angular_velocities=array([[0.2, -0.1]], shape=(T, K)),
+                types.unicycle.obstacle_inputs.create(
+                    linear_velocities=array([10.0, 3.0], shape=(K,)),
+                    angular_velocities=array([0.2, -0.1], shape=(K,)),
                 ),
                 unicycle_to_states,
                 unicycle_to_inputs,
@@ -113,15 +113,13 @@ class test_that_jacobians_match_finite_differences:
             *cases(model=model.jax, types=types.jax, epsilon=1e-4),
         ],
     )
-    def test[InputSequencesT, StateSequencesT, JacobianT: ArrayLike](
+    def test[InputsT, StateSequencesT, JacobianT: ArrayLike](
         self,
-        obstacle_model: ObstacleModel[
-            Any, Any, Any, InputSequencesT, StateSequencesT, JacobianT
-        ],
+        obstacle_model: ObstacleModel[Any, Any, InputsT, StateSequencesT, JacobianT],
         states: StateSequencesT,
-        inputs: InputSequencesT,
-        to_states: ObstacleStatesWrapper[StateSequencesT],
-        to_inputs: ObstacleControlInputSequencesWrapper[InputSequencesT],
+        inputs: InputsT,
+        to_states: ObstacleStatesWrapper,
+        to_inputs: ObstacleInputsWrapper[InputsT],
         epsilon: float,
     ) -> None:
         state_jacobian = obstacle_model.state_jacobian(states=states, inputs=inputs)
