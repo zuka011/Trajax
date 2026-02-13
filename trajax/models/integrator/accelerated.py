@@ -84,18 +84,16 @@ class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxIntegratorObstacleVelocities[D_o: int, K: int]:
+class JaxIntegratorObstacleInputs[D_o: int, K: int]:
     array: Float[JaxArray, "D_o K"]
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self._numpy_array
 
-    def zeroed(
-        self, *, at: tuple[int, ...]
-    ) -> "JaxIntegratorObstacleVelocities[D_o, K]":
-        """Returns new obstacle velocities with velocities at specified state dimensions zeroed out."""
+    def zeroed(self, *, at: tuple[int, ...]) -> "JaxIntegratorObstacleInputs[D_o, K]":
+        """Returns new obstacle inputs with inputs at specified state dimensions zeroed out."""
 
-        return JaxIntegratorObstacleVelocities(self.array.at[at].set(0.0))
+        return JaxIntegratorObstacleInputs(self.array.at[at].set(0.0))
 
     @property
     def dimension(self) -> D_o:
@@ -257,14 +255,15 @@ class JaxIntegratorObstacleModel(
     ObstacleModel[
         JaxIntegratorObstacleStatesHistory,
         JaxIntegratorObstacleStates,
-        JaxIntegratorObstacleVelocities,
+        JaxIntegratorObstacleInputs,
         JaxIntegratorObstacleControlInputSequences,
         JaxIntegratorObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle velocities from position history and propagates with constant velocity."""
+    """Estimates obstacle inputs from position history and propagates with constant velocity."""
 
     time_step: Scalar
+    estimator: "JaxFiniteDifferenceIntegratorStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "JaxIntegratorObstacleModel":
@@ -272,33 +271,31 @@ class JaxIntegratorObstacleModel(
 
         See `JaxIntegratorModel.create` for details on the integrator dynamics.
         """
-        return JaxIntegratorObstacleModel(time_step=jnp.asarray(time_step_size))
+        return JaxIntegratorObstacleModel(
+            time_step=jnp.asarray(time_step_size),
+            estimator=JaxFiniteDifferenceIntegratorStateEstimator.create(
+                time_step_size=time_step_size
+            ),
+        )
 
     def estimate_state_from[D_o: int, K: int](
         self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
     ) -> EstimatedObstacleStates[
-        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleVelocities[D_o, K]
+        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        velocities = estimate_velocities(
-            history=history.array, time_step=self.time_step
-        )
-
-        return EstimatedObstacleStates(
-            states=JaxIntegratorObstacleStates(history.array[-1, :, :]),
-            velocities=JaxIntegratorObstacleVelocities(velocities),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[D_o: int, K: int](
         self,
-        velocities: JaxIntegratorObstacleVelocities[D_o, K],
+        inputs: JaxIntegratorObstacleInputs[D_o, K],
         *,
         states: JaxIntegratorObstacleStates[D_o, K],
         horizon: int,
     ) -> JaxIntegratorObstacleControlInputSequences[int, D_o, K]:
         return JaxIntegratorObstacleControlInputSequences(
-            jnp.tile(velocities.array[jnp.newaxis, :, :], (horizon, 1, 1))
+            jnp.tile(inputs.array[jnp.newaxis, :, :], (horizon, 1, 1))
         )
 
     def forward[T: int, D_o: int, K: int](
@@ -337,6 +334,37 @@ class JaxIntegratorObstacleModel(
         raise NotImplementedError(
             "Input Jacobian is not implemented for JaxIntegratorObstacleModel."
         )
+
+
+@dataclass(frozen=True)
+class JaxFiniteDifferenceIntegratorStateEstimator:
+    time_step_size: Scalar
+
+    @staticmethod
+    def create(
+        *, time_step_size: float
+    ) -> "JaxFiniteDifferenceIntegratorStateEstimator":
+        return JaxFiniteDifferenceIntegratorStateEstimator(
+            time_step_size=jnp.asarray(time_step_size)
+        )
+
+    def estimate_from[D_o: int, K: int](
+        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
+    ) -> EstimatedObstacleStates[
+        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K]
+    ]:
+        velocities = self.estimate_velocities_from(history)
+
+        return EstimatedObstacleStates(
+            states=JaxIntegratorObstacleStates(history.array[-1, :, :]),
+            inputs=JaxIntegratorObstacleInputs(velocities),
+        )
+
+    def estimate_velocities_from[D_o: int, K: int](
+        self, history: JaxIntegratorObstacleStatesHistory[int, D_o, K]
+    ) -> Float[JaxArray, "D_o K"]:
+        """Estimates velocities from position history using finite differences."""
+        return estimate_velocities(history=history.array, time_step=self.time_step_size)
 
 
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:

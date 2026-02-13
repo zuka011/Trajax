@@ -9,7 +9,7 @@ from .common import (
     ObstacleControlInputSequences as ObstacleControlInputSequences,
     ObstacleModel as ObstacleModel,
     PredictionCreator as PredictionCreator,
-    VelocityAssumptionProvider as VelocityAssumptionProvider,
+    InputAssumptionProvider as InputAssumptionProvider,
     CovariancePropagator as CovariancePropagator,
     CovarianceExtractor as CovarianceExtractor,
     ObstacleMotionPredictor as ObstacleMotionPredictor,

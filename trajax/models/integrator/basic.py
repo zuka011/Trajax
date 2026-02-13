@@ -1,5 +1,4 @@
-import math
-from typing import Final
+from typing import Final, cast
 from dataclasses import dataclass
 
 from trajax.types import (
@@ -69,21 +68,19 @@ class NumPyIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
 
 
 @dataclass(frozen=True)
-class NumPyIntegratorObstacleVelocities[D_o: int, K: int]:
+class NumPyIntegratorObstacleInputs[D_o: int, K: int]:
     array: Array[Dims[D_o, K]]
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self.array
 
-    def zeroed(
-        self, *, at: tuple[int, ...]
-    ) -> "NumPyIntegratorObstacleVelocities[D_o, K]":
-        """Returns new obstacle velocities with velocities at specified state dimensions zeroed out."""
+    def zeroed(self, *, at: tuple[int, ...]) -> "NumPyIntegratorObstacleInputs[D_o, K]":
+        """Returns new obstacle inputs with inputs at specified state dimensions zeroed out."""
 
         zeroed_array = self.array.copy()
         zeroed_array[at, :] = 0.0
 
-        return NumPyIntegratorObstacleVelocities(zeroed_array)
+        return NumPyIntegratorObstacleInputs(zeroed_array)
 
     @property
     def dimension(self) -> D_o:
@@ -234,14 +231,15 @@ class NumPyIntegratorObstacleModel(
     ObstacleModel[
         NumPyIntegratorObstacleStatesHistory,
         NumPyIntegratorObstacleStates,
-        NumPyIntegratorObstacleVelocities,
+        NumPyIntegratorObstacleInputs,
         NumPyIntegratorObstacleControlInputSequences,
         NumPyIntegratorObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle velocities from position history and propagates with constant velocity."""
+    """Estimates obstacle inputs from position history and propagates with constant velocity."""
 
     time_step: float
+    estimator: "NumPyFiniteDifferenceIntegratorStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "NumPyIntegratorObstacleModel":
@@ -249,38 +247,31 @@ class NumPyIntegratorObstacleModel(
 
         See `NumPyIntegratorModel.create` for details on the integrator dynamics.
         """
-        return NumPyIntegratorObstacleModel(time_step=time_step_size)
+        return NumPyIntegratorObstacleModel(
+            time_step=time_step_size,
+            estimator=NumPyFiniteDifferenceIntegratorStateEstimator.create(
+                time_step_size=time_step_size
+            ),
+        )
 
     def estimate_state_from[D_o: int, K: int](
         self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
     ) -> EstimatedObstacleStates[
-        NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleVelocities[D_o, K]
+        NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleInputs[D_o, K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        if history.horizon < 2:
-            velocities = np.zeros((history.dimension, history.count))
-        else:
-            velocities = (
-                history.array[-1, :, :] - history.array[-2, :, :]
-            ) / self.time_step
-
-        assert shape_of(velocities, matches=(history.dimension, history.count))
-
-        return EstimatedObstacleStates(
-            states=NumPyIntegratorObstacleStates(history.array[-1, :, :]),
-            velocities=NumPyIntegratorObstacleVelocities(velocities),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[T: int, D_o: int, K: int](
         self,
-        velocities: NumPyIntegratorObstacleVelocities[D_o, K],
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
         *,
         states: NumPyIntegratorObstacleStates[D_o, K],
         horizon: T,
     ) -> NumPyIntegratorObstacleControlInputSequences[T, D_o, K]:
         return NumPyIntegratorObstacleControlInputSequences(
-            np.tile(velocities.array[np.newaxis, :, :], (horizon, 1, 1))
+            np.tile(inputs.array[np.newaxis, :, :], (horizon, 1, 1))
         )
 
     def forward[T: int, D_o: int, K: int](
@@ -318,13 +309,69 @@ class NumPyIntegratorObstacleModel(
         )
 
 
+@dataclass(frozen=True)
+class NumPyFiniteDifferenceIntegratorStateEstimator:
+    time_step_size: float
+
+    @staticmethod
+    def create(
+        *, time_step_size: float
+    ) -> "NumPyFiniteDifferenceIntegratorStateEstimator":
+        return NumPyFiniteDifferenceIntegratorStateEstimator(
+            time_step_size=time_step_size
+        )
+
+    def estimate_from[D_o: int, K: int](
+        self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
+    ) -> EstimatedObstacleStates[
+        NumPyIntegratorObstacleStates[D_o, K], NumPyIntegratorObstacleInputs[D_o, K]
+    ]:
+        velocities = self.estimate_velocities_from(history)
+
+        return EstimatedObstacleStates(
+            states=NumPyIntegratorObstacleStates(history.array[-1, :, :]),
+            inputs=NumPyIntegratorObstacleInputs(velocities),
+        )
+
+    def estimate_velocities_from[D_o: int, K: int](
+        self, history: NumPyIntegratorObstacleStatesHistory[int, D_o, K]
+    ) -> Array[Dims[D_o, K]]:
+        """Estimates velocities from position history using finite differences.
+
+        $$v_t = (x_t - x_{t-1}) / (\\Delta t)$$
+        """
+        if history.horizon < 2:
+            return cast(
+                Array[Dims[D_o, K]], np.zeros((history.dimension, history.count))
+            )
+
+        return self._estimate_velocities_from(
+            current=history.array[-1, :, :],
+            previous=history.array[-2, :, :],
+        )
+
+    def _estimate_velocities_from[D_o: int, K: int](
+        self,
+        *,
+        current: Array[Dims[D_o, K]],
+        previous: Array[Dims[D_o, K]],
+    ) -> Array[Dims[D_o, K]]:
+        velocities = (current - previous) / self.time_step_size
+
+        assert shape_of(
+            velocities, matches=(current.shape[0], current.shape[1]), name="velocities"
+        )
+
+        return velocities
+
+
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
     assert state_limits is not None, (
         "Periodic boundaries require explicit state limits."
     )
 
     lower, upper = state_limits
-    assert math.isfinite(lower) and math.isfinite(upper), (
+    assert np.isfinite(lower) and np.isfinite(upper), (
         "Periodic boundaries must be finite."
     )
 

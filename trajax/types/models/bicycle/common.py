@@ -5,7 +5,6 @@ from trajax.types.array import DataType
 from numtypes import Array, Dims, D
 
 BICYCLE_D_X: Final = 4
-BICYCLE_D_V: Final = 1
 BICYCLE_D_U: Final = 2
 BICYCLE_D_O: Final = 4
 BICYCLE_POSE_D_O: Final = 3
@@ -13,9 +12,6 @@ BICYCLE_POSITION_D_O: Final = 2
 
 type BicycleD_x = D[4]
 """State dimension of the bicycle model, consisting of (x position, y position, heading, speed)."""
-
-type BicycleD_v = D[1]
-"""Velocity dimension of the bicycle model, consisting of the steering angle."""
 
 type BicycleD_u = D[2]
 """Control input dimension of the bicycle model, consisting of (acceleration, steering angle)."""

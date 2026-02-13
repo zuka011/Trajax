@@ -19,8 +19,6 @@ from trajax.types import (
     UnicyclePositions,
     UnicycleD_x,
     UNICYCLE_D_X,
-    UnicycleD_v,
-    UNICYCLE_D_V,
     UnicycleD_u,
     UNICYCLE_D_U,
     UnicycleD_o,
@@ -488,32 +486,36 @@ class JaxUnicycleObstacleStateSequences[T: int, K: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxUnicycleObstacleVelocities[K: int]:
+class JaxUnicycleObstacleInputs[K: int]:
     linear_velocities: Float[JaxArray, "K"]
     angular_velocities: Float[JaxArray, "K"]
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_v, K]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_u, K]]:
         return self._numpy_array
 
-    def zeroed(self, *, angular_velocity: bool) -> "JaxUnicycleObstacleVelocities[K]":
-        """Returns a version of the velocities with the angular velocity zeroed out."""
-        return JaxUnicycleObstacleVelocities(
-            linear_velocities=self.linear_velocities,
+    def zeroed(
+        self, *, linear_velocity: bool = False, angular_velocity: bool = False
+    ) -> "JaxUnicycleObstacleInputs[K]":
+        """Returns a version of the inputs with the specified components zeroed out."""
+        return JaxUnicycleObstacleInputs(
+            linear_velocities=jnp.zeros_like(self.linear_velocities)
+            if linear_velocity
+            else self.linear_velocities,
             angular_velocities=jnp.zeros_like(self.angular_velocities)
             if angular_velocity
             else self.angular_velocities,
         )
 
     @property
-    def dimension(self) -> UnicycleD_v:
-        return UNICYCLE_D_V
+    def dimension(self) -> UnicycleD_u:
+        return UNICYCLE_D_U
 
     @property
     def count(self) -> K:
         return cast(K, self.linear_velocities.shape[0])
 
     @cached_property
-    def _numpy_array(self) -> Array[Dims[UnicycleD_v, K]]:
+    def _numpy_array(self) -> Array[Dims[UnicycleD_u, K]]:
         return np.stack([self.linear_velocities, self.angular_velocities], axis=0)
 
 
@@ -647,59 +649,48 @@ class JaxUnicycleObstacleModel(
     ObstacleModel[
         JaxUnicycleObstacleStatesHistory,
         JaxUnicycleObstacleStates,
-        JaxUnicycleObstacleVelocities,
+        JaxUnicycleObstacleInputs,
         JaxUnicycleObstacleControlInputSequences,
         JaxUnicycleObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle velocities from history and propagates unicycle kinematics forward."""
+    """Estimates obstacle inputs from history and propagates unicycle kinematics forward."""
 
     time_step_size: Scalar
+    estimator: "JaxFiniteDifferenceUnicycleStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "JaxUnicycleObstacleModel":
         """Creates a JAX unicycle obstacle model."""
-        return JaxUnicycleObstacleModel(time_step_size=jnp.asarray(time_step_size))
+        return JaxUnicycleObstacleModel(
+            time_step_size=jnp.asarray(time_step_size),
+            estimator=JaxFiniteDifferenceUnicycleStateEstimator.create(
+                time_step_size=time_step_size
+            ),
+        )
 
     def estimate_state_from[K: int](
         self, history: JaxUnicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        JaxUnicycleObstacleStates[K], JaxUnicycleObstacleVelocities[K]
+        JaxUnicycleObstacleStates[K], JaxUnicycleObstacleInputs[K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        linear_velocities, angular_velocities = estimate_velocities(
-            x_history=history.x_array,
-            y_history=history.y_array,
-            heading_history=history.heading_array,
-            time_step_size=self.time_step_size,
-        )
-
-        return EstimatedObstacleStates(
-            states=JaxUnicycleObstacleStates.create(
-                x=history.x_array[-1],
-                y=history.y_array[-1],
-                heading=history.heading_array[-1],
-            ),
-            velocities=JaxUnicycleObstacleVelocities(
-                linear_velocities=linear_velocities,
-                angular_velocities=angular_velocities,
-            ),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[K: int](
         self,
-        velocities: JaxUnicycleObstacleVelocities[K],
+        inputs: JaxUnicycleObstacleInputs[K],
         *,
         states: JaxUnicycleObstacleStates[K],
         horizon: int,
     ) -> JaxUnicycleObstacleControlInputSequences[int, K]:
         return JaxUnicycleObstacleControlInputSequences.create(  # type: ignore[return-value]
             linear_velocities=jnp.tile(
-                velocities.linear_velocities[jnp.newaxis, :], (horizon, 1)
+                inputs.linear_velocities[jnp.newaxis, :], (horizon, 1)
             ),
             angular_velocities=jnp.tile(
-                velocities.angular_velocities[jnp.newaxis, :], (horizon, 1)
+                inputs.angular_velocities[jnp.newaxis, :], (horizon, 1)
             ),
         )
 
@@ -739,6 +730,47 @@ class JaxUnicycleObstacleModel(
     ) -> Float[JaxArray, "T 3 2 K"]:
         return unicycle_input_jacobian(
             states.array,
+            time_step_size=self.time_step_size,
+        )
+
+
+@dataclass(frozen=True)
+class JaxFiniteDifferenceUnicycleStateEstimator:
+    time_step_size: Scalar
+
+    @staticmethod
+    def create(*, time_step_size: float) -> "JaxFiniteDifferenceUnicycleStateEstimator":
+        return JaxFiniteDifferenceUnicycleStateEstimator(
+            time_step_size=jnp.asarray(time_step_size)
+        )
+
+    def estimate_from[K: int](
+        self, history: JaxUnicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        JaxUnicycleObstacleStates[K], JaxUnicycleObstacleInputs[K]
+    ]:
+        linear_velocities, angular_velocities = self.estimate_inputs(history)
+
+        return EstimatedObstacleStates(
+            states=JaxUnicycleObstacleStates.create(
+                x=history.x_array[-1],
+                y=history.y_array[-1],
+                heading=history.heading_array[-1],
+            ),
+            inputs=JaxUnicycleObstacleInputs(
+                linear_velocities=linear_velocities,
+                angular_velocities=angular_velocities,
+            ),
+        )
+
+    def estimate_inputs[K: int](
+        self, history: JaxUnicycleObstacleStatesHistory[int, K]
+    ) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+        """Estimates linear and angular velocities from pose history."""
+        return estimate_velocities(
+            x_history=history.x_array,
+            y_history=history.y_array,
+            heading_history=history.heading_array,
             time_step_size=self.time_step_size,
         )
 
@@ -886,8 +918,11 @@ def _estimate_velocities_with_two_points(
 ) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
     delta_x = x_history[-1] - x_history[-2]
     delta_y = y_history[-1] - y_history[-2]
+    heading = heading_history[-1]
 
-    linear_velocities = jnp.sqrt(delta_x**2 + delta_y**2) / time_step_size
+    linear_velocities = (
+        delta_x * jnp.cos(heading) + delta_y * jnp.sin(heading)
+    ) / time_step_size
     angular_velocities = (heading_history[-1] - heading_history[-2]) / time_step_size
 
     return linear_velocities, angular_velocities

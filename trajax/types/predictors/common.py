@@ -7,9 +7,9 @@ from numtypes import Array, IndexArray, Dims
 
 
 @dataclass(kw_only=True, frozen=True)
-class EstimatedObstacleStates[StatesT, VelocitiesT]:
+class EstimatedObstacleStates[StatesT, InputsT]:
     states: StatesT
-    velocities: VelocitiesT
+    inputs: InputsT
 
 
 class ObstacleStatesHistory[T: int, D_o: int, K: int, ObstacleStatesForTimeStepT = Any](
@@ -152,21 +152,21 @@ class ObstacleControlInputSequences[T: int, D_u: int, K: int](Protocol):
 class ObstacleModel[
     HistoryT,
     StatesT,
-    VelocitiesT,
+    InputsT,
     InputSequencesT,
     StateSequencesT,
     JacobianT = Any,
 ](Protocol):
     def estimate_state_from(
         self, history: HistoryT
-    ) -> EstimatedObstacleStates[StatesT, VelocitiesT]:
-        """Estimates the current states and velocities of objects given their history."""
+    ) -> EstimatedObstacleStates[StatesT, InputsT]:
+        """Estimates the current states and inputs of objects given their history."""
         ...
 
     def input_to_maintain(
-        self, velocities: VelocitiesT, *, states: StatesT, horizon: int
+        self, inputs: InputsT, *, states: StatesT, horizon: int
     ) -> InputSequencesT:
-        """Generates control inputs to maintain the given velocities over the specified horizon."""
+        """Generates control input sequences that maintain the given inputs over the specified horizon."""
         ...
 
     def forward(self, *, current: StatesT, inputs: InputSequencesT) -> StateSequencesT:
@@ -206,9 +206,9 @@ class PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT](Prot
         ...
 
 
-class VelocityAssumptionProvider[VelocitiesT](Protocol):
-    def __call__(self, velocities: VelocitiesT, /) -> VelocitiesT:
-        """Applies assumptions to the given velocities and returns the modified velocities."""
+class InputAssumptionProvider[InputsT](Protocol):
+    def __call__(self, inputs: InputsT, /) -> InputsT:
+        """Applies assumptions to the given inputs and returns the modified inputs."""
         ...
 
 

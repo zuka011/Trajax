@@ -1,12 +1,10 @@
 from .bicycle import (
     BICYCLE_D_X as BICYCLE_D_X,
-    BICYCLE_D_V as BICYCLE_D_V,
     BICYCLE_D_U as BICYCLE_D_U,
     BICYCLE_D_O as BICYCLE_D_O,
     BICYCLE_POSE_D_O as BICYCLE_POSE_D_O,
     BICYCLE_POSITION_D_O as BICYCLE_POSITION_D_O,
     BicycleD_x as BicycleD_x,
-    BicycleD_v as BicycleD_v,
     BicycleD_u as BicycleD_u,
     BicycleD_o as BicycleD_o,
     BicyclePoseD_o as BicyclePoseD_o,
@@ -41,11 +39,9 @@ from .integrator import (
 )
 from .unicycle import (
     UNICYCLE_D_X as UNICYCLE_D_X,
-    UNICYCLE_D_V as UNICYCLE_D_V,
     UNICYCLE_D_U as UNICYCLE_D_U,
     UNICYCLE_D_O as UNICYCLE_D_O,
     UnicycleD_x as UnicycleD_x,
-    UnicycleD_v as UnicycleD_v,
     UnicycleD_u as UnicycleD_u,
     UnicycleD_o as UnicycleD_o,
     UnicycleState as UnicycleState,

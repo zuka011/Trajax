@@ -19,8 +19,6 @@ from trajax.types import (
     BicyclePositions,
     BicycleD_x,
     BICYCLE_D_X,
-    BicycleD_v,
-    BICYCLE_D_V,
     BicycleD_u,
     BICYCLE_D_U,
     BicycleD_o,
@@ -501,33 +499,41 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxBicycleObstacleVelocities[K: int]:
+class JaxBicycleObstacleInputs[K: int]:
+    accelerations: Float[JaxArray, "K"]
     steering_angles: Float[JaxArray, "K"]
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_v, K]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
         return self._numpy_array
 
-    def zeroed(self, *, steering_angle: bool) -> "JaxBicycleObstacleVelocities[K]":
-        """Returns a version of the velocities with the specified components zeroed out."""
-        return JaxBicycleObstacleVelocities(
+    def zeroed(
+        self, *, acceleration: bool = False, steering_angle: bool = False
+    ) -> "JaxBicycleObstacleInputs[K]":
+        """Returns a version of the inputs with the specified components zeroed out."""
+        return JaxBicycleObstacleInputs(
+            accelerations=jnp.zeros_like(self.accelerations)
+            if acceleration
+            else self.accelerations,
             steering_angles=jnp.zeros_like(self.steering_angles)
             if steering_angle
-            else self.steering_angles
+            else self.steering_angles,
         )
 
     @property
-    def dimension(self) -> BicycleD_v:
-        return BICYCLE_D_V
+    def dimension(self) -> BicycleD_u:
+        return BICYCLE_D_U
 
     @property
     def count(self) -> K:
         return cast(K, self.steering_angles.shape[0])
 
     @cached_property
-    def _numpy_array(self) -> Array[Dims[BicycleD_v, K]]:
-        array = np.asarray(self.steering_angles).reshape((1, -1))
+    def _numpy_array(self) -> Array[Dims[BicycleD_u, K]]:
+        array = np.stack(
+            [np.asarray(self.accelerations), np.asarray(self.steering_angles)], axis=0
+        )
 
-        assert shape_of(array, matches=(BICYCLE_D_V, self.count))
+        assert shape_of(array, matches=(BICYCLE_D_U, self.count))
 
         return array
 
@@ -670,7 +676,7 @@ class JaxBicycleObstacleModel(
     ObstacleModel[
         JaxBicycleObstacleStatesHistory,
         JaxBicycleObstacleStates,
-        JaxBicycleObstacleVelocities,
+        JaxBicycleObstacleInputs,
         JaxBicycleObstacleControlInputSequences,
         JaxBicycleObstacleStateSequences,
     ]
@@ -679,51 +685,40 @@ class JaxBicycleObstacleModel(
 
     time_step_size: Scalar
     wheelbase: Scalar
+    estimator: "JaxFiniteDifferenceBicycleStateEstimator"
 
     @staticmethod
     def create(
         *, time_step_size: float, wheelbase: float = 1.0
     ) -> "JaxBicycleObstacleModel":
         return JaxBicycleObstacleModel(
-            time_step_size=jnp.asarray(time_step_size), wheelbase=jnp.asarray(wheelbase)
+            time_step_size=jnp.asarray(time_step_size),
+            wheelbase=jnp.asarray(wheelbase),
+            estimator=JaxFiniteDifferenceBicycleStateEstimator.create(
+                time_step_size=time_step_size, wheelbase=wheelbase
+            ),
         )
 
     def estimate_state_from[K: int](
         self, history: JaxBicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        JaxBicycleObstacleStates[K], JaxBicycleObstacleVelocities[K]
+        JaxBicycleObstacleStates[K], JaxBicycleObstacleInputs[K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        speeds, steering_angles = estimate_velocities(
-            x_history=history.x_array,
-            y_history=history.y_array,
-            heading_history=history.heading_array,
-            time_step_size=self.time_step_size,
-            wheelbase=self.wheelbase,
-        )
-
-        return EstimatedObstacleStates(
-            states=JaxBicycleObstacleStates.create(
-                x=history.x_array[-1],
-                y=history.y_array[-1],
-                heading=history.heading_array[-1],
-                speed=speeds,
-            ),
-            velocities=JaxBicycleObstacleVelocities(steering_angles=steering_angles),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[K: int](
         self,
-        velocities: JaxBicycleObstacleVelocities[K],
+        inputs: JaxBicycleObstacleInputs[K],
         *,
         states: JaxBicycleObstacleStates[K],
         horizon: int,
     ) -> JaxBicycleObstacleControlInputSequences[int, K]:
         return JaxBicycleObstacleControlInputSequences.create(  # type: ignore[return-value]
-            accelerations=jnp.zeros((horizon, velocities.count)),
+            accelerations=jnp.tile(inputs.accelerations[jnp.newaxis, :], (horizon, 1)),
             steering_angles=jnp.tile(
-                velocities.steering_angles[jnp.newaxis, :], (horizon, 1)
+                inputs.steering_angles[jnp.newaxis, :], (horizon, 1)
             ),
         )
 
@@ -914,50 +909,161 @@ def bicycle_input_jacobian(
 
 @jax.jit
 @jaxtyped
-def estimate_velocities(
+def estimate_inputs(
     *,
     x_history: Float[JaxArray, "T K"],
     y_history: Float[JaxArray, "T K"],
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
     wheelbase: Scalar,
-) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+    """Estimates speeds, accelerations, and steering angles from position history.
+
+    Returns (speeds, accelerations, steering_angles).
+    - Requires at least 2 history points for speed and steering estimation.
+    - Requires at least 3 history points for acceleration estimation.
+    """
     horizon = x_history.shape[0]
     count = x_history.shape[1]
+    zeros = jnp.zeros(count)
+
     return jax.lax.cond(
-        horizon > 1,
-        lambda: _estimate_velocities_with_two_points(
+        horizon > 2,
+        lambda: _estimate_inputs_with_three_points(
             x_history=x_history,
             y_history=y_history,
             heading_history=heading_history,
             time_step_size=time_step_size,
             wheelbase=wheelbase,
         ),
-        lambda: (jnp.zeros(count), jnp.zeros(count)),
+        lambda: jax.lax.cond(
+            horizon > 1,
+            lambda: _estimate_inputs_with_two_points(
+                x_history=x_history,
+                y_history=y_history,
+                heading_history=heading_history,
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+            ),
+            lambda: (zeros, zeros, zeros),
+        ),
     )
 
 
 @jax.jit
 @jaxtyped
-def _estimate_velocities_with_two_points(
+def _estimate_inputs_with_two_points(
     *,
     x_history: Float[JaxArray, "T K"],
     y_history: Float[JaxArray, "T K"],
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
     wheelbase: Scalar,
-) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+    """Estimates speeds and steering angles from two history points, acceleration is zero.
+
+    Speed is computed as the projection of displacement onto heading direction,
+    which can be negative for reverse motion.
+    """
     delta_x = x_history[-1] - x_history[-2]
     delta_y = y_history[-1] - y_history[-2]
+    heading = heading_history[-1]
 
-    speeds = jnp.sqrt(delta_x**2 + delta_y**2) / time_step_size
+    # Project displacement onto heading direction
+    speeds = (delta_x * jnp.cos(heading) + delta_y * jnp.sin(heading)) / time_step_size
 
     heading_velocity = (heading_history[-1] - heading_history[-2]) / time_step_size
 
     steering_angles = jnp.where(
-        speeds > 1e-6,
+        jnp.abs(speeds) > 1e-6,
         jnp.arctan(heading_velocity * wheelbase / speeds),
         jnp.zeros_like(speeds),
     )
 
-    return speeds, steering_angles
+    accelerations = jnp.zeros_like(speeds)
+
+    return speeds, accelerations, steering_angles
+
+
+@jax.jit
+@jaxtyped
+def _estimate_inputs_with_three_points(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"], Float[JaxArray, "K"]]:
+    """Estimates speeds, accelerations, and steering angles from three history points.
+
+    Speed is computed as the projection of displacement onto heading direction,
+    which can be negative for reverse motion.
+    """
+    heading_t = heading_history[-1]
+    heading_tm1 = heading_history[-2]
+
+    # Speeds at t and t-1 using projection onto heading direction
+    delta_x_t = x_history[-1] - x_history[-2]
+    delta_y_t = y_history[-1] - y_history[-2]
+    speeds_t = (
+        delta_x_t * jnp.cos(heading_t) + delta_y_t * jnp.sin(heading_t)
+    ) / time_step_size
+
+    delta_x_tm1 = x_history[-2] - x_history[-3]
+    delta_y_tm1 = y_history[-2] - y_history[-3]
+    speeds_tm1 = (
+        delta_x_tm1 * jnp.cos(heading_tm1) + delta_y_tm1 * jnp.sin(heading_tm1)
+    ) / time_step_size
+
+    accelerations = (speeds_t - speeds_tm1) / time_step_size
+
+    heading_velocity = (heading_history[-1] - heading_history[-2]) / time_step_size
+
+    steering_angles = jnp.where(
+        jnp.abs(speeds_t) > 1e-6,
+        jnp.arctan(heading_velocity * wheelbase / speeds_t),
+        jnp.zeros_like(speeds_t),
+    )
+
+    return speeds_t, accelerations, steering_angles
+
+
+@dataclass(frozen=True)
+class JaxFiniteDifferenceBicycleStateEstimator:
+    time_step_size: Scalar
+    wheelbase: Scalar
+
+    @staticmethod
+    def create(
+        *, time_step_size: float, wheelbase: float
+    ) -> "JaxFiniteDifferenceBicycleStateEstimator":
+        return JaxFiniteDifferenceBicycleStateEstimator(
+            time_step_size=jnp.asarray(time_step_size),
+            wheelbase=jnp.asarray(wheelbase),
+        )
+
+    def estimate_from[K: int](
+        self, history: JaxBicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        JaxBicycleObstacleStates[K], JaxBicycleObstacleInputs[K]
+    ]:
+        speeds, accelerations, steering_angles = estimate_inputs(
+            x_history=history.x_array,
+            y_history=history.y_array,
+            heading_history=history.heading_array,
+            time_step_size=self.time_step_size,
+            wheelbase=self.wheelbase,
+        )
+
+        return EstimatedObstacleStates(
+            states=JaxBicycleObstacleStates.create(
+                x=history.x_array[-1],
+                y=history.y_array[-1],
+                heading=history.heading_array[-1],
+                speed=speeds,
+            ),
+            inputs=JaxBicycleObstacleInputs(
+                accelerations=accelerations, steering_angles=steering_angles
+            ),
+        )

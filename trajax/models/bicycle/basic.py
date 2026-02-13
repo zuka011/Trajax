@@ -18,8 +18,6 @@ from trajax.types import (
     BicyclePositions,
     BicycleD_x,
     BICYCLE_D_X,
-    BicycleD_v,
-    BICYCLE_D_V,
     BicycleD_u,
     BICYCLE_D_U,
     BicycleD_o,
@@ -447,33 +445,39 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
 
 
 @dataclass(frozen=True)
-class NumPyBicycleObstacleVelocities[K: int]:
+class NumPyBicycleObstacleInputs[K: int]:
+    accelerations: Array[Dims[K]]
     steering_angles: Array[Dims[K]]
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_v, K]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
         return self._array
 
-    def zeroed(self, *, steering_angle: bool) -> "NumPyBicycleObstacleVelocities[K]":
-        """Returns a version of the velocities with the specified components zeroed out."""
-        return NumPyBicycleObstacleVelocities(
+    def zeroed(
+        self, *, acceleration: bool = False, steering_angle: bool = False
+    ) -> "NumPyBicycleObstacleInputs[K]":
+        """Returns a version of the inputs with the specified components zeroed out."""
+        return NumPyBicycleObstacleInputs(
+            accelerations=np.zeros_like(self.accelerations)
+            if acceleration
+            else self.accelerations,
             steering_angles=np.zeros_like(self.steering_angles)
             if steering_angle
-            else self.steering_angles
+            else self.steering_angles,
         )
 
     @property
-    def dimension(self) -> BicycleD_v:
-        return BICYCLE_D_V
+    def dimension(self) -> BicycleD_u:
+        return BICYCLE_D_U
 
     @property
     def count(self) -> K:
         return self.steering_angles.shape[0]
 
     @cached_property
-    def _array(self) -> Array[Dims[BicycleD_v, K]]:
-        array = self.steering_angles.reshape((1, -1))
+    def _array(self) -> Array[Dims[BicycleD_u, K]]:
+        array = np.stack([self.accelerations, self.steering_angles], axis=0)
 
-        assert shape_of(array, matches=(BICYCLE_D_V, self.count))
+        assert shape_of(array, matches=(BICYCLE_D_U, self.count))
 
         return array
 
@@ -631,7 +635,7 @@ class NumPyBicycleObstacleModel(
     ObstacleModel[
         NumPyBicycleObstacleStatesHistory,
         NumPyBicycleObstacleStates,
-        NumPyBicycleObstacleVelocities,
+        NumPyBicycleObstacleInputs,
         NumPyBicycleObstacleControlInputSequences,
         NumPyBicycleObstacleStateSequences,
     ]
@@ -640,62 +644,40 @@ class NumPyBicycleObstacleModel(
 
     time_step_size: float
     wheelbase: float
+    estimator: "NumPyFiniteDifferenceBicycleStateEstimator"
 
     @staticmethod
     def create(
         *, time_step_size: float, wheelbase: float = 1.0
     ) -> "NumPyBicycleObstacleModel":
         return NumPyBicycleObstacleModel(
-            time_step_size=time_step_size, wheelbase=wheelbase
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            estimator=NumPyFiniteDifferenceBicycleStateEstimator.create(
+                time_step_size=time_step_size, wheelbase=wheelbase
+            ),
         )
 
     def estimate_state_from[K: int](
         self, history: NumPyBicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        NumPyBicycleObstacleStates[K], NumPyBicycleObstacleVelocities[K]
+        NumPyBicycleObstacleStates[K], NumPyBicycleObstacleInputs[K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        if history.horizon < 2:
-            speeds = np.zeros((history.count))
-            steering_angles = np.zeros((history.count))
-        else:
-            speeds = estimate_speeds_from(history, time_step_size=self.time_step_size)
-            steering_angles = estimate_steering_angles_from(
-                history,
-                speeds=speeds,
-                time_step_size=self.time_step_size,
-                wheelbase=self.wheelbase,
-            )
-
-        assert shape_of(speeds, matches=(history.count,))
-        assert shape_of(steering_angles, matches=(history.count,))
-
-        return EstimatedObstacleStates(
-            states=NumPyBicycleObstacleStates.create(
-                x=history.x()[-1],
-                y=history.y()[-1],
-                heading=history.heading()[-1, :],
-                speed=speeds,
-            ),
-            velocities=NumPyBicycleObstacleVelocities(steering_angles=steering_angles),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[K: int](
         self,
-        velocities: NumPyBicycleObstacleVelocities[K],
+        inputs: NumPyBicycleObstacleInputs[K],
         *,
         states: NumPyBicycleObstacleStates[K],
         horizon: int,
     ) -> NumPyBicycleObstacleControlInputSequences[int, K]:
-        accelerations = np.zeros((horizon, velocities.count))
-
-        assert shape_of(accelerations, matches=(horizon, velocities.count))
-
         return NumPyBicycleObstacleControlInputSequences.create(
-            accelerations=accelerations,
+            accelerations=np.tile(inputs.accelerations[np.newaxis, :], (horizon, 1)),
             steering_angles=np.tile(
-                velocities.steering_angles[np.newaxis, :], (horizon, 1)
+                inputs.steering_angles[np.newaxis, :], (horizon, 1)
             ),
         )
 
@@ -766,6 +748,177 @@ class NumPyBicyclePositionCovarianceExtractor(CovarianceExtractor):
         self, covariance: BicycleObstacleStateCovarianceArray[T, K]
     ) -> BicycleObstaclePositionCovarianceArray[T, K]:
         return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
+
+
+@dataclass(frozen=True)
+class NumPyFiniteDifferenceBicycleStateEstimator:
+    time_step_size: float
+    wheelbase: float
+
+    @staticmethod
+    def create(
+        *, time_step_size: float, wheelbase: float
+    ) -> "NumPyFiniteDifferenceBicycleStateEstimator":
+        return NumPyFiniteDifferenceBicycleStateEstimator(
+            time_step_size=time_step_size, wheelbase=wheelbase
+        )
+
+    def estimate_from[K: int](
+        self, history: NumPyBicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        NumPyBicycleObstacleStates[K], NumPyBicycleObstacleInputs[K]
+    ]:
+        speeds = self.estimate_speeds_from(history)
+        accelerations = self.estimate_accelerations_from(history, speeds=speeds)
+        steering_angles = self.estimate_steering_angles_from(history, speeds=speeds)
+
+        return EstimatedObstacleStates(
+            states=NumPyBicycleObstacleStates.create(
+                x=history.x()[-1],
+                y=history.y()[-1],
+                heading=history.heading()[-1, :],
+                speed=speeds,
+            ),
+            inputs=NumPyBicycleObstacleInputs(
+                accelerations=accelerations, steering_angles=steering_angles
+            ),
+        )
+
+    def estimate_speeds_from[K: int](
+        self, history: NumPyBicycleObstacleStatesHistory[int, K]
+    ) -> Array[Dims[K]]:
+        """Estimates speeds from position history using finite differences.
+
+        Speed is computed as the projection of the displacement onto the heading direction,
+        which can be negative for reverse motion:
+
+        # TODO: Fix KaTeX formatting.
+        $$v_t = ((x_t - x_{t-1}) * cos(\\theta_t) + (y_t - y_{t-1}) * sin(\\theta_t)) / (\\Delta t)$$
+        """
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        x = history.x()
+        y = history.y()
+        heading = history.heading()
+
+        return self._estimate_speeds_from(
+            x_current=x[-1],
+            y_current=y[-1],
+            x_previous=x[-2],
+            y_previous=y[-2],
+            heading_current=heading[-1],
+        )
+
+    def estimate_accelerations_from[K: int](
+        self,
+        history: NumPyBicycleObstacleStatesHistory[int, K],
+        *,
+        speeds: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        """Estimates accelerations from speed history using finite differences.
+
+        Acceleration is computed as the change in speed over time:
+
+        $$a_t = (v_t - v_{t-1}) / (\\Delta t)$$
+        """
+        if history.horizon < 3:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        x = history.x()
+        y = history.y()
+        heading = history.heading()
+
+        return self._estimate_accelerations_from(
+            speeds_current=speeds,
+            speeds_previous=self._estimate_speeds_from(
+                x_current=x[-2],
+                y_current=y[-2],
+                x_previous=x[-3],
+                y_previous=y[-3],
+                heading_current=heading[-2],
+            ),
+        )
+
+    def estimate_steering_angles_from[K: int](
+        self,
+        history: NumPyBicycleObstacleStatesHistory[int, K],
+        *,
+        speeds: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        """Estimates steering angles from heading change and speed.
+
+        From the kinematic bicycle model: δ = arctan(L * ω / v)
+        where ω = dθ/dt is the heading rate.
+
+        When speed is very small, the steering angle estimate is unreliable,
+        so we return zero in those cases.
+        """
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        heading = history.heading()
+
+        return self._estimate_steering_angles_from(
+            heading_current=heading[-1], heading_previous=heading[-2], speeds=speeds
+        )
+
+    def _estimate_speeds_from[K: int](
+        self,
+        *,
+        x_current: Array[Dims[K]],
+        y_current: Array[Dims[K]],
+        x_previous: Array[Dims[K]],
+        y_previous: Array[Dims[K]],
+        heading_current: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        delta_x = x_current - x_previous
+        delta_y = y_current - y_previous
+
+        speeds = (
+            delta_x * np.cos(heading_current) + delta_y * np.sin(heading_current)
+        ) / self.time_step_size
+
+        assert shape_of(speeds, matches=(x_current.shape[0],), name="estimated speeds")
+
+        return speeds
+
+    def _estimate_accelerations_from[K: int](
+        self, *, speeds_current: Array[Dims[K]], speeds_previous: Array[Dims[K]]
+    ) -> Array[Dims[K]]:
+        accelerations = (speeds_current - speeds_previous) / self.time_step_size
+
+        assert shape_of(
+            accelerations,
+            matches=(speeds_current.shape[0],),
+            name="estimated accelerations",
+        )
+
+        return accelerations
+
+    def _estimate_steering_angles_from[K: int](
+        self,
+        *,
+        heading_current: Array[Dims[K]],
+        heading_previous: Array[Dims[K]],
+        speeds: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        heading_velocity = (heading_current - heading_previous) / self.time_step_size
+
+        with np.errstate(invalid="ignore"):
+            steering_angles = np.where(
+                np.abs(speeds) > 1e-6,
+                np.arctan(heading_velocity * self.wheelbase / speeds),
+                0.0,
+            )
+
+        assert shape_of(
+            steering_angles,
+            matches=(heading_current.shape[0],),
+            name="estimated steering angles",
+        )
+
+        return steering_angles
 
 
 def simulate[T: int, N: int](
@@ -885,47 +1038,3 @@ def input_jacobian[T: int, K: int](
     assert shape_of(G, matches=(T, BICYCLE_D_O, BICYCLE_D_U, K), name="input_jacobian")
 
     return G
-
-
-def estimate_speeds_from[K: int](
-    history: NumPyBicycleObstacleStatesHistory[int, K], *, time_step_size: float
-) -> Array[Dims[K]]:
-    assert history.horizon >= 2, (
-        "At least two history steps are required to estimate speed."
-    )
-
-    delta_x = history.x()[-1] - history.x()[-2]
-    delta_y = history.y()[-1] - history.y()[-2]
-
-    speeds = np.sqrt(delta_x**2 + delta_y**2) / time_step_size
-
-    assert shape_of(speeds, matches=(history.count,), name="estimated speeds")
-
-    return speeds
-
-
-def estimate_steering_angles_from[K: int](
-    history: NumPyBicycleObstacleStatesHistory[int, K],
-    *,
-    speeds: Array[Dims[K]],
-    time_step_size: float,
-    wheelbase: float,
-) -> Array[Dims[K]]:
-    assert history.horizon >= 2, (
-        "At least two history steps are required to estimate heading."
-    )
-
-    heading_velocity = (
-        history.heading()[-1, :] - history.heading()[-2, :]
-    ) / time_step_size
-
-    with np.errstate(invalid="ignore"):
-        steering_angles = np.where(
-            speeds > 1e-6, np.arctan(heading_velocity * wheelbase / speeds), 0.0
-        )
-
-    assert shape_of(
-        steering_angles, matches=(history.count,), name="estimated steering angles"
-    )
-
-    return steering_angles

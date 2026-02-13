@@ -660,12 +660,6 @@ If more observations are available, the acceleration $a$ can also be estimated.
   $
     a_t := (v_t - v_(t-1)) / #delta-t
   $
-
-  Alternatively, the acceleration can also be estimated directly from the last three observed poses $(x_(t-2), y_(t-2), theta_(t-2))$, $(x_(t-1), y_(t-1), theta_(t-1))$, and $(x_t, y_t, theta_t)$:
-
-  $
-    a_t approx ((x_t - 2 x_(t-1) + x_(t-2)) cos(theta_t) + (y_t - 2 y_(t-1) + y_(t-2)) sin(theta_t)) / #delta-t^2
-  $
 ]
 
 == Heading Rate & Steering Angle

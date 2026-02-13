@@ -78,36 +78,53 @@ provider = obstacles.provider.predicting(
 provider.observe(detected_obstacle_states)
 ```
 
-### Velocity Assumptions
+### Input Assumptions
 
-By default the curvilinear predictor assumes **all** estimated velocity components remain constant over the prediction horizon. Sometimes this is too strong — for example, you may want to assume an obstacle drives straight (zero steering) while keeping its current speed.
+By default the curvilinear predictor assumes **all** estimated input components remain constant over the prediction horizon. Sometimes this is too strong — for example, you may want to assume an obstacle drives straight (zero steering) while keeping its current speed.
 
-Pass an `assumptions` callable to override specific components. The callable receives the model-specific velocity object and must return the same type:
+Pass an `assumptions` callable to override specific components. The callable receives the model-specific input object and must return the same type:
 
 ```python
-from trajax.models.bicycle.basic import NumPyBicycleObstacleVelocities
+from trajax.models.bicycle.basic import NumPyBicycleObstacleInputs
 import numpy as np
 
-# Bicycle: keep speed, zero out steering angle
+# Bicycle: keep acceleration, zero out steering angle (CSAA with straight motion)
 motion_predictor = predictor.curvilinear(
     horizon=30,
     model=model.bicycle.obstacle(time_step_size=0.1, wheelbase=2.5),
     prediction=bicycle_to_obstacle_states,
-    assumptions=lambda v: NumPyBicycleObstacleVelocities(
+    assumptions=lambda v: NumPyBicycleObstacleInputs(
+        accelerations=v.accelerations,
         steering_angles=np.zeros_like(v.steering_angles),
     ),
 )
 ```
 
 ```python
-from trajax.models.unicycle.basic import NumPyUnicycleObstacleVelocities
+from trajax.models.bicycle.basic import NumPyBicycleObstacleInputs
+import numpy as np
+
+# Bicycle: zero out acceleration, keep steering angle (constant velocity turn)
+motion_predictor = predictor.curvilinear(
+    horizon=30,
+    model=model.bicycle.obstacle(time_step_size=0.1, wheelbase=2.5),
+    prediction=bicycle_to_obstacle_states,
+    assumptions=lambda v: NumPyBicycleObstacleInputs(
+        accelerations=np.zeros_like(v.accelerations),
+        steering_angles=v.steering_angles,
+    ),
+)
+```
+
+```python
+from trajax.models.unicycle.basic import NumPyUnicycleObstacleInputs
 
 # Unicycle: keep linear velocity, zero out angular velocity
 motion_predictor = predictor.curvilinear(
     horizon=30,
     model=model.unicycle.obstacle(time_step_size=0.1),
     prediction=unicycle_to_obstacle_states,
-    assumptions=lambda v: NumPyUnicycleObstacleVelocities(
+    assumptions=lambda v: NumPyUnicycleObstacleInputs(
         linear_velocities=v.linear_velocities,
         angular_velocities=np.zeros_like(v.angular_velocities),
     ),
@@ -115,20 +132,20 @@ motion_predictor = predictor.curvilinear(
 ```
 
 ```python
-from trajax.models.integrator.basic import NumPyIntegratorObstacleVelocities
+from trajax.models.integrator.basic import NumPyIntegratorObstacleInputs
 
-# Integrator: keep first two velocities, zero out the rest
+# Integrator: keep first two inputs, zero out the rest
 motion_predictor = predictor.curvilinear(
     horizon=30,
     model=model.integrator.obstacle(time_step_size=0.1),
     prediction=integrator_to_obstacle_states,
-    assumptions=lambda v: NumPyIntegratorObstacleVelocities(
+    assumptions=lambda v: NumPyIntegratorObstacleInputs(
         np.stack([v.array[0], v.array[1], np.zeros_like(v.array[2])]),
     ),
 )
 ```
 
-The same pattern works with the JAX backend — import the corresponding JAX velocity type instead.
+The same pattern works with the JAX backend — import the corresponding JAX input type instead.
 
 ## Obstacle ID Assignment
 

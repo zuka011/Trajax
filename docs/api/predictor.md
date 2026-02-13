@@ -42,9 +42,9 @@ Predictors estimate future obstacle states based on motion models and covariance
       show_root_heading: true
       heading_level: 3
 
-## Velocity Assumption Provider Protocol
+## Input Assumption Provider Protocol
 
-::: trajax.types.VelocityAssumptionProvider
+::: trajax.types.InputAssumptionProvider
     options:
       show_root_heading: true
       heading_level: 3

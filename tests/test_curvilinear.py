@@ -277,9 +277,8 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         prediction=prediction_creator.bicycle(),
                     ),
                     history := data.obstacle_2d_poses(
-                        # v = 10 m/s (Δ pos = 1.0 per step along heading)
+                        # v ≈ 9.9875 m/s (Δ pos = 1.0 and θ=0.05)
                         # ω = 0.5 rad/s (Δ θ = 0.05 rad per step)
-                        # This implies δ = arctan(ω * L / v) = arctan(0.5 * 1 / 10) = arctan(0.05)
                         x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
                         y=array([[0.0], [0.0]], shape=(T_h, K)),
                         heading=array([[0.0], [0.05]], shape=(T_h, K)),  # ω * dt = 0.05
@@ -291,48 +290,237 @@ class test_that_obstacle_motion_is_predicted_correctly:
                     expected := data.obstacle_2d_poses(
                         x=array(
                             [
-                                [1.0 + 10 * np.cos(0.05) * 0.1],
                                 [
-                                    1.0
-                                    + 10 * np.cos(0.05) * 0.1
-                                    + 10 * np.cos(0.10) * 0.1
+                                    (x_0 := 1.0)
+                                    + (v := 1.0 * np.cos(0.05) / dt) * np.cos(0.05) * dt
                                 ],
                                 [
-                                    1.0
-                                    + 10 * np.cos(0.05) * 0.1
-                                    + 10 * np.cos(0.10) * 0.1
-                                    + 10 * np.cos(0.15) * 0.1
+                                    (x_1 := x_0 + v * np.cos(0.05) * dt)
+                                    + v * np.cos(0.10) * dt
                                 ],
                                 [
-                                    1.0
-                                    + 10 * np.cos(0.05) * 0.1
-                                    + 10 * np.cos(0.10) * 0.1
-                                    + 10 * np.cos(0.15) * 0.1
-                                    + 10 * np.cos(0.20) * 0.1
+                                    (x_2 := x_1 + v * np.cos(0.10) * dt)
+                                    + v * np.cos(0.15) * dt
+                                ],
+                                [
+                                    (x_3 := x_2 + v * np.cos(0.15) * dt)
+                                    + v * np.cos(0.20) * dt
                                 ],
                             ],
                             shape=(T_p, K),
                         ),
                         y=array(
                             [
-                                [10 * np.sin(0.05) * 0.1],
-                                [10 * np.sin(0.05) * 0.1 + 10 * np.sin(0.10) * 0.1],
+                                [(y_0 := 0.0) + v * np.sin(0.05) * dt],
                                 [
-                                    10 * np.sin(0.05) * 0.1
-                                    + 10 * np.sin(0.10) * 0.1
-                                    + 10 * np.sin(0.15) * 0.1
+                                    (y_1 := y_0 + v * np.sin(0.05) * dt)
+                                    + v * np.sin(0.10) * dt
                                 ],
                                 [
-                                    10 * np.sin(0.05) * 0.1
-                                    + 10 * np.sin(0.10) * 0.1
-                                    + 10 * np.sin(0.15) * 0.1
-                                    + 10 * np.sin(0.20) * 0.1
+                                    (y_2 := y_1 + v * np.sin(0.10) * dt)
+                                    + v * np.sin(0.15) * dt
+                                ],
+                                [
+                                    (y_3 := y_2 + v * np.sin(0.15) * dt)
+                                    + v * np.sin(0.20) * dt
                                 ],
                             ],
                             shape=(T_p, K),
                         ),
                         heading=array(
                             [[0.10], [0.15], [0.20], [0.25]],
+                            shape=(T_p, K),
+                        ),
+                    ),
+                ),
+                (  # Accelerating vehicle along x-axis (θ=0, δ=0)
+                    # History shows increasing speed: v = 8, 10 m/s (a = 20 m/s²)
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        prediction=prediction_creator.bicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        x=array([[0.0], [0.8], [x_0 := 1.8]], shape=(T_h := 3, K := 1)),
+                        y=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                        heading=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                    ),
+                    # Current state: x=1.8, v=10, a=20, δ=0
+                    # Bicycle model: x(t+1) = x(t) + v(t) * dt, v(t+1) = v(t) + a * dt
+                    expected := data.obstacle_2d_poses(
+                        x=array(
+                            [
+                                [x_1 := x_0 + (v_0 := 10) * dt],
+                                [x_2 := x_1 + (v_1 := v_0 + 2) * dt],
+                                [x_3 := x_2 + (v_2 := v_1 + 2) * dt],
+                                [x_4 := x_3 + (v_3 := v_2 + 2) * dt],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        y=np.full((T_p, K), 0.0),
+                        heading=np.full((T_p, K), 0.0),
+                    ),
+                ),
+                (  # Reverse motion: vehicle moving backward (opposite to heading)
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        prediction=prediction_creator.bicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                        # Heading is π/2 (pointing up), but vehicle moves down (negative y)
+                        y=array([[0.0], [-1.0]], shape=(T_h, K)),
+                        heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+                    ),
+                    # Speed estimation with projection onto heading:
+                    # v = (Δx * cos(θ) + Δy * sin(θ)) / dt
+                    # v = (0 * cos(π/2) + (-1) * sin(π/2)) / 0.1 = (-1) / 0.1 = -10 m/s
+                    expected := data.obstacle_2d_poses(
+                        x=np.full((T_p, K), 0.0),
+                        y=array(
+                            [
+                                [(y_0 := -1.0) + (v := -10.0) * np.sin(np.pi / 2) * dt],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 2],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 3],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 4],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        heading=np.full((T_p, K), np.pi / 2),
+                    ),
+                ),
+                (  # Motion with constant acceleration and steering angle
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        prediction=prediction_creator.bicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        # x increases by 1.0 each step -> v = 10 m/s constant
+                        x=array([[0.0], [1.0], [x_0 := 2.0]], shape=(T_h := 3, K := 1)),
+                        y=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                        heading=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                    ),
+                    expected := data.obstacle_2d_poses(
+                        x=array(
+                            [
+                                [x_0 + (v := 10.0) * dt * 1],
+                                [x_0 + v * dt * 2],
+                                [x_0 + v * dt * 3],
+                                [x_0 + v * dt * 4],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        y=np.full((T_p, K), 0.0),
+                        heading=np.full((T_p, K), 0.0),
+                    ),
+                ),
+                (  # Decelerating vehicle
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        prediction=prediction_creator.bicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        # x: 0 -> 1.2 -> 2.2 (Δx = 1.2, then 1.0)
+                        # v_0 = 1.2/0.1 = 12, v_1 = 1.0/0.1 = 10 -> a = -20 m/s²
+                        x=array([[0.0], [1.2], [x_0 := 2.2]], shape=(T_h := 3, K := 1)),
+                        y=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                        heading=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                    ),
+                    # Current state: x=2.2, v=10, a=-20, δ=0
+                    # Vehicle slows down by 2 m/s each step
+                    expected := data.obstacle_2d_poses(
+                        x=array(
+                            [
+                                [x_1 := x_0 + (v_0 := 10.0) * dt],
+                                [x_2 := x_1 + (v_1 := v_0 - 2) * dt],
+                                [x_3 := x_2 + (v_2 := v_1 - 2) * dt],
+                                [x_4 := x_3 + (v_3 := v_2 - 2) * dt],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        y=np.full((T_p, K), 0.0),
+                        heading=np.full((T_p, K), 0.0),
+                    ),
+                ),
+                (  # Turning while reversing
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(
+                            time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                        ),
+                        prediction=prediction_creator.bicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        # Vehicle pointing right (θ=0) but moving left (reverse)
+                        # θ changes from 0.05 to 0.00
+                        x=array([[0.0], [-1.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[0.0], [0.0]], shape=(T_h, K)),
+                        heading=array([[0.05], [0.0]], shape=(T_h, K)),
+                    ),
+                    # v = (Δx * cos(θ) + Δy * sin(θ)) / dt = (-1 * 1 + 0) / 0.1 = -10 m/s
+                    # ω = (0.0 - 0.05) / 0.1 = -0.5 rad/s
+                    # δ = arctan(L * ω / v) = arctan(1 * -0.5 / -10) = arctan(0.05) ≈ 0.05
+                    # When reversing, negative ω with negative v gives positive steering
+                    expected := data.obstacle_2d_poses(
+                        x=array(
+                            [
+                                [
+                                    (x_0 := -1.0)
+                                    + (v := -10.0) * np.cos((theta_0 := 0.0)) * dt
+                                ],
+                                [
+                                    (x_1 := x_0 + v * np.cos(theta_0) * dt)
+                                    + v
+                                    * np.cos(theta_1 := theta_0 + (w := -0.5) * dt)
+                                    * dt
+                                ],
+                                [
+                                    (x_2 := x_1 + v * np.cos(theta_1) * dt)
+                                    + v * np.cos(theta_2 := theta_1 + w * dt) * dt
+                                ],
+                                [
+                                    (x_3 := x_2 + v * np.cos(theta_2) * dt)
+                                    + v * np.cos(theta_3 := theta_2 + w * dt) * dt
+                                ],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        y=array(
+                            [
+                                [v * np.sin(theta_0) * dt],
+                                [v * np.sin(theta_0) * dt + v * np.sin(theta_1) * dt],
+                                [
+                                    v * np.sin(theta_0) * dt
+                                    + v * np.sin(theta_1) * dt
+                                    + v * np.sin(theta_2) * dt
+                                ],
+                                [
+                                    v * np.sin(theta_0) * dt
+                                    + v * np.sin(theta_1) * dt
+                                    + v * np.sin(theta_2) * dt
+                                    + v * np.sin(theta_3) * dt
+                                ],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        heading=array(
+                            [
+                                [theta_0 + w * dt],
+                                [theta_0 + w * dt * 2],
+                                [theta_0 + w * dt * 3],
+                                [theta_0 + w * dt * 4],
+                            ],
                             shape=(T_p, K),
                         ),
                     ),
@@ -447,7 +635,7 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         prediction=prediction_creator.unicycle(),
                     ),
                     history := data.obstacle_2d_poses(
-                        # v = 10 m/s (Δ pos = 1.0 per step along heading)
+                        # Δ pos = 2.0, θ = 0.05, estimate: v ≈ 19.975 m/s
                         # ω = 0.5 rad/s (Δ θ = 0.05 rad per step)
                         x=array([[x_0 := 0.0], [x_1 := 2.0]], shape=(T_h := 2, K := 1)),
                         y=array([[0.0], [0.0]], shape=(T_h, K)),
@@ -457,46 +645,46 @@ class test_that_obstacle_motion_is_predicted_correctly:
                         ),
                     ),
                     # Prediction: θ increases by 0.05 each step, path curves
-                    # Same as bicycle for this case since both predict constant ω
                     expected := data.obstacle_2d_poses(
                         x=array(
                             [
                                 [
                                     x_1
-                                    + (v := x_1 - x_0)
+                                    + (v := (x_1 - x_0) * np.cos(theta_1) / dt)
                                     * np.cos((w := theta_1 - theta_0) * 1)
+                                    * dt
                                 ],
-                                [x_1 + v * np.cos(w * 1) + v * np.cos(w * 2)],
+                                [x_1 + v * np.cos(w * 1) * dt + v * np.cos(w * 2) * dt],
                                 [
                                     x_1
-                                    + v * np.cos(w * 1)
-                                    + v * np.cos(w * 2)
-                                    + v * np.cos(w * 3)
+                                    + v * np.cos(w * 1) * dt
+                                    + v * np.cos(w * 2) * dt
+                                    + v * np.cos(w * 3) * dt
                                 ],
                                 [
                                     x_1
-                                    + v * np.cos(w * 1)
-                                    + v * np.cos(w * 2)
-                                    + v * np.cos(w * 3)
-                                    + v * np.cos(w * 4)
+                                    + v * np.cos(w * 1) * dt
+                                    + v * np.cos(w * 2) * dt
+                                    + v * np.cos(w * 3) * dt
+                                    + v * np.cos(w * 4) * dt
                                 ],
                             ],
                             shape=(T_p, K),
                         ),
                         y=array(
                             [
-                                [v * np.sin(w * 1)],
-                                [v * np.sin(w * 1) + v * np.sin(w * 2)],
+                                [v * np.sin(w * 1) * dt],
+                                [v * np.sin(w * 1) * dt + v * np.sin(w * 2) * dt],
                                 [
-                                    v * np.sin(w * 1)
-                                    + v * np.sin(w * 2)
-                                    + v * np.sin(w * 3)
+                                    v * np.sin(w * 1) * dt
+                                    + v * np.sin(w * 2) * dt
+                                    + v * np.sin(w * 3) * dt
                                 ],
                                 [
-                                    v * np.sin(w * 1)
-                                    + v * np.sin(w * 2)
-                                    + v * np.sin(w * 3)
-                                    + v * np.sin(w * 4)
+                                    v * np.sin(w * 1) * dt
+                                    + v * np.sin(w * 2) * dt
+                                    + v * np.sin(w * 3) * dt
+                                    + v * np.sin(w * 4) * dt
                                 ],
                             ],
                             shape=(T_p, K),
@@ -532,6 +720,35 @@ class test_that_obstacle_motion_is_predicted_correctly:
                             [[0.2], [0.3], [0.4], [0.5]],
                             shape=(T_p, K),
                         ),
+                    ),
+                ),
+                (  # Reverse motion
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                        prediction=prediction_creator.unicycle(),
+                    ),
+                    history := data.obstacle_2d_poses(
+                        # Heading is π/2 (pointing up), but vehicle moves down (negative y)
+                        x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[0.0], [-1.0]], shape=(T_h, K)),
+                        heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+                    ),
+                    # Speed estimation with projection onto heading:
+                    # v = (Δx * cos(θ) + Δy * sin(θ)) / dt
+                    # v = (0 * cos(π/2) + (-1) * sin(π/2)) / 0.1 = -10 m/s
+                    expected := data.obstacle_2d_poses(
+                        x=np.full((T_p, K), 0.0),
+                        y=array(
+                            [
+                                [(y_0 := -1.0) + (v := -10.0) * np.sin(np.pi / 2) * dt],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 2],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 3],
+                                [y_0 + v * np.sin(np.pi / 2) * dt * 4],
+                            ],
+                            shape=(T_p, K),
+                        ),
+                        heading=np.full((T_p, K), np.pi / 2),
                     ),
                 ),
             ],
@@ -683,7 +900,7 @@ class test_that_position_covariance_information_is_provided_when_propagator_is_a
         )
 
 
-class test_that_velocity_assumptions_are_applied_during_prediction:
+class test_that_input_assumptions_are_applied_during_prediction:
     @staticmethod
     def cases(create_predictor, model, data, prediction_creator) -> Sequence[tuple]:
         return [
@@ -692,7 +909,7 @@ class test_that_velocity_assumptions_are_applied_during_prediction:
                     horizon=(T_p := 4),
                     model=model.integrator.obstacle(time_step_size=(dt := 0.1)),
                     prediction=prediction_creator.integrator(),
-                    assumptions=lambda velocity: velocity.zeroed(at=(2,)),
+                    assumptions=lambda inputs: inputs.zeroed(at=(2,)),
                 ),
                 data.obstacle_2d_poses(
                     x=array([[0.0, 0.0], [1.0, 0.0]], shape=(T_h := 2, K := 2)),
@@ -717,36 +934,112 @@ class test_that_velocity_assumptions_are_applied_during_prediction:
                         time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
                     ),
                     prediction=prediction_creator.bicycle(),
-                    assumptions=lambda velocity: velocity.zeroed(steering_angle=True),
+                    assumptions=lambda inputs: inputs.zeroed(steering_angle=True),
                 ),
                 data.obstacle_2d_poses(
-                    # v = 10 m/s, ω = 0.5 rad/s => δ = arctan(ω * L / v)
+                    # v is estimated using projection: (1 * cos(0.05)) / 0.1 ≈ 9.9875
                     # With assumption: δ = 0, so heading stays constant
                     x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
                     y=array([[0.0], [0.0]], shape=(T_h, K)),
                     heading=array([[0.0], [0.05]], shape=(T_h, K)),
                 ),
-                # With zeroed steering: straight-line motion at heading=0.05, speed=10
+                # With zeroed steering: straight-line motion at heading=0.05
                 data.obstacle_2d_poses(
                     x=array(
                         [
-                            [1.0 + 10 * np.cos(0.05) * 0.1],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 2],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 3],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 4],
+                            [1.0 + (v := 1.0 * np.cos(0.05) / dt) * np.cos(0.05) * dt],
+                            [1.0 + v * np.cos(0.05) * dt * 2],
+                            [1.0 + v * np.cos(0.05) * dt * 3],
+                            [1.0 + v * np.cos(0.05) * dt * 4],
                         ],
                         shape=(T_p, K),
                     ),
                     y=array(
                         [
-                            [10 * np.sin(0.05) * 0.1],
-                            [10 * np.sin(0.05) * 0.1 * 2],
-                            [10 * np.sin(0.05) * 0.1 * 3],
-                            [10 * np.sin(0.05) * 0.1 * 4],
+                            [v * np.sin(0.05) * dt],
+                            [v * np.sin(0.05) * dt * 2],
+                            [v * np.sin(0.05) * dt * 3],
+                            [v * np.sin(0.05) * dt * 4],
                         ],
                         shape=(T_p, K),
                     ),
                     heading=array([[0.05]] * T_p, shape=(T_p, K)),
+                ),
+            ),
+            (  # Bicycle: zero out acceleration, obstacle maintains constant velocity
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.bicycle.obstacle(
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                    ),
+                    prediction=prediction_creator.bicycle(),
+                    assumptions=lambda inputs: inputs.zeroed(acceleration=True),
+                ),
+                data.obstacle_2d_poses(
+                    # History shows acceleration: v_0 = 8 m/s, v_1 = 10 m/s, a = 20 m/s²
+                    # But with zeroed acceleration, continues at v = 10 m/s
+                    x=array([[0.0], [0.8], [x_0 := 1.8]], shape=(T_h := 3, K := 1)),
+                    y=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                ),
+                # With zeroed acceleration: constant velocity v = 10 m/s
+                data.obstacle_2d_poses(
+                    x=array(
+                        [
+                            [x_0 + (v := 10.0) * dt * 1],
+                            [x_0 + v * dt * 2],
+                            [x_0 + v * dt * 3],
+                            [x_0 + v * dt * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    y=np.full((T_p, K), 0.0),
+                    heading=np.full((T_p, K), 0.0),
+                ),
+            ),
+            (  # Bicycle: zero out both acceleration and steering angle
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.bicycle.obstacle(
+                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+                    ),
+                    prediction=prediction_creator.bicycle(),
+                    assumptions=lambda inputs: inputs.zeroed(
+                        acceleration=True, steering_angle=True
+                    ),
+                ),
+                data.obstacle_2d_poses(
+                    # History shows: accelerating and turning
+                    # Speed at last step: v = (1.0 * cos(0.05)) / 0.1 ≈ 9.9875 m/s
+                    x=array([[0.0], [0.8], [x_0 := 1.8]], shape=(T_h := 3, K := 1)),
+                    y=array([[0.0], [0.0], [0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [0.0], [theta := 0.05]], shape=(T_h, K)),
+                ),
+                # With both zeroed: straight line at constant velocity
+                # v = (Δx * cos(θ)) / dt = (1.0 * cos(0.05)) / 0.1
+                data.obstacle_2d_poses(
+                    x=array(
+                        [
+                            [
+                                x_0
+                                + (v := 1.0 * np.cos(theta) / dt) * np.cos(theta) * dt
+                            ],
+                            [x_0 + v * np.cos(theta) * dt * 2],
+                            [x_0 + v * np.cos(theta) * dt * 3],
+                            [x_0 + v * np.cos(theta) * dt * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    y=array(
+                        [
+                            [v * np.sin(theta) * dt * 1],
+                            [v * np.sin(theta) * dt * 2],
+                            [v * np.sin(theta) * dt * 3],
+                            [v * np.sin(theta) * dt * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                    heading=np.full((T_p, K), theta),
                 ),
             ),
             (  # Unicycle: zero out angular velocity, obstacle goes straight
@@ -754,36 +1047,89 @@ class test_that_velocity_assumptions_are_applied_during_prediction:
                     horizon=(T_p := 4),
                     model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
                     prediction=prediction_creator.unicycle(),
-                    assumptions=lambda velocity: velocity.zeroed(angular_velocity=True),
+                    assumptions=lambda inputs: inputs.zeroed(angular_velocity=True),
                 ),
                 data.obstacle_2d_poses(
-                    # v = 10 m/s, ω = 0.5 rad/s
-                    # With assumption: ω = 0, straight-line motion
+                    # Projection-based speed: v = 1.0 * cos(0.05) / 0.1 ≈ 9.9875 m/s
+                    # ω = 0.5 rad/s, but will be zeroed by assumption
                     x=array([[0.0], [1.0]], shape=(T_h := 2, K := 1)),
                     y=array([[0.0], [0.0]], shape=(T_h, K)),
                     heading=array([[0.0], [0.05]], shape=(T_h, K)),
                 ),
-                # With zeroed angular velocity: straight-line at heading=0.05, v=10
+                # With zeroed angular velocity: straight-line at heading=0.05
+                # v = Δx * cos(θ) / dt = 1.0 * cos(0.05) / 0.1
                 data.obstacle_2d_poses(
                     x=array(
                         [
-                            [1.0 + 10 * np.cos(0.05) * 0.1],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 2],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 3],
-                            [1.0 + 10 * np.cos(0.05) * 0.1 * 4],
+                            [
+                                1.0
+                                + (v := 1.0 * np.cos(0.05) / 0.1) * np.cos(0.05) * 0.1
+                            ],
+                            [1.0 + v * np.cos(0.05) * 0.1 * 2],
+                            [1.0 + v * np.cos(0.05) * 0.1 * 3],
+                            [1.0 + v * np.cos(0.05) * 0.1 * 4],
                         ],
                         shape=(T_p, K),
                     ),
                     y=array(
                         [
-                            [10 * np.sin(0.05) * 0.1],
-                            [10 * np.sin(0.05) * 0.1 * 2],
-                            [10 * np.sin(0.05) * 0.1 * 3],
-                            [10 * np.sin(0.05) * 0.1 * 4],
+                            [v * np.sin(0.05) * 0.1],
+                            [v * np.sin(0.05) * 0.1 * 2],
+                            [v * np.sin(0.05) * 0.1 * 3],
+                            [v * np.sin(0.05) * 0.1 * 4],
                         ],
                         shape=(T_p, K),
                     ),
                     heading=array([[0.05]] * T_p, shape=(T_p, K)),
+                ),
+            ),
+            (  # Unicycle: zero out linear velocity, obstacle stays in place (spinning)
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    prediction=prediction_creator.unicycle(),
+                    assumptions=lambda inputs: inputs.zeroed(linear_velocity=True),
+                ),
+                data.obstacle_2d_poses(
+                    # v = 10 m/s (will be zeroed), ω = 0.5 rad/s
+                    x=array([[0.0], [x_0 := 1.0]], shape=(T_h := 2, K := 1)),
+                    y=array([[0.0], [0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [theta_0 := 0.05]], shape=(T_h, K)),
+                ),
+                # With zeroed linear velocity: stays in place, only heading changes
+                data.obstacle_2d_poses(
+                    x=np.full((T_p, K), x_0),
+                    y=np.full((T_p, K), 0.0),
+                    heading=array(
+                        [
+                            [theta_0 + (w := 0.5) * dt * 1],
+                            [theta_0 + w * dt * 2],
+                            [theta_0 + w * dt * 3],
+                            [theta_0 + w * dt * 4],
+                        ],
+                        shape=(T_p, K),
+                    ),
+                ),
+            ),
+            (  # Unicycle: zero out both linear and angular velocity, obstacle frozen
+                create_predictor.curvilinear(
+                    horizon=(T_p := 4),
+                    model=model.unicycle.obstacle(time_step_size=(dt := 0.1)),
+                    prediction=prediction_creator.unicycle(),
+                    assumptions=lambda inputs: inputs.zeroed(
+                        linear_velocity=True, angular_velocity=True
+                    ),
+                ),
+                data.obstacle_2d_poses(
+                    # v = 10 m/s, ω = 0.5 rad/s - both will be zeroed
+                    x=array([[0.0], [x_0 := 1.0]], shape=(T_h := 2, K := 1)),
+                    y=array([[0.0], [y_0 := 0.0]], shape=(T_h, K)),
+                    heading=array([[0.0], [theta_0 := 0.05]], shape=(T_h, K)),
+                ),
+                data.obstacle_2d_poses(
+                    x=np.full((T_p, K), x_0),
+                    y=np.full((T_p, K), y_0),
+                    heading=np.full((T_p, K), theta_0),
                 ),
             ),
         ]

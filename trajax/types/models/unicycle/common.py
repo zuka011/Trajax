@@ -5,15 +5,11 @@ from trajax.types.array import DataType
 from numtypes import Array, Dims, D
 
 UNICYCLE_D_X: Final = 3
-UNICYCLE_D_V: Final = 2
 UNICYCLE_D_U: Final = 2
 UNICYCLE_D_O: Final = 3
 
 type UnicycleD_x = D[3]
 """State dimension of the unicycle model, consisting of (x position, y position, heading)."""
-
-type UnicycleD_v = D[2]
-"""Velocity dimension of the unicycle model, consisting of (linear velocity, angular velocity)."""
 
 type UnicycleD_u = D[2]
 """Control input dimension of the unicycle model, consisting of (linear velocity, angular velocity)."""

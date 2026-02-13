@@ -8,7 +8,7 @@ from trajax.types import (
     CovarianceExtractor,
     ObstacleModel,
     PredictionCreator,
-    VelocityAssumptionProvider,
+    InputAssumptionProvider,
 )
 
 
@@ -93,42 +93,40 @@ class StaticPredictor:
         return history.last().replicate(horizon=self.horizon)
 
 
-class NoAssumptions[VelocitiesT]:
-    """Identity assumption provider that passes velocities through unchanged."""
+class NoAssumptions[InputsT]:
+    """Identity assumption provider that passes inputs through unchanged."""
 
-    def __call__(self, velocities: VelocitiesT, /) -> VelocitiesT:
-        return velocities
+    def __call__(self, inputs: InputsT, /) -> InputsT:
+        return inputs
 
 
 @dataclass(kw_only=True, frozen=True)
 class CurvilinearPredictor[
     HistoryT: ObstacleStatesHistory,
     StatesT,
-    VelocitiesT,
+    InputsT,
     InputSequencesT,
     StateSequencesT,
     CovarianceSequencesT,
     PredictionT,
 ]:
-    """Predicts obstacle motion by estimating velocities and propagating forward with a dynamical model."""
+    """Predicts obstacle motion by estimating inputs and propagating forward with a dynamical model."""
 
     horizon: int
-    model: ObstacleModel[
-        HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequencesT
-    ]
+    model: ObstacleModel[HistoryT, StatesT, InputsT, InputSequencesT, StateSequencesT]
     propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT]
     prediction: PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT]
-    assumptions: VelocityAssumptionProvider[VelocitiesT]
+    assumptions: InputAssumptionProvider[InputsT]
 
     @staticmethod
-    def create[H: ObstacleStatesHistory, S, V, IS, SS, CS, P](
+    def create[H: ObstacleStatesHistory, S, I, IS, SS, CS, P](
         *,
         horizon: int,
-        model: ObstacleModel[H, S, V, IS, SS],
+        model: ObstacleModel[H, S, I, IS, SS],
         prediction: PredictionCreator[SS, CS, P],
         propagator: CovariancePropagator[SS, CS] | None = None,
-        assumptions: VelocityAssumptionProvider[V] | None = None,
-    ) -> "CurvilinearPredictor[H, S, V, IS, SS, CS, P]":
+        assumptions: InputAssumptionProvider[I] | None = None,
+    ) -> "CurvilinearPredictor[H, S, I, IS, SS, CS, P]":
         return CurvilinearPredictor(
             horizon=horizon,
             model=model,
@@ -138,7 +136,7 @@ class CurvilinearPredictor[
             else cast(CovariancePropagator[SS, CS], NoCovariance()),
             assumptions=assumptions
             if assumptions is not None
-            else cast(VelocityAssumptionProvider[V], NoAssumptions()),
+            else cast(InputAssumptionProvider[I], NoAssumptions()),
         )
 
     def predict(self, *, history: HistoryT) -> PredictionT:
@@ -146,9 +144,10 @@ class CurvilinearPredictor[
             return self.prediction.empty(horizon=self.horizon)
 
         estimated = self.model.estimate_state_from(history)
-        velocities = self.assumptions(estimated.velocities)
         inputs = self.model.input_to_maintain(
-            velocities, states=estimated.states, horizon=self.horizon
+            self.assumptions(estimated.inputs),
+            states=estimated.states,
+            horizon=self.horizon,
         )
         states = self.model.forward(current=estimated.states, inputs=inputs)
         covariances = self.propagator.propagate(states=states, inputs=inputs)

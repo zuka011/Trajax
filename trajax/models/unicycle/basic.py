@@ -18,8 +18,6 @@ from trajax.types import (
     UnicyclePositions,
     UnicycleD_x,
     UNICYCLE_D_X,
-    UnicycleD_v,
-    UNICYCLE_D_V,
     UnicycleD_u,
     UNICYCLE_D_U,
     UnicycleD_o,
@@ -412,32 +410,36 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
 
 
 @dataclass(frozen=True)
-class NumPyUnicycleObstacleVelocities[K: int]:
+class NumPyUnicycleObstacleInputs[K: int]:
     linear_velocities: Array[Dims[K]]
     angular_velocities: Array[Dims[K]]
 
-    def zeroed(self, *, angular_velocity: bool) -> "NumPyUnicycleObstacleVelocities[K]":
-        """Returns a version of the velocities with the angular velocity zeroed out."""
-        return NumPyUnicycleObstacleVelocities(
-            linear_velocities=self.linear_velocities,
+    def zeroed(
+        self, *, linear_velocity: bool = False, angular_velocity: bool = False
+    ) -> "NumPyUnicycleObstacleInputs[K]":
+        """Returns a version of the inputs with the specified components zeroed out."""
+        return NumPyUnicycleObstacleInputs(
+            linear_velocities=np.zeros_like(self.linear_velocities)
+            if linear_velocity
+            else self.linear_velocities,
             angular_velocities=np.zeros_like(self.angular_velocities)
             if angular_velocity
             else self.angular_velocities,
         )
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_v, K]]:
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_u, K]]:
         return self._array
 
     @property
-    def dimension(self) -> UnicycleD_v:
-        return UNICYCLE_D_V
+    def dimension(self) -> UnicycleD_u:
+        return UNICYCLE_D_U
 
     @property
     def count(self) -> K:
         return self.linear_velocities.shape[0]
 
     @cached_property
-    def _array(self) -> Array[Dims[UnicycleD_v, K]]:
+    def _array(self) -> Array[Dims[UnicycleD_u, K]]:
         return np.stack([self.linear_velocities, self.angular_velocities], axis=0)
 
 
@@ -584,66 +586,48 @@ class NumPyUnicycleObstacleModel(
     ObstacleModel[
         NumPyUnicycleObstacleStatesHistory,
         NumPyUnicycleObstacleStates,
-        NumPyUnicycleObstacleVelocities,
+        NumPyUnicycleObstacleInputs,
         NumPyUnicycleObstacleControlInputSequences,
         NumPyUnicycleObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle velocities from history and propagates unicycle kinematics forward."""
+    """Estimates obstacle inputs from history and propagates unicycle kinematics forward."""
 
     time_step_size: float
+    estimator: "NumPyFiniteDifferenceUnicycleStateEstimator"
 
     @staticmethod
     def create(*, time_step_size: float) -> "NumPyUnicycleObstacleModel":
         """Creates a NumPy unicycle obstacle model."""
-        return NumPyUnicycleObstacleModel(time_step_size=time_step_size)
+        return NumPyUnicycleObstacleModel(
+            time_step_size=time_step_size,
+            estimator=NumPyFiniteDifferenceUnicycleStateEstimator.create(
+                time_step_size=time_step_size
+            ),
+        )
 
     def estimate_state_from[K: int](
         self, history: NumPyUnicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleVelocities[K]
+        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K]
     ]:
         assert history.horizon > 0, "History must have at least one time step."
 
-        if history.horizon < 2:
-            linear_velocities = np.zeros((history.count))
-            angular_velocities = np.zeros((history.count))
-        else:
-            linear_velocities = estimate_speeds_from(
-                history, time_step_size=self.time_step_size
-            )
-            angular_velocities = estimate_angular_velocities_from(
-                history, time_step_size=self.time_step_size
-            )
-
-        assert shape_of(linear_velocities, matches=(history.count,))
-        assert shape_of(angular_velocities, matches=(history.count,))
-
-        return EstimatedObstacleStates(
-            states=NumPyUnicycleObstacleStates.create(
-                x=history.x()[-1],
-                y=history.y()[-1],
-                heading=history.heading()[-1],
-            ),
-            velocities=NumPyUnicycleObstacleVelocities(
-                linear_velocities=linear_velocities,
-                angular_velocities=angular_velocities,
-            ),
-        )
+        return self.estimator.estimate_from(history)
 
     def input_to_maintain[K: int](
         self,
-        velocities: NumPyUnicycleObstacleVelocities[K],
+        inputs: NumPyUnicycleObstacleInputs[K],
         *,
         states: NumPyUnicycleObstacleStates[K],
         horizon: int,
     ) -> NumPyUnicycleObstacleControlInputSequences[int, K]:
         return NumPyUnicycleObstacleControlInputSequences.create(
             linear_velocities=np.tile(
-                velocities.linear_velocities[np.newaxis, :], (horizon, 1)
+                inputs.linear_velocities[np.newaxis, :], (horizon, 1)
             ),
             angular_velocities=np.tile(
-                velocities.angular_velocities[np.newaxis, :], (horizon, 1)
+                inputs.angular_velocities[np.newaxis, :], (horizon, 1)
             ),
         )
 
@@ -802,38 +786,114 @@ def input_jacobian[T: int, K: int](
     return G
 
 
-def estimate_speeds_from[K: int](
-    history: NumPyUnicycleObstacleStatesHistory[int, K], *, time_step_size: float
-) -> Array[Dims[K]]:
-    assert history.horizon >= 2, (
-        "At least two history steps are required to estimate speed."
-    )
+@dataclass(frozen=True)
+class NumPyFiniteDifferenceUnicycleStateEstimator:
+    time_step_size: float
 
-    delta_x = history.x()[-1] - history.x()[-2]
-    delta_y = history.y()[-1] - history.y()[-2]
+    @staticmethod
+    def create(
+        *, time_step_size: float
+    ) -> "NumPyFiniteDifferenceUnicycleStateEstimator":
+        return NumPyFiniteDifferenceUnicycleStateEstimator(
+            time_step_size=time_step_size
+        )
 
-    speeds = np.sqrt(delta_x**2 + delta_y**2) / time_step_size
+    def estimate_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K]
+    ]:
+        linear_velocities = self.estimate_speeds_from(history)
+        angular_velocities = self.estimate_angular_velocities_from(history)
 
-    assert shape_of(speeds, matches=(history.count,), name="estimated speeds")
+        return EstimatedObstacleStates(
+            states=NumPyUnicycleObstacleStates.create(
+                x=history.x()[-1],
+                y=history.y()[-1],
+                heading=history.heading()[-1],
+            ),
+            inputs=NumPyUnicycleObstacleInputs(
+                linear_velocities=linear_velocities,
+                angular_velocities=angular_velocities,
+            ),
+        )
 
-    return speeds
+    def estimate_speeds_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> Array[Dims[K]]:
+        """Estimates speeds from position history using finite differences.
 
+        Speed is computed as the projection of the displacement onto the heading direction,
+        which can be negative for reverse motion:
 
-def estimate_angular_velocities_from[K: int](
-    history: NumPyUnicycleObstacleStatesHistory[int, K], *, time_step_size: float
-) -> Array[Dims[K]]:
-    assert history.horizon >= 2, (
-        "At least two history steps are required to estimate angular velocity."
-    )
+        $$v_t = ((x_t - x_{t-1}) * cos(\\theta_t) + (y_t - y_{t-1}) * sin(\\theta_t)) / (\\Delta t)$$
+        """
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
 
-    angular_velocities = (
-        history.heading()[-1] - history.heading()[-2]
-    ) / time_step_size
+        x = history.x()
+        y = history.y()
+        heading = history.heading()
 
-    assert shape_of(
-        angular_velocities,
-        matches=(history.count,),
-        name="estimated angular velocities",
-    )
+        return self._estimate_speeds_from(
+            x_current=x[-1],
+            y_current=y[-1],
+            x_previous=x[-2],
+            y_previous=y[-2],
+            heading_current=heading[-1],
+        )
 
-    return angular_velocities
+    def estimate_angular_velocities_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> Array[Dims[K]]:
+        """Estimates angular velocities from heading history using finite differences.
+
+        Angular velocity is computed as the change in heading over time:
+
+        $$\\omega_t = (\\theta_t - \\theta_{t-1}) / (\\Delta t)$$
+        """
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        heading = history.heading()
+
+        return self._estimate_angular_velocities_from(
+            heading_current=heading[-1],
+            heading_previous=heading[-2],
+        )
+
+    def _estimate_speeds_from[K: int](
+        self,
+        *,
+        x_current: Array[Dims[K]],
+        y_current: Array[Dims[K]],
+        x_previous: Array[Dims[K]],
+        y_previous: Array[Dims[K]],
+        heading_current: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        delta_x = x_current - x_previous
+        delta_y = y_current - y_previous
+
+        speeds = (
+            delta_x * np.cos(heading_current) + delta_y * np.sin(heading_current)
+        ) / self.time_step_size
+
+        assert shape_of(speeds, matches=(x_current.shape[0],), name="estimated speeds")
+
+        return speeds
+
+    def _estimate_angular_velocities_from[K: int](
+        self,
+        *,
+        heading_current: Array[Dims[K]],
+        heading_previous: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        angular_velocities = (heading_current - heading_previous) / self.time_step_size
+
+        assert shape_of(
+            angular_velocities,
+            matches=(heading_current.shape[0],),
+            name="estimated angular velocities",
+        )
+
+        return angular_velocities
