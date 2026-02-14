@@ -1,6 +1,7 @@
 from .array import (
     DataType as DataType,
     Device as Device,
+    HasShape as HasShape,
     jaxtyped as jaxtyped,
     place as place,
 )

@@ -5,6 +5,7 @@ from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
+    HasShape,
     DynamicalModel,
     ObstacleModel,
     ObstacleStateEstimator,
@@ -21,6 +22,13 @@ from trajax.states import (
     JaxSimpleStateSequence as SimpleStateSequence,
     JaxSimpleStateBatch as SimpleStateBatch,
     JaxSimpleControlInputBatch as SimpleControlInputBatch,
+)
+from trajax.filters import (
+    JaxKalmanFilter,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceArrayDescription,
+    JaxNoiseCovarianceDescription,
+    jax_kalman_filter,
 )
 
 from numtypes import Array, Dims
@@ -39,6 +47,8 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
     """Obstacle states represented in integrator model coordinates."""
 
     _array: Float[JaxArray, "D_o K"]
+    _covariance: Float[JaxArray, "D_o D_o K"] | None = None
+    """State covariance matrix from Kalman filtering. Shape: (D_o, D_o, K)."""
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self._numpy_array
@@ -54,6 +64,10 @@ class JaxIntegratorObstacleStates[D_o: int, K: int]:
     @property
     def array(self) -> Float[JaxArray, "D_o K"]:
         return self._array
+
+    @property
+    def covariance(self) -> Float[JaxArray, "D_o D_o K"] | None:
+        return self._covariance
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[D_o, K]]:
@@ -91,6 +105,8 @@ class JaxIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
 @dataclass(frozen=True)
 class JaxIntegratorObstacleInputs[D_o: int, K: int]:
     array: Float[JaxArray, "D_o K"]
+    _covariance: Float[JaxArray, "D_o D_o K"] | None = None
+    """Input covariance matrix from Kalman filtering. Shape: (D_o, D_o, K)."""
 
     def __array__(self, dtype: None | type = None) -> Array[Dims[D_o, K]]:
         return self._numpy_array
@@ -98,7 +114,7 @@ class JaxIntegratorObstacleInputs[D_o: int, K: int]:
     def zeroed(self, *, at: tuple[int, ...]) -> "JaxIntegratorObstacleInputs[D_o, K]":
         """Returns new obstacle inputs with inputs at specified state dimensions zeroed out."""
 
-        return JaxIntegratorObstacleInputs(self.array.at[at].set(0.0))
+        return JaxIntegratorObstacleInputs(self.array.at[at].set(0.0), self._covariance)
 
     @property
     def dimension(self) -> D_o:
@@ -107,6 +123,10 @@ class JaxIntegratorObstacleInputs[D_o: int, K: int]:
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[1])
+
+    @property
+    def covariance(self) -> Float[JaxArray, "D_o D_o K"] | None:
+        return self._covariance
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[D_o, K]]:
@@ -343,13 +363,14 @@ class JaxFiniteDifferenceIntegratorStateEstimator(
     def estimate_from[D_o: int, K: int, T: int = int](
         self, history: JaxIntegratorObstacleStatesHistory[T, D_o, K]
     ) -> EstimatedObstacleStates[
-        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K]
+        JaxIntegratorObstacleStates[D_o, K], JaxIntegratorObstacleInputs[D_o, K], None
     ]:
         velocities = self.estimate_velocities_from(history)
 
         return EstimatedObstacleStates(
             states=JaxIntegratorObstacleStates(history.array[-1, :, :]),
             inputs=JaxIntegratorObstacleInputs(velocities),
+            covariance=None,
         )
 
     def estimate_velocities_from[D_o: int, K: int, T: int = int](
@@ -357,6 +378,171 @@ class JaxFiniteDifferenceIntegratorStateEstimator(
     ) -> Float[JaxArray, "D_o K"]:
         """Estimates velocities from position history using finite differences."""
         return estimate_velocities(history=history.array, time_step=self.time_step_size)
+
+
+@dataclass(frozen=True)
+class JaxKfIntegratorStateEstimator[D_o: int, D_x: int](
+    ObstacleStateEstimator[
+        JaxIntegratorObstacleStatesHistory,
+        JaxIntegratorObstacleStates,
+        JaxIntegratorObstacleInputs,
+    ]
+):
+    """Kalman Filter state estimator for integrator model obstacles."""
+
+    time_step_size: float
+    process_noise_covariance: Float[JaxArray, "D_x D_x"]
+    observation_noise_covariance: Float[JaxArray, "D_o D_o"]
+    observation_dimension: D_o
+    estimator: JaxKalmanFilter
+
+    @staticmethod
+    def create[D_o_: int, D_x_: int](
+        *,
+        time_step_size: float,
+        process_noise_covariance: JaxNoiseCovarianceDescription[D_x_],
+        observation_noise_covariance: JaxNoiseCovarianceArrayDescription[D_o_],
+        observation_dimension: D_o_ | None = None,
+    ) -> "JaxKfIntegratorStateEstimator[D_o_, D_x_]":
+        """Creates an integrator state estimator based on the Kalman Filter with the
+        specified noise covariances.
+
+        Args:
+            time_step_size: The time step size for the integrator.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a single scalar representing
+                isotropic noise across all state dimensions.
+            observation_noise_covariance: The observation noise covariance, either as
+                a full matrix, a vector of diagonal entries, or a single scalar
+                representing isotropic noise across all state dimensions.
+            observation_dimension: The observation dimension for the Kalman filter.
+                Mandatory if both noise covariances are specified as scalars.
+        """
+        observation_dimension = observation_dimension_from(
+            process_noise_covariance=process_noise_covariance,
+            observation_noise_covariance=observation_noise_covariance,
+            observation_dimension=observation_dimension,
+        )
+
+        return JaxKfIntegratorStateEstimator(
+            time_step_size=time_step_size,
+            process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance,
+                dimension=kf_state_dimension_for(observation_dimension),
+            ),
+            observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=observation_dimension
+            ),
+            observation_dimension=observation_dimension,
+            estimator=JaxKalmanFilter.create(),
+        )
+
+    def estimate_from[K: int, T: int = int](
+        self, history: JaxIntegratorObstacleStatesHistory[T, D_o, K]
+    ) -> EstimatedObstacleStates[
+        JaxIntegratorObstacleStates[D_o, K],
+        JaxIntegratorObstacleInputs[D_o, K],
+        Float[JaxArray, "D_x D_x K"],
+    ]:
+        """Estimate states and velocities using Kalman filtering."""
+        assert history.horizon > 0, (
+            "History must contain at least one state for estimation."
+        )
+        assert history.dimension == self.observation_dimension, (
+            f"History dimension {history.dimension} does not match expected "
+            f"observation dimension {self.observation_dimension}."
+        )
+
+        estimate = self.estimator.filter(
+            observations=history.array,
+            initial_state_covariance=self.initial_state_covariance,
+            state_transition_matrix=self.state_transition_matrix,
+            process_noise_covariance=self.process_noise_covariance,
+            observation_noise_covariance=self.observation_noise_covariance,
+            observation_matrix=self.observation_matrix,
+        )
+
+        return EstimatedObstacleStates(
+            states=self.states_from(estimate),
+            inputs=self.inputs_from(estimate),
+            covariance=estimate.covariance,
+        )
+
+    def states_from[K: int = int](
+        self, belief: JaxGaussianBelief
+    ) -> JaxIntegratorObstacleStates[D_o, K]:
+        D_o = self.observation_dimension
+
+        return JaxIntegratorObstacleStates(
+            belief.mean[:D_o, :], belief.covariance[:D_o, :D_o, :]
+        )
+
+    def inputs_from[K: int = int](
+        self, belief: JaxGaussianBelief
+    ) -> JaxIntegratorObstacleInputs[D_o, K]:
+        D_o = self.observation_dimension
+
+        return JaxIntegratorObstacleInputs(
+            belief.mean[D_o:, :], belief.covariance[D_o:, D_o:, :]
+        )
+
+    @cached_property
+    def initial_state_covariance(self) -> Float[JaxArray, "D_x D_x"]:
+        D_o = self.observation_dimension
+
+        # NOTE: We are sure of the observed states, unsure of the velocities.
+        return jnp.diag(jnp.concatenate((jnp.full(D_o, 1e-4), jnp.full(D_o, 1e3))))
+
+    @cached_property
+    def state_transition_matrix(self) -> Float[JaxArray, "D_x D_x"]:
+        D_o = self.observation_dimension
+
+        # NOTE: State transition matrix for constant velocity model.
+        return jnp.block(
+            [
+                [jnp.eye(D_o), self.time_step_size * jnp.eye(D_o)],
+                [jnp.zeros((D_o, D_o)), jnp.eye(D_o)],
+            ]
+        )
+
+    @cached_property
+    def observation_matrix(self) -> Float[JaxArray, "D_o D_x"]:
+        D_o = self.observation_dimension
+
+        # NOTE: We observe only the positions, not the velocities.
+        return jnp.hstack((jnp.eye(D_o), jnp.zeros((D_o, D_o))))
+
+
+def observation_dimension_from[D_o: int, D_x: int](
+    *,
+    process_noise_covariance: JaxNoiseCovarianceDescription[D_x],
+    observation_noise_covariance: JaxNoiseCovarianceDescription[D_o],
+    observation_dimension: D_o | None,
+) -> D_o:
+    if observation_dimension is not None:
+        return observation_dimension
+
+    if isinstance(observation_noise_covariance, HasShape):
+        return cast(D_o, observation_noise_covariance.shape[0])
+
+    if isinstance(process_noise_covariance, HasShape):
+        return cast(D_o, observation_dimension_for(process_noise_covariance.shape[0]))
+
+    assert False, (
+        "Observation dimension must be specified if noise covariances are not provided as arrays."
+    )
+
+
+def kf_state_dimension_for(observation_dimension: int) -> int:
+    # NOTE: For the integrator model, both the states and state velocities are combined
+    # into the estimated state vector.
+    return 2 * observation_dimension
+
+
+def observation_dimension_for(kf_state_dimension: int) -> int:
+    # NOTE: For the integrator model, both the states and state velocities are combined
+    # into the estimated state vector.
+    return kf_state_dimension // 2
 
 
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:

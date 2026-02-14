@@ -7,9 +7,10 @@ from numtypes import Array, IndexArray, Dims
 
 
 @dataclass(kw_only=True, frozen=True)
-class EstimatedObstacleStates[StatesT, InputsT]:
+class EstimatedObstacleStates[StatesT, InputsT, CovarianceT]:
     states: StatesT
     inputs: InputsT
+    covariance: CovarianceT | None
 
 
 class ObstacleStatesHistory[T: int, D_o: int, K: int, ObstacleStatesForTimeStepT = Any](
@@ -149,10 +150,10 @@ class ObstacleControlInputSequences[T: int, D_u: int, K: int](Protocol):
         ...
 
 
-class ObstacleStateEstimator[HistoryT, StatesT, InputsT](Protocol):
+class ObstacleStateEstimator[HistoryT, StatesT, InputsT, CovarianceT = None](Protocol):
     def estimate_from(
         self, history: HistoryT
-    ) -> EstimatedObstacleStates[StatesT, InputsT]:
+    ) -> EstimatedObstacleStates[StatesT, InputsT, CovarianceT]:
         """Estimates the current states and inputs of obstacles given their history."""
         ...
 

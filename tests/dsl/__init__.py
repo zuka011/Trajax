@@ -12,4 +12,4 @@ from .numeric import (
     check as check,
 )
 from .prediction import prediction_creator as prediction_creator
-from .estimate import ComponentExtractor as ComponentExtractor
+from .estimator import ComponentExtractor as ComponentExtractor

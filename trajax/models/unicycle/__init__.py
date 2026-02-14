@@ -12,6 +12,7 @@ from .basic import (
     NumPyUnicycleModel as NumPyUnicycleModel,
     NumPyUnicycleObstacleModel as NumPyUnicycleObstacleModel,
     NumPyFiniteDifferenceUnicycleStateEstimator as NumPyFiniteDifferenceUnicycleStateEstimator,
+    NumPyKfUnicycleStateEstimator as NumPyKfUnicycleStateEstimator,
 )
 from .accelerated import (
     JaxUnicycleState as JaxUnicycleState,
@@ -27,4 +28,5 @@ from .accelerated import (
     JaxUnicycleModel as JaxUnicycleModel,
     JaxUnicycleObstacleModel as JaxUnicycleObstacleModel,
     JaxFiniteDifferenceUnicycleStateEstimator as JaxFiniteDifferenceUnicycleStateEstimator,
+    JaxKfUnicycleStateEstimator as JaxKfUnicycleStateEstimator,
 )

@@ -16,38 +16,47 @@ class test_that_velocity_estimates_are_zero_for_single_state_history:
         dt = 0.1
         tolerance = 1e-10
         return [
-            (
-                estimator := model.bicycle.estimator.finite_difference(
-                    time_step_size=dt, wheelbase=1.0
-                ),
-                history := data.obstacle_2d_poses(
-                    x=array([[5.0, 10.0]], shape=(1, 2)),
-                    y=array([[3.0, 7.0]], shape=(1, 2)),
-                    heading=array([[0.5, 1.0]], shape=(1, 2)),
-                ),
-                velocity_of := lambda result: result.states.speed(),
-                tolerance,
-            ),
-            (
-                estimator := model.unicycle.estimator.finite_difference(
-                    time_step_size=dt
-                ),
-                history := data.obstacle_2d_poses(
-                    x=array([[5.0, 10.0]], shape=(1, 2)),
-                    y=array([[3.0, 7.0]], shape=(1, 2)),
-                    heading=array([[0.5, 1.0]], shape=(1, 2)),
-                ),
-                velocity_of := lambda result: result.inputs.linear_velocities(),
-                tolerance,
-            ),
+            *[
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array([[5.0, 10.0]], shape=(T := 1, K := 2)),
+                        y=array([[3.0, 7.0]], shape=(T, K)),
+                        heading=array([[0.5, 1.0]], shape=(T, K)),
+                    ),
+                    velocity_of,
+                    tolerance,
+                )
+                for estimator, velocity_of in [
+                    (
+                        model.bicycle.estimator.finite_difference(
+                            time_step_size=dt, wheelbase=1.0
+                        ),
+                        [
+                            lambda result: result.states.speed(),
+                            # Steering angle is kinda like a velocity.
+                            lambda result: result.inputs.steering_angles(),
+                        ],
+                    ),
+                    (
+                        model.unicycle.estimator.finite_difference(time_step_size=dt),
+                        [
+                            lambda result: result.inputs.linear_velocities(),
+                            lambda result: result.inputs.angular_velocities(),
+                        ],
+                    ),
+                ]
+            ],
             (
                 estimator := model.integrator.estimator.finite_difference(
                     time_step_size=dt
                 ),
                 history := data.simple_obstacle_states(
-                    states=array([[[5.0, 10.0], [3.0, 7.0]]], shape=(1, 2, 2)),
+                    states=array(
+                        [[[5.0, 10.0], [3.0, 7.0]]], shape=(T := 1, D_o := 2, K := 2)
+                    ),
                 ),
-                velocity_of := lambda result: result.inputs.array,
+                velocity_of := [lambda result: result.inputs.array],
                 tolerance,
             ),
         ]
@@ -63,11 +72,12 @@ class test_that_velocity_estimates_are_zero_for_single_state_history:
         self,
         estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT],
         history: HistoryT,
-        velocity_of: ComponentExtractor[StatesT, InputsT],
+        velocity_of: Sequence[ComponentExtractor[StatesT, InputsT]],
         tolerance: float,
     ) -> None:
         result = estimator.estimate_from(history)
-        assert np.allclose(velocity_of(result), 0.0, atol=tolerance)
+        for velocity in velocity_of:
+            assert np.allclose(velocity(result), 0.0, atol=tolerance)
 
 
 class test_that_acceleration_is_zero_for_fewer_than_three_states:
@@ -75,31 +85,31 @@ class test_that_acceleration_is_zero_for_fewer_than_three_states:
     def cases(model, data) -> Sequence[tuple]:
         dt = 0.1
         tolerance = 1e-10
+        histories = [
+            # One historical state.
+            data.obstacle_2d_poses(
+                x=array([[0.0]], shape=(T := 1, K := 1)),
+                y=array([[0.0]], shape=(T, K)),
+                heading=array([[0.0]], shape=(T, K)),
+            ),
+            # Two historical states.
+            history := data.obstacle_2d_poses(
+                x=array([[0.0], [1.0]], shape=(T := 2, K := 1)),
+                y=array([[0.0], [0.0]], shape=(T, K)),
+                heading=array([[0.0], [0.0]], shape=(T, K)),
+            ),
+        ]
+
         return [
             (
                 estimator := model.bicycle.estimator.finite_difference(
                     time_step_size=dt, wheelbase=1.0
                 ),
-                history := data.obstacle_2d_poses(
-                    x=array([[0.0]], shape=(1, 1)),
-                    y=array([[0.0]], shape=(1, 1)),
-                    heading=array([[0.0]], shape=(1, 1)),
-                ),
+                history,
                 acceleration_of := lambda result: result.inputs.accelerations(),
                 tolerance,
-            ),
-            (
-                estimator := model.bicycle.estimator.finite_difference(
-                    time_step_size=dt, wheelbase=1.0
-                ),
-                history := data.obstacle_2d_poses(
-                    x=array([[0.0], [1.0]], shape=(2, 1)),
-                    y=array([[0.0], [0.0]], shape=(2, 1)),
-                    heading=array([[0.0], [0.0]], shape=(2, 1)),
-                ),
-                acceleration_of := lambda result: result.inputs.accelerations(),
-                tolerance,
-            ),
+            )
+            for history in histories
         ]
 
     @mark.parametrize(
@@ -118,3 +128,53 @@ class test_that_acceleration_is_zero_for_fewer_than_three_states:
     ) -> None:
         result = estimator.estimate_from(history)
         assert np.allclose(acceleration_of(result), 0.0, atol=tolerance)
+
+
+class test_that_finite_difference_estimators_return_none_covariance:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        return [
+            *[
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array([[0.0, 1.0], [0.5, 1.5]], shape=(T := 2, K := 2)),
+                        y=array([[0.0, 0.0], [0.5, 0.5]], shape=(T, K)),
+                        heading=array([[0.7, 0.7], [0.7, 0.7]], shape=(T, K)),
+                    ),
+                )
+                for estimator in [
+                    model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=1.0
+                    ),
+                    model.unicycle.estimator.finite_difference(time_step_size=dt),
+                ]
+            ],
+            (
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
+                history := data.simple_obstacle_states(
+                    states=array(
+                        [[[0.0, 1.0], [0.0, 0.0]], [[0.5, 1.5], [0.5, 0.5]]],
+                        shape=(T := 2, D_o := 2, K := 2),
+                    ),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT, InputsT](
+        self,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, None],
+        history: HistoryT,
+    ) -> None:
+        result = estimator.estimate_from(history)
+        assert result.covariance is None

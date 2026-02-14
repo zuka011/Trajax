@@ -210,9 +210,12 @@ class compute:
 class check:
     @staticmethod
     def is_spd[T: int = int, D: int = int, K: int = int](
-        matrices: Array[Dims[T, D, D, K]], atol: float = 1e-6
+        matrices: Array[Dims[T, D, D, K]] | Array[Dims[D, D, K]], atol: float = 1e-6
     ) -> bool:
         """Check if matrices are symmetric positive semi-definite."""
+        if matrices.ndim == 3:
+            matrices = matrices[np.newaxis, ...]
+
         T, D1, D2, K = matrices.shape
 
         assert D1 == D2, "Covariance matrices must be square."

@@ -32,17 +32,45 @@ from trajax.types import (
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D
 
+from trajax.filters import (
+    JaxExtendedKalmanFilter,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceDescription,
+    JaxUnscentedKalmanFilter,
+    jax_kalman_filter,
+)
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 
 NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 
+UNICYCLE_ESTIMATION_D_X: Final = 5
+UNICYCLE_OBSERVATION_D_O: Final = 3
+
+type UnicycleEstimationD_x = D[5]
+type UnicycleObservationD_o = D[3]
+
 
 type StateArray = Float[JaxArray, f"{UNICYCLE_D_X}"]
 type ControlInputSequenceArray[T: int] = Float[JaxArray, f"T {UNICYCLE_D_U}"]
 type StateBatchArray[T: int, M: int] = Float[JaxArray, f"T {UNICYCLE_D_X} M"]
 type ControlInputBatchArray[T: int, M: int] = Float[JaxArray, f"T {UNICYCLE_D_U} M"]
+type EstimationStateCovarianceArray = Float[
+    JaxArray, f"{UNICYCLE_ESTIMATION_D_X} {UNICYCLE_ESTIMATION_D_X}"
+]
+type ProcessNoiseCovarianceArray = Float[
+    JaxArray, f"{UNICYCLE_ESTIMATION_D_X} {UNICYCLE_ESTIMATION_D_X}"
+]
+type ObservationNoiseCovarianceArray = Float[
+    JaxArray, f"{UNICYCLE_OBSERVATION_D_O} {UNICYCLE_OBSERVATION_D_O}"
+]
+type ObservationMatrix = Float[
+    JaxArray, f"{UNICYCLE_OBSERVATION_D_O} {UNICYCLE_ESTIMATION_D_X}"
+]
+
+type KalmanFilter = JaxExtendedKalmanFilter | JaxUnscentedKalmanFilter
 
 type StatesAtTimeStep[M: int] = Float[JaxArray, f"{UNICYCLE_D_X} M"]
 type ControlInputsAtTimeStep[M: int] = Float[JaxArray, f"{UNICYCLE_D_U} M"]
@@ -396,12 +424,16 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
 @dataclass(frozen=True)
 class JaxUnicycleObstacleStates[K: int]:
     array: Float[JaxArray, f"{UNICYCLE_D_O} K"]
+    _covariance: Float[JaxArray, f"{UNICYCLE_D_O} {UNICYCLE_D_O} K"] | None = None
+    """State covariance matrix from Kalman filtering. Shape: (UnicycleD_o, UnicycleD_o, K)."""
 
     @staticmethod
     def wrap[K_: int](
         array: Array[Dims[UnicycleD_o, K_]] | Float[JaxArray, f"{UNICYCLE_D_O} K"],
+        *,
+        covariance: Float[JaxArray, f"{UNICYCLE_D_O} {UNICYCLE_D_O} K"] | None = None,
     ) -> "JaxUnicycleObstacleStates[K_]":
-        return JaxUnicycleObstacleStates(jnp.asarray(array))
+        return JaxUnicycleObstacleStates(jnp.asarray(array), covariance)
 
     @staticmethod
     def create[K_: int](
@@ -409,8 +441,9 @@ class JaxUnicycleObstacleStates[K: int]:
         x: Array[Dims[K_]] | Float[JaxArray, "K_"],
         y: Array[Dims[K_]] | Float[JaxArray, "K_"],
         heading: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        covariance: Float[JaxArray, f"{UNICYCLE_D_O} {UNICYCLE_D_O} K"] | None = None,
     ) -> "JaxUnicycleObstacleStates[K_]":
-        return JaxUnicycleObstacleStates(jnp.stack([x, y, heading], axis=0))
+        return JaxUnicycleObstacleStates(jnp.stack([x, y, heading], axis=0), covariance)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
         return self._numpy_array
@@ -431,6 +464,10 @@ class JaxUnicycleObstacleStates[K: int]:
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[1])
+
+    @property
+    def covariance(self) -> Float[JaxArray, f"{UNICYCLE_D_O} {UNICYCLE_D_O} K"] | None:
+        return self._covariance
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[UnicycleD_o, K]]:
@@ -499,14 +536,20 @@ class JaxUnicycleObstacleStateSequences[T: int, K: int]:
 class JaxUnicycleObstacleInputs[K: int]:
     _linear_velocities: Float[JaxArray, "K"]
     _angular_velocities: Float[JaxArray, "K"]
+    _covariance: Float[JaxArray, f"{UNICYCLE_D_U} {UNICYCLE_D_U} K"] | None = None
+    """Input covariance matrix from Kalman filtering. Shape: (UnicycleD_u, UnicycleD_u, K)."""
 
     @staticmethod
     def wrap[K_: int](
         inputs: Float[JaxArray, f"{UNICYCLE_D_U} K"] | Array[Dims[UnicycleD_u, K_]],
+        *,
+        covariance: Float[JaxArray, f"{UNICYCLE_D_U} {UNICYCLE_D_U} K"] | None = None,
     ) -> "JaxUnicycleObstacleInputs[K_]":
         inputs = jnp.asarray(inputs)
         return JaxUnicycleObstacleInputs(
-            _linear_velocities=inputs[0], _angular_velocities=inputs[1]
+            _linear_velocities=inputs[0],
+            _angular_velocities=inputs[1],
+            _covariance=covariance,
         )
 
     @staticmethod
@@ -514,10 +557,12 @@ class JaxUnicycleObstacleInputs[K: int]:
         *,
         linear_velocities: Float[JaxArray, "K"] | Array[Dims[K]],
         angular_velocities: Float[JaxArray, "K"] | Array[Dims[K]],
+        covariance: Float[JaxArray, f"{UNICYCLE_D_U} {UNICYCLE_D_U} K"] | None = None,
     ) -> "JaxUnicycleObstacleInputs[int]":
         return JaxUnicycleObstacleInputs(
             _linear_velocities=jnp.asarray(linear_velocities),
             _angular_velocities=jnp.asarray(angular_velocities),
+            _covariance=covariance,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_u, K]]:
@@ -540,6 +585,7 @@ class JaxUnicycleObstacleInputs[K: int]:
             _angular_velocities=jnp.zeros_like(self.angular_velocities())
             if angular_velocity
             else self._angular_velocities,
+            _covariance=self._covariance,
         )
 
     @property
@@ -549,6 +595,10 @@ class JaxUnicycleObstacleInputs[K: int]:
     @property
     def count(self) -> K:
         return cast(K, self._linear_velocities.shape[0])
+
+    @property
+    def covariance(self) -> Float[JaxArray, f"{UNICYCLE_D_U} {UNICYCLE_D_U} K"] | None:
+        return self._covariance
 
     @property
     def linear_velocities_array(self) -> Float[JaxArray, "K"]:
@@ -760,6 +810,81 @@ class JaxUnicycleObstacleModel(
         )
 
 
+class JaxUnicycleStateEstimationModel(NamedTuple):
+    """Kinematic unicycle model used for state estimation."""
+
+    time_step_size: Scalar
+
+    @staticmethod
+    def create(*, time_step_size: float) -> "JaxUnicycleStateEstimationModel":
+        return JaxUnicycleStateEstimationModel(
+            time_step_size=jnp.asarray(time_step_size),
+        )
+
+    @jax.jit
+    @jaxtyped
+    def __call__(self, state: Float[JaxArray, "D_x K"]) -> Float[JaxArray, "D_x K"]:
+        return jax.vmap(self.step, in_axes=1, out_axes=1)(state)
+
+    @jax.jit
+    @jaxtyped
+    def jacobian(self, state: Float[JaxArray, "D_x K"]) -> Float[JaxArray, "D_x D_x K"]:
+        return jax.vmap(jax.jacfwd(self.step))(state.T).transpose(1, 2, 0)
+
+    @jax.jit
+    @jaxtyped
+    def step(self, state: Float[JaxArray, "D_x"]) -> Float[JaxArray, "D_x"]:
+        dt = self.time_step_size
+        x, y, theta, v, omega = state
+        return jnp.array(
+            [
+                x + v * jnp.cos(theta) * dt,
+                y + v * jnp.sin(theta) * dt,
+                theta + omega * dt,
+                v,
+                omega,
+            ]
+        )
+
+    def observations_from(
+        self, history: "JaxUnicycleObstacleStatesHistory"
+    ) -> Float[JaxArray, "T D_z K"]:
+        return jnp.stack(
+            [history.x_array, history.y_array, history.heading_array], axis=1
+        )
+
+    def x(self, belief: JaxGaussianBelief) -> Float[JaxArray, "K"]:
+        return belief.mean[0, :]
+
+    def y(self, belief: JaxGaussianBelief) -> Float[JaxArray, "K"]:
+        return belief.mean[1, :]
+
+    def heading(self, belief: JaxGaussianBelief) -> Float[JaxArray, "K"]:
+        return belief.mean[2, :]
+
+    def linear_velocity(self, belief: JaxGaussianBelief) -> Float[JaxArray, "K"]:
+        return belief.mean[3, :]
+
+    def angular_velocity(self, belief: JaxGaussianBelief) -> Float[JaxArray, "K"]:
+        return belief.mean[4, :]
+
+    @property
+    def initial_state_covariance(self) -> EstimationStateCovarianceArray:
+        # NOTE: Sure of pose, unsure of velocities.
+        return jnp.diag(jnp.array([1e-4, 1e-4, 1e-4, 1.0, 1.0]))
+
+    @property
+    def observation_matrix(self) -> ObservationMatrix:
+        # NOTE: We observe the pose directly.
+        return jnp.array(
+            [
+                [1.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 0.0],
+            ]
+        )
+
+
 @dataclass(frozen=True)
 class JaxFiniteDifferenceUnicycleStateEstimator(
     ObstacleStateEstimator[
@@ -779,7 +904,7 @@ class JaxFiniteDifferenceUnicycleStateEstimator(
     def estimate_from[K: int](
         self, history: JaxUnicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        JaxUnicycleObstacleStates[K], JaxUnicycleObstacleInputs[K]
+        JaxUnicycleObstacleStates[K], JaxUnicycleObstacleInputs[K], None
     ]:
         """Estimates current states and inputs from position/heading history using finite differences.
 
@@ -817,6 +942,125 @@ class JaxFiniteDifferenceUnicycleStateEstimator(
                     linear_velocities=estimated.linear_velocities,
                     angular_velocities=estimated.angular_velocities,
                 ),
+            ),
+            covariance=None,
+        )
+
+
+@dataclass(frozen=True)
+class JaxKfUnicycleStateEstimator(
+    ObstacleStateEstimator[
+        JaxUnicycleObstacleStatesHistory,
+        JaxUnicycleObstacleStates,
+        JaxUnicycleObstacleInputs,
+    ]
+):
+    """Kalman Filter state estimator for unicycle model obstacles."""
+
+    process_noise_covariance: ProcessNoiseCovarianceArray
+    observation_noise_covariance: ObservationNoiseCovarianceArray
+    model: JaxUnicycleStateEstimationModel
+    estimator: KalmanFilter
+
+    @staticmethod
+    def ekf(
+        *,
+        time_step_size: float,
+        process_noise_covariance: JaxNoiseCovarianceDescription[UnicycleEstimationD_x],
+        observation_noise_covariance: JaxNoiseCovarianceDescription[
+            UnicycleObservationD_o
+        ],
+    ) -> "JaxKfUnicycleStateEstimator":
+        """Creates an EKF state estimator for the unicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+        """
+        return JaxKfUnicycleStateEstimator(
+            process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=UNICYCLE_ESTIMATION_D_X
+            ),
+            observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=UNICYCLE_OBSERVATION_D_O
+            ),
+            model=JaxUnicycleStateEstimationModel.create(time_step_size=time_step_size),
+            estimator=JaxExtendedKalmanFilter.create(),
+        )
+
+    @staticmethod
+    def ukf(
+        *,
+        time_step_size: float,
+        process_noise_covariance: JaxNoiseCovarianceDescription[UnicycleEstimationD_x],
+        observation_noise_covariance: JaxNoiseCovarianceDescription[
+            UnicycleObservationD_o
+        ],
+    ) -> "JaxKfUnicycleStateEstimator":
+        """Creates a UKF state estimator for the unicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+        """
+        return JaxKfUnicycleStateEstimator(
+            process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=UNICYCLE_ESTIMATION_D_X
+            ),
+            observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=UNICYCLE_OBSERVATION_D_O
+            ),
+            model=JaxUnicycleStateEstimationModel.create(time_step_size=time_step_size),
+            estimator=JaxUnscentedKalmanFilter.create(),
+        )
+
+    def estimate_from[K: int, T: int = int](
+        self, history: JaxUnicycleObstacleStatesHistory[T, K]
+    ) -> EstimatedObstacleStates[
+        JaxUnicycleObstacleStates[K],
+        JaxUnicycleObstacleInputs[K],
+        Float[JaxArray, "D_x D_x K"],
+    ]:
+        estimate = self.estimator.filter(
+            self.model.observations_from(history),
+            initial_state_covariance=self.model.initial_state_covariance,
+            state_transition=self.model,
+            process_noise_covariance=self.process_noise_covariance,
+            observation_noise_covariance=self.observation_noise_covariance,
+            observation_matrix=self.model.observation_matrix,
+        )
+
+        return EstimatedObstacleStates(
+            states=self.states_from(estimate),
+            inputs=self.inputs_from(estimate),
+            covariance=estimate.covariance,
+        )
+
+    def states_from[K: int = int](
+        self, belief: JaxGaussianBelief
+    ) -> JaxUnicycleObstacleStates[K]:
+        return JaxUnicycleObstacleStates.create(
+            x=self.model.x(belief),
+            y=self.model.y(belief),
+            heading=self.model.heading(belief),
+        )
+
+    def inputs_from[K: int = int](
+        self, belief: JaxGaussianBelief
+    ) -> JaxUnicycleObstacleInputs[K]:
+        return cast(
+            JaxUnicycleObstacleInputs[K],
+            JaxUnicycleObstacleInputs.create(
+                linear_velocities=self.model.linear_velocity(belief),
+                angular_velocities=self.model.angular_velocity(belief),
             ),
         )
 

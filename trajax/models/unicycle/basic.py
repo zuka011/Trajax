@@ -30,17 +30,43 @@ from trajax.types import (
 
 from numtypes import Array, Dims, D, shape_of, array
 
+from trajax.filters import (
+    NumPyExtendedKalmanFilter,
+    NumPyGaussianBelief,
+    NumPyNoiseCovarianceDescription,
+    NumPyUnscentedKalmanFilter,
+    numpy_kalman_filter,
+)
+
 import numpy as np
 
 NO_LIMITS: Final = (float("-inf"), float("inf"))
+
+UNICYCLE_ESTIMATION_D_X: Final = 5
+UNICYCLE_OBSERVATION_D_O: Final = 3
+
+type UnicycleEstimationD_x = D[5]
+type UnicycleObservationD_o = D[3]
 
 type StateArray = Array[Dims[UnicycleD_x]]
 type ControlInputSequenceArray[T: int] = Array[Dims[T, UnicycleD_u]]
 type StateBatchArray[T: int, M: int] = Array[Dims[T, UnicycleD_x, M]]
 type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, UnicycleD_u, M]]
+type EstimationStateCovarianceArray = Array[
+    Dims[UnicycleEstimationD_x, UnicycleEstimationD_x]
+]
+type ProcessNoiseCovarianceArray = Array[
+    Dims[UnicycleEstimationD_x, UnicycleEstimationD_x]
+]
+type ObservationNoiseCovarianceArray = Array[
+    Dims[UnicycleObservationD_o, UnicycleObservationD_o]
+]
+type ObservationMatrix = Array[Dims[UnicycleObservationD_o, UnicycleEstimationD_x]]
 
 type StatesAtTimeStep[M: int] = Array[Dims[UnicycleD_x, M]]
 type ControlInputsAtTimeStep[M: int] = Array[Dims[UnicycleD_u, M]]
+
+type KalmanFilter = NumPyExtendedKalmanFilter | NumPyUnscentedKalmanFilter
 
 
 @dataclass(frozen=True)
@@ -330,12 +356,16 @@ class NumPyUnicycleControlInputBatch[T: int, M: int](
 @dataclass(frozen=True)
 class NumPyUnicycleObstacleStates[K: int]:
     array: Array[Dims[UnicycleD_o, K]]
+    _covariance: Array[Dims[UnicycleD_o, UnicycleD_o, K]] | None = None
+    """State covariance matrix from Kalman filtering. Shape: (UnicycleD_o, UnicycleD_o, K)."""
 
     @staticmethod
     def wrap[K_: int](
         array: Array[Dims[UnicycleD_o, K_]],
+        *,
+        covariance: Array[Dims[UnicycleD_o, UnicycleD_o, K_]] | None = None,
     ) -> "NumPyUnicycleObstacleStates[K_]":
-        return NumPyUnicycleObstacleStates(array)
+        return NumPyUnicycleObstacleStates(array, covariance)
 
     @staticmethod
     def create(
@@ -343,12 +373,13 @@ class NumPyUnicycleObstacleStates[K: int]:
         x: Array[Dims[K]],
         y: Array[Dims[K]],
         heading: Array[Dims[K]],
+        covariance: Array[Dims[UnicycleD_o, UnicycleD_o, K]] | None = None,
     ) -> "NumPyUnicycleObstacleStates[K]":
         array = np.stack([x, y, heading], axis=0)
 
         assert shape_of(array, matches=(UNICYCLE_D_O, x.shape[0]))
 
-        return NumPyUnicycleObstacleStates(array)
+        return NumPyUnicycleObstacleStates(array, covariance)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_o, K]]:
         return self.array
@@ -369,6 +400,10 @@ class NumPyUnicycleObstacleStates[K: int]:
     @property
     def count(self) -> K:
         return self.array.shape[1]
+
+    @property
+    def covariance(self) -> Array[Dims[UnicycleD_o, UnicycleD_o, K]] | None:
+        return self._covariance
 
 
 @dataclass(frozen=True)
@@ -420,21 +455,32 @@ class NumPyUnicycleObstacleStateSequences[T: int, K: int]:
 class NumPyUnicycleObstacleInputs[K: int]:
     _linear_velocities: Array[Dims[K]]
     _angular_velocities: Array[Dims[K]]
+    _covariance: Array[Dims[UnicycleD_u, UnicycleD_u, K]] | None = None
+    """Input covariance matrix from Kalman filtering. Shape: (UnicycleD_u, UnicycleD_u, K)."""
 
     @staticmethod
     def wrap[K_: int](
         inputs: Array[Dims[UnicycleD_u, K_]],
+        *,
+        covariance: Array[Dims[UnicycleD_u, UnicycleD_u, K_]] | None = None,
     ) -> "NumPyUnicycleObstacleInputs[K_]":
         return NumPyUnicycleObstacleInputs(
-            _linear_velocities=inputs[0], _angular_velocities=inputs[1]
+            _linear_velocities=inputs[0],
+            _angular_velocities=inputs[1],
+            _covariance=covariance,
         )
 
     @staticmethod
     def create(
-        *, linear_velocities: Array[Dims[K]], angular_velocities: Array[Dims[K]]
+        *,
+        linear_velocities: Array[Dims[K]],
+        angular_velocities: Array[Dims[K]],
+        covariance: Array[Dims[UnicycleD_u, UnicycleD_u, K]] | None = None,
     ) -> "NumPyUnicycleObstacleInputs[K]":
         return NumPyUnicycleObstacleInputs(
-            _linear_velocities=linear_velocities, _angular_velocities=angular_velocities
+            _linear_velocities=linear_velocities,
+            _angular_velocities=angular_velocities,
+            _covariance=covariance,
         )
 
     def zeroed(
@@ -448,6 +494,7 @@ class NumPyUnicycleObstacleInputs[K: int]:
             _angular_velocities=np.zeros_like(self._angular_velocities)
             if angular_velocity
             else self._angular_velocities,
+            _covariance=self._covariance,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[UnicycleD_u, K]]:
@@ -466,6 +513,10 @@ class NumPyUnicycleObstacleInputs[K: int]:
     @property
     def count(self) -> K:
         return self._linear_velocities.shape[0]
+
+    @property
+    def covariance(self) -> Array[Dims[UnicycleD_u, UnicycleD_u, K]] | None:
+        return self._covariance
 
     @cached_property
     def _array(self) -> Array[Dims[UnicycleD_u, K]]:
@@ -710,7 +761,7 @@ class NumPyFiniteDifferenceUnicycleStateEstimator(
     def estimate_from[K: int](
         self, history: NumPyUnicycleObstacleStatesHistory[int, K]
     ) -> EstimatedObstacleStates[
-        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K]
+        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K], None
     ]:
         """Estimates current states and inputs from position/heading history using finite differences.
 
@@ -740,6 +791,7 @@ class NumPyFiniteDifferenceUnicycleStateEstimator(
                 linear_velocities=linear_velocities,
                 angular_velocities=angular_velocities,
             ),
+            covariance=None,
         )
 
     def estimate_speeds_from[K: int](
@@ -808,6 +860,242 @@ class NumPyFiniteDifferenceUnicycleStateEstimator(
         )
 
         return angular_velocities
+
+
+@dataclass(frozen=True)
+class NumPyUnicycleStateEstimationModel:
+    """Kinematic unicycle model used for state estimation."""
+
+    time_step_size: float
+
+    @staticmethod
+    def create(*, time_step_size: float) -> "NumPyUnicycleStateEstimationModel":
+        return NumPyUnicycleStateEstimationModel(time_step_size=time_step_size)
+
+    def __call__[D_x: int, K: int](
+        self, state: Array[Dims[D_x, K]]
+    ) -> Array[Dims[D_x, K]]:
+        dt = self.time_step_size
+        x, y, theta, v, omega = state
+
+        return np.array(
+            [
+                x + v * np.cos(theta) * dt,
+                y + v * np.sin(theta) * dt,
+                theta + omega * dt,
+                v,
+                omega,
+            ]
+        )
+
+    def jacobian[D_x: int, K: int](
+        self, state: Array[Dims[D_x, K]]
+    ) -> Array[Dims[D_x, D_x, K]]:
+        D_x, K = state.shape
+        dt = self.time_step_size
+        x, y, theta, v, omega = state
+
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        jacobian = np.zeros((D_x, D_x, K))
+
+        # Partial derivatives for x
+        jacobian[0, 0, :] = 1  # ∂x_next/∂x
+        jacobian[0, 2, :] = -v * sin_theta * dt  # ∂x_next/∂theta
+        jacobian[0, 3, :] = cos_theta * dt  # ∂x_next/∂v
+
+        # Partial derivatives for y
+        jacobian[1, 1, :] = 1  # ∂y_next/∂y
+        jacobian[1, 2, :] = v * cos_theta * dt  # ∂y_next/∂theta
+        jacobian[1, 3, :] = sin_theta * dt  # ∂y_next/∂v
+
+        # Partial derivatives for theta
+        jacobian[2, 2, :] = 1  # ∂theta_next/∂theta
+        jacobian[2, 4, :] = dt  # ∂theta_next/∂omega
+
+        # Partial derivatives for v and omega are identity since they are assumed constant
+        jacobian[3, 3, :] = 1  # ∂v_next/∂v
+        jacobian[4, 4, :] = 1  # ∂omega_next/∂omega
+
+        assert shape_of(jacobian, matches=(D_x, D_x, K), name="jacobian")
+
+        return jacobian
+
+    def observations_from[K: int, T: int = int](
+        self, history: NumPyUnicycleObstacleStatesHistory[T, K]
+    ) -> Array[Dims[T, UnicycleObservationD_o, K]]:
+        return np.stack([history.x(), history.y(), history.heading()], axis=1)
+
+    def x[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> Array[Dims[K]]:
+        return belief.mean[0, :]
+
+    def y[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> Array[Dims[K]]:
+        return belief.mean[1, :]
+
+    def heading[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> Array[Dims[K]]:
+        return belief.mean[2, :]
+
+    def linear_velocity[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> Array[Dims[K]]:
+        return belief.mean[3, :]
+
+    def angular_velocity[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> Array[Dims[K]]:
+        return belief.mean[4, :]
+
+    @cached_property
+    def initial_state_covariance(self) -> EstimationStateCovarianceArray:
+        # NOTE: Sure of pose, unsure of velocities.
+        return cast(
+            EstimationStateCovarianceArray, np.diag([1e-4, 1e-4, 1e-4, 1.0, 1.0])
+        )
+
+    @cached_property
+    def observation_matrix(self) -> ObservationMatrix:
+        # NOTE: We observe the pose directly.
+        return np.array(
+            [
+                [1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0],
+            ]
+        )
+
+
+@dataclass(frozen=True)
+class NumPyKfUnicycleStateEstimator(
+    ObstacleStateEstimator[
+        NumPyUnicycleObstacleStatesHistory,
+        NumPyUnicycleObstacleStates,
+        NumPyUnicycleObstacleInputs,
+    ]
+):
+    """Kalman Filter state estimator for unicycle model obstacles."""
+
+    process_noise_covariance: ProcessNoiseCovarianceArray
+    observation_noise_covariance: ObservationNoiseCovarianceArray
+    model: NumPyUnicycleStateEstimationModel
+    estimator: KalmanFilter
+
+    @staticmethod
+    def ekf(
+        *,
+        time_step_size: float,
+        process_noise_covariance: NumPyNoiseCovarianceDescription[
+            UnicycleEstimationD_x
+        ],
+        observation_noise_covariance: NumPyNoiseCovarianceDescription[
+            UnicycleObservationD_o
+        ],
+    ) -> "NumPyKfUnicycleStateEstimator":
+        """Creates an EKF state estimator for the unicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+        """
+        return NumPyKfUnicycleStateEstimator(
+            process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=UNICYCLE_ESTIMATION_D_X
+            ),
+            observation_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=UNICYCLE_OBSERVATION_D_O
+            ),
+            model=NumPyUnicycleStateEstimationModel.create(
+                time_step_size=time_step_size
+            ),
+            estimator=NumPyExtendedKalmanFilter.create(),
+        )
+
+    @staticmethod
+    def ukf(
+        *,
+        time_step_size: float,
+        process_noise_covariance: NumPyNoiseCovarianceDescription[
+            UnicycleEstimationD_x
+        ],
+        observation_noise_covariance: NumPyNoiseCovarianceDescription[
+            UnicycleObservationD_o
+        ],
+    ) -> "NumPyKfUnicycleStateEstimator":
+        """Creates a UKF state estimator for the unicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+        """
+        return NumPyKfUnicycleStateEstimator(
+            process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=UNICYCLE_ESTIMATION_D_X
+            ),
+            observation_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=UNICYCLE_OBSERVATION_D_O
+            ),
+            model=NumPyUnicycleStateEstimationModel.create(
+                time_step_size=time_step_size
+            ),
+            estimator=NumPyUnscentedKalmanFilter.create(),
+        )
+
+    def estimate_from[K: int, T: int = int](
+        self, history: NumPyUnicycleObstacleStatesHistory[T, K]
+    ) -> EstimatedObstacleStates[
+        NumPyUnicycleObstacleStates[K],
+        NumPyUnicycleObstacleInputs[K],
+        Array[Dims[UnicycleEstimationD_x, UnicycleEstimationD_x, K]],
+    ]:
+        estimate = cast(
+            NumPyGaussianBelief[UnicycleEstimationD_x, K],
+            self.estimator.filter(
+                self.model.observations_from(history),
+                initial_state_covariance=self.model.initial_state_covariance,
+                state_transition=self.model,
+                process_noise_covariance=self.process_noise_covariance,
+                observation_noise_covariance=self.observation_noise_covariance,
+                observation_matrix=self.model.observation_matrix,
+            ),
+        )
+
+        return EstimatedObstacleStates(
+            states=self.states_from(estimate),
+            inputs=self.inputs_from(estimate),
+            covariance=estimate.covariance,
+        )
+
+    def states_from[K: int](
+        self, belief: NumPyGaussianBelief[UnicycleEstimationD_x, K]
+    ) -> NumPyUnicycleObstacleStates[K]:
+        return NumPyUnicycleObstacleStates.create(
+            x=self.model.x(belief),
+            y=self.model.y(belief),
+            heading=self.model.heading(belief),
+        )
+
+    def inputs_from[K: int](
+        self,
+        belief: NumPyGaussianBelief[UnicycleEstimationD_x, K],
+    ) -> NumPyUnicycleObstacleInputs[K]:
+        return NumPyUnicycleObstacleInputs.create(
+            linear_velocities=self.model.linear_velocity(belief),
+            angular_velocities=self.model.angular_velocity(belief),
+        )
 
 
 def simulate[T: int, N: int](
