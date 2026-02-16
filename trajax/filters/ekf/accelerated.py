@@ -53,9 +53,7 @@ class JaxExtendedKalmanFilter:
             observation_matrix: H matrix mapping state to observation space.
         """
         belief = JaxExtendedKalmanFilter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
@@ -69,6 +67,7 @@ class JaxExtendedKalmanFilter:
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -109,6 +108,7 @@ class JaxExtendedKalmanFilter:
         prediction: JaxGaussianBelief,
         observation_matrix: Float[JaxArray, "D_z D_x"],
         observation_noise_covariance: Float[JaxArray, "D_z D_z"],
+        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         """Performs the update step of the EKF using a new observation.
 
@@ -117,12 +117,14 @@ class JaxExtendedKalmanFilter:
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return jax_kalman_filter.update(
             observation=observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     @staticmethod
@@ -132,17 +134,13 @@ class JaxExtendedKalmanFilter:
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],
-        observation_matrix: Float[JaxArray, "D_z D_x"],
     ) -> JaxGaussianBelief:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
         Args:
             observations: The observed state history up to the current time step.
             initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
         """
         return jax_kalman_filter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )

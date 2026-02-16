@@ -66,6 +66,9 @@ type ObservationMatrix = Array[Dims[UnicycleObservationD_o, UnicycleEstimationD_
 type StatesAtTimeStep[M: int] = Array[Dims[UnicycleD_x, M]]
 type ControlInputsAtTimeStep[M: int] = Array[Dims[UnicycleD_u, M]]
 
+type NumPyUnicycleObstacleCovariances[K: int] = Array[
+    Dims[UnicycleEstimationD_x, UnicycleEstimationD_x, K]
+]
 type KalmanFilter = NumPyExtendedKalmanFilter | NumPyUnscentedKalmanFilter
 
 
@@ -741,128 +744,6 @@ class NumPyUnicycleObstacleModel(
 
 
 @dataclass(frozen=True)
-class NumPyFiniteDifferenceUnicycleStateEstimator(
-    ObstacleStateEstimator[
-        NumPyUnicycleObstacleStatesHistory,
-        NumPyUnicycleObstacleStates,
-        NumPyUnicycleObstacleInputs,
-    ]
-):
-    time_step_size: float
-
-    @staticmethod
-    def create(
-        *, time_step_size: float
-    ) -> "NumPyFiniteDifferenceUnicycleStateEstimator":
-        return NumPyFiniteDifferenceUnicycleStateEstimator(
-            time_step_size=time_step_size
-        )
-
-    def estimate_from[K: int](
-        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
-    ) -> EstimatedObstacleStates[
-        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K], None
-    ]:
-        """Estimates current states and inputs from position/heading history using finite differences.
-
-        Computes the following quantities from the unicycle model (requires T ≥ 2, otherwise returns zeros):
-
-        **Linear velocity**:
-            Projection of displacement onto the heading direction (negative for reverse):
-            $$v_t = \\frac{(x_t - x_{t-1}) \\cos(\\theta_t) + (y_t - y_{t-1}) \\sin(\\theta_t)}{\\Delta t}$$
-
-        **Angular velocity**:
-            Change in heading over time:
-            $$\\omega_t = \\frac{\\theta_t - \\theta_{t-1}}{\\Delta t}$$
-
-        Args:
-            history: History of observed poses with at least one entry.
-        """
-        linear_velocities = self.estimate_speeds_from(history)
-        angular_velocities = self.estimate_angular_velocities_from(history)
-
-        return EstimatedObstacleStates(
-            states=NumPyUnicycleObstacleStates.create(
-                x=history.x()[-1],
-                y=history.y()[-1],
-                heading=history.heading()[-1],
-            ),
-            inputs=NumPyUnicycleObstacleInputs.create(
-                linear_velocities=linear_velocities,
-                angular_velocities=angular_velocities,
-            ),
-            covariance=None,
-        )
-
-    def estimate_speeds_from[K: int](
-        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
-    ) -> Array[Dims[K]]:
-        if history.horizon < 2:
-            return cast(Array[Dims[K]], np.zeros((history.count,)))
-
-        x = history.x()
-        y = history.y()
-        heading = history.heading()
-
-        return self._estimate_speeds_from(
-            x_current=x[-1],
-            y_current=y[-1],
-            x_previous=x[-2],
-            y_previous=y[-2],
-            heading_current=heading[-1],
-        )
-
-    def estimate_angular_velocities_from[K: int](
-        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
-    ) -> Array[Dims[K]]:
-        if history.horizon < 2:
-            return cast(Array[Dims[K]], np.zeros((history.count,)))
-
-        heading = history.heading()
-
-        return self._estimate_angular_velocities_from(
-            heading_current=heading[-1],
-            heading_previous=heading[-2],
-        )
-
-    def _estimate_speeds_from[K: int](
-        self,
-        *,
-        x_current: Array[Dims[K]],
-        y_current: Array[Dims[K]],
-        x_previous: Array[Dims[K]],
-        y_previous: Array[Dims[K]],
-        heading_current: Array[Dims[K]],
-    ) -> Array[Dims[K]]:
-        delta_x = x_current - x_previous
-        delta_y = y_current - y_previous
-
-        speeds = (
-            delta_x * np.cos(heading_current) + delta_y * np.sin(heading_current)
-        ) / self.time_step_size
-
-        assert shape_of(speeds, matches=(x_current.shape[0],), name="estimated speeds")
-
-        return speeds
-
-    def _estimate_angular_velocities_from[K: int](
-        self,
-        *,
-        heading_current: Array[Dims[K]],
-        heading_previous: Array[Dims[K]],
-    ) -> Array[Dims[K]]:
-        angular_velocities = (heading_current - heading_previous) / self.time_step_size
-
-        assert shape_of(
-            angular_velocities,
-            matches=(heading_current.shape[0],),
-            name="estimated angular velocities",
-        )
-
-        return angular_velocities
-
-
-@dataclass(frozen=True)
 class NumPyUnicycleStateEstimationModel:
     """Kinematic unicycle model used for state estimation."""
 
@@ -972,11 +853,152 @@ class NumPyUnicycleStateEstimationModel:
 
 
 @dataclass(frozen=True)
+class NumPyFiniteDifferenceUnicycleStateEstimator(
+    ObstacleStateEstimator[
+        NumPyUnicycleObstacleStatesHistory,
+        NumPyUnicycleObstacleStates,
+        NumPyUnicycleObstacleInputs,
+    ]
+):
+    time_step_size: float
+
+    @staticmethod
+    def create(
+        *, time_step_size: float
+    ) -> "NumPyFiniteDifferenceUnicycleStateEstimator":
+        return NumPyFiniteDifferenceUnicycleStateEstimator(
+            time_step_size=time_step_size
+        )
+
+    def estimate_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> EstimatedObstacleStates[
+        NumPyUnicycleObstacleStates[K], NumPyUnicycleObstacleInputs[K], None
+    ]:
+        """Estimates current states and inputs from position/heading history using finite differences.
+
+        Computes the following quantities from the unicycle model (requires T ≥ 2, otherwise returns zeros):
+
+        **Linear velocity**:
+            Projection of displacement onto the heading direction (negative for reverse):
+            $$v_t = \\frac{(x_t - x_{t-1}) \\cos(\\theta_t) + (y_t - y_{t-1}) \\sin(\\theta_t)}{\\Delta t}$$
+
+        **Angular velocity**:
+            Change in heading over time:
+            $$\\omega_t = \\frac{\\theta_t - \\theta_{t-1}}{\\Delta t}$$
+
+        Args:
+            history: History of observed poses with at least one entry.
+        """
+        assert history.horizon > 0, "History must contain at least one state."
+
+        invalid = self.invalid_obstacle_mask_from(history)
+
+        def filter_invalid(array: Array[Dims[K]]) -> Array[Dims[K]]:
+            array[..., invalid] = np.nan  # type: ignore
+            return array
+
+        linear_velocities = self.estimate_speeds_from(history)
+        angular_velocities = self.estimate_angular_velocities_from(history)
+
+        return EstimatedObstacleStates(
+            states=NumPyUnicycleObstacleStates.create(
+                x=filter_invalid(history.x()[-1]),
+                y=filter_invalid(history.y()[-1]),
+                heading=filter_invalid(history.heading()[-1]),
+            ),
+            inputs=NumPyUnicycleObstacleInputs.create(
+                linear_velocities=filter_invalid(linear_velocities),
+                angular_velocities=filter_invalid(angular_velocities),
+            ),
+            covariance=None,
+        )
+
+    def invalid_obstacle_mask_from[K: int, T: int = int](
+        self, history: NumPyUnicycleObstacleStatesHistory[T, K]
+    ) -> Array[Dims[K]]:
+        return np.any(
+            np.isnan(history.x()[-3:])
+            | np.isnan(history.y()[-3:])
+            | np.isnan(history.heading()[-3:]),
+            axis=0,
+        )
+
+    def estimate_speeds_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> Array[Dims[K]]:
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        x = history.x()
+        y = history.y()
+        heading = history.heading()
+
+        return self._estimate_speeds_from(
+            x_current=x[-1],
+            y_current=y[-1],
+            x_previous=x[-2],
+            y_previous=y[-2],
+            heading_current=heading[-1],
+        )
+
+    def estimate_angular_velocities_from[K: int](
+        self, history: NumPyUnicycleObstacleStatesHistory[int, K]
+    ) -> Array[Dims[K]]:
+        if history.horizon < 2:
+            return cast(Array[Dims[K]], np.zeros((history.count,)))
+
+        heading = history.heading()
+
+        return self._estimate_angular_velocities_from(
+            heading_current=heading[-1],
+            heading_previous=heading[-2],
+        )
+
+    def _estimate_speeds_from[K: int](
+        self,
+        *,
+        x_current: Array[Dims[K]],
+        y_current: Array[Dims[K]],
+        x_previous: Array[Dims[K]],
+        y_previous: Array[Dims[K]],
+        heading_current: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        delta_x = x_current - x_previous
+        delta_y = y_current - y_previous
+
+        speeds = (
+            delta_x * np.cos(heading_current) + delta_y * np.sin(heading_current)
+        ) / self.time_step_size
+
+        assert shape_of(speeds, matches=(x_current.shape[0],), name="estimated speeds")
+
+        return speeds
+
+    def _estimate_angular_velocities_from[K: int](
+        self,
+        *,
+        heading_current: Array[Dims[K]],
+        heading_previous: Array[Dims[K]],
+    ) -> Array[Dims[K]]:
+        angular_velocities = (heading_current - heading_previous) / self.time_step_size
+
+        assert shape_of(
+            angular_velocities,
+            matches=(heading_current.shape[0],),
+            name="estimated angular velocities",
+        )
+
+        return angular_velocities
+
+
+@dataclass(frozen=True)
 class NumPyKfUnicycleStateEstimator(
     ObstacleStateEstimator[
         NumPyUnicycleObstacleStatesHistory,
         NumPyUnicycleObstacleStates,
         NumPyUnicycleObstacleInputs,
+        NumPyUnicycleObstacleCovariances,
     ]
 ):
     """Kalman Filter state estimator for unicycle model obstacles."""
@@ -1059,7 +1081,7 @@ class NumPyKfUnicycleStateEstimator(
     ) -> EstimatedObstacleStates[
         NumPyUnicycleObstacleStates[K],
         NumPyUnicycleObstacleInputs[K],
-        Array[Dims[UnicycleEstimationD_x, UnicycleEstimationD_x, K]],
+        NumPyUnicycleObstacleCovariances[K],
     ]:
         estimate = cast(
             NumPyGaussianBelief[UnicycleEstimationD_x, K],

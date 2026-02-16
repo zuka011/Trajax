@@ -27,6 +27,11 @@ class JaxGaussianBelief(NamedTuple):
     covariance: Float[JaxArray, "D_x D_x K"]
 
 
+class ObstaclePartitioning(NamedTuple):
+    should_update: Float[JaxArray, "K"]
+    should_initialize: Float[JaxArray, "K"]
+
+
 @dataclass(kw_only=True)
 class JaxKalmanFilter:
     """Standard Kalman Filter for linear systems."""
@@ -60,7 +65,6 @@ class JaxKalmanFilter:
         belief = JaxKalmanFilter.initial_belief_from(
             observations,
             initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
         )
 
         for observation in observations:
@@ -74,6 +78,7 @@ class JaxKalmanFilter:
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -109,6 +114,7 @@ class JaxKalmanFilter:
         prediction: JaxGaussianBelief,
         observation_matrix: Float[JaxArray, "D_z D_x"],
         observation_noise_covariance: Float[JaxArray, "D_z D_z"],
+        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         """Performs the update step of the Kalman filter using a new observation.
 
@@ -117,12 +123,14 @@ class JaxKalmanFilter:
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return jax_kalman_filter.update(
             observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     @staticmethod
@@ -132,7 +140,6 @@ class JaxKalmanFilter:
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],
-        observation_matrix: Float[JaxArray, "D_z D_x"],
     ) -> JaxGaussianBelief:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
@@ -142,12 +149,10 @@ class JaxKalmanFilter:
         Args:
             observations: The observed state history up to the current time step.
             initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
         """
         return jax_kalman_filter.initial_belief_from(
             observations,
             initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
         )
 
 
@@ -179,27 +184,113 @@ class jax_kalman_filter:
         prediction: JaxGaussianBelief,
         observation_matrix: Float[JaxArray, "D_z D_x"],
         observation_noise_covariance: Float[JaxArray, "D_z D_z"],
+        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         H = observation_matrix
         Q = observation_noise_covariance
-        mu, sigma = prediction
-        D_x = mu.shape[0]
 
-        S = jnp.einsum("ij,jlk,ml->imk", H, sigma, H) + Q[..., jnp.newaxis]
-        rhs = jnp.einsum("ijk,lj->ilk", sigma, H)
+        def partition(
+            *, observation: Float[JaxArray, "D_z K"], mean: Float[JaxArray, "D_x K"]
+        ) -> ObstaclePartitioning:
+            observation_valid = ~jnp.any(jnp.isnan(observation), axis=0)
+            prediction_valid = ~jnp.any(jnp.isnan(mean), axis=0)
 
-        K = jnp.linalg.solve(S.transpose(2, 0, 1), rhs.transpose(2, 1, 0)).transpose(
-            2, 1, 0
+            return ObstaclePartitioning(
+                should_update=observation_valid & prediction_valid,
+                should_initialize=observation_valid & ~prediction_valid,
+            )
+
+        def substitute_missing_values(
+            *,
+            observation: Float[JaxArray, "D_z K"],
+            mean: Float[JaxArray, "D_x K"],
+            covariance: Float[JaxArray, "D_x D_x K"],
+        ) -> tuple[
+            Float[JaxArray, "D_z K"],
+            Float[JaxArray, "D_x K"],
+            Float[JaxArray, "D_x D_x K"],
+        ]:
+            covariance_is_nan = jnp.any(jnp.isnan(covariance), axis=(0, 1))
+
+            return (
+                jnp.where(jnp.isnan(observation), 0.0, observation),
+                jnp.where(jnp.isnan(mean), 0.0, mean),
+                jnp.where(
+                    covariance_is_nan[jnp.newaxis, jnp.newaxis, :],
+                    initial_state_covariance[..., jnp.newaxis],
+                    covariance,
+                ),
+            )
+
+        def update(
+            *,
+            observation: Float[JaxArray, "D_z K"],
+            mean: Float[JaxArray, "D_x K"],
+            covariance: Float[JaxArray, "D_x D_x K"],
+        ) -> JaxGaussianBelief:
+            D_x = prediction.mean.shape[0]
+
+            S = jnp.einsum("ij,jlk,ml->imk", H, covariance, H) + Q[..., jnp.newaxis]
+            rhs = jnp.einsum("ijk,lj->ilk", covariance, H)
+            K = jnp.linalg.solve(
+                S.transpose(2, 0, 1), rhs.transpose(2, 1, 0)
+            ).transpose(2, 1, 0)
+
+            innovation = observation - H @ mean
+            KH = jnp.einsum("ijk,jl->ilk", K, H)
+
+            return JaxGaussianBelief(
+                mean=mean + jnp.einsum("ijk,jk->ik", K, innovation),
+                covariance=jnp.einsum(
+                    "ijk,jlk->ilk", jnp.eye(D_x)[..., jnp.newaxis] - KH, covariance
+                ),
+            )
+
+        def initialize_from(
+            observation: Float[JaxArray, "D_z K"],
+        ) -> JaxGaussianBelief:
+            K = observation.shape[1]
+
+            # NOTE: The mean state is the observation when available, 0 otherwise.
+            return JaxGaussianBelief(
+                mean=jnp.linalg.pinv(H) @ observation,
+                covariance=jnp.repeat(
+                    initial_state_covariance[..., jnp.newaxis], K, axis=2
+                ),
+            )
+
+        def blend(
+            partitioning: ObstaclePartitioning,
+            *,
+            initial: JaxGaussianBelief,
+            prediction: JaxGaussianBelief,
+            update: JaxGaussianBelief,
+        ) -> JaxGaussianBelief:
+            return JaxGaussianBelief(
+                mean=jnp.select(
+                    [partitioning.should_update, partitioning.should_initialize],
+                    [update.mean, initial.mean],
+                    default=prediction.mean,
+                ),
+                covariance=jnp.select(
+                    [partitioning.should_update, partitioning.should_initialize],
+                    [update.covariance, initial.covariance],
+                    default=prediction.covariance,
+                ),
+            )
+
+        partitioning = partition(observation=observation, mean=prediction.mean)
+        observation, mean, covariance = substitute_missing_values(
+            observation=observation,
+            mean=prediction.mean,
+            covariance=prediction.covariance,
         )
 
-        innovation = observation - H @ mu
-        KH = jnp.einsum("ijk,jl->ilk", K, H)
-
-        return JaxGaussianBelief(
-            mean=mu + jnp.einsum("ijk,jk->ik", K, innovation),
-            covariance=jnp.einsum(
-                "ijk,jlk->ilk", jnp.eye(D_x)[..., jnp.newaxis] - KH, sigma
-            ),
+        return blend(
+            partitioning,
+            initial=initialize_from(observation),
+            prediction=prediction,
+            update=update(observation=observation, mean=mean, covariance=covariance),
         )
 
     @staticmethod
@@ -209,16 +300,13 @@ class jax_kalman_filter:
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],
-        observation_matrix: Float[JaxArray, "D_z D_x"],
     ) -> JaxGaussianBelief:
-        H_pinv = jnp.linalg.pinv(observation_matrix)
+        D_x = initial_state_covariance.shape[0]
         K = observations.shape[2]
 
         return JaxGaussianBelief(
-            mean=H_pinv @ observations[0],
-            covariance=jnp.repeat(
-                initial_state_covariance[..., jnp.newaxis], K, axis=2
-            ),
+            mean=jnp.full((D_x, K), jnp.nan),
+            covariance=jnp.full((D_x, D_x, K), jnp.nan),
         )
 
     @staticmethod

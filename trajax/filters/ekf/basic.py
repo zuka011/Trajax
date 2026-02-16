@@ -48,9 +48,7 @@ class NumPyExtendedKalmanFilter:
             observation_matrix: H matrix mapping state to observation space.
         """
         belief = self.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
@@ -64,6 +62,7 @@ class NumPyExtendedKalmanFilter:
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -99,6 +98,7 @@ class NumPyExtendedKalmanFilter:
         prediction: NumPyGaussianBelief[D_x, K],
         observation_matrix: Array[Dims[D_z, D_x]],
         observation_noise_covariance: Array[Dims[D_z, D_z]],
+        initial_state_covariance: Array[Dims[D_x, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Performs the update step of the EKF using a new observation.
 
@@ -107,12 +107,14 @@ class NumPyExtendedKalmanFilter:
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return numpy_kalman_filter.update(
             observation=observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     def initial_belief_from[T: int, D_x: int, D_z: int, K: int](
@@ -120,17 +122,13 @@ class NumPyExtendedKalmanFilter:
         observations: Array[Dims[T, D_z, K]],
         *,
         initial_state_covariance: Array[Dims[D_x, D_x]],
-        observation_matrix: Array[Dims[D_z, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
         Args:
             observations: The observed state history up to the current time step.
             initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
         """
         return numpy_kalman_filter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )

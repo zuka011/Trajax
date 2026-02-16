@@ -29,7 +29,7 @@ from trajax.types import (
     EstimatedObstacleStates,
 )
 
-from jaxtyping import Array as JaxArray, Float, Scalar
+from jaxtyping import Array as JaxArray, Float, Bool, Scalar
 from numtypes import Array, Dims, D
 
 from trajax.filters import (
@@ -70,6 +70,9 @@ type ObservationMatrix = Float[
     JaxArray, f"{UNICYCLE_OBSERVATION_D_O} {UNICYCLE_ESTIMATION_D_X}"
 ]
 
+type JaxUnicycleObstacleCovariances[K: int] = Float[
+    JaxArray, f"{UNICYCLE_ESTIMATION_D_X} {UNICYCLE_ESTIMATION_D_X} K"
+]
 type KalmanFilter = JaxExtendedKalmanFilter | JaxUnscentedKalmanFilter
 
 type StatesAtTimeStep[M: int] = Float[JaxArray, f"{UNICYCLE_D_X} M"]
@@ -932,9 +935,9 @@ class JaxFiniteDifferenceUnicycleStateEstimator(
 
         return EstimatedObstacleStates(
             states=JaxUnicycleObstacleStates.create(
-                x=history.x_array[-1],
-                y=history.y_array[-1],
-                heading=history.heading_array[-1],
+                x=estimated.x,
+                y=estimated.y,
+                heading=estimated.heading,
             ),
             inputs=cast(
                 JaxUnicycleObstacleInputs[K],
@@ -953,6 +956,7 @@ class JaxKfUnicycleStateEstimator(
         JaxUnicycleObstacleStatesHistory,
         JaxUnicycleObstacleStates,
         JaxUnicycleObstacleInputs,
+        JaxUnicycleObstacleCovariances,
     ]
 ):
     """Kalman Filter state estimator for unicycle model obstacles."""
@@ -1027,7 +1031,7 @@ class JaxKfUnicycleStateEstimator(
     ) -> EstimatedObstacleStates[
         JaxUnicycleObstacleStates[K],
         JaxUnicycleObstacleInputs[K],
-        Float[JaxArray, "D_x D_x K"],
+        JaxUnicycleObstacleCovariances[K],
     ]:
         estimate = self.estimator.filter(
             self.model.observations_from(history),
@@ -1066,6 +1070,9 @@ class JaxKfUnicycleStateEstimator(
 
 
 class EstimatedUnicycleObstacleStates(NamedTuple):
+    x: Float[JaxArray, "K"]
+    y: Float[JaxArray, "K"]
+    heading: Float[JaxArray, "K"]
     linear_velocities: Float[JaxArray, "K"]
     angular_velocities: Float[JaxArray, "K"]
 
@@ -1182,17 +1189,47 @@ def estimate_states(
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
 ) -> EstimatedUnicycleObstacleStates:
+    invalid = invalid_obstacle_mask_from(
+        x_history=x_history, y_history=y_history, heading_history=heading_history
+    )
+
+    def filter_invalid(array: Float[JaxArray, "K"]) -> Float[JaxArray, "K"]:
+        return jnp.where(invalid, jnp.nan, array)
+
     return EstimatedUnicycleObstacleStates(
-        linear_velocities=estimate_linear_velocities(
-            x_history=x_history,
-            y_history=y_history,
-            heading_history=heading_history,
-            time_step_size=time_step_size,
+        x=filter_invalid(x_history[-1]),
+        y=filter_invalid(y_history[-1]),
+        heading=filter_invalid(heading_history[-1]),
+        linear_velocities=filter_invalid(
+            estimate_linear_velocities(
+                x_history=x_history,
+                y_history=y_history,
+                heading_history=heading_history,
+                time_step_size=time_step_size,
+            )
         ),
-        angular_velocities=estimate_angular_velocities(
-            heading_history=heading_history,
-            time_step_size=time_step_size,
+        angular_velocities=filter_invalid(
+            estimate_angular_velocities(
+                heading_history=heading_history,
+                time_step_size=time_step_size,
+            )
         ),
+    )
+
+
+@jax.jit
+@jaxtyped
+def invalid_obstacle_mask_from(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+) -> Bool[JaxArray, "K"]:
+    return jnp.any(
+        jnp.isnan(x_history[-3:])
+        | jnp.isnan(y_history[-3:])
+        | jnp.isnan(heading_history[-3:]),
+        axis=0,
     )
 
 

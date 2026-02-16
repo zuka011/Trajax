@@ -1126,3 +1126,146 @@ class test_that_unicycle_input_estimates_are_close_to_true_values_when_inputs_ar
         assert np.allclose(
             angular_velocity_of(result), expected_angular, rtol=tolerance, atol=0.05
         )
+
+
+class test_that_estimates_are_missing_when_obstacle_is_missing:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        T = 3
+        K = 3
+        missing_obstacle_index = 1
+
+        return [
+            *[
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array(
+                            [
+                                [0.0, 0.0, 10.0],
+                                [1.0, np.nan, 10.0],
+                                [2.0, np.nan, 10.0],
+                            ],
+                            shape=(T, K),
+                        ),
+                        y=array(
+                            [
+                                [0.0, np.nan, 10.0],
+                                [0.0, 0.0, 10.0],
+                                [0.0, np.nan, 10.0],
+                            ],
+                            shape=(T, K),
+                        ),
+                        heading=array(
+                            [
+                                [0.0, np.nan, 0.5],
+                                [0.0, np.nan, 0.5],
+                                [0.0, 0.0, 0.5],
+                            ],
+                            shape=(T, K),
+                        ),
+                    ),
+                    missing_obstacle_index,
+                )
+                for estimator in [
+                    model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=1.0
+                    ),
+                    model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.finite_difference(time_step_size=dt),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                ]
+            ],
+            *[
+                (
+                    estimator,
+                    history := data.simple_obstacle_states(
+                        states=array(
+                            [
+                                [
+                                    [0.0, 0.0, 10.0],
+                                    [0.0, np.nan, 10.0],
+                                    [0.0, np.nan, 10.0],
+                                ],
+                                [
+                                    [1.0, np.nan, 10.0],
+                                    [0.0, 0.0, 10.0],
+                                    [0.0, np.nan, 10.0],
+                                ],
+                                [
+                                    [2.0, np.nan, 10.0],
+                                    [0.0, np.nan, 10.0],
+                                    [0.0, 0, 10.0],
+                                ],
+                            ],
+                            shape=(T, D_o := 3, K),
+                        ),
+                    ),
+                    missing_obstacle_index,
+                )
+                for estimator in [
+                    model.integrator.estimator.finite_difference(time_step_size=dt),
+                    model.integrator.estimator.kf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                        observation_dimension=3,
+                    ),
+                ]
+            ],
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history", "missing_obstacle_index"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT, InputsT](
+        self,
+        subtests: Subtests,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT],
+        history: HistoryT,
+        missing_obstacle_index: int,
+    ) -> None:
+        result = estimator.estimate_from(history)
+        states = np.asarray(result.states)
+        inputs = np.asarray(result.inputs)
+        covariance = (
+            np.asarray(result.covariance) if result.covariance is not None else None
+        )
+
+        missing = np.arange(states.shape[-1]) == missing_obstacle_index
+        present = np.arange(states.shape[-1]) != missing_obstacle_index
+
+        with subtests.test("missing obstacle estimates are NaN"):
+            assert np.all(np.isnan(states[..., missing]))
+            assert np.all(np.isnan(inputs[..., missing]))
+            assert covariance is None or np.all(np.isnan(covariance[..., missing]))
+
+        with subtests.test("present obstacles have finite states"):
+            assert np.all(np.isfinite(states[..., present]))
+            assert np.all(np.isfinite(inputs[..., present]))
+            assert covariance is None or np.all(np.isfinite(covariance[..., present]))

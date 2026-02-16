@@ -59,9 +59,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             observation_matrix: H matrix mapping state to observation space.
         """
         belief = self.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
@@ -69,12 +67,14 @@ class JaxUnscentedKalmanFilter(NamedTuple):
                 belief=belief,
                 state_transition=state_transition,
                 process_noise_covariance=process_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
             belief = self.update(
                 observation=observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -87,6 +87,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         belief: JaxGaussianBelief,
         state_transition: StateTransitionFunction,
         process_noise_covariance: Float[JaxArray, "D_x D_x"],
+        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         """Performs the prediction step of the UKF using the unscented transform.
 
@@ -94,6 +95,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             belief: The current belief about the state.
             state_transition: Nonlinear state transition function.
             process_noise_covariance: R matrix representing the covariance of process noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         R = process_noise_covariance
         mu, sigma = belief
@@ -102,6 +104,27 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         lambda_ = self.scaling_parameter_for(state_dimension)
 
         mean_weights, covariance_weights = self._compute_weights(state_dimension)
+
+        def should_skip(
+            covariance: Float[JaxArray, "D_x D_x K"],
+        ) -> Float[JaxArray, "K"]:
+            return jnp.any(jnp.isnan(covariance), axis=(0, 1))
+
+        def substitute_missing_values(
+            *,
+            mean: Float[JaxArray, "D_x K"],
+            covariance: Float[JaxArray, "D_x D_x K"],
+        ) -> tuple[Float[JaxArray, "D_x K"], Float[JaxArray, "D_x D_x K"]]:
+            covariance_is_nan = should_skip(covariance)
+
+            return (
+                jnp.where(jnp.isnan(mean), 0.0, mean),
+                jnp.where(
+                    covariance_is_nan[jnp.newaxis, jnp.newaxis, :],
+                    initial_state_covariance[..., jnp.newaxis],
+                    covariance,
+                ),
+            )
 
         def predict_single(
             mu_k: JaxArray, sigma_k: JaxArray
@@ -127,11 +150,33 @@ class JaxUnscentedKalmanFilter(NamedTuple):
 
             return predicted_mean_k, predicted_covariance_k
 
+        def restore_missing(
+            *,
+            skip_mask: Float[JaxArray, "K"],
+            predicted_mean: Float[JaxArray, "D_x K"],
+            predicted_covariance: Float[JaxArray, "D_x D_x K"],
+        ) -> JaxGaussianBelief:
+            return JaxGaussianBelief(
+                mean=jnp.where(skip_mask, jnp.nan, predicted_mean),
+                covariance=jnp.where(
+                    skip_mask[jnp.newaxis, jnp.newaxis, :],
+                    jnp.nan,
+                    predicted_covariance,
+                ),
+            )
+
+        skip_mask = should_skip(sigma)
+        safe_mu, safe_sigma = substitute_missing_values(mean=mu, covariance=sigma)
+
         predicted_means, predicted_covariances = jax.vmap(
             predict_single, in_axes=(1, 2), out_axes=(1, 2)
-        )(mu, sigma)
+        )(safe_mu, safe_sigma)
 
-        return JaxGaussianBelief(mean=predicted_means, covariance=predicted_covariances)
+        return restore_missing(
+            skip_mask=skip_mask,
+            predicted_mean=predicted_means,
+            predicted_covariance=predicted_covariances,
+        )
 
     @jax.jit
     @jaxtyped
@@ -142,6 +187,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         prediction: JaxGaussianBelief,
         observation_matrix: Float[JaxArray, "D_z D_x"],
         observation_noise_covariance: Float[JaxArray, "D_z D_z"],
+        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         """Performs the update step of the UKF using a linear observation model.
 
@@ -150,12 +196,14 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return jax_kalman_filter.update(
             observation=observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     @jax.jit
@@ -165,19 +213,15 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],
-        observation_matrix: Float[JaxArray, "D_z D_x"],
     ) -> JaxGaussianBelief:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
         Args:
             observations: The observed state history up to the current time step.
-            initial_state_covariance: Σ₀ matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return jax_kalman_filter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
     def scaling_parameter_for(self, state_dimension: int) -> float:

@@ -6,7 +6,7 @@ from numtypes import array
 
 import numpy as np
 
-from tests.dsl import ComponentExtractor, mppi as data
+from tests.dsl import ComponentExtractor, ArrayConvertible, mppi as data
 from pytest import mark
 
 
@@ -178,3 +178,90 @@ class test_that_finite_difference_estimators_return_none_covariance:
     ) -> None:
         result = estimator.estimate_from(history)
         assert result.covariance is None
+
+
+class test_that_missing_state_earlier_in_history_does_not_affect_estimates:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        T = 8
+        D_o = 3
+        K = 2
+
+        def poses_history(*, missing_at: int | None = None):
+            x = np.arange(T * K, dtype=float).reshape(T, K)
+            y = np.arange(T * K, dtype=float).reshape(T, K) * 0.5
+            heading = np.zeros((T, K))
+
+            if missing_at is not None:
+                x[missing_at] = np.nan
+                y[missing_at] = np.nan
+                heading[missing_at] = np.nan
+
+            return data.obstacle_2d_poses(
+                x=array(x, shape=(T, K)),
+                y=array(y, shape=(T, K)),
+                heading=array(heading, shape=(T, K)),
+            )
+
+        def simple_history(*, missing_at: int | None = None):
+            states = np.arange(T * K * D_o, dtype=float).reshape(T, D_o, K)
+            states[:, 1, :] = states[:, 0, :] * 0.5
+            states[:, 2, :] = 0.0
+
+            if missing_at is not None:
+                states[missing_at] = np.nan
+
+            return data.simple_obstacle_states(states=array(states, shape=(T, D_o, K)))
+
+        return [
+            *[
+                (
+                    estimator := model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=1.0
+                    ),
+                    history := poses_history(missing_at=t),
+                    reference_history := poses_history(),
+                )
+                for t in range(T - 6, T - 4)
+            ],
+            *[
+                (
+                    estimator := model.unicycle.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
+                    history := poses_history(missing_at=t),
+                    reference_history := poses_history(),
+                )
+                for t in range(T - 5, T - 3)
+            ],
+            *[
+                (
+                    estimator := model.integrator.estimator.finite_difference(
+                        time_step_size=dt
+                    ),
+                    history := simple_history(missing_at=t),
+                    reference_history := simple_history(),
+                )
+                for t in range(T - 5, T - 3)
+            ],
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history", "reference_history"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT: ArrayConvertible, InputsT: ArrayConvertible](
+        self,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT],
+        history: HistoryT,
+        reference_history: HistoryT,
+    ) -> None:
+        result = estimator.estimate_from(history)
+        reference_result = estimator.estimate_from(reference_history)
+
+        assert np.allclose(result.states, reference_result.states)
+        assert np.allclose(result.inputs, reference_result.inputs)

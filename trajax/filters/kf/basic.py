@@ -20,6 +20,11 @@ class NumPyGaussianBelief[D_x: int, K: int](NamedTuple):
     covariance: Array[Dims[D_x, D_x, K]]
 
 
+class ObstaclePartitioning[K: int](NamedTuple):
+    should_update: Array[Dims[K]]
+    should_initialize: Array[Dims[K]]
+
+
 @dataclass(kw_only=True)
 class NumPyKalmanFilter:
     @staticmethod
@@ -47,9 +52,7 @@ class NumPyKalmanFilter:
             observation_matrix: H matrix mapping state to observation space.
         """
         belief = self.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
@@ -63,6 +66,7 @@ class NumPyKalmanFilter:
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -94,6 +98,7 @@ class NumPyKalmanFilter:
         prediction: NumPyGaussianBelief[D_x, K],
         observation_matrix: Array[Dims[D_z, D_x]],
         observation_noise_covariance: Array[Dims[D_z, D_z]],
+        initial_state_covariance: Array[Dims[D_x, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Performs the update step of the Kalman filter using a new observation.
 
@@ -102,12 +107,14 @@ class NumPyKalmanFilter:
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return numpy_kalman_filter.update(
             observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     def initial_belief_from[T: int, D_x: int, D_z: int, K: int](
@@ -115,7 +122,6 @@ class NumPyKalmanFilter:
         observations: Array[Dims[T, D_z, K]],
         *,
         initial_state_covariance: Array[Dims[D_x, D_x]],
-        observation_matrix: Array[Dims[D_z, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
@@ -125,12 +131,9 @@ class NumPyKalmanFilter:
         Args:
             observations: The observed state history up to the current time step.
             initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
         """
         return numpy_kalman_filter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
 
@@ -158,27 +161,110 @@ class numpy_kalman_filter:
         prediction: NumPyGaussianBelief[D_x, K],
         observation_matrix: Array[Dims[D_z, D_x]],
         observation_noise_covariance: Array[Dims[D_z, D_z]],
+        initial_state_covariance: Array[Dims[D_x, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         H = observation_matrix
         Q = observation_noise_covariance
-        mu, sigma = prediction
-        D_x = mu.shape[0]
 
-        S = np.einsum("ij,jlk,ml->imk", H, sigma, H) + Q[..., np.newaxis]
-        rhs = np.einsum("ijk,lj->ilk", sigma, H)
+        def partition(
+            *, observation: Array[Dims[D_z, K]], mean: Array[Dims[D_x, K]]
+        ) -> ObstaclePartitioning[K]:
+            observation_valid = ~np.any(np.isnan(observation), axis=0)
+            prediction_valid = ~np.any(np.isnan(mean), axis=0)
 
-        K = np.linalg.solve(S.transpose(2, 0, 1), rhs.transpose(2, 1, 0)).transpose(
-            2, 1, 0
+            return ObstaclePartitioning(
+                should_update=observation_valid & prediction_valid,
+                should_initialize=observation_valid & ~prediction_valid,
+            )
+
+        def substitute_missing_values(
+            *,
+            observation: Array[Dims[D_z, K]],
+            mean: Array[Dims[D_x, K]],
+            covariance: Array[Dims[D_x, D_x, K]],
+        ) -> tuple[Array[Dims[D_z, K]], Array[Dims[D_x, K]], Array[Dims[D_x, D_x, K]]]:
+            # NOTE: We temporarily replace NaNs with zeros to prevent errors.
+            covariance_is_nan = np.any(np.isnan(covariance), axis=(0, 1))
+
+            return (
+                np.where(np.isnan(observation), 0.0, observation),
+                np.where(np.isnan(mean), 0.0, mean),
+                np.where(
+                    covariance_is_nan[np.newaxis, np.newaxis, :],
+                    initial_state_covariance[..., np.newaxis],
+                    covariance,
+                ),
+            )
+
+        def update(
+            *,
+            observation: Array[Dims[D_z, K]],
+            mean: Array[Dims[D_x, K]],
+            covariance: Array[Dims[D_x, D_x, K]],
+        ) -> NumPyGaussianBelief[D_x, K]:
+            D_x = prediction.mean.shape[0]
+
+            S = np.einsum("ij,jlk,ml->imk", H, covariance, H) + Q[..., np.newaxis]
+            rhs = np.einsum("ijk,lj->ilk", covariance, H)
+            K = np.linalg.solve(S.transpose(2, 0, 1), rhs.transpose(2, 1, 0)).transpose(
+                2, 1, 0
+            )
+
+            innovation = observation - H @ mean
+            KH = np.einsum("ijk,jl->ilk", K, H)
+
+            return NumPyGaussianBelief(
+                mean=mean + np.einsum("ijk,jk->ik", K, innovation),
+                covariance=np.einsum(
+                    "ijk,jlk->ilk", np.eye(D_x)[..., np.newaxis] - KH, covariance
+                ),
+            )
+
+        def initialize_from(
+            observation: Array[Dims[D_z, K]],
+        ) -> NumPyGaussianBelief[D_x, K]:
+            K = observation.shape[1]
+
+            # NOTE: The mean state is the observation when available, 0 otherwise.
+            return NumPyGaussianBelief(
+                mean=np.linalg.pinv(H) @ observation,
+                covariance=np.repeat(
+                    initial_state_covariance[..., np.newaxis], K, axis=2
+                ),
+            )
+
+        def blend(
+            partitioning: ObstaclePartitioning[K],
+            *,
+            initial: NumPyGaussianBelief[D_x, K],
+            prediction: NumPyGaussianBelief[D_x, K],
+            update: NumPyGaussianBelief[D_x, K],
+        ) -> NumPyGaussianBelief[D_x, K]:
+            return NumPyGaussianBelief(
+                mean=np.select(  # type: ignore
+                    [partitioning.should_update, partitioning.should_initialize],  # type: ignore
+                    [update.mean, initial.mean],
+                    default=prediction.mean,
+                ),
+                covariance=np.select(  # type: ignore
+                    [partitioning.should_update, partitioning.should_initialize],  # type: ignore
+                    [update.covariance, initial.covariance],
+                    default=prediction.covariance,
+                ),
+            )
+
+        partitioning = partition(observation=observation, mean=prediction.mean)
+        observation, mean, covariance = substitute_missing_values(
+            observation=observation,
+            mean=prediction.mean,
+            covariance=prediction.covariance,
         )
 
-        innovation = observation - H @ mu
-        KH = np.einsum("ijk,jl->ilk", K, H)
-
-        return NumPyGaussianBelief(
-            mean=mu + np.einsum("ijk,jk->ik", K, innovation),
-            covariance=np.einsum(
-                "ijk,jlk->ilk", np.eye(D_x)[..., np.newaxis] - KH, sigma
-            ),
+        return blend(
+            partitioning,
+            initial=initialize_from(observation),
+            prediction=prediction,
+            update=update(observation=observation, mean=mean, covariance=covariance),
         )
 
     @staticmethod
@@ -186,15 +272,17 @@ class numpy_kalman_filter:
         observations: Array[Dims[T, D_z, K]],
         *,
         initial_state_covariance: Array[Dims[D_x, D_x]],
-        observation_matrix: Array[Dims[D_z, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
-        H_pinv = np.linalg.pinv(observation_matrix)
+        D_x = initial_state_covariance.shape[0]
         K = observations.shape[2]
 
-        return NumPyGaussianBelief(
-            mean=H_pinv @ observations[0],
-            covariance=np.repeat(initial_state_covariance[..., np.newaxis], K, axis=2),
-        )
+        mean = np.full((D_x, K), np.nan)
+        covariance = np.full((D_x, D_x, K), np.nan)
+
+        assert shape_of(mean, matches=(D_x, K), name="initial mean")
+        assert shape_of(covariance, matches=(D_x, D_x, K), name="initial covariance")
+
+        return NumPyGaussianBelief(mean=mean, covariance=covariance)
 
     @staticmethod
     def standardize_noise_covariance[D_c: int](

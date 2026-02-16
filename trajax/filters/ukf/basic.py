@@ -61,9 +61,7 @@ class NumPyUnscentedKalmanFilter:
             observation_matrix: H matrix mapping state to observation space.
         """
         belief = self.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
@@ -77,6 +75,7 @@ class NumPyUnscentedKalmanFilter:
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
+                initial_state_covariance=initial_state_covariance,
             )
 
         return belief
@@ -106,13 +105,12 @@ class NumPyUnscentedKalmanFilter:
             state_dimension, lambda_
         )
 
-        predicted_mean = np.zeros_like(mu)
-        predicted_covariance = np.zeros_like(sigma)
+        def should_skip(covariance: Array[Dims[D_x, D_x]]) -> bool:
+            return np.any(np.isnan(covariance))  # type: ignore
 
-        for k in range(batch_count):
-            mu_k = mu[:, k]
-            sigma_k = sigma[:, :, k]
-
+        def predict_single(
+            mu_k: Array[Dims[D_x]], sigma_k: Array[Dims[D_x, D_x]]
+        ) -> tuple[Array[Dims[D_x]], Array[Dims[D_x, D_x]]]:
             sigma_points = self._generate_sigma_points(
                 mu_k, sigma_k, state_dimension, lambda_
             )
@@ -129,8 +127,18 @@ class NumPyUnscentedKalmanFilter:
                 np.einsum("i,ij,ik->jk", covariance_weights, deviations, deviations) + R
             )
 
-            predicted_mean[:, k] = predicted_mean_k
-            predicted_covariance[:, :, k] = predicted_covariance_k
+            return predicted_mean_k, predicted_covariance_k
+
+        predicted_mean = np.full_like(mu, np.nan)
+        predicted_covariance = np.full_like(sigma, np.nan)
+
+        for k in range(batch_count):
+            if should_skip(sigma[:, :, k]):
+                continue
+
+            predicted_mean[:, k], predicted_covariance[:, :, k] = predict_single(
+                mu[:, k], sigma[:, :, k]
+            )
 
         return NumPyGaussianBelief(mean=predicted_mean, covariance=predicted_covariance)
 
@@ -141,6 +149,7 @@ class NumPyUnscentedKalmanFilter:
         prediction: NumPyGaussianBelief[D_x, K],
         observation_matrix: Array[Dims[D_z, D_x]],
         observation_noise_covariance: Array[Dims[D_z, D_z]],
+        initial_state_covariance: Array[Dims[D_x, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Performs the update step of the UKF using a linear observation model.
 
@@ -149,12 +158,14 @@ class NumPyUnscentedKalmanFilter:
             prediction: The predicted belief from the prediction step.
             observation_matrix: H matrix mapping state to observation space.
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return numpy_kalman_filter.update(
             observation=observation,
             prediction=prediction,
             observation_matrix=observation_matrix,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
         )
 
     def initial_belief_from[T: int, D_x: int, D_z: int, K: int](
@@ -162,19 +173,15 @@ class NumPyUnscentedKalmanFilter:
         observations: Array[Dims[T, D_z, K]],
         *,
         initial_state_covariance: Array[Dims[D_x, D_x]],
-        observation_matrix: Array[Dims[D_z, D_x]],
     ) -> NumPyGaussianBelief[D_x, K]:
         """Initializes the belief state from the first observation using a pseudo-inverse.
 
         Args:
             observations: The observed state history up to the current time step.
-            initial_state_covariance: Σ₀ matrix representing initial state uncertainty.
-            observation_matrix: H matrix mapping state to observation space.
+            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         return numpy_kalman_filter.initial_belief_from(
-            observations,
-            initial_state_covariance=initial_state_covariance,
-            observation_matrix=observation_matrix,
+            observations, initial_state_covariance=initial_state_covariance
         )
 
     def scaling_parameter_for(self, state_dimension: int) -> float:

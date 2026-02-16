@@ -22,17 +22,18 @@ class test_that_covariance_satisfies_basic_properties:
     @staticmethod
     def cases(model, data) -> Sequence[tuple]:
         dt = 0.1
+        rng = np.random.default_rng(seed=2025)
 
         def random_2d_poses(T: int, K: int):
             return data.obstacle_2d_poses(
-                x=array(np.random.randn(T, K), shape=(T, K)),
-                y=array(np.random.randn(T, K), shape=(T, K)),
-                heading=array(np.random.randn(T, K), shape=(T, K)),
+                x=array(0.1 * rng.standard_normal((T, K)), shape=(T, K)),
+                y=array(0.1 * rng.standard_normal((T, K)), shape=(T, K)),
+                heading=array(0.1 * rng.standard_normal((T, K)), shape=(T, K)),
             )
 
         def random_simple_obstacle_states(T: int, D_o: int, K: int):
             return data.simple_obstacle_states(
-                states=array(np.random.randn(T, D_o, K), shape=(T, D_o, K)),
+                states=array(0.1 * rng.standard_normal((T, D_o, K)), shape=(T, D_o, K)),
             )
 
         return [
@@ -112,7 +113,9 @@ class test_that_covariance_satisfies_basic_properties:
             assert covariance.shape == expected_shape
 
         with subtests.test("covariance is symmetric positive definite"):
-            assert check.is_spd(covariance)
+            # Use higher tolerance for float32 (JAX) due to numerical precision
+            tolerance = 1e-4 if covariance.dtype == np.float32 else 1e-6
+            assert check.is_spd(covariance, atol=tolerance)
 
 
 class test_that_covariance_decreases_with_more_observations:
@@ -535,3 +538,217 @@ class test_that_covariance_is_independent_across_obstacles:
         perturbed_cov = np.asarray(perturbed_result.covariance)
 
         assert np.allclose(base_cov[:, :, k], perturbed_cov[:, :, k], atol=1e-10)
+
+
+class test_that_estimator_estimates_obstacle_state_when_obstacle_appears_mid_history:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        T = 6
+        K = 1
+        D_o = 3
+
+        def poses_history(*, shift: int = 0, missing_before: int | None = None):
+            x = np.array([[t * 0.5] for t in range(shift, T)])
+            y = np.array([[t * 0.3] for t in range(shift, T)])
+            heading = np.array([[t * 0.1] for t in range(shift, T)])
+
+            if missing_before is not None:
+                x[:missing_before] = np.nan
+                y[:missing_before] = np.nan
+                heading[:missing_before] = np.nan
+
+            return data.obstacle_2d_poses(
+                x=array(x, shape=(T - shift, K)),
+                y=array(y, shape=(T - shift, K)),
+                heading=array(heading, shape=(T - shift, K)),
+            )
+
+        def simple_history(*, shift: int = 0, missing_before: int | None = None):
+            states = np.array(
+                [[[(d + 1) * 0.1 * t] for d in range(D_o)] for t in range(shift, T)]
+            )
+
+            if missing_before is not None:
+                states[:missing_before] = np.nan
+
+            return data.simple_obstacle_states(
+                states=array(states, shape=(T - shift, D_o, K))
+            )
+
+        return [
+            *[
+                (
+                    estimator,
+                    history := poses_history(missing_before=(T_0 := 3)),
+                    reference_history := poses_history(shift=T_0),
+                )
+                for estimator in [
+                    model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                ]
+            ],
+            (
+                estimator := model.integrator.estimator.kf(
+                    time_step_size=dt,
+                    process_noise_covariance=1e-5,
+                    observation_noise_covariance=1e-5,
+                    observation_dimension=D_o,
+                ),
+                history := simple_history(missing_before=(T_0 := 3)),
+                reference_history := simple_history(shift=T_0),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history", "reference_history"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT: ArrayConvertible, InputsT: ArrayConvertible](
+        self,
+        subtests: Subtests,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, ArrayConvertible],
+        history: HistoryT,
+        reference_history: HistoryT,
+    ) -> None:
+        result = estimator.estimate_from(history)
+        reference_result = estimator.estimate_from(reference_history)
+
+        with subtests.test("states match reference"):
+            assert np.allclose(result.states, reference_result.states, atol=1e-5)
+
+        with subtests.test("inputs match reference"):
+            assert np.allclose(result.inputs, reference_result.inputs, atol=1e-5)
+
+        with subtests.test("covariance matches reference"):
+            assert np.allclose(
+                result.covariance, reference_result.covariance, atol=1e-5
+            )
+
+
+class test_that_estimator_uses_observations_when_there_are_gaps_in_history:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        T = 10
+        K = 1
+        D_o = 3
+
+        def poses_history(*, gap_range: tuple[int, int] | None = None):
+            x = np.full((T, K), 5.0)
+            y = np.full((T, K), 3.0)
+            heading = np.full((T, K), 0.5)
+
+            if gap_range is not None:
+                x[gap_range[0] : gap_range[1]] = np.nan
+                y[gap_range[0] : gap_range[1]] = np.nan
+                heading[gap_range[0] : gap_range[1]] = np.nan
+
+            return data.obstacle_2d_poses(
+                x=array(x, shape=(T, K)),
+                y=array(y, shape=(T, K)),
+                heading=array(heading, shape=(T, K)),
+            )
+
+        def simple_history(*, gap_range: tuple[int, int] | None = None):
+            states = np.full((T, D_o, K), 2.0)
+
+            if gap_range is not None:
+                states[gap_range[0] : gap_range[1]] = np.nan
+
+            return data.simple_obstacle_states(states=array(states, shape=(T, D_o, K)))
+
+        gap = (3, 7)
+
+        return [
+            *[
+                (
+                    estimator,
+                    gappy_history := poses_history(gap_range=gap),
+                    reference_history := poses_history(),
+                )
+                for estimator in [
+                    model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=1e-8,
+                    ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=1e-8,
+                    ),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=1e-8,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=1e-8,
+                    ),
+                ]
+            ],
+            (
+                model.integrator.estimator.kf(
+                    time_step_size=dt,
+                    process_noise_covariance=1e-8,
+                    observation_noise_covariance=1e-8,
+                    observation_dimension=D_o,
+                ),
+                simple_history(gap_range=gap),
+                simple_history(),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["estimator", "gappy_history", "reference_history"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT: ArrayConvertible, InputsT: ArrayConvertible](
+        self,
+        subtests: Subtests,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, ArrayConvertible],
+        gappy_history: HistoryT,
+        reference_history: HistoryT,
+    ) -> None:
+        result = estimator.estimate_from(gappy_history)
+        reference = estimator.estimate_from(reference_history)
+
+        with subtests.test("states match reference"):
+            assert np.allclose(result.states, reference.states, atol=1e-5)
+
+        with subtests.test("inputs match reference"):
+            assert np.allclose(result.inputs, reference.inputs, atol=1e-5)
+
+        with subtests.test("covariance matches reference"):
+            assert np.allclose(result.covariance, reference.covariance, atol=1e-5)

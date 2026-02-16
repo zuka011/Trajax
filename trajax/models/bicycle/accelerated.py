@@ -32,7 +32,7 @@ from trajax.types import (
     CovarianceExtractor,
 )
 
-from jaxtyping import Array as JaxArray, Float, Scalar
+from jaxtyping import Array as JaxArray, Float, Bool, Scalar
 from numtypes import Array, Dims, D, shape_of
 
 from trajax.filters import (
@@ -86,6 +86,9 @@ type BicycleObstaclePositionCovarianceArray[T: int, K: int] = Float[
     JaxArray, f"T {BICYCLE_POSITION_D_O} {BICYCLE_POSITION_D_O} K"
 ]
 
+type JaxBicycleObstacleCovariances[K: int] = Float[
+    JaxArray, f"{BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"
+]
 type KalmanFilter = JaxExtendedKalmanFilter | JaxUnscentedKalmanFilter
 
 
@@ -420,17 +423,13 @@ class JaxBicycleControlInputBatch[T: int, M: int](
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleStates[K: int]:
-    array: Float[JaxArray, f"{BICYCLE_D_O} K"]
-    _covariance: Float[JaxArray, f"{BICYCLE_D_O} {BICYCLE_D_O} K"] | None = None
-    """State covariance matrix from Kalman filtering. Shape: (BicycleD_o, BicycleD_o, K)."""
+    _array: Float[JaxArray, f"{BICYCLE_D_O} K"]
 
     @staticmethod
     def wrap[K_: int](
         array: Array[Dims[BicycleD_o, K_]] | Float[JaxArray, f"{BICYCLE_D_O} K"],
-        *,
-        covariance: Float[JaxArray, f"{BICYCLE_D_O} {BICYCLE_D_O} K"] | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
-        return JaxBicycleObstacleStates(jnp.asarray(array), covariance)
+        return JaxBicycleObstacleStates(jnp.asarray(array))
 
     @staticmethod
     def create[K_: int](
@@ -440,10 +439,15 @@ class JaxBicycleObstacleStates[K: int]:
         heading: Array[Dims[K_]] | Float[JaxArray, "K_"],
         speed: Array[Dims[K_]] | Float[JaxArray, "K_"],
         count: K_ | None = None,
-        covariance: Float[JaxArray, f"{BICYCLE_D_O} {BICYCLE_D_O} K"] | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
+        count = count if count is not None else cast(K_, x.shape[0])
         array = jnp.stack([x, y, heading, speed], axis=0)
-        return JaxBicycleObstacleStates(array, covariance)
+
+        assert array.shape == (expected := (BICYCLE_D_O, count)), (
+            f"Array shape {array.shape} does not match expected shape {expected}."
+        )
+
+        return JaxBicycleObstacleStates(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
         return self._numpy_array
@@ -469,8 +473,8 @@ class JaxBicycleObstacleStates[K: int]:
         return cast(K, self.array.shape[1])
 
     @property
-    def covariance(self) -> Float[JaxArray, f"{BICYCLE_D_O} {BICYCLE_D_O} K"] | None:
-        return self._covariance
+    def array(self) -> Float[JaxArray, f"{BICYCLE_D_O} K"]:
+        return self._array
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[BicycleD_o, K]]:
@@ -552,18 +556,14 @@ class JaxBicycleObstacleStateSequences[T: int, K: int]:
 class JaxBicycleObstacleInputs[K: int]:
     _accelerations: Float[JaxArray, "K"]
     _steering_angles: Float[JaxArray, "K"]
-    _covariance: Float[JaxArray, f"{BICYCLE_D_U} {BICYCLE_D_U} K"] | None = None
-    """Input covariance matrix from Kalman filtering. Shape: (BicycleD_u, BicycleD_u, K)."""
 
     @staticmethod
     def wrap[K_: int](
         inputs: Array[Dims[BicycleD_u, K_]] | Float[JaxArray, f"{BICYCLE_D_U} K"],
-        *,
-        covariance: Float[JaxArray, f"{BICYCLE_D_U} {BICYCLE_D_U} K"] | None = None,
     ) -> "JaxBicycleObstacleInputs[K_]":
         inputs = jnp.asarray(inputs)
         return JaxBicycleObstacleInputs(
-            _accelerations=inputs[0], _steering_angles=inputs[1], _covariance=covariance
+            _accelerations=inputs[0], _steering_angles=inputs[1]
         )
 
     @staticmethod
@@ -571,12 +571,10 @@ class JaxBicycleObstacleInputs[K: int]:
         *,
         accelerations: Array[Dims[K_]] | Float[JaxArray, "K"],
         steering_angles: Array[Dims[K_]] | Float[JaxArray, "K"],
-        covariance: Float[JaxArray, f"{BICYCLE_D_U} {BICYCLE_D_U} K"] | None = None,
     ) -> "JaxBicycleObstacleInputs[int]":
         return JaxBicycleObstacleInputs(
             _accelerations=jnp.asarray(accelerations),
             _steering_angles=jnp.asarray(steering_angles),
-            _covariance=covariance,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
@@ -593,7 +591,6 @@ class JaxBicycleObstacleInputs[K: int]:
             _steering_angles=jnp.zeros_like(self._steering_angles)
             if steering_angle
             else self._steering_angles,
-            _covariance=self._covariance,
         )
 
     def accelerations(self) -> Array[Dims[K]]:
@@ -611,10 +608,6 @@ class JaxBicycleObstacleInputs[K: int]:
         return cast(K, self._steering_angles.shape[0])
 
     @property
-    def covariance(self) -> Float[JaxArray, f"{BICYCLE_D_U} {BICYCLE_D_U} K"] | None:
-        return self._covariance
-
-    @property
     def accelerations_array(self) -> Float[JaxArray, "K"]:
         return self._accelerations
 
@@ -622,11 +615,13 @@ class JaxBicycleObstacleInputs[K: int]:
     def steering_angles_array(self) -> Float[JaxArray, "K"]:
         return self._steering_angles
 
+    @property
+    def array(self) -> Float[JaxArray, f"{BICYCLE_D_U} K"]:
+        return jnp.stack([self._accelerations, self._steering_angles], axis=0)
+
     @cached_property
     def _numpy_array(self) -> Array[Dims[BicycleD_u, K]]:
-        array = np.stack(
-            [np.asarray(self._accelerations), np.asarray(self._steering_angles)], axis=0
-        )
+        array = np.asarray(self.array)
 
         assert shape_of(array, matches=(BICYCLE_D_U, self.count))
 
@@ -995,9 +990,9 @@ class JaxFiniteDifferenceBicycleStateEstimator(
 
         return EstimatedObstacleStates(
             states=JaxBicycleObstacleStates.create(
-                x=history.x_array[-1],
-                y=history.y_array[-1],
-                heading=history.heading_array[-1],
+                x=estimated.x,
+                y=estimated.y,
+                heading=estimated.heading,
                 speed=estimated.speed,
             ),
             inputs=cast(
@@ -1017,6 +1012,7 @@ class JaxKfBicycleStateEstimator(
         JaxBicycleObstacleStatesHistory,
         JaxBicycleObstacleStates,
         JaxBicycleObstacleInputs,
+        JaxBicycleObstacleCovariances,
     ]
 ):
     """Kalman Filter state estimator for bicycle model obstacles."""
@@ -1099,7 +1095,7 @@ class JaxKfBicycleStateEstimator(
     ) -> EstimatedObstacleStates[
         JaxBicycleObstacleStates[K],
         JaxBicycleObstacleInputs[K],
-        Float[JaxArray, "D_x D_x K"],
+        JaxBicycleObstacleCovariances[K],
     ]:
         estimate = self.estimator.filter(
             self.model.observations_from(history),
@@ -1157,6 +1153,9 @@ class JaxBicyclePositionCovarianceExtractor(CovarianceExtractor):
 
 
 class EstimatedBicycleObstacleStates(NamedTuple):
+    x: Float[JaxArray, "K"]
+    y: Float[JaxArray, "K"]
+    heading: Float[JaxArray, "K"]
     speed: Float[JaxArray, "K"]
     accelerations: Float[JaxArray, "K"]
     steering_angles: Float[JaxArray, "K"]
@@ -1288,8 +1287,18 @@ def estimate_states(
     time_step_size: Scalar,
     wheelbase: Scalar,
 ) -> EstimatedBicycleObstacleStates:
+    invalid = invalid_obstacle_mask_from(
+        x_history=x_history, y_history=y_history, heading_history=heading_history
+    )
+
+    def filter_invalid(array: Float[JaxArray, "K"]) -> Float[JaxArray, "K"]:
+        return jnp.where(invalid, jnp.nan, array)
+
     return EstimatedBicycleObstacleStates(
-        speed=(
+        x=filter_invalid(x_history[-1]),
+        y=filter_invalid(y_history[-1]),
+        heading=filter_invalid(heading_history[-1]),
+        speed=filter_invalid(
             speed := estimate_speed(
                 x_history=x_history,
                 y_history=y_history,
@@ -1297,19 +1306,40 @@ def estimate_states(
                 time_step_size=time_step_size,
             )
         ),
-        accelerations=estimate_acceleration(
-            x_history=x_history,
-            y_history=y_history,
-            heading_history=heading_history,
-            speed_current=speed,
-            time_step_size=time_step_size,
+        accelerations=filter_invalid(
+            estimate_acceleration(
+                x_history=x_history,
+                y_history=y_history,
+                heading_history=heading_history,
+                speed_current=speed,
+                time_step_size=time_step_size,
+            )
         ),
-        steering_angles=estimate_steering_angle(
-            heading_history=heading_history,
-            speed_current=speed,
-            time_step_size=time_step_size,
-            wheelbase=wheelbase,
+        steering_angles=filter_invalid(
+            estimate_steering_angle(
+                heading_history=heading_history,
+                speed_current=speed,
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+            )
         ),
+    )
+
+
+# TODO: Extract this to be reusable for all models.
+@jax.jit
+@jaxtyped
+def invalid_obstacle_mask_from(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+) -> Bool[JaxArray, "K"]:
+    return jnp.any(
+        jnp.isnan(x_history[-3:])
+        | jnp.isnan(y_history[-3:])
+        | jnp.isnan(heading_history[-3:]),
+        axis=0,
     )
 
 
