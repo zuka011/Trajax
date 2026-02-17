@@ -8,7 +8,6 @@ from .bicycle import (
     NumPyBicycleObstacleStates as NumPyBicycleObstacleStates,
     NumPyBicycleObstacleInputs as NumPyBicycleObstacleInputs,
     NumPyBicycleObstacleStateSequences as NumPyBicycleObstacleStateSequences,
-    NumPyBicycleObstacleControlInputSequences as NumPyBicycleObstacleControlInputSequences,
     NumPyBicycleModel as NumPyBicycleModel,
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
     JaxBicycleState as JaxBicycleState,
@@ -20,7 +19,6 @@ from .bicycle import (
     JaxBicycleObstacleStates as JaxBicycleObstacleStates,
     JaxBicycleObstacleInputs as JaxBicycleObstacleInputs,
     JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
-    JaxBicycleObstacleControlInputSequences as JaxBicycleObstacleControlInputSequences,
     JaxBicycleModel as JaxBicycleModel,
     JaxBicycleObstacleModel as JaxBicycleObstacleModel,
 )
@@ -42,7 +40,6 @@ from .unicycle import (
     NumPyUnicycleObstacleStates as NumPyUnicycleObstacleStates,
     NumPyUnicycleObstacleInputs as NumPyUnicycleObstacleInputs,
     NumPyUnicycleObstacleStateSequences as NumPyUnicycleObstacleStateSequences,
-    NumPyUnicycleObstacleControlInputSequences as NumPyUnicycleObstacleControlInputSequences,
     NumPyUnicycleModel as NumPyUnicycleModel,
     NumPyUnicycleObstacleModel as NumPyUnicycleObstacleModel,
     JaxUnicycleState as JaxUnicycleState,
@@ -54,7 +51,6 @@ from .unicycle import (
     JaxUnicycleObstacleStates as JaxUnicycleObstacleStates,
     JaxUnicycleObstacleInputs as JaxUnicycleObstacleInputs,
     JaxUnicycleObstacleStateSequences as JaxUnicycleObstacleStateSequences,
-    JaxUnicycleObstacleControlInputSequences as JaxUnicycleObstacleControlInputSequences,
     JaxUnicycleModel as JaxUnicycleModel,
     JaxUnicycleObstacleModel as JaxUnicycleObstacleModel,
 )

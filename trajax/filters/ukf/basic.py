@@ -1,5 +1,4 @@
-from typing import Protocol, runtime_checkable
-from dataclasses import dataclass
+from typing import Protocol, NamedTuple, runtime_checkable
 
 from numtypes import Dims, Array
 
@@ -16,18 +15,15 @@ class StateTransitionFunction[D_x: int, K: int](Protocol):
         ...
 
 
-@dataclass(kw_only=True)
-class NumPyUnscentedKalmanFilter:
+class NumPyUnscentedKalmanFilter(NamedTuple):
     """Unscented Kalman Filter for nonlinear systems with linear observations."""
 
-    alpha: float = 1.0
-    beta: float = 2.0
+    alpha: float
+    beta: float
 
     @staticmethod
     def create(
-        *,
-        alpha: float = 1.0,
-        beta: float = 2.0,
+        *, alpha: float = 1.0, beta: float = 2.0
     ) -> "NumPyUnscentedKalmanFilter":
         """Create an Unscented Kalman Filter.
 
@@ -35,10 +31,7 @@ class NumPyUnscentedKalmanFilter:
             alpha: Controls spread of sigma points - λ = (α² - 1)n.
             beta: Incorporates prior knowledge (2 is optimal for Gaussian).
         """
-        return NumPyUnscentedKalmanFilter(
-            alpha=alpha,
-            beta=beta,
-        )
+        return NumPyUnscentedKalmanFilter(alpha=alpha, beta=beta)
 
     def filter[T: int, D_x: int, D_z: int, K: int](
         self,
@@ -191,11 +184,6 @@ class NumPyUnscentedKalmanFilter:
     def _compute_weights(
         self, state_dimension: int, lambda_: float
     ) -> tuple[Array, Array]:
-        """Compute sigma point weights for mean and covariance.
-
-        Mean weights: w_m,0 = λ/(n+λ), w_m,i = 1/(2(n+λ))
-        Covariance weights: w_c,0 = λ/(n+λ) + (1-α²+β), w_c,i = 1/(2(n+λ))
-        """
         n = state_dimension
         sigma_point_count = 2 * n + 1
 
@@ -216,12 +204,6 @@ class NumPyUnscentedKalmanFilter:
     def _generate_sigma_points(
         self, mean: Array, covariance: Array, state_dimension: int, lambda_: float
     ) -> Array:
-        """Generate 2n+1 sigma points around the mean.
-
-        σ₀ = μ
-        σᵢ = μ + (√((n+λ)Σ))ᵢ for i = 1,...,n
-        σᵢ = μ - (√((n+λ)Σ))_{i-n} for i = n+1,...,2n
-        """
         n = state_dimension
         sigma_point_count = 2 * n + 1
 
@@ -230,7 +212,7 @@ class NumPyUnscentedKalmanFilter:
 
         scaled_covariance = (n + lambda_) * covariance
 
-        # Ensure the scaled covariance is positive definite.
+        # NOTE: To ensure the scaled covariance is positive definite.
         scaled_covariance = (scaled_covariance + scaled_covariance.T) / 2
         eigenvalues, eigenvectors = np.linalg.eigh(scaled_covariance)
         eigenvalues = np.maximum(eigenvalues, 1e-10)

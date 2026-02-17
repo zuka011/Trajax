@@ -7,8 +7,6 @@ from numtypes import Array, Dims, D
 BICYCLE_D_X: Final = 4
 BICYCLE_D_U: Final = 2
 BICYCLE_D_O: Final = 4
-BICYCLE_POSE_D_O: Final = 3
-BICYCLE_POSITION_D_O: Final = 2
 
 type BicycleD_x = D[4]
 """State dimension of the bicycle model, consisting of (x position, y position, heading, speed)."""
@@ -18,12 +16,6 @@ type BicycleD_u = D[2]
 
 type BicycleD_o = D[4]
 """Obstacle state dimension of the bicycle model, consisting of (x position, y position, heading, speed)."""
-
-type BicyclePoseD_o = D[3]
-"""Obstacle pose dimension of the bicycle model, consisting of (x position, y position, heading)."""
-
-type BicyclePositionD_o = D[2]
-"""Obstacle position dimension of the bicycle model, consisting of (x position, y position)."""
 
 
 class BicycleState(Protocol):

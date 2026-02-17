@@ -1,9 +1,8 @@
-from typing import Final, cast
+from typing import Final, Sequence, cast
 from dataclasses import dataclass
 from functools import cached_property
 
 from trajax.types import (
-    HasShape,
     DynamicalModel,
     ObstacleModel,
     ObstacleStateEstimator,
@@ -27,6 +26,11 @@ from trajax.filters import (
     NumPyNoiseCovarianceArrayDescription,
     NumPyNoiseCovarianceDescription,
     numpy_kalman_filter,
+)
+from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.integrator.common import (
+    observation_dimension_from,
+    kf_state_dimension_for,
 )
 
 from numtypes import Array, Dims, shape_of
@@ -68,25 +72,51 @@ class NumPyIntegratorObstacleStates[D_o: int, K: int]:
 
 
 @dataclass(frozen=True)
-class NumPyIntegratorObstacleStateSequences[T: int, D_o: int, K: int]:
+class NumPyIntegratorObstacleStateSequences[T: int, D_x: int, K: int]:
     """Time-indexed obstacle state sequences for integrator model obstacles."""
 
-    array: Array[Dims[T, D_o, K]]
+    _array: Array[Dims[T, D_x, K]]
+    _covariance: Array[Dims[T, D_x, D_x, K]]
 
-    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
+    @staticmethod
+    def create[D_x_: int, K_: int, T_: int = int](
+        predictions: Sequence[NumPyGaussianBelief[D_x_, K_]],
+    ) -> "NumPyIntegratorObstacleStateSequences[T_, D_x_, K_]":
+        assert len(predictions) > 0, "Predictions sequence must not be empty."
+
+        T = cast(T_, len(predictions))
+        D_x = predictions[0].mean.shape[0]
+        K = predictions[0].mean.shape[1]
+
+        array = np.stack([belief.mean for belief in predictions], axis=0)
+        covariance = np.stack([belief.covariance for belief in predictions], axis=0)
+
+        assert shape_of(array, matches=(T, D_x, K))
+        assert shape_of(covariance, matches=(T, D_x, D_x, K))
+
+        return NumPyIntegratorObstacleStateSequences(array, covariance)
+
+    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_x, K]]:
         return self.array
+
+    def covariance(self) -> Array[Dims[T, D_x, D_x, K]]:
+        return self._covariance
 
     @property
     def horizon(self) -> T:
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> D_o:
+    def dimension(self) -> D_x:
         return self.array.shape[1]
 
     @property
     def count(self) -> K:
         return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D_x, K]]:
+        return self._array
 
 
 @dataclass(frozen=True)
@@ -121,26 +151,6 @@ class NumPyIntegratorObstacleInputs[D_o: int, K: int]:
     @property
     def array(self) -> Array[Dims[D_o, K]]:
         return self._array
-
-
-@dataclass(frozen=True)
-class NumPyIntegratorObstacleControlInputSequences[T: int, D_o: int, K: int]:
-    array: Array[Dims[T, D_o, K]]
-
-    def __array__(self, dtype: None | type = None) -> Array[Dims[T, D_o, K]]:
-        return self.array
-
-    @property
-    def horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def dimension(self) -> D_o:
-        return self.array.shape[1]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[2]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -258,73 +268,172 @@ class NumPyIntegratorModel(
         return self.state_limits != NO_LIMITS
 
 
+@dataclass(frozen=True)
+class NumPyIntegratorStateEstimationModel[D_o: int, D_x: int]:
+    """Single integrator model used for obstacle state estimation."""
+
+    time_step_size: float
+    observation_dimension: D_o
+    initial_state_covariance: Array[Dims[D_x, D_x]]
+
+    @staticmethod
+    def create[D_o_: int, D_x_: int = int](
+        *,
+        time_step_size: float,
+        observation_dimension: D_o_,
+        initial_state_covariance: Array[Dims[D_x_, D_x_]] | None = None,
+    ) -> "NumPyIntegratorStateEstimationModel[D_o_, D_x_]":
+        if initial_state_covariance is None:
+            initial_state_covariance = NumPyIntegratorStateEstimationModel.default_initial_state_covariance_for(
+                observation_dimension
+            )
+
+        return NumPyIntegratorStateEstimationModel(
+            time_step_size=time_step_size,
+            observation_dimension=observation_dimension,
+            initial_state_covariance=initial_state_covariance,
+        )
+
+    @staticmethod
+    def default_initial_state_covariance_for[D_o_: int = int, D_x_: int = int](
+        observation_dimension: D_o_,
+    ) -> Array[Dims[D_x_, D_x_]]:
+        D_o = observation_dimension
+
+        # NOTE: We are sure of the observed states, unsure of the velocities.
+        return np.diag(
+            np.concatenate(
+                (np.full(D_o, SMALL_UNCERTAINTY), np.full(D_o, LARGE_UNCERTAINTY))
+            )
+        )
+
+    def __call__[K: int](
+        self, augmented_state: Array[Dims[D_x, K]]
+    ) -> Array[Dims[D_x, K]]:
+        return self.state_transition_matrix @ augmented_state
+
+    def states_from[K: int](
+        self, belief: NumPyGaussianBelief[D_x, K]
+    ) -> NumPyIntegratorObstacleStates[D_o, K]:
+        D_o = self.observation_dimension
+        return NumPyIntegratorObstacleStates.create(array=belief.mean[:D_o, :])
+
+    def inputs_from[K: int](
+        self, belief: NumPyGaussianBelief[D_x, K]
+    ) -> NumPyIntegratorObstacleInputs[D_o, K]:
+        D_o = self.observation_dimension
+        return NumPyIntegratorObstacleInputs.create(array=belief.mean[D_o:, :])
+
+    def initial_belief_from[K: int](
+        self,
+        *,
+        states: NumPyIntegratorObstacleStates[D_o, K],
+        inputs: NumPyIntegratorObstacleInputs[D_o, K],
+        covariances: NumPyIntegratorObstacleCovariances[D_x, K] | None = None,
+    ) -> NumPyGaussianBelief[int, K]:
+        augmented = np.concatenate([states.array, inputs.array], axis=0)
+        D_x = 2 * self.observation_dimension
+
+        if covariances is None:
+            # NOTE: No covariance means we are "certain" about the states.
+            covariances = np.broadcast_to(  # type: ignore
+                np.eye(D_x)[:, :, np.newaxis] * SMALL_UNCERTAINTY,
+                (D_x, D_x, states.count),
+            ).copy()
+
+        assert shape_of(augmented, matches=(D_x, states.count), name="augmented state")
+        assert shape_of(
+            covariances, matches=(D_x, D_x, states.count), name="initial covariances"
+        )
+
+        return NumPyGaussianBelief(mean=augmented, covariance=covariances)
+
+    @cached_property
+    def state_transition_matrix(self) -> Array[Dims[D_x, D_x]]:
+        D_o = self.observation_dimension
+
+        # NOTE: State transition matrix for constant velocity model.
+        return np.block(
+            [
+                [np.eye(D_o), self.time_step_size * np.eye(D_o)],
+                [np.zeros((D_o, D_o)), np.eye(D_o)],
+            ]
+        )
+
+    @cached_property
+    def observation_matrix(self) -> Array[Dims[D_o, D_x]]:
+        D_o = self.observation_dimension
+
+        # NOTE: We have a velocity for each observed state.
+        return np.hstack((np.eye(D_o), np.zeros((D_o, D_o))))
+
+
 @dataclass(kw_only=True, frozen=True)
-class NumPyIntegratorObstacleModel(
+class NumPyIntegratorObstacleModel[D_o: int, D_x: int](
     ObstacleModel[
         NumPyIntegratorObstacleStatesHistory,
         NumPyIntegratorObstacleStates,
         NumPyIntegratorObstacleInputs,
-        NumPyIntegratorObstacleStateSequences,
+        NumPyIntegratorObstacleCovariances[D_x, int],
+        NumPyIntegratorObstacleStateSequences[int, D_x, int],
     ]
 ):
     """Propagates integrator dynamics forward with constant velocity."""
 
-    time_step: float
+    model: NumPyIntegratorStateEstimationModel[D_o, D_x]
+    process_noise_covariance: Array[Dims[D_x, D_x]]
+    predictor: NumPyKalmanFilter
 
     @staticmethod
-    def create(*, time_step_size: float) -> "NumPyIntegratorObstacleModel":
+    def create[D_o_: int, D_x_: int](
+        *,
+        time_step_size: float,
+        state_dimension: D_o_,
+        process_noise_covariance: NumPyNoiseCovarianceDescription[D_x_] = 1e-3,
+    ) -> "NumPyIntegratorObstacleModel[D_o_, D_x_]":
         """Creates a NumPy integrator obstacle model.
 
-        See `NumPyIntegratorModel.create` for details on the integrator dynamics.
+        Args:
+            time_step_size: The time step size for integration.
+            state_dimension: The dimension of the obstacle state (e.g., 2 for 2D position).
+            process_noise_covariance: The process noise covariance, either as a
+                full covariance array, a diagonal covariance vector, or a scalar
+                variance representing isotropic noise.
         """
-        return NumPyIntegratorObstacleModel(time_step=time_step_size)
+        return NumPyIntegratorObstacleModel(
+            model=NumPyIntegratorStateEstimationModel.create(
+                time_step_size=time_step_size, observation_dimension=state_dimension
+            ),
+            process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance,
+                dimension=kf_state_dimension_for(observation_dimension=state_dimension),
+            ),
+            predictor=NumPyKalmanFilter.create(),
+        )
 
-    def forward[T: int, D_o: int, K: int](
+    def forward[T: int, K: int](
         self,
         *,
-        current: NumPyIntegratorObstacleStates[D_o, K],
+        states: NumPyIntegratorObstacleStates[D_o, K],
         inputs: NumPyIntegratorObstacleInputs[D_o, K],
+        covariances: NumPyIntegratorObstacleCovariances[D_x, K] | None,
         horizon: T,
-    ) -> NumPyIntegratorObstacleStateSequences[T, D_o, K]:
-        input_sequences = self._input_to_maintain(inputs, horizon=horizon)
-
-        result = simulate(
-            inputs=input_sequences.array,
-            initial_states=current.array,
-            time_step=self.time_step,
+    ) -> NumPyIntegratorObstacleStateSequences[T, D_x, K]:
+        beliefs = []
+        last = self.model.initial_belief_from(
+            states=states, inputs=inputs, covariances=covariances
         )
 
-        return NumPyIntegratorObstacleStateSequences(result)
+        for _ in range(horizon):
+            beliefs.append(
+                last := self.predictor.predict(
+                    belief=last,
+                    state_transition_matrix=self.model.state_transition_matrix,
+                    process_noise_covariance=self.process_noise_covariance,
+                )
+            )
 
-    def state_jacobian[T: int, D_o: int, K: int](
-        self,
-        *,
-        states: NumPyIntegratorObstacleStateSequences[T, D_o, K],
-        inputs: NumPyIntegratorObstacleInputs[D_o, K],
-    ) -> Array[Dims[T, D_o, D_o, K]]:
-        raise NotImplementedError(
-            "State Jacobian is not implemented for NumPyIntegratorObstacleModel."
-        )
-
-    def input_jacobian[T: int, D_o: int, K: int](
-        self,
-        *,
-        states: NumPyIntegratorObstacleStateSequences[T, D_o, K],
-        inputs: NumPyIntegratorObstacleInputs[D_o, K],
-    ) -> Array[Dims[T, D_o, D_o, K]]:
-        raise NotImplementedError(
-            "Input Jacobian is not implemented for NumPyIntegratorObstacleModel."
-        )
-
-    def _input_to_maintain[T: int, D_o: int, K: int](
-        self,
-        inputs: NumPyIntegratorObstacleInputs[D_o, K],
-        *,
-        horizon: T,
-    ) -> NumPyIntegratorObstacleControlInputSequences[T, D_o, K]:
-        return NumPyIntegratorObstacleControlInputSequences(
-            np.tile(inputs.array[np.newaxis, :, :], (horizon, 1, 1))
-        )
+        return NumPyIntegratorObstacleStateSequences.create(beliefs)
 
 
 @dataclass(frozen=True)
@@ -422,10 +531,9 @@ class NumPyKfIntegratorStateEstimator[D_o: int, D_x: int](
 ):
     """Kalman Filter state estimator for integrator model obstacles."""
 
-    time_step_size: float
     process_noise_covariance: Array[Dims[D_x, D_x]]
     observation_noise_covariance: Array[Dims[D_o, D_o]]
-    observation_dimension: D_o
+    model: NumPyIntegratorStateEstimationModel[D_o, D_x]
     estimator: NumPyKalmanFilter
 
     @staticmethod
@@ -434,6 +542,7 @@ class NumPyKfIntegratorStateEstimator[D_o: int, D_x: int](
         time_step_size: float,
         process_noise_covariance: NumPyNoiseCovarianceDescription[D_x_],
         observation_noise_covariance: NumPyNoiseCovarianceArrayDescription[D_o_],
+        initial_state_covariance: Array[Dims[D_x_, D_x_]] | None = None,
         observation_dimension: D_o_ | None = None,
     ) -> "NumPyKfIntegratorStateEstimator[D_o_, D_x_]":
         """Creates an integrator state estimator based on the Kalman Filter with the
@@ -447,17 +556,20 @@ class NumPyKfIntegratorStateEstimator[D_o: int, D_x: int](
             observation_noise_covariance: The observation noise covariance, either as
                 a full matrix, a vector of diagonal entries, or a single scalar
                 representing isotropic noise across all state dimensions.
+            initial_state_covariance: The initial state covariance for the Kalman filter.
+                If not provided, low uncertainty will be assumed for observed states and high
+                uncertainty for unobserved velocities.
             observation_dimension: The observation dimension for the Kalman filter.
-                Mandatory if both noise covariances are specified as scalars.
+                Mandatory if noise/state covariances are not specified/specified as scalars.
         """
         observation_dimension = observation_dimension_from(
             process_noise_covariance=process_noise_covariance,
             observation_noise_covariance=observation_noise_covariance,
+            initial_state_covariance=initial_state_covariance,
             observation_dimension=observation_dimension,
         )
 
         return NumPyKfIntegratorStateEstimator(
-            time_step_size=time_step_size,
             process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
                 process_noise_covariance,
                 dimension=cast(D_x_, kf_state_dimension_for(observation_dimension)),
@@ -465,7 +577,11 @@ class NumPyKfIntegratorStateEstimator[D_o: int, D_x: int](
             observation_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
                 observation_noise_covariance, dimension=observation_dimension
             ),
-            observation_dimension=observation_dimension,
+            model=NumPyIntegratorStateEstimationModel.create(
+                time_step_size=time_step_size,
+                observation_dimension=observation_dimension,
+                initial_state_covariance=initial_state_covariance,
+            ),
             estimator=NumPyKalmanFilter.create(),
         )
 
@@ -480,65 +596,25 @@ class NumPyKfIntegratorStateEstimator[D_o: int, D_x: int](
         assert history.horizon > 0, (
             "History must contain at least one state for estimation."
         )
-        assert history.dimension == self.observation_dimension, (
+        assert history.dimension == self.model.observation_dimension, (
             f"History dimension {history.dimension} does not match expected "
-            f"observation dimension {self.observation_dimension}."
+            f"observation dimension {self.model.observation_dimension}."
         )
 
         estimate = self.estimator.filter(
             observations=history.array,
-            initial_state_covariance=self.initial_state_covariance,
-            state_transition_matrix=self.state_transition_matrix,
+            initial_state_covariance=self.model.initial_state_covariance,
+            state_transition_matrix=self.model.state_transition_matrix,
             process_noise_covariance=self.process_noise_covariance,
             observation_noise_covariance=self.observation_noise_covariance,
-            observation_matrix=self.observation_matrix,
+            observation_matrix=self.model.observation_matrix,
         )
 
         return EstimatedObstacleStates(
-            states=self.states_from(estimate),
-            inputs=self.inputs_from(estimate),
+            states=self.model.states_from(estimate),
+            inputs=self.model.inputs_from(estimate),
             covariance=estimate.covariance,
         )
-
-    def states_from[K: int](
-        self, belief: NumPyGaussianBelief[D_x, K]
-    ) -> NumPyIntegratorObstacleStates[D_o, K]:
-        D_o = self.observation_dimension
-
-        return NumPyIntegratorObstacleStates.create(array=belief.mean[:D_o, :])
-
-    def inputs_from[K: int](
-        self, belief: NumPyGaussianBelief[D_x, K]
-    ) -> NumPyIntegratorObstacleInputs[D_o, K]:
-        D_o = self.observation_dimension
-
-        return NumPyIntegratorObstacleInputs.create(array=belief.mean[D_o:, :])
-
-    @cached_property
-    def initial_state_covariance(self) -> Array[Dims[D_x, D_x]]:
-        D_o = self.observation_dimension
-
-        # NOTE: We are sure of the observed states, unsure of the velocities.
-        return np.diag(np.concatenate((np.full(D_o, 1e-4), np.full(D_o, 1e3))))
-
-    @cached_property
-    def state_transition_matrix(self) -> Array[Dims[D_x, D_x]]:
-        D_o = self.observation_dimension
-
-        # NOTE: State transition matrix for constant velocity model.
-        return np.block(
-            [
-                [np.eye(D_o), self.time_step_size * np.eye(D_o)],
-                [np.zeros((D_o, D_o)), np.eye(D_o)],
-            ]
-        )
-
-    @cached_property
-    def observation_matrix(self) -> Array[Dims[D_o, D_x]]:
-        D_o = self.observation_dimension
-
-        # NOTE: We have a velocity for each observed state.
-        return np.hstack((np.eye(D_o), np.zeros((D_o, D_o))))
 
 
 def validate_periodic_state_limits(state_limits: tuple[float, float] | None) -> None:
@@ -604,35 +680,3 @@ def simulate[T: int, D_x: int, N: int](
 ) -> Array[Dims[T, D_x, N]]:
     states = initial_states + np.cumsum(inputs * time_step, axis=0)
     return states
-
-
-def observation_dimension_from[D_o: int, D_x: int](
-    *,
-    process_noise_covariance: NumPyNoiseCovarianceDescription[D_x],
-    observation_noise_covariance: NumPyNoiseCovarianceDescription[D_o],
-    observation_dimension: D_o | None,
-) -> D_o:
-    if observation_dimension is not None:
-        return observation_dimension
-
-    if isinstance(observation_noise_covariance, HasShape):
-        return cast(D_o, observation_noise_covariance.shape[0])
-
-    if isinstance(process_noise_covariance, HasShape):
-        return cast(D_o, observation_dimension_for(process_noise_covariance.shape[0]))
-
-    assert False, (
-        "Observation dimension must be specified if noise covariances are not provided as arrays."
-    )
-
-
-def kf_state_dimension_for(observation_dimension: int) -> int:
-    # NOTE: For the integrator model, both the states and state velocities are combined
-    # into the estimated state vector.
-    return 2 * observation_dimension
-
-
-def observation_dimension_for(kf_state_dimension: int) -> int:
-    # NOTE: For the integrator model, both the states and state velocities are combined
-    # into the estimated state vector.
-    return kf_state_dimension // 2

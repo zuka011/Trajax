@@ -1,5 +1,4 @@
 from typing import NamedTuple
-from dataclasses import dataclass
 
 from numtypes import Dims, Array, shape_of
 
@@ -25,8 +24,9 @@ class ObstaclePartitioning[K: int](NamedTuple):
     should_initialize: Array[Dims[K]]
 
 
-@dataclass(kw_only=True)
 class NumPyKalmanFilter:
+    """Kalman Filter for linear systems."""
+
     @staticmethod
     def create() -> "NumPyKalmanFilter":
         return NumPyKalmanFilter()

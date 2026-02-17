@@ -1,4 +1,4 @@
-from typing import Never, Self, overload, cast, Sequence, Final, Any
+from typing import Self, overload, cast, Sequence, Final, Any
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -22,15 +22,11 @@ from trajax.types import (
     BICYCLE_D_U,
     BicycleD_o,
     BICYCLE_D_O,
-    BicyclePoseD_o,
-    BICYCLE_POSE_D_O,
-    BicyclePositionD_o,
-    BICYCLE_POSITION_D_O,
+    PoseD_o,
     DynamicalModel,
     ObstacleModel,
     ObstacleStateEstimator,
     EstimatedObstacleStates,
-    CovarianceExtractor,
 )
 from trajax.filters import (
     NumPyGaussianBelief,
@@ -39,11 +35,13 @@ from trajax.filters import (
     NumPyUnscentedKalmanFilter,
     numpy_kalman_filter,
 )
-
+from trajax.obstacles import NumPyObstacle2dPoses
+from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
 
 from numtypes import Array, Dims, D, shape_of, array
 
 import numpy as np
+
 
 NO_LIMITS: Final = (float("-inf"), float("inf"))
 
@@ -57,6 +55,10 @@ type StateArray = Array[Dims[BicycleD_x]]
 type ControlInputSequenceArray[T: int] = Array[Dims[T, BicycleD_u]]
 type StateBatchArray[T: int, M: int] = Array[Dims[T, BicycleD_x, M]]
 type ControlInputBatchArray[T: int, M: int] = Array[Dims[T, BicycleD_u, M]]
+
+type StatesAtTimeStep[M: int] = Array[Dims[BicycleD_x, M]]
+type ControlInputsAtTimeStep[M: int] = Array[Dims[BicycleD_u, M]]
+
 type EstimationStateCovarianceArray = Array[
     Dims[BicycleEstimationD_x, BicycleEstimationD_x]
 ]
@@ -68,19 +70,7 @@ type ObservationNoiseCovarianceArray = Array[
 ]
 type ObservationMatrix = Array[Dims[BicycleObservationD_o, BicycleEstimationD_x]]
 
-type StatesAtTimeStep[M: int] = Array[Dims[BicycleD_x, M]]
-type ControlInputsAtTimeStep[M: int] = Array[Dims[BicycleD_u, M]]
-
-type BicycleObstacleStateCovarianceArray[T: int, K: int] = Array[
-    Dims[T, BicycleD_o, BicycleD_o, K]
-]
-type BicycleObstaclePoseCovarianceArray[T: int, K: int] = Array[
-    Dims[T, BicyclePoseD_o, BicyclePoseD_o, K]
-]
-type BicycleObstaclePositionCovarianceArray[T: int, K: int] = Array[
-    Dims[T, BicyclePositionD_o, BicyclePositionD_o, K]
-]
-
+type BicycleGaussianBelief[K: int] = NumPyGaussianBelief[BicycleEstimationD_x, K]
 type NumPyBicycleObstacleCovariances[K: int] = Array[
     Dims[BicycleEstimationD_x, BicycleEstimationD_x, K]
 ]
@@ -433,31 +423,32 @@ class NumPyBicycleObstacleStates[K: int]:
 
 @dataclass(frozen=True)
 class NumPyBicycleObstacleStateSequences[T: int, K: int]:
-    array: Array[Dims[T, BicycleD_o, K]]
+    _array: Array[Dims[T, BicycleEstimationD_x, K]]
+    _covariance: Array[Dims[T, BicycleEstimationD_x, BicycleEstimationD_x, K]]
 
     @staticmethod
-    def create(
-        *,
-        x: Array[Dims[T, K]],
-        y: Array[Dims[T, K]],
-        heading: Array[Dims[T, K]],
-        speed: Array[Dims[T, K]],
-    ) -> "NumPyBicycleObstacleStateSequences[T, K]":
-        T, K = x.shape
-        array = np.stack([x, y, heading, speed], axis=1)
+    def create[K_: int, T_: int = int](
+        predictions: Sequence[BicycleGaussianBelief[K_]],
+    ) -> "NumPyBicycleObstacleStateSequences[T_, K_]":
+        assert len(predictions) > 0, "Predictions sequence must not be empty."
 
-        assert shape_of(array, matches=(T, BICYCLE_D_O, K))
+        T = cast(T_, len(predictions))
+        K = predictions[0].mean.shape[1]
 
-        return NumPyBicycleObstacleStateSequences(array)
+        array = np.stack([belief.mean for belief in predictions], axis=0)
+        covariance = np.stack([belief.covariance for belief in predictions], axis=0)
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_o, K]]:
-        return self.array
-
-    def single(self) -> Never:
-        # TODO: Fix this!
-        raise NotImplementedError(
-            "single() is not implemented for NumPyBicycleObstacleStateSequences."
+        assert shape_of(array, matches=(T, BICYCLE_ESTIMATION_D_X, K))
+        assert shape_of(
+            covariance, matches=(T, BICYCLE_ESTIMATION_D_X, BICYCLE_ESTIMATION_D_X, K)
         )
+
+        return NumPyBicycleObstacleStateSequences(array, covariance)
+
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, BicycleEstimationD_x, K]]:
+        return self.array
 
     def x(self) -> Array[Dims[T, K]]:
         return self.array[:, 0, :]
@@ -468,20 +459,37 @@ class NumPyBicycleObstacleStateSequences[T: int, K: int]:
     def heading(self) -> Array[Dims[T, K]]:
         return self.array[:, 2, :]
 
-    def speed(self) -> Array[Dims[T, K]]:
-        return self.array[:, 3, :]
+    def covariance(
+        self,
+    ) -> Array[Dims[T, BicycleEstimationD_x, BicycleEstimationD_x, K]]:
+        return self._covariance
+
+    def pose_covariance(self) -> Array[Dims[T, PoseD_o, PoseD_o, K]]:
+        return self._covariance[:, :3, :3, :]
+
+    def pose(self) -> NumPyObstacle2dPoses[T, K]:
+        return NumPyObstacle2dPoses.create(
+            x=self.x(),
+            y=self.y(),
+            heading=self.heading(),
+            covariance=self.pose_covariance(),
+        )
 
     @property
     def horizon(self) -> T:
         return self.array.shape[0]
 
     @property
-    def dimension(self) -> BicycleD_o:
+    def dimension(self) -> BicycleEstimationD_x:
         return self.array.shape[1]
 
     @property
     def count(self) -> K:
         return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, BicycleEstimationD_x, K]]:
+        return self._array
 
 
 @dataclass(frozen=True)
@@ -493,8 +501,9 @@ class NumPyBicycleObstacleInputs[K: int]:
     def wrap[K_: int](
         inputs: Array[Dims[BicycleD_u, K_]],
     ) -> "NumPyBicycleObstacleInputs[K_]":
+        accelerations, steering_angles = inputs
         return NumPyBicycleObstacleInputs(
-            _accelerations=inputs[0], _steering_angles=inputs[1]
+            _accelerations=accelerations, _steering_angles=steering_angles
         )
 
     @staticmethod
@@ -509,6 +518,12 @@ class NumPyBicycleObstacleInputs[K: int]:
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
         return self.array
 
+    def accelerations(self) -> Array[Dims[K]]:
+        return self._accelerations
+
+    def steering_angles(self) -> Array[Dims[K]]:
+        return self._steering_angles
+
     def zeroed(
         self, *, acceleration: bool = False, steering_angle: bool = False
     ) -> "NumPyBicycleObstacleInputs[K]":
@@ -521,12 +536,6 @@ class NumPyBicycleObstacleInputs[K: int]:
             if steering_angle
             else self._steering_angles,
         )
-
-    def accelerations(self) -> Array[Dims[K]]:
-        return self._accelerations
-
-    def steering_angles(self) -> Array[Dims[K]]:
-        return self._steering_angles
 
     @property
     def dimension(self) -> BicycleD_u:
@@ -547,49 +556,6 @@ class NumPyBicycleObstacleInputs[K: int]:
         assert shape_of(array, matches=(BICYCLE_D_U, self.count))
 
         return array
-
-
-@dataclass(frozen=True)
-class NumPyBicycleObstacleControlInputSequences[T: int, K: int]:
-    array: Array[Dims[T, BicycleD_u, K]]
-
-    @staticmethod
-    def wrap[T_: int, K_: int](
-        array: Array[Dims[T_, BicycleD_u, K_]],
-    ) -> "NumPyBicycleObstacleControlInputSequences[T_, K_]":
-        return NumPyBicycleObstacleControlInputSequences(array)
-
-    @staticmethod
-    def create(
-        *,
-        accelerations: Array[Dims[T, K]],
-        steering_angles: Array[Dims[T, K]],
-    ) -> "NumPyBicycleObstacleControlInputSequences[T, K]":
-        """Creates a NumPy bicycle obstacle control input sequences from individual input components."""
-        T, K = accelerations.shape
-        array = np.stack([accelerations, steering_angles], axis=1)
-
-        assert shape_of(array, matches=(T, BICYCLE_D_U, K))
-
-        return NumPyBicycleObstacleControlInputSequences(array)
-
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_u, K]]:
-        return self.array
-
-    def steering_angles(self) -> Array[Dims[T, K]]:
-        return self.array[:, 1, :]
-
-    @property
-    def horizon(self) -> T:
-        return self.array.shape[0]
-
-    @property
-    def dimension(self) -> BicycleD_u:
-        return self.array.shape[1]
-
-    @property
-    def count(self) -> K:
-        return self.array.shape[2]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -697,109 +663,49 @@ class NumPyBicycleModel(
         return self._time_step_size
 
 
-@dataclass(kw_only=True, frozen=True)
-class NumPyBicycleObstacleModel(
-    ObstacleModel[
-        NumPyBicycleObstacleStatesHistory,
-        NumPyBicycleObstacleStates,
-        NumPyBicycleObstacleInputs,
-        NumPyBicycleObstacleStateSequences,
-    ]
-):
-    """Propagates bicycle kinematics forward given states and control inputs."""
-
-    time_step_size: float
-    wheelbase: float
-
-    @staticmethod
-    def create(
-        *, time_step_size: float, wheelbase: float = 1.0
-    ) -> "NumPyBicycleObstacleModel":
-        return NumPyBicycleObstacleModel(
-            time_step_size=time_step_size, wheelbase=wheelbase
-        )
-
-    def forward[T: int, K: int](
-        self,
-        *,
-        current: NumPyBicycleObstacleStates[K],
-        inputs: NumPyBicycleObstacleInputs[K],
-        horizon: T,
-    ) -> NumPyBicycleObstacleStateSequences[T, K]:
-        input_sequences = self._input_to_maintain(inputs, horizon=horizon)
-
-        result = simulate(
-            input_sequences.array,
-            current.array,
-            time_step_size=self.time_step_size,
-            wheelbase=self.wheelbase,
-            speed_limits=(float("-inf"), float("inf")),
-            steering_limits=(float("-inf"), float("inf")),
-            acceleration_limits=(float("-inf"), float("inf")),
-        )
-
-        return NumPyBicycleObstacleStateSequences.create(
-            x=result[:, 0, :],
-            y=result[:, 1, :],
-            heading=result[:, 2, :],
-            speed=result[:, 3, :],
-        )
-
-    def state_jacobian[T: int, K: int](
-        self,
-        *,
-        states: NumPyBicycleObstacleStateSequences[T, K],
-        inputs: NumPyBicycleObstacleInputs[K],
-    ) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
-        input_sequences = self._input_to_maintain(inputs, horizon=states.horizon)
-
-        return state_jacobian(
-            heading=states.heading(),
-            speed=states.speed(),
-            steering_angle=input_sequences.steering_angles(),
-            time_step_size=self.time_step_size,
-            wheelbase=self.wheelbase,
-        )
-
-    def input_jacobian[T: int, K: int](
-        self,
-        *,
-        states: NumPyBicycleObstacleStateSequences[T, K],
-        inputs: NumPyBicycleObstacleInputs[K],
-    ) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
-        input_sequences = self._input_to_maintain(inputs, horizon=states.horizon)
-
-        return input_jacobian(
-            speed=states.speed(),
-            steering_angle=input_sequences.steering_angles(),
-            time_step_size=self.time_step_size,
-            wheelbase=self.wheelbase,
-        )
-
-    def _input_to_maintain[T: int, K: int](
-        self, inputs: NumPyBicycleObstacleInputs[K], *, horizon: T
-    ) -> NumPyBicycleObstacleControlInputSequences[T, K]:
-        return NumPyBicycleObstacleControlInputSequences.create(
-            accelerations=np.tile(inputs.accelerations()[np.newaxis, :], (horizon, 1)),
-            steering_angles=np.tile(
-                inputs.steering_angles()[np.newaxis, :], (horizon, 1)
-            ),
-        )
-
-
 @dataclass(frozen=True)
 class NumPyBicycleStateEstimationModel:
     """Kinematic bicycle model used for state estimation."""
 
     time_step_size: float
     wheelbase: float
+    initial_state_covariance: EstimationStateCovarianceArray
 
     @staticmethod
     def create(
-        *, time_step_size: float, wheelbase: float
+        *,
+        time_step_size: float,
+        wheelbase: float,
+        initial_state_covariance: EstimationStateCovarianceArray | None = None,
     ) -> "NumPyBicycleStateEstimationModel":
+        if initial_state_covariance is None:
+            initial_state_covariance = (
+                NumPyBicycleStateEstimationModel.default_initial_state_covariance()
+            )
+
         return NumPyBicycleStateEstimationModel(
-            time_step_size=time_step_size, wheelbase=wheelbase
+            time_step_size=time_step_size,
+            wheelbase=wheelbase,
+            initial_state_covariance=initial_state_covariance,
+        )
+
+    @staticmethod
+    def default_initial_state_covariance() -> EstimationStateCovarianceArray:
+        # NOTE: Sure of pose, unsure of everything else.
+        # Steering angle covariance is kept somewhat smaller (0.1), since it
+        # otherwise messes up UKF.
+        return cast(
+            EstimationStateCovarianceArray,
+            np.diag(
+                [
+                    SMALL_UNCERTAINTY,
+                    SMALL_UNCERTAINTY,
+                    SMALL_UNCERTAINTY,
+                    LARGE_UNCERTAINTY,
+                    LARGE_UNCERTAINTY,
+                    0.1,
+                ]
+            ),
         )
 
     def __call__[D_x: int, K: int](
@@ -864,47 +770,47 @@ class NumPyBicycleStateEstimationModel:
 
     def observations_from[K: int, T: int = int](
         self, history: NumPyBicycleObstacleStatesHistory[T, K]
-    ) -> Array[Dims[T, BicyclePoseD_o, K]]:
+    ) -> Array[Dims[T, BicycleObservationD_o, K]]:
         return np.stack([history.x(), history.y(), history.heading()], axis=1)
 
-    def x[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[0, :]
+    def states_from[K: int](
+        self, belief: BicycleGaussianBelief[K]
+    ) -> NumPyBicycleObstacleStates[K]:
+        return NumPyBicycleObstacleStates.wrap(belief.mean[:4, :])
 
-    def y[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[1, :]
+    def inputs_from[K: int](
+        self, belief: BicycleGaussianBelief[K]
+    ) -> NumPyBicycleObstacleInputs[K]:
+        return NumPyBicycleObstacleInputs.wrap(belief.mean[4:, :])
 
-    def heading[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[2, :]
+    def initial_belief_from[K: int](
+        self,
+        *,
+        states: NumPyBicycleObstacleStates[K],
+        inputs: NumPyBicycleObstacleInputs[K],
+        covariances: NumPyBicycleObstacleCovariances[K] | None = None,
+    ) -> BicycleGaussianBelief[K]:
+        augmented = np.concatenate([states.array, inputs.array], axis=0)
 
-    def speed[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[3, :]
+        if covariances is None:
+            # NOTE: No covariance means we are "certain" about the states.
+            covariances = np.broadcast_to(  # type: ignore
+                np.eye(BICYCLE_ESTIMATION_D_X)[:, :, np.newaxis] * SMALL_UNCERTAINTY,
+                (BICYCLE_ESTIMATION_D_X, BICYCLE_ESTIMATION_D_X, states.count),
+            ).copy()
 
-    def acceleration[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[4, :]
-
-    def steering_angle[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> Array[Dims[K]]:
-        return belief.mean[5, :]
-
-    @cached_property
-    def initial_state_covariance(self) -> EstimationStateCovarianceArray:
-        # NOTE: Sure of pose, unsure of everything else.
-        # Steering angle covariance is kept small (0.1) to prevent UKF sigma point
-        # spread from reaching regions where tan(delta) becomes highly nonlinear.
-        return cast(
-            EstimationStateCovarianceArray, np.diag([1e-4, 1e-4, 1e-4, 1.0, 1.0, 0.1])
+        assert shape_of(
+            augmented,
+            matches=(BICYCLE_ESTIMATION_D_X, states.count),
+            name="augmented state",
         )
+        assert shape_of(
+            covariances,
+            matches=(BICYCLE_ESTIMATION_D_X, BICYCLE_ESTIMATION_D_X, states.count),
+            name="initial state covariance",
+        )
+
+        return NumPyGaussianBelief(mean=augmented, covariance=covariances)
 
     @cached_property
     def observation_matrix(self) -> ObservationMatrix:
@@ -916,6 +822,85 @@ class NumPyBicycleStateEstimationModel:
                 [0, 0, 1, 0, 0, 0],
             ]
         )
+
+
+@dataclass(kw_only=True, frozen=True)
+class NumPyBicycleObstacleModel(
+    ObstacleModel[
+        NumPyBicycleObstacleStatesHistory,
+        NumPyBicycleObstacleStates,
+        NumPyBicycleObstacleInputs,
+        NumPyBicycleObstacleCovariances,
+        NumPyBicycleObstacleStateSequences,
+    ]
+):
+    """Propagates bicycle kinematics forward given states and control inputs."""
+
+    model: NumPyBicycleStateEstimationModel
+    process_noise_covariance: ProcessNoiseCovarianceArray
+    predictor: KalmanFilter
+
+    @staticmethod
+    def unscented(
+        *,
+        time_step_size: float,
+        wheelbase: float = 1.0,
+        process_noise_covariance: NumPyNoiseCovarianceDescription[
+            BicycleEstimationD_x
+        ] = 1e-3,
+        sigma_point_spread: float = 1.0,
+        prior_knowledge: float = 2.0,
+    ) -> "NumPyBicycleObstacleModel":
+        """Creates a bicycle obstacle model for obstacle state prediction. This
+        model uses the unscented transform for propagating state information through
+        the nonlinear bicycle dynamics.
+
+        Args:
+            time_step_size: Time step size for state propagation.
+            wheelbase: The wheelbase length of the bicycle.
+            process_noise_covariance: The process noise covariance, either as a
+                full covariance array, a diagonal covariance vector, or a scalar
+                variance representing isotropic noise.
+            sigma_point_spread: Spread of sigma points (α) for the unscented
+                transform, controlling how far the sigma points are from the mean.
+            prior_knowledge: Prior knowledge (β) about the state distribution
+                for the unscented transform.
+        """
+        return NumPyBicycleObstacleModel(
+            model=NumPyBicycleStateEstimationModel.create(
+                time_step_size=time_step_size, wheelbase=wheelbase
+            ),
+            process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=BICYCLE_ESTIMATION_D_X
+            ),
+            predictor=NumPyUnscentedKalmanFilter.create(
+                alpha=sigma_point_spread, beta=prior_knowledge
+            ),
+        )
+
+    def forward[T: int, K: int](
+        self,
+        *,
+        states: NumPyBicycleObstacleStates[K],
+        inputs: NumPyBicycleObstacleInputs[K],
+        covariances: NumPyBicycleObstacleCovariances[K] | None,
+        horizon: T,
+    ) -> NumPyBicycleObstacleStateSequences[T, K]:
+        beliefs = []
+        last = self.model.initial_belief_from(
+            states=states, inputs=inputs, covariances=covariances
+        )
+
+        for _ in range(horizon):
+            beliefs.append(
+                last := self.predictor.predict(
+                    belief=last,  # type: ignore
+                    state_transition=self.model,
+                    process_noise_covariance=self.process_noise_covariance,
+                )
+            )
+
+        return NumPyBicycleObstacleStateSequences.create(beliefs)
 
 
 @dataclass(frozen=True)
@@ -1139,6 +1124,7 @@ class NumPyKfBicycleStateEstimator(
         observation_noise_covariance: NumPyNoiseCovarianceDescription[
             BicycleObservationD_o
         ],
+        initial_state_covariance: EstimationStateCovarianceArray | None = None,
     ) -> "NumPyKfBicycleStateEstimator":
         """Creates an EKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -1150,6 +1136,9 @@ class NumPyKfBicycleStateEstimator(
                 matrix, a vector of diagonal entries, or a scalar for isotropic noise.
             observation_noise_covariance: The observation noise covariance, either as a
                 full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            initial_state_covariance: The initial state covariance for the Kalman filter.
+                If not provided, low uncertainty will be assumed for observed states and high
+                uncertainty for speed and inputs.
         """
         return NumPyKfBicycleStateEstimator(
             process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
@@ -1159,7 +1148,9 @@ class NumPyKfBicycleStateEstimator(
                 observation_noise_covariance, dimension=BICYCLE_OBSERVATION_D_O
             ),
             model=NumPyBicycleStateEstimationModel.create(
-                time_step_size=time_step_size, wheelbase=wheelbase
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+                initial_state_covariance=initial_state_covariance,
             ),
             estimator=NumPyExtendedKalmanFilter.create(),
         )
@@ -1173,6 +1164,7 @@ class NumPyKfBicycleStateEstimator(
         observation_noise_covariance: NumPyNoiseCovarianceDescription[
             BicycleObservationD_o
         ],
+        initial_state_covariance: EstimationStateCovarianceArray | None = None,
     ) -> "NumPyKfBicycleStateEstimator":
         """Creates a UKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -1184,6 +1176,9 @@ class NumPyKfBicycleStateEstimator(
                 matrix, a vector of diagonal entries, or a scalar for isotropic noise.
             observation_noise_covariance: The observation noise covariance, either as a
                 full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            initial_state_covariance: The initial state covariance for the Kalman filter.
+                If not provided, low uncertainty will be assumed for observed states and high
+                uncertainty for speed and inputs.
         """
         return NumPyKfBicycleStateEstimator(
             process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
@@ -1193,7 +1188,9 @@ class NumPyKfBicycleStateEstimator(
                 observation_noise_covariance, dimension=BICYCLE_OBSERVATION_D_O
             ),
             model=NumPyBicycleStateEstimationModel.create(
-                time_step_size=time_step_size, wheelbase=wheelbase
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+                initial_state_covariance=initial_state_covariance,
             ),
             estimator=NumPyUnscentedKalmanFilter.create(),
         )
@@ -1206,7 +1203,7 @@ class NumPyKfBicycleStateEstimator(
         NumPyBicycleObstacleCovariances[K],
     ]:
         estimate = cast(
-            NumPyGaussianBelief[BicycleEstimationD_x, K],
+            BicycleGaussianBelief[K],
             self.estimator.filter(
                 self.model.observations_from(history),
                 initial_state_covariance=self.model.initial_state_covariance,
@@ -1218,47 +1215,10 @@ class NumPyKfBicycleStateEstimator(
         )
 
         return EstimatedObstacleStates(
-            states=self.states_from(estimate),
-            inputs=self.inputs_from(estimate),
+            states=self.model.states_from(estimate),
+            inputs=self.model.inputs_from(estimate),
             covariance=estimate.covariance,
         )
-
-    def states_from[K: int](
-        self, belief: NumPyGaussianBelief[BicycleEstimationD_x, K]
-    ) -> NumPyBicycleObstacleStates[K]:
-        return NumPyBicycleObstacleStates.create(
-            x=self.model.x(belief),
-            y=self.model.y(belief),
-            heading=self.model.heading(belief),
-            speed=self.model.speed(belief),
-        )
-
-    def inputs_from[K: int](
-        self,
-        belief: NumPyGaussianBelief[BicycleEstimationD_x, K],
-    ) -> NumPyBicycleObstacleInputs[K]:
-        return NumPyBicycleObstacleInputs.create(
-            accelerations=self.model.acceleration(belief),
-            steering_angles=self.model.steering_angle(belief),
-        )
-
-
-class NumPyBicyclePoseCovarianceExtractor(CovarianceExtractor):
-    """Extracts the pose-related state covariance from the full state covariance for bicycle obstacles."""
-
-    def __call__[T: int, K: int](
-        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
-    ) -> BicycleObstaclePoseCovarianceArray[T, K]:
-        return covariance[:, :BICYCLE_POSE_D_O, :BICYCLE_POSE_D_O, :]
-
-
-class NumPyBicyclePositionCovarianceExtractor(CovarianceExtractor):
-    """Extracts x and y covariance from the full state covariance for bicycle obstacles."""
-
-    def __call__[T: int, K: int](
-        self, covariance: BicycleObstacleStateCovarianceArray[T, K]
-    ) -> BicycleObstaclePositionCovarianceArray[T, K]:
-        return covariance[:, :BICYCLE_POSITION_D_O, :BICYCLE_POSITION_D_O, :]
 
 
 def simulate[T: int, N: int](
@@ -1316,59 +1276,3 @@ def step[M: int](
     new_v = np.clip(v + acceleration * time_step_size, *speed_limits)
 
     return np.stack([new_x, new_y, new_theta, new_v])
-
-
-def state_jacobian[T: int, K: int](
-    heading: Array[Dims[T, K]],
-    speed: Array[Dims[T, K]],
-    steering_angle: Array[Dims[T, K]],
-    *,
-    time_step_size: float,
-    wheelbase: float,
-) -> Array[Dims[T, BicycleD_o, BicycleD_o, K]]:
-    v, theta, delta = speed, heading, steering_angle
-
-    T, K = heading.shape
-    F = np.zeros((T, BICYCLE_D_O, BICYCLE_D_O, K))
-
-    dt = time_step_size
-
-    F[:, 0, 0, :] = 1.0
-    F[:, 1, 1, :] = 1.0
-    F[:, 2, 2, :] = 1.0
-    F[:, 3, 3, :] = 1.0
-
-    F[:, 0, 2, :] = -v * np.sin(theta) * dt
-    F[:, 0, 3, :] = np.cos(theta) * dt
-    F[:, 1, 2, :] = v * np.cos(theta) * dt
-    F[:, 1, 3, :] = np.sin(theta) * dt
-    F[:, 2, 3, :] = np.tan(delta) / wheelbase * dt
-
-    assert shape_of(F, matches=(T, BICYCLE_D_O, BICYCLE_D_O, K), name="state_jacobian")
-
-    return F
-
-
-def input_jacobian[T: int, K: int](
-    speed: Array[Dims[T, K]],
-    steering_angle: Array[Dims[T, K]],
-    *,
-    time_step_size: float,
-    wheelbase: float,
-) -> Array[Dims[T, BicycleD_o, BicycleD_u, K]]:
-    v, delta = speed, steering_angle
-
-    T, K = speed.shape
-    G = np.zeros((T, BICYCLE_D_O, BICYCLE_D_U, K))
-
-    dt = time_step_size
-
-    # ∂θ/∂δ = v / (L * cos²(δ)) * dt
-    G[:, 2, 1, :] = v / (wheelbase * np.cos(delta) ** 2) * dt
-
-    # ∂v/∂a = dt
-    G[:, 3, 0, :] = dt
-
-    assert shape_of(G, matches=(T, BICYCLE_D_O, BICYCLE_D_U, K), name="input_jacobian")
-
-    return G

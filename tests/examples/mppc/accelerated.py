@@ -31,7 +31,6 @@ from trajax.jax import (
     types,
     extract,
     predictor,
-    propagator,
     obstacles as create_obstacles,
     risk,
 )
@@ -624,27 +623,19 @@ class configure:
                                     model=model.bicycle.obstacle(
                                         time_step_size=dt, wheelbase=L
                                     ),
-                                    estimator=model.bicycle.estimator.finite_difference(
-                                        time_step_size=dt, wheelbase=L
+                                    estimator=(
+                                        model.bicycle.estimator.ekf(
+                                            time_step_size=dt,
+                                            wheelbase=L,
+                                            process_noise_covariance=0.01,
+                                            observation_noise_covariance=0.01,
+                                        )
+                                        if use_covariance_propagation
+                                        else model.bicycle.estimator.finite_difference(
+                                            time_step_size=dt, wheelbase=L
+                                        )
                                     ),
                                     prediction=bicycle_to_obstacle_states,
-                                    propagator=propagator.linear(
-                                        time_step_size=dt,
-                                        # TODO: Review!
-                                        covariance=propagator.covariance.composite(
-                                            state_provider=propagator.covariance.constant_variance(
-                                                variance=0.01, dimension=2
-                                            ),
-                                            input_provider=propagator.covariance.constant_variance(
-                                                variance=1.0, dimension=2
-                                            ),
-                                        ),
-                                        resizing=propagator.covariance.resize(
-                                            pad_to=3, epsilon=1e-9
-                                        ),
-                                    )
-                                    if use_covariance_propagation
-                                    else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
                                     creator=types.obstacle_2d_poses,
@@ -811,27 +802,19 @@ class configure:
                                     model=model.bicycle.obstacle(
                                         time_step_size=dt, wheelbase=L
                                     ),
-                                    estimator=model.bicycle.estimator.finite_difference(
-                                        time_step_size=dt, wheelbase=L
+                                    estimator=(
+                                        model.bicycle.estimator.ekf(
+                                            time_step_size=dt,
+                                            wheelbase=L,
+                                            process_noise_covariance=0.01,
+                                            observation_noise_covariance=0.01,
+                                        )
+                                        if use_covariance_propagation
+                                        else model.bicycle.estimator.finite_difference(
+                                            time_step_size=dt, wheelbase=L
+                                        )
                                     ),
                                     prediction=bicycle_to_obstacle_states,
-                                    propagator=propagator.linear(
-                                        time_step_size=dt,
-                                        # TODO: Review!
-                                        covariance=propagator.covariance.composite(
-                                            state_provider=propagator.covariance.constant_variance(
-                                                variance=0.01, dimension=2
-                                            ),
-                                            input_provider=propagator.covariance.constant_variance(
-                                                variance=1.0, dimension=2
-                                            ),
-                                        ),
-                                        resizing=propagator.covariance.resize(
-                                            pad_to=3, epsilon=1e-9
-                                        ),
-                                    )
-                                    if use_covariance_propagation
-                                    else None,
                                 ),
                                 history=types.obstacle_states_running_history.empty(
                                     creator=types.obstacle_2d_poses,

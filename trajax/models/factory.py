@@ -13,14 +13,10 @@ from trajax.models.integrator import (
 from trajax.models.bicycle import (
     NumPyBicycleModel,
     NumPyBicycleObstacleModel,
-    NumPyBicyclePoseCovarianceExtractor,
-    NumPyBicyclePositionCovarianceExtractor,
     NumPyFiniteDifferenceBicycleStateEstimator,
     NumPyKfBicycleStateEstimator,
     JaxBicycleModel,
     JaxBicycleObstacleModel,
-    JaxBicyclePoseCovarianceExtractor,
-    JaxBicyclePositionCovarianceExtractor,
     JaxFiniteDifferenceBicycleStateEstimator,
     JaxKfBicycleStateEstimator,
 )
@@ -50,7 +46,7 @@ class model:
 
         class bicycle:
             dynamical: Final = NumPyBicycleModel.create
-            obstacle: Final = NumPyBicycleObstacleModel.create
+            obstacle: Final = NumPyBicycleObstacleModel.unscented
 
             class estimator:
                 finite_difference: Final = (
@@ -59,13 +55,9 @@ class model:
                 ekf: Final = NumPyKfBicycleStateEstimator.ekf
                 ukf: Final = NumPyKfBicycleStateEstimator.ukf
 
-            class covariance_of:
-                pose: Final = NumPyBicyclePoseCovarianceExtractor
-                position: Final = NumPyBicyclePositionCovarianceExtractor
-
         class unicycle:
             dynamical: Final = NumPyUnicycleModel.create
-            obstacle: Final = NumPyUnicycleObstacleModel.create
+            obstacle: Final = NumPyUnicycleObstacleModel.unscented
 
             class estimator:
                 finite_difference: Final = (
@@ -87,7 +79,7 @@ class model:
 
         class bicycle:
             dynamical: Final = JaxBicycleModel.create
-            obstacle: Final = JaxBicycleObstacleModel.create
+            obstacle: Final = JaxBicycleObstacleModel.unscented
 
             class estimator:
                 finite_difference: Final = (
@@ -96,13 +88,9 @@ class model:
                 ekf: Final = JaxKfBicycleStateEstimator.ekf
                 ukf: Final = JaxKfBicycleStateEstimator.ukf
 
-            class covariance_of:
-                pose: Final = JaxBicyclePoseCovarianceExtractor
-                position: Final = JaxBicyclePositionCovarianceExtractor
-
         class unicycle:
             dynamical: Final = JaxUnicycleModel.create
-            obstacle: Final = JaxUnicycleObstacleModel.create
+            obstacle: Final = JaxUnicycleObstacleModel.unscented
 
             class estimator:
                 finite_difference: Final = (

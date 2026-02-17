@@ -1,8 +1,6 @@
 from typing import Any, Protocol, cast
 from dataclasses import dataclass
 
-from trajax import ObstacleModel, ObstacleStateSequences
-
 from numtypes import Array, Shape, Dims, shape_of
 
 import numpy as np
@@ -40,115 +38,6 @@ class ObstacleInputsWrapper[InputsT, D_u: int = Any, K: int = Any](Protocol):
 
 
 class estimate:
-    @staticmethod
-    def state_jacobian[
-        T: int,
-        D_o: int,
-        K: int,
-        D_u: int,
-        StatesT,
-        InputsT,
-        StateSequencesT: ObstacleStateSequences,
-    ](
-        obstacle_model: ObstacleModel[Any, StatesT, InputsT, StateSequencesT, Any],
-        *,
-        states: StateSequencesT,
-        inputs: InputsT,
-        to_states: ObstacleStatesWrapper[StatesT, D_o, K],
-        to_inputs: ObstacleInputsWrapper[InputsT, D_u, K],
-        epsilon: float = 1e-6,
-    ) -> Array[Dims[T, D_o, D_o, K]]:
-        """Computes the state Jacobian F = ∂f/∂x via central finite differences.
-
-        For each time step t, computes the Jacobian ∂f/∂x by perturbing states[t]
-        and measuring the change in the forward model's output.
-        """
-        state_array = np.asarray(states)
-        input_array = np.asarray(inputs)
-        T, D_o, K = state_array.shape
-
-        jacobians = np.zeros((T, D_o, D_o, K))
-        perturbations = np.tile(np.eye(D_o) * epsilon, (1, K))
-
-        for t in range(T):
-            base_tiled = np.repeat(state_array[t], D_o, axis=1)
-            input_tiled = np.repeat(input_array, D_o, axis=1)
-
-            results_plus = np.asarray(
-                obstacle_model.forward(
-                    current=to_states(base_tiled + perturbations),
-                    inputs=to_inputs(input_tiled),
-                    horizon=1,
-                )
-            )
-            results_minus = np.asarray(
-                obstacle_model.forward(
-                    current=to_states(base_tiled - perturbations),
-                    inputs=to_inputs(input_tiled),
-                    horizon=1,
-                )
-            )
-
-            diff = (results_plus[0] - results_minus[0]) / (2 * epsilon)
-            jacobians[t] = diff.reshape(D_o, K, D_o).transpose(0, 2, 1)
-
-        return jacobians
-
-    @staticmethod
-    def input_jacobian[
-        T: int,
-        D_o: int,
-        K: int,
-        D_u: int,
-        StatesT,
-        InputsT,
-        StateSequencesT: ObstacleStateSequences,
-    ](
-        obstacle_model: ObstacleModel[Any, StatesT, InputsT, StateSequencesT, Any],
-        *,
-        states: StateSequencesT,
-        inputs: InputsT,
-        to_states: ObstacleStatesWrapper[StatesT, D_o, K],
-        to_inputs: ObstacleInputsWrapper[InputsT, D_u, K],
-        epsilon: float = 1e-6,
-    ) -> Array[Dims[T, D_o, D_u, K]]:
-        """Computes the input Jacobian G = ∂f/∂u via central finite differences.
-
-        For each time step t, computes the Jacobian ∂f/∂u by perturbing inputs
-        and measuring the change in the forward model's output.
-        """
-        state_array = np.asarray(states)
-        input_array = np.asarray(inputs)
-        T, D_o, K = state_array.shape
-        D_u = input_array.shape[0]
-
-        jacobians = np.zeros((T, D_o, D_u, K))
-
-        for t in range(T):
-            for u in range(D_u):
-                perturbation = np.zeros((D_u, K))
-                perturbation[u, :] = epsilon
-
-                results_plus = np.asarray(
-                    obstacle_model.forward(
-                        current=to_states(state_array[t]),
-                        inputs=to_inputs(input_array + perturbation),
-                        horizon=1,
-                    )
-                )
-                results_minus = np.asarray(
-                    obstacle_model.forward(
-                        current=to_states(state_array[t]),
-                        inputs=to_inputs(input_array - perturbation),
-                        horizon=1,
-                    )
-                )
-
-                diff = (results_plus[0] - results_minus[0]) / (2 * epsilon)
-                jacobians[t, :, u, :] = diff
-
-        return jacobians
-
     @staticmethod
     def displacements[T: int, M: int](
         *,

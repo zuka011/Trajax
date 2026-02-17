@@ -8,11 +8,8 @@ from .basic import (
     NumPyBicycleObstacleStates as NumPyBicycleObstacleStates,
     NumPyBicycleObstacleInputs as NumPyBicycleObstacleInputs,
     NumPyBicycleObstacleStateSequences as NumPyBicycleObstacleStateSequences,
-    NumPyBicycleObstacleControlInputSequences as NumPyBicycleObstacleControlInputSequences,
     NumPyBicycleModel as NumPyBicycleModel,
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
-    NumPyBicyclePoseCovarianceExtractor as NumPyBicyclePoseCovarianceExtractor,
-    NumPyBicyclePositionCovarianceExtractor as NumPyBicyclePositionCovarianceExtractor,
     NumPyFiniteDifferenceBicycleStateEstimator as NumPyFiniteDifferenceBicycleStateEstimator,
     NumPyKfBicycleStateEstimator as NumPyKfBicycleStateEstimator,
 )
@@ -26,11 +23,8 @@ from .accelerated import (
     JaxBicycleObstacleStates as JaxBicycleObstacleStates,
     JaxBicycleObstacleInputs as JaxBicycleObstacleInputs,
     JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
-    JaxBicycleObstacleControlInputSequences as JaxBicycleObstacleControlInputSequences,
     JaxBicycleModel as JaxBicycleModel,
     JaxBicycleObstacleModel as JaxBicycleObstacleModel,
-    JaxBicyclePoseCovarianceExtractor as JaxBicyclePoseCovarianceExtractor,
-    JaxBicyclePositionCovarianceExtractor as JaxBicyclePositionCovarianceExtractor,
     JaxFiniteDifferenceBicycleStateEstimator as JaxFiniteDifferenceBicycleStateEstimator,
     JaxKfBicycleStateEstimator as JaxKfBicycleStateEstimator,
 )

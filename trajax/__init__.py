@@ -29,10 +29,7 @@ from .obstacles import (
     obstacles as obstacles,
     PredictingObstacleStateProvider as PredictingObstacleStateProvider,
 )
-from .predictors import (
-    predictor as predictor,
-    propagator as propagator,
-)
+from .predictors import predictor as predictor
 from .types import (
     DataType as DataType,
     jaxtyped as jaxtyped,
@@ -76,17 +73,12 @@ from .types import (
     PositionExtractor as PositionExtractor,
     ContouringCost as ContouringCost,
     LagCost as LagCost,
-    ObstacleStateSequences as ObstacleStateSequences,
-    ObstacleControlInputSequences as ObstacleControlInputSequences,
-    CovarianceSequences as CovarianceSequences,
-    ObstacleModel as ObstacleModel,
-    CovariancePropagator as CovariancePropagator,
-    CovarianceExtractor as CovarianceExtractor,
-    ObstacleMotionPredictor as ObstacleMotionPredictor,
-    InputAssumptionProvider as InputAssumptionProvider,
     EstimatedObstacleStates as EstimatedObstacleStates,
-    ObstacleStateEstimator as ObstacleStateEstimator,
+    InputAssumptionProvider as InputAssumptionProvider,
+    ObstacleModel as ObstacleModel,
     PredictionCreator as PredictionCreator,
+    ObstacleMotionPredictor as ObstacleMotionPredictor,
+    ObstacleStateEstimator as ObstacleStateEstimator,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,
     BoundaryPoints as BoundaryPoints,

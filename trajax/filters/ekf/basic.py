@@ -1,5 +1,4 @@
 from typing import Protocol, runtime_checkable
-from dataclasses import dataclass
 
 from numtypes import Dims, Array
 
@@ -19,7 +18,6 @@ class StateTransitionFunction[D_x: int, K: int](Protocol):
         ...
 
 
-@dataclass(kw_only=True)
 class NumPyExtendedKalmanFilter:
     """Extended Kalman Filter for nonlinear systems with linear observations."""
 

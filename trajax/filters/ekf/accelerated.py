@@ -1,5 +1,4 @@
-from typing import Protocol, runtime_checkable
-from dataclasses import dataclass
+from typing import Protocol, NamedTuple, runtime_checkable
 
 from trajax.types import jaxtyped
 
@@ -22,18 +21,17 @@ class StateTransitionFunction(Protocol):
         ...
 
 
-@dataclass(kw_only=True)
-class JaxExtendedKalmanFilter:
+class JaxExtendedKalmanFilter(NamedTuple):
     """Extended Kalman Filter for nonlinear systems with linear observations."""
 
     @staticmethod
     def create() -> "JaxExtendedKalmanFilter":
         return JaxExtendedKalmanFilter()
 
-    @staticmethod
     @jax.jit
     @jaxtyped
     def filter(
+        self,
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],
@@ -52,17 +50,17 @@ class JaxExtendedKalmanFilter:
             observation_noise_covariance: Q matrix representing the covariance of observation noise.
             observation_matrix: H matrix mapping state to observation space.
         """
-        belief = JaxExtendedKalmanFilter.initial_belief_from(
+        belief = self.initial_belief_from(
             observations, initial_state_covariance=initial_state_covariance
         )
 
         for observation in observations:
-            belief = JaxExtendedKalmanFilter.predict(
+            belief = self.predict(
                 belief=belief,
                 state_transition=state_transition,
                 process_noise_covariance=process_noise_covariance,
             )
-            belief = JaxExtendedKalmanFilter.update(
+            belief = self.update(
                 observation=observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
@@ -72,10 +70,10 @@ class JaxExtendedKalmanFilter:
 
         return belief
 
-    @staticmethod
     @jax.jit
     @jaxtyped
     def predict(
+        self,
         *,
         belief: JaxGaussianBelief,
         state_transition: StateTransitionFunction,
@@ -99,10 +97,10 @@ class JaxExtendedKalmanFilter:
             + R[..., jnp.newaxis],
         )
 
-    @staticmethod
     @jax.jit
     @jaxtyped
     def update(
+        self,
         observation: Float[JaxArray, "D_z K"],
         *,
         prediction: JaxGaussianBelief,
@@ -127,10 +125,10 @@ class JaxExtendedKalmanFilter:
             initial_state_covariance=initial_state_covariance,
         )
 
-    @staticmethod
     @jax.jit
     @jaxtyped
     def initial_belief_from(
+        self,
         observations: Float[JaxArray, "T D_z K"],
         *,
         initial_state_covariance: Float[JaxArray, "D_x D_x"],

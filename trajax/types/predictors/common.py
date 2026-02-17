@@ -1,4 +1,4 @@
-from typing import Protocol, Self, Any, runtime_checkable
+from typing import Protocol, Self, Any
 from dataclasses import dataclass
 
 from trajax.types.array import DataType
@@ -82,115 +82,11 @@ class ObstacleStatesRunningHistory[ObstacleStatesForTimeStepT, IdT, HistoryT](Pr
         ...
 
 
-# TODO: Check if this can be removed and replaced with ObstacleStates.
-class ObstacleStateSequences[T: int, D_o: int, K: int, SingleSampleT = Any](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        """Returns the obstacle state sequences as a NumPy array."""
-        ...
-
-    def single(self) -> SingleSampleT:
-        """Returns the state sequences as sampled obstacle states with one sample."""
-        ...
-
-    @property
-    def horizon(self) -> T:
-        """The time horizon of the obstacle state sequences."""
-        ...
-
-    @property
-    def dimension(self) -> D_o:
-        """The dimension of the obstacle states."""
-        ...
-
-    @property
-    def count(self) -> K:
-        """The number of obstacles."""
-        ...
-
-
-class CovarianceSequences[T: int, D_o: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, D_o, K]]:
-        """Returns the covariance sequences as a NumPy array."""
-        ...
-
-    @property
-    def horizon(self) -> T:
-        """The time horizon of the covariance sequences."""
-        ...
-
-    @property
-    def dimension(self) -> D_o:
-        """The dimension of the covariance matrices."""
-        ...
-
-    @property
-    def count(self) -> K:
-        """The number of obstacles."""
-        ...
-
-
-class ObstacleControlInputSequences[T: int, D_u: int, K: int](Protocol):
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, K]]:
-        """Returns the control input sequences as a NumPy array."""
-        ...
-
-    @property
-    def horizon(self) -> T:
-        """The time horizon of the control input sequences."""
-        ...
-
-    @property
-    def dimension(self) -> D_u:
-        """The dimension of the control inputs."""
-        ...
-
-    @property
-    def count(self) -> K:
-        """The number of obstacles."""
-        ...
-
-
 class ObstacleStateEstimator[HistoryT, StatesT, InputsT, CovarianceT = None](Protocol):
     def estimate_from(
         self, history: HistoryT
     ) -> EstimatedObstacleStates[StatesT, InputsT, CovarianceT]:
         """Estimates the current states and inputs of obstacles given their history."""
-        ...
-
-
-class ObstacleModel[HistoryT, StatesT, InputsT, StateSequencesT, JacobianT = Any](
-    Protocol
-):
-    def forward(
-        self, *, current: StatesT, inputs: InputsT, horizon: int
-    ) -> StateSequencesT:
-        """Simulates the objects forward in time given the current states, assumed inputs, and horizon."""
-        ...
-
-    def state_jacobian(self, *, states: StateSequencesT, inputs: InputsT) -> JacobianT:
-        """Computes the state Jacobian F = ∂f/∂x of the model's forward function.
-
-        This describes how state uncertainty propagates through the dynamics.
-        """
-        ...
-
-    def input_jacobian(self, *, states: StateSequencesT, inputs: InputsT) -> JacobianT:
-        """Computes the input Jacobian G = ∂f/∂u of the model's forward function.
-
-        This describes how input uncertainty enters the state dynamics.
-        """
-        ...
-
-
-class PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT](Protocol):
-    def __call__(
-        self, *, states: StateSequencesT, covariances: CovarianceSequencesT
-    ) -> PredictionT:
-        """Creates a prediction from the given state sequences."""
-        ...
-
-    def empty(self, *, horizon: int) -> PredictionT:
-        """Creates an empty obstacle state prediction with the specified horizon."""
         ...
 
 
@@ -200,27 +96,35 @@ class InputAssumptionProvider[InputsT](Protocol):
         ...
 
 
-class CovariancePropagator[StateSequencesT, CovarianceSequencesT](Protocol):
-    def propagate(
-        self, *, states: StateSequencesT, inputs: Any = None
-    ) -> CovarianceSequencesT:
-        """Propagates the covariance of obstacle states over time.
+class ObstacleModel[HistoryT, StatesT, InputsT, CovariancesT, StateSequencesT](
+    Protocol
+):
+    def forward(
+        self,
+        *,
+        states: StatesT,
+        inputs: InputsT,
+        covariances: CovariancesT | None,
+        horizon: int,
+    ) -> StateSequencesT:
+        """Simulates the objects forward in time given the current states, assumed inputs, and horizon.
 
         Args:
-            states: The predicted obstacle state sequences.
-            inputs: Optional control input sequences, required by state-dependent
-                propagators such as EKF.
+            states: The current states of obstacles.
+            inputs: The assumed control inputs.
+            covariances: Uncertainty associated with the current states and inputs (if available).
+            horizon: The number of time steps to simulate.
         """
         ...
 
 
-# NOTE: Simplifies JAX type checking.
-@runtime_checkable
-class CovarianceExtractor[InputCovarianceT, OutputCovarianceT](Protocol):
-    def __call__(self, covariance: InputCovarianceT, /) -> OutputCovarianceT:
-        """Extracts parts of the input covariance to produce the output covariance.
+class PredictionCreator[StateSequencesT, PredictionT](Protocol):
+    def __call__(self, *, states: StateSequencesT) -> PredictionT:
+        """Creates a prediction from the given state sequences."""
+        ...
 
-        For example, an extractor may take only the position part of a full state covariance."""
+    def empty(self, *, horizon: int) -> PredictionT:
+        """Creates an empty obstacle state prediction with the specified horizon."""
         ...
 
 

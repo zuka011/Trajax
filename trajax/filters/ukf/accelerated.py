@@ -31,10 +31,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             alpha: Controls spread of sigma points - λ = (α² - 1)n.
             beta: Incorporates prior knowledge (2 is used for Gaussian).
         """
-        return JaxUnscentedKalmanFilter(
-            alpha=alpha,
-            beta=beta,
-        )
+        return JaxUnscentedKalmanFilter(alpha=alpha, beta=beta)
 
     @jax.jit
     @jaxtyped
@@ -67,7 +64,6 @@ class JaxUnscentedKalmanFilter(NamedTuple):
                 belief=belief,
                 state_transition=state_transition,
                 process_noise_covariance=process_noise_covariance,
-                initial_state_covariance=initial_state_covariance,
             )
             belief = self.update(
                 observation=observation,
@@ -87,7 +83,6 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         belief: JaxGaussianBelief,
         state_transition: StateTransitionFunction,
         process_noise_covariance: Float[JaxArray, "D_x D_x"],
-        initial_state_covariance: Float[JaxArray, "D_x D_x"],
     ) -> JaxGaussianBelief:
         """Performs the prediction step of the UKF using the unscented transform.
 
@@ -95,7 +90,6 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             belief: The current belief about the state.
             state_transition: Nonlinear state transition function.
             process_noise_covariance: R matrix representing the covariance of process noise.
-            initial_state_covariance: Sigma_0 matrix representing initial state uncertainty.
         """
         R = process_noise_covariance
         mu, sigma = belief
@@ -121,7 +115,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
                 jnp.where(jnp.isnan(mean), 0.0, mean),
                 jnp.where(
                     covariance_is_nan[jnp.newaxis, jnp.newaxis, :],
-                    initial_state_covariance[..., jnp.newaxis],
+                    jnp.eye(state_dimension)[..., jnp.newaxis] * 1e-4,
                     covariance,
                 ),
             )
