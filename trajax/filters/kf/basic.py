@@ -149,10 +149,12 @@ class numpy_kalman_filter:
         R = process_noise_covariance
         mu, sigma = belief
 
-        return NumPyGaussianBelief(
-            mean=A @ mu,
-            covariance=np.einsum("ij,jlk,ml->imk", A, sigma, A) + R[..., np.newaxis],
-        )
+        sigma_t = sigma.transpose(2, 0, 1)
+        predicted_covariance = (A @ sigma_t @ A.T).transpose(1, 2, 0) + R[
+            ..., np.newaxis
+        ]
+
+        return NumPyGaussianBelief(mean=A @ mu, covariance=predicted_covariance)
 
     @staticmethod
     def update[D_x: int, D_z: int, K: int](
@@ -204,21 +206,15 @@ class numpy_kalman_filter:
         ) -> NumPyGaussianBelief[D_x, K]:
             D_x = prediction.mean.shape[0]
 
-            S = np.einsum("ij,jlk,ml->imk", H, covariance, H) + Q[..., np.newaxis]
-            rhs = np.einsum("ijk,lj->ilk", covariance, H)
-            K = np.linalg.solve(S.transpose(2, 0, 1), rhs.transpose(2, 1, 0)).transpose(
-                2, 1, 0
-            )
+            sigma_t = covariance.transpose(2, 0, 1)
+            S_t = H @ sigma_t @ H.T + Q
+            K_t = np.linalg.solve(S_t, H @ sigma_t).transpose(0, 2, 1)
 
             innovation = observation - H @ mean
-            KH = np.einsum("ijk,jl->ilk", K, H)
+            updated_mean = mean + (K_t @ innovation.T[:, :, np.newaxis]).squeeze(-1).T
+            updated_covariance = ((np.eye(D_x) - K_t @ H) @ sigma_t).transpose(1, 2, 0)
 
-            return NumPyGaussianBelief(
-                mean=mean + np.einsum("ijk,jk->ik", K, innovation),
-                covariance=np.einsum(
-                    "ijk,jlk->ilk", np.eye(D_x)[..., np.newaxis] - KH, covariance
-                ),
-            )
+            return NumPyGaussianBelief(mean=updated_mean, covariance=updated_covariance)
 
         def initialize_from(
             observation: Array[Dims[D_z, K]],
@@ -241,30 +237,48 @@ class numpy_kalman_filter:
             update: NumPyGaussianBelief[D_x, K],
         ) -> NumPyGaussianBelief[D_x, K]:
             return NumPyGaussianBelief(
-                mean=np.select(  # type: ignore
-                    [partitioning.should_update, partitioning.should_initialize],  # type: ignore
-                    [update.mean, initial.mean],
-                    default=prediction.mean,
+                mean=np.where(
+                    partitioning.should_update,
+                    update.mean,
+                    np.where(
+                        partitioning.should_initialize, initial.mean, prediction.mean
+                    ),
                 ),
-                covariance=np.select(  # type: ignore
-                    [partitioning.should_update, partitioning.should_initialize],  # type: ignore
-                    [update.covariance, initial.covariance],
-                    default=prediction.covariance,
+                covariance=np.where(
+                    partitioning.should_update,
+                    update.covariance,
+                    np.where(
+                        partitioning.should_initialize,
+                        initial.covariance,
+                        prediction.covariance,
+                    ),
                 ),
             )
 
         partitioning = partition(observation=observation, mean=prediction.mean)
+
+        if np.all(partitioning.should_update):
+            return update(
+                observation=observation,
+                mean=prediction.mean,
+                covariance=prediction.covariance,
+            )
+
         observation, mean, covariance = substitute_missing_values(
             observation=observation,
             mean=prediction.mean,
             covariance=prediction.covariance,
         )
 
+        updated = update(observation=observation, mean=mean, covariance=covariance)
+
+        if np.any(partitioning.should_initialize):
+            initial = initialize_from(observation)
+        else:
+            initial = prediction
+
         return blend(
-            partitioning,
-            initial=initialize_from(observation),
-            prediction=prediction,
-            update=update(observation=observation, mean=mean, covariance=covariance),
+            partitioning, initial=initial, prediction=prediction, update=updated
         )
 
     @staticmethod

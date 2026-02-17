@@ -84,9 +84,14 @@ class NumPyExtendedKalmanFilter:
 
         F = state_transition.jacobian(mu)
 
+        F_t = F.transpose(2, 0, 1)
+        sigma_t = sigma.transpose(2, 0, 1)
+        predicted_covariance = (F_t @ sigma_t @ F_t.transpose(0, 2, 1)).transpose(
+            1, 2, 0
+        ) + R[..., np.newaxis]
+
         return NumPyGaussianBelief(
-            mean=state_transition(mu),
-            covariance=np.einsum("ijk,jlk,mlk->imk", F, sigma, F) + R[..., np.newaxis],
+            mean=state_transition(mu), covariance=predicted_covariance
         )
 
     def update[D_x: int, D_z: int, K: int](

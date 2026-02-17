@@ -1,13 +1,12 @@
-from typing import Protocol
+from typing import Protocol, Any
 
 from trajax.types.predictors import ObstacleStatesHistory
-from trajax.types.models.bicycle.common import BicycleD_o
 
 from numtypes import Array, Dims
 
 
 class NumPyBicycleObstacleStatesHistory[T: int, K: int](
-    ObstacleStatesHistory[T, BicycleD_o, K], Protocol
+    ObstacleStatesHistory[T, Any, K], Protocol
 ):
     def x(self) -> Array[Dims[T, K]]:
         """Returns the x positions of the obstacles over time."""
@@ -22,6 +21,6 @@ class NumPyBicycleObstacleStatesHistory[T: int, K: int](
         ...
 
     @property
-    def array(self) -> Array[Dims[T, BicycleD_o, K]]:
+    def array(self) -> Array[Dims[T, Any, K]]:
         """Returns the obstacle history as a NumPy array."""
         ...

@@ -1,13 +1,12 @@
-from typing import Protocol
+from typing import Protocol, Any
 
 from trajax.types.predictors import ObstacleStatesHistory
-from trajax.types.models.unicycle.common import UnicycleD_o, UNICYCLE_D_O
 
 from jaxtyping import Array as JaxArray, Float
 
 
 class JaxUnicycleObstacleStatesHistory[T: int, K: int](
-    ObstacleStatesHistory[T, UnicycleD_o, K], Protocol
+    ObstacleStatesHistory[T, Any, K], Protocol
 ):
     @property
     def x_array(self) -> Float[JaxArray, "T K"]:
@@ -25,6 +24,6 @@ class JaxUnicycleObstacleStatesHistory[T: int, K: int](
         ...
 
     @property
-    def array(self) -> Float[JaxArray, f"T {UNICYCLE_D_O} K"]:
+    def array(self) -> Float[JaxArray, "T D_o K"]:
         """Returns the obstacle history as a JAX array."""
         ...

@@ -1,11 +1,10 @@
-from typing import Protocol, NamedTuple, runtime_checkable
-
-from numtypes import Dims, Array
-
-import numpy as np
-from scipy.linalg import cholesky
+from typing import Protocol, NamedTuple, runtime_checkable, cast
 
 from trajax.filters.kf import NumPyGaussianBelief, numpy_kalman_filter
+
+from numtypes import Dims, Array, IndexArray, shape_of
+
+import numpy as np
 
 
 @runtime_checkable
@@ -90,50 +89,68 @@ class NumPyUnscentedKalmanFilter(NamedTuple):
         R = process_noise_covariance
         mu, sigma = belief
 
-        state_dimension = mu.shape[0]
-        batch_count = mu.shape[1]
-        lambda_ = self.scaling_parameter_for(state_dimension)
+        n, obstacle_count = mu.shape
+        lambda_ = self.scaling_parameter_for(n)
+        sigma_point_count = 2 * n + 1
 
-        mean_weights, covariance_weights = self._compute_weights(
-            state_dimension, lambda_
+        mean_weights, covariance_weights = self._compute_weights(n, lambda_)
+
+        def propagate[N_SigmaPoints: int](
+            sigma_points: Array[Dims[K, N_SigmaPoints, D_x]],
+        ) -> Array[Dims[K, N_SigmaPoints, D_x]]:
+            all_points = sigma_points.reshape(-1, n).T
+            propagated_flat = state_transition(all_points)  # type: ignore
+            return propagated_flat.T.reshape(-1, sigma_point_count, n)  # type: ignore
+
+        def reconstruct_belief[N_SigmaPoints: int](
+            propagated: Array[Dims[K, N_SigmaPoints, D_x]],
+        ) -> tuple[Array[Dims[K, D_x]], Array[Dims[K, D_x, D_x]]]:
+            means = np.sum(
+                mean_weights[np.newaxis, :, np.newaxis] * propagated,
+                axis=1,
+            )
+
+            deviations = propagated - means[:, np.newaxis, :]
+            covariances = (
+                np.einsum("s,ksi,ksj->kij", covariance_weights, deviations, deviations)
+                + R
+            )
+
+            return means, covariances
+
+        def scatter_to_full[K_valid: int](
+            *,
+            means: Array[Dims[K_valid, D_x]],
+            covariances: Array[Dims[K_valid, D_x, D_x]],
+            valid_indices: IndexArray[Dims[K_valid]],
+        ) -> NumPyGaussianBelief[D_x, K]:
+            predicted_mean = np.full_like(mu, np.nan)
+            predicted_covariance = np.full_like(sigma, np.nan)
+            predicted_mean[:, valid_indices] = means.T  # type: ignore
+            predicted_covariance[:, :, valid_indices] = covariances.transpose(1, 2, 0)  # type: ignore
+            return NumPyGaussianBelief(
+                mean=predicted_mean, covariance=predicted_covariance
+            )
+
+        valid_indices = np.where(~np.any(np.isnan(sigma), axis=(0, 1)))[0]
+
+        if len(valid_indices) == 0:
+            return NumPyGaussianBelief(
+                mean=np.full_like(mu, np.nan),
+                covariance=np.full_like(sigma, np.nan),
+            )
+
+        sigma_points = self._generate_sigma_points_batch(
+            means=mu[:, valid_indices],
+            covariances=sigma[:, :, valid_indices],
+            lambda_=lambda_,
         )
+        propagated = propagate(sigma_points)
+        means, covariances = reconstruct_belief(propagated)
 
-        def should_skip(covariance: Array[Dims[D_x, D_x]]) -> bool:
-            return np.any(np.isnan(covariance))  # type: ignore
-
-        def predict_single(
-            mu_k: Array[Dims[D_x]], sigma_k: Array[Dims[D_x, D_x]]
-        ) -> tuple[Array[Dims[D_x]], Array[Dims[D_x, D_x]]]:
-            sigma_points = self._generate_sigma_points(
-                mu_k, sigma_k, state_dimension, lambda_
-            )
-            propagated_sigma_points = np.array(
-                [state_transition(sp[:, np.newaxis]).flatten() for sp in sigma_points]
-            )
-
-            predicted_mean_k = np.sum(
-                mean_weights[:, np.newaxis] * propagated_sigma_points, axis=0
-            )
-
-            deviations = propagated_sigma_points - predicted_mean_k
-            predicted_covariance_k = (
-                np.einsum("i,ij,ik->jk", covariance_weights, deviations, deviations) + R
-            )
-
-            return predicted_mean_k, predicted_covariance_k
-
-        predicted_mean = np.full_like(mu, np.nan)
-        predicted_covariance = np.full_like(sigma, np.nan)
-
-        for k in range(batch_count):
-            if should_skip(sigma[:, :, k]):
-                continue
-
-            predicted_mean[:, k], predicted_covariance[:, :, k] = predict_single(
-                mu[:, k], sigma[:, :, k]
-            )
-
-        return NumPyGaussianBelief(mean=predicted_mean, covariance=predicted_covariance)
+        return scatter_to_full(
+            means=means, covariances=covariances, valid_indices=valid_indices
+        )
 
     def update[D_x: int, D_z: int, K: int](
         self,
@@ -181,11 +198,11 @@ class NumPyUnscentedKalmanFilter(NamedTuple):
         """Returns the scaling parameter λ = (α² - 1)n for the given state dimension."""
         return (self.alpha**2 - 1) * state_dimension
 
-    def _compute_weights(
-        self, state_dimension: int, lambda_: float
-    ) -> tuple[Array, Array]:
+    def _compute_weights[D_x: int = int, N_SigmaPoints: int = int](
+        self, state_dimension: D_x, lambda_: float
+    ) -> tuple[Array[Dims[N_SigmaPoints]], Array[Dims[N_SigmaPoints]]]:
         n = state_dimension
-        sigma_point_count = 2 * n + 1
+        sigma_point_count = cast(N_SigmaPoints, 2 * n + 1)
 
         mean_weights = np.zeros(sigma_point_count)
         covariance_weights = np.zeros(sigma_point_count)
@@ -199,29 +216,47 @@ class NumPyUnscentedKalmanFilter(NamedTuple):
         mean_weights[1:] = remaining_weight
         covariance_weights[1:] = remaining_weight
 
+        assert shape_of(mean_weights, matches=(sigma_point_count,))
+        assert shape_of(covariance_weights, matches=(sigma_point_count,))
+
         return mean_weights, covariance_weights
 
-    def _generate_sigma_points(
-        self, mean: Array, covariance: Array, state_dimension: int, lambda_: float
-    ) -> Array:
-        n = state_dimension
-        sigma_point_count = 2 * n + 1
+    def _generate_sigma_points_batch[D_x: int, K: int, N_SigmaPoints: int = int](
+        self,
+        *,
+        means: Array[Dims[D_x, K]],
+        covariances: Array[Dims[D_x, D_x, K]],
+        lambda_: float,
+    ) -> Array[Dims[K, N_SigmaPoints, D_x]]:
+        n, obstacle_count = means.shape
+        sigma_point_count = cast(N_SigmaPoints, 2 * n + 1)
 
-        sigma_points = np.zeros((sigma_point_count, n))
-        sigma_points[0] = mean
+        batched_covariance = covariances.transpose(2, 0, 1)
+        scaled = (n + lambda_) * batched_covariance
 
-        scaled_covariance = (n + lambda_) * covariance
-
-        # NOTE: To ensure the scaled covariance is positive definite.
-        scaled_covariance = (scaled_covariance + scaled_covariance.T) / 2
-        eigenvalues, eigenvectors = np.linalg.eigh(scaled_covariance)
+        # NOTE: To ensure symmetric positive definite
+        scaled = (scaled + scaled.transpose(0, 2, 1)) / 2
+        eigenvalues, eigenvectors = np.linalg.eigh(scaled)
         eigenvalues = np.maximum(eigenvalues, 1e-10)
-        scaled_covariance = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
+        scaled = eigenvectors @ (
+            eigenvalues[..., np.newaxis] * eigenvectors.transpose(0, 2, 1)
+        )
 
-        sqrt_scaled_covariance = cholesky(scaled_covariance, lower=True)
+        sqrt_covariance = np.linalg.cholesky(scaled)
+        means_t = means.T
 
-        for i in range(n):
-            sigma_points[i + 1] = mean + sqrt_scaled_covariance[:, i]
-            sigma_points[n + i + 1] = mean - sqrt_scaled_covariance[:, i]
+        # NOTE: Use columns of L (transposed to row-major) for sigma point offsets
+        sqrt_covariance_columns = sqrt_covariance.transpose(0, 2, 1)
+
+        sigma_points = np.empty((obstacle_count, sigma_point_count, n))
+        sigma_points[:, 0, :] = means_t
+        sigma_points[:, 1 : n + 1, :] = (
+            means_t[:, np.newaxis, :] + sqrt_covariance_columns
+        )
+        sigma_points[:, n + 1 :, :] = (
+            means_t[:, np.newaxis, :] - sqrt_covariance_columns
+        )
+
+        assert shape_of(sigma_points, matches=(obstacle_count, sigma_point_count, n))
 
         return sigma_points

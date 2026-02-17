@@ -54,20 +54,24 @@ class JaxExtendedKalmanFilter(NamedTuple):
             observations, initial_state_covariance=initial_state_covariance
         )
 
-        for observation in observations:
+        def step(
+            belief: JaxGaussianBelief, observation: Float[JaxArray, "D_z K"]
+        ) -> tuple[JaxGaussianBelief, None]:
             belief = self.predict(
                 belief=belief,
                 state_transition=state_transition,
                 process_noise_covariance=process_noise_covariance,
             )
             belief = self.update(
-                observation=observation,
+                observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
                 observation_noise_covariance=observation_noise_covariance,
                 initial_state_covariance=initial_state_covariance,
             )
+            return belief, None
 
+        belief, _ = jax.lax.scan(step, belief, observations)
         return belief
 
     @jax.jit

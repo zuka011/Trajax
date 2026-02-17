@@ -54,7 +54,7 @@ class CurvilinearPredictor[
     """Predicts obstacle motion by forward propagating estimated states with a curvilinear model."""
 
     horizon: int
-    estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT]
+    estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, CovarianceT]
     assumptions: InputAssumptionProvider[InputsT]
     model: ObstacleModel[HistoryT, StatesT, InputsT, CovarianceT, StateSequencesT]
     prediction: PredictionCreator[StateSequencesT, PredictionT]
@@ -64,7 +64,7 @@ class CurvilinearPredictor[
         *,
         horizon: int,
         model: ObstacleModel[H, S, I, C, SS],
-        estimator: ObstacleStateEstimator[H, S, I],
+        estimator: ObstacleStateEstimator[H, S, I, C],
         prediction: PredictionCreator[SS, P],
         assumptions: InputAssumptionProvider[I] | None = None,
     ) -> "CurvilinearPredictor[H, S, I, C, SS, P]":
