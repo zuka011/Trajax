@@ -23,3 +23,8 @@ class JaxBicycleObstacleStatesHistory[T: int, K: int](
     def heading_array(self) -> Float[JaxArray, "T K"]:
         """Returns the headings of the obstacles over time."""
         ...
+
+    @property
+    def array(self) -> Float[JaxArray, f"T {BicycleD_o} K"]:
+        """Returns the obstacle history as a JAX array."""
+        ...

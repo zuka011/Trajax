@@ -37,6 +37,7 @@ from trajax.filters import (
 )
 from trajax.obstacles import NumPyObstacle2dPoses
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.basic import invalid_obstacle_filter_from
 
 from numtypes import Array, Dims, D, shape_of, array
 
@@ -896,36 +897,21 @@ class NumPyFiniteDifferenceUnicycleStateEstimator(
         """
         assert history.horizon > 0, "History must contain at least one state."
 
-        invalid = self.invalid_obstacle_mask_from(history)
-
-        def filter_invalid(array: Array[Dims[K]]) -> Array[Dims[K]]:
-            array[..., invalid] = np.nan  # type: ignore
-            return array
-
+        filter_invalid = invalid_obstacle_filter_from(history, check_recent=2)
         linear_velocities = self.estimate_speeds_from(history)
         angular_velocities = self.estimate_angular_velocities_from(history)
 
         return EstimatedObstacleStates(
             states=NumPyUnicycleObstacleStates.create(
-                x=filter_invalid(history.x()[-1]),
-                y=filter_invalid(history.y()[-1]),
-                heading=filter_invalid(history.heading()[-1]),
+                x=history.x()[-1],
+                y=history.y()[-1],
+                heading=history.heading()[-1],
             ),
             inputs=NumPyUnicycleObstacleInputs.create(
                 linear_velocities=filter_invalid(linear_velocities),
                 angular_velocities=filter_invalid(angular_velocities),
             ),
             covariance=None,
-        )
-
-    def invalid_obstacle_mask_from[K: int, T: int = int](
-        self, history: NumPyUnicycleObstacleStatesHistory[T, K]
-    ) -> Array[Dims[K]]:
-        return np.any(
-            np.isnan(history.x()[-3:])
-            | np.isnan(history.y()[-3:])
-            | np.isnan(history.heading()[-3:]),
-            axis=0,
         )
 
     def estimate_speeds_from[K: int](

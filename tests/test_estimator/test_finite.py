@@ -1,8 +1,8 @@
-from typing import Sequence
+from typing import Sequence, Callable
 
-from trajax import ObstacleStateEstimator, model
+from trajax import ObstacleStateEstimator, EstimatedObstacleStates, model
 
-from numtypes import array
+from numtypes import Array, array
 
 import numpy as np
 
@@ -265,3 +265,243 @@ class test_that_missing_state_earlier_in_history_does_not_affect_estimates:
 
         assert np.allclose(result.states, reference_result.states)
         assert np.allclose(result.inputs, reference_result.inputs)
+
+
+class test_that_estimable_states_are_computed_when_there_are_not_enough_valid_entries_for_all_states:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        tolerance = 0.1
+
+        def check_exact(
+            actual: ArrayConvertible, expected: ArrayConvertible | None
+        ) -> bool:
+            if expected is None:
+                assert np.all(np.isnan(actual))
+            else:
+                assert np.allclose(actual, expected, rtol=tolerance)
+
+            return True
+
+        def check_in_range(
+            actual: ArrayConvertible, expected_range: tuple[float, float] | None
+        ) -> bool:
+            if expected_range is None:
+                assert np.all(np.isnan(actual))
+            else:
+                low, high = expected_range
+                assert np.all((actual > low) & (actual < high))
+
+            return True
+
+        def check_bicycle(
+            *,
+            expected_x: float | None = None,
+            expected_y: float | None = None,
+            expected_heading: float | None = None,
+            expected_speed: float | None = None,
+            expected_steering_angle_range: tuple[float, float] | None = None,
+            expected_acceleration_range: tuple[float, float] | None = None,
+        ):
+            def check(result: EstimatedObstacleStates) -> bool:
+                assert check_exact(result.states.x(), expected_x)
+                assert check_exact(result.states.y(), expected_y)
+                assert check_exact(result.states.heading(), expected_heading)
+                assert check_exact(result.states.speed(), expected_speed)
+                assert check_in_range(
+                    result.inputs.steering_angles(), expected_steering_angle_range
+                )
+                assert check_in_range(
+                    result.inputs.accelerations(), expected_acceleration_range
+                )
+
+                return True
+
+            return check
+
+        def check_unicycle(
+            *,
+            expected_x: float | None = None,
+            expected_y: float | None = None,
+            expected_heading: float | None = None,
+            expected_linear_velocity: float | None = None,
+            expected_angular_velocity: float | None = None,
+        ):
+            def check(result: EstimatedObstacleStates) -> bool:
+                assert check_exact(result.states.x(), expected_x)
+                assert check_exact(result.states.y(), expected_y)
+                assert check_exact(result.states.heading(), expected_heading)
+                assert check_exact(
+                    result.inputs.linear_velocities(), expected_linear_velocity
+                )
+                assert check_exact(
+                    result.inputs.angular_velocities(), expected_angular_velocity
+                )
+
+                return True
+
+            return check
+
+        def check_integrator(
+            *,
+            expected_states: Array | None = None,
+            expected_velocities: Array | None = None,
+        ):
+            def check(result: EstimatedObstacleStates) -> bool:
+                assert check_exact(result.states.array, expected_states)
+                assert check_exact(result.inputs.array, expected_velocities)
+
+                return True
+
+            return check
+
+        return [
+            *[  # Sufficient states for pose
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array(
+                            [[np.nan], [np.nan], [2.0]],
+                            shape=(T := 3, K := 1),
+                        ),
+                        y=array([[np.nan], [np.nan], [0.0]], shape=(T, K)),
+                        heading=array(
+                            [[np.nan], [np.nan], [np.pi / 16]],
+                            shape=(T, K),
+                        ),
+                    ),
+                    check,
+                )
+                for estimator, check in [
+                    (
+                        model.bicycle.estimator.finite_difference(
+                            time_step_size=dt, wheelbase=1.0
+                        ),
+                        check_bicycle(
+                            expected_x=2.0,
+                            expected_y=0.0,
+                            expected_heading=np.pi / 16,
+                        ),
+                    ),
+                    (
+                        model.unicycle.estimator.finite_difference(time_step_size=dt),
+                        check_unicycle(
+                            expected_x=2.0,
+                            expected_y=0.0,
+                            expected_heading=np.pi / 16,
+                        ),
+                    ),
+                ]
+            ],
+            *[  # Sufficient states for velocities
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array([[np.nan], [1.0], [2.0]], shape=(T := 3, K := 1)),
+                        y=array([[np.nan], [0.0], [0.0]], shape=(T, K)),
+                        heading=array([[np.nan], [0.0], [np.pi / 16]], shape=(T, K)),
+                    ),
+                    check,
+                )
+                for estimator, check in [
+                    (
+                        model.bicycle.estimator.finite_difference(
+                            time_step_size=dt, wheelbase=1.0
+                        ),
+                        check_bicycle(
+                            expected_x=2.0,
+                            expected_y=0.0,
+                            expected_heading=np.pi / 16,
+                            expected_speed=10.0,
+                            expected_steering_angle_range=(0.0, 2 * np.pi / 16),
+                        ),
+                    ),
+                    (
+                        model.unicycle.estimator.finite_difference(time_step_size=dt),
+                        check_unicycle(
+                            expected_x=2.0,
+                            expected_y=0.0,
+                            expected_heading=np.pi / 16,
+                            expected_linear_velocity=10.0,
+                            expected_angular_velocity=np.pi / 16 / dt,
+                        ),
+                    ),
+                ]
+            ],
+            (  # Sufficient states for acceleration.
+                estimator := model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=1.0
+                ),
+                history := data.obstacle_2d_poses(
+                    x=array(
+                        [[np.nan], [1.0], [2.0], [4.0]],
+                        shape=(T := 4, K := 1),
+                    ),
+                    y=array([[np.nan], [0.0], [0.0], [0.0]], shape=(T, K)),
+                    heading=array([[np.nan], [0.0], [0.0], [0.0]], shape=(T, K)),
+                ),
+                check_bicycle(
+                    expected_x=4.0,
+                    expected_y=0.0,
+                    expected_heading=0.0,
+                    expected_speed=20.0,
+                    expected_steering_angle_range=(-0.1, 0.1),
+                    expected_acceleration_range=(0.0, 150.0),
+                ),
+            ),
+            (  # Sufficient states for integrator states.
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
+                history := data.simple_obstacle_states(
+                    states=array(
+                        [
+                            [[np.nan], [np.nan]],
+                            [[np.nan], [np.nan]],
+                            [[np.nan], [np.nan]],
+                            [[4.0], [2.0]],
+                        ],
+                        shape=(T := 4, D_o := 2, K := 1),
+                    ),
+                ),
+                check_integrator(
+                    expected_states=array([[4.0], [2.0]], shape=(D_o, K)),
+                ),
+            ),
+            (  # Sufficient states for integrator velocities.
+                estimator := model.integrator.estimator.finite_difference(
+                    time_step_size=dt
+                ),
+                history := data.simple_obstacle_states(
+                    states=array(
+                        [
+                            [[np.nan], [np.nan]],
+                            [[1.0], [0.5]],
+                            [[4.0], [2.0]],
+                        ],
+                        shape=(T := 3, D_o := 2, K := 1),
+                    ),
+                ),
+                check_integrator(
+                    expected_states=array([[4.0], [2.0]], shape=(D_o, K)),
+                    expected_velocities=array([[30.0], [15.0]], shape=(D_o, K)),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history", "check"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT, StatesT, InputsT](
+        self,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT],
+        history: HistoryT,
+        check: Callable[[EstimatedObstacleStates], bool],
+    ) -> None:
+        result = estimator.estimate_from(history)
+
+        assert check(result)

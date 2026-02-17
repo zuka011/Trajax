@@ -20,3 +20,8 @@ class NumPyUnicycleObstacleStatesHistory[T: int, K: int](
     def heading(self) -> Array[Dims[T, K]]:
         """Returns the headings of the obstacles over time."""
         ...
+
+    @property
+    def array(self) -> Array[Dims[T, UnicycleD_o, K]]:
+        """Returns the obstacle history as a NumPy array."""
+        ...

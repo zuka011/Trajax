@@ -38,8 +38,9 @@ from trajax.filters import (
 )
 from trajax.obstacles import JaxObstacle2dPoses
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.accelerated import invalid_obstacle_filter_from
 
-from jaxtyping import Array as JaxArray, Float, Bool, Scalar
+from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D, shape_of
 
 
@@ -1233,18 +1234,18 @@ def estimate_states(
     time_step_size: Scalar,
     wheelbase: Scalar,
 ) -> EstimatedBicycleObstacleStates:
-    invalid = invalid_obstacle_mask_from(
-        x_history=x_history, y_history=y_history, heading_history=heading_history
+    filter_invalid_short = invalid_obstacle_filter_from(
+        x_history, y_history, heading_history, check_recent=2
+    )
+    filter_invalid_long = invalid_obstacle_filter_from(
+        x_history, y_history, heading_history, check_recent=3
     )
 
-    def filter_invalid(array: Float[JaxArray, "K"]) -> Float[JaxArray, "K"]:
-        return jnp.where(invalid, jnp.nan, array)
-
     return EstimatedBicycleObstacleStates(
-        x=filter_invalid(x_history[-1]),
-        y=filter_invalid(y_history[-1]),
-        heading=filter_invalid(heading_history[-1]),
-        speed=filter_invalid(
+        x=x_history[-1],
+        y=y_history[-1],
+        heading=heading_history[-1],
+        speed=filter_invalid_short(
             speed := estimate_speed(
                 x_history=x_history,
                 y_history=y_history,
@@ -1252,7 +1253,7 @@ def estimate_states(
                 time_step_size=time_step_size,
             )
         ),
-        accelerations=filter_invalid(
+        accelerations=filter_invalid_long(
             estimate_acceleration(
                 x_history=x_history,
                 y_history=y_history,
@@ -1261,7 +1262,7 @@ def estimate_states(
                 time_step_size=time_step_size,
             )
         ),
-        steering_angles=filter_invalid(
+        steering_angles=filter_invalid_short(
             estimate_steering_angle(
                 heading_history=heading_history,
                 speed_current=speed,
@@ -1269,23 +1270,6 @@ def estimate_states(
                 wheelbase=wheelbase,
             )
         ),
-    )
-
-
-# TODO: Extract this to be reusable for all models.
-@jax.jit
-@jaxtyped
-def invalid_obstacle_mask_from(
-    *,
-    x_history: Float[JaxArray, "T K"],
-    y_history: Float[JaxArray, "T K"],
-    heading_history: Float[JaxArray, "T K"],
-) -> Bool[JaxArray, "K"]:
-    return jnp.any(
-        jnp.isnan(x_history[-3:])
-        | jnp.isnan(y_history[-3:])
-        | jnp.isnan(heading_history[-3:]),
-        axis=0,
     )
 
 

@@ -37,6 +37,7 @@ from trajax.filters import (
 )
 from trajax.obstacles import NumPyObstacle2dPoses
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.basic import invalid_obstacle_filter_from
 
 from numtypes import Array, Dims, D, shape_of, array
 
@@ -950,11 +951,8 @@ class NumPyFiniteDifferenceBicycleStateEstimator(
         """
         assert history.horizon > 0, "History must contain at least one state."
 
-        invalid = self.invalid_obstacle_mask_from(history)
-
-        def filter_invalid(array: Array[Dims[K]]) -> Array[Dims[K]]:
-            array[..., invalid] = np.nan  # type: ignore
-            return array
+        filter_invalid_short = invalid_obstacle_filter_from(history, check_recent=2)
+        filter_invalid_long = invalid_obstacle_filter_from(history, check_recent=3)
 
         speeds = self.estimate_speeds_from(history)
         accelerations = self.estimate_accelerations_from(history, speeds=speeds)
@@ -962,14 +960,14 @@ class NumPyFiniteDifferenceBicycleStateEstimator(
 
         return EstimatedObstacleStates(
             states=NumPyBicycleObstacleStates.create(
-                x=filter_invalid(history.x()[-1]),
-                y=filter_invalid(history.y()[-1]),
-                heading=filter_invalid(history.heading()[-1]),
-                speed=filter_invalid(speeds),
+                x=history.x()[-1],
+                y=history.y()[-1],
+                heading=history.heading()[-1],
+                speed=filter_invalid_short(speeds),
             ),
             inputs=NumPyBicycleObstacleInputs.create(
-                accelerations=filter_invalid(accelerations),
-                steering_angles=filter_invalid(steering_angles),
+                accelerations=filter_invalid_long(accelerations),
+                steering_angles=filter_invalid_short(steering_angles),
             ),
             covariance=None,
         )

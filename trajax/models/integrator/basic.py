@@ -28,6 +28,7 @@ from trajax.filters import (
     numpy_kalman_filter,
 )
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.basic import invalid_obstacle_filter_from
 from trajax.models.integrator.common import (
     observation_dimension_from,
     kf_state_dimension_for,
@@ -469,28 +470,17 @@ class NumPyFiniteDifferenceIntegratorStateEstimator(
         assert history.horizon > 0, (
             "History must contain at least one state for estimation."
         )
-        invalid = self.invalid_obstacle_mask_from(history)
 
-        def filter_invalid(array: Array[Dims[D_o, K]]) -> Array[Dims[D_o, K]]:
-            array[..., invalid] = np.nan  # type: ignore
-            return array
-
+        filter_invalid = invalid_obstacle_filter_from(history, check_recent=2)
         velocities = self.estimate_velocities_from(history)
 
         return EstimatedObstacleStates(
-            states=NumPyIntegratorObstacleStates.create(
-                array=filter_invalid(history.array[-1, :, :])
-            ),
+            states=NumPyIntegratorObstacleStates.create(array=history.array[-1, :, :]),
             inputs=NumPyIntegratorObstacleInputs.create(
                 array=filter_invalid(velocities)
             ),
             covariance=None,
         )
-
-    def invalid_obstacle_mask_from[K: int, T: int = int, D_o: int = int](
-        self, history: NumPyIntegratorObstacleStatesHistory[T, D_o, K]
-    ) -> Array[Dims[K]]:
-        return np.any(np.isnan(history.array[-2:]), axis=(0, 1))
 
     def estimate_velocities_from[D_o: int, K: int, T: int = int](
         self, history: NumPyIntegratorObstacleStatesHistory[T, D_o, K]

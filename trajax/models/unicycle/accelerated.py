@@ -38,8 +38,9 @@ from trajax.filters import (
 )
 from trajax.obstacles import JaxObstacle2dPoses
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.accelerated import invalid_obstacle_filter_from
 
-from jaxtyping import Array as JaxArray, Float, Bool, Scalar
+from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import Array, Dims, D
 
 import jax
@@ -1080,7 +1081,6 @@ class JaxKfUnicycleStateEstimator(
             observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
                 observation_noise_covariance, dimension=UNICYCLE_OBSERVATION_D_O
             ),
-            # TODO: Test that specifying intial_state_covariance works.
             model=JaxUnicycleStateEstimationModel.create(
                 time_step_size=time_step_size,
                 initial_state_covariance=initial_state_covariance,
@@ -1180,17 +1180,14 @@ def estimate_states(
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
 ) -> EstimatedUnicycleObstacleStates:
-    invalid = invalid_obstacle_mask_from(
-        x_history=x_history, y_history=y_history, heading_history=heading_history
+    filter_invalid = invalid_obstacle_filter_from(
+        x_history, y_history, heading_history, check_recent=2
     )
 
-    def filter_invalid(array: Float[JaxArray, "K"]) -> Float[JaxArray, "K"]:
-        return jnp.where(invalid, jnp.nan, array)
-
     return EstimatedUnicycleObstacleStates(
-        x=filter_invalid(x_history[-1]),
-        y=filter_invalid(y_history[-1]),
-        heading=filter_invalid(heading_history[-1]),
+        x=x_history[-1],
+        y=y_history[-1],
+        heading=heading_history[-1],
         linear_velocities=filter_invalid(
             estimate_linear_velocities(
                 x_history=x_history,
@@ -1205,22 +1202,6 @@ def estimate_states(
                 time_step_size=time_step_size,
             )
         ),
-    )
-
-
-@jax.jit
-@jaxtyped
-def invalid_obstacle_mask_from(
-    *,
-    x_history: Float[JaxArray, "T K"],
-    y_history: Float[JaxArray, "T K"],
-    heading_history: Float[JaxArray, "T K"],
-) -> Bool[JaxArray, "K"]:
-    return jnp.any(
-        jnp.isnan(x_history[-3:])
-        | jnp.isnan(y_history[-3:])
-        | jnp.isnan(heading_history[-3:]),
-        axis=0,
     )
 
 

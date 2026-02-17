@@ -30,6 +30,7 @@ from trajax.filters import (
     jax_kalman_filter,
 )
 from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.accelerated import invalid_obstacle_filter_from
 from trajax.models.integrator.common import (
     observation_dimension_from,
     kf_state_dimension_for,
@@ -37,7 +38,7 @@ from trajax.models.integrator.common import (
 
 from numtypes import Array, Dims
 
-from jaxtyping import Array as JaxArray, Float, Bool, Scalar
+from jaxtyping import Array as JaxArray, Float, Scalar
 
 import jax
 import jax.numpy as jnp
@@ -701,25 +702,14 @@ def step_periodic(
 def estimate_states(
     history: Float[JaxArray, "T D_o K"], time_step: Scalar
 ) -> EstimatedIntegratorObstacleStates:
-    invalid = invalid_obstacle_mask_from(history)
-
-    def filter_invalid(array: Float[JaxArray, "D_o K"]) -> Float[JaxArray, "D_o K"]:
-        return jnp.where(invalid, jnp.nan, array)
+    filter_invalid = invalid_obstacle_filter_from(history, check_recent=2)
 
     return EstimatedIntegratorObstacleStates(
-        states=filter_invalid(history[-1]),
+        states=history[-1],
         velocities=filter_invalid(
             estimate_velocities(history=history, time_step=time_step)
         ),
     )
-
-
-@jax.jit
-@jaxtyped
-def invalid_obstacle_mask_from(
-    history: Float[JaxArray, "T D_o K"],
-) -> Bool[JaxArray, "K"]:
-    return jnp.any(jnp.isnan(history[-2:]), axis=(0, 1))
 
 
 @jax.jit

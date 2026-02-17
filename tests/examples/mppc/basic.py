@@ -101,12 +101,18 @@ def heading(states: PhysicalStateBatch) -> types.Headings:
     return types.headings(heading=states.heading())
 
 
-def bicycle_to_obstacle_states(
-    states: types.bicycle.ObstacleStateSequences, covariances: Array | None
-) -> ObstacleStates:
-    return types.obstacle_2d_poses.create(
-        x=states.x(), y=states.y(), heading=states.heading(), covariance=covariances
-    )
+class BicyclePredictionCreator:
+    def __call__(
+        self, *, states: types.bicycle.ObstacleStateSequences
+    ) -> ObstacleStates:
+        return states.pose()
+
+    def empty(self, *, horizon: int) -> ObstacleStates:
+        return types.obstacle_2d_poses.create(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -499,7 +505,6 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
-        use_covariance_propagation: bool = False,
     ) -> NumPyMpccPlannerConfiguration:
         obstacle_simulator = obstacles()
 
@@ -567,18 +572,11 @@ class configure:
                                         time_step_size=dt, wheelbase=L
                                     ),
                                     estimator=(
-                                        model.bicycle.estimator.ekf(
-                                            time_step_size=dt,
-                                            wheelbase=L,
-                                            process_noise_covariance=0.01,
-                                            observation_noise_covariance=0.01,
-                                        )
-                                        if use_covariance_propagation
-                                        else model.bicycle.estimator.finite_difference(
+                                        model.bicycle.estimator.finite_difference(
                                             time_step_size=dt, wheelbase=L
                                         )
                                     ),
-                                    prediction=bicycle_to_obstacle_states,
+                                    prediction=BicyclePredictionCreator(),
                                 ),
                                 history=types.obstacle_states_running_history.empty(
                                     creator=types.obstacle_2d_poses,
@@ -621,15 +619,7 @@ class configure:
                     ),
                     distance_threshold=array([0.5, 0.5, 0.5], shape=(V,)),
                     weight=weights.collision,
-                    metric=(
-                        risk_collector := (
-                            collectors.risk.decorating(
-                                risk.mean_variance(gamma=0.5, sample_count=10)
-                            )
-                            if use_covariance_propagation
-                            else None
-                        )
-                    ),
+                    metric=(risk_collector := None),
                 ),
             ),
             state=types.augmented.state,
@@ -696,7 +686,7 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: NumPyMpccPlannerWeights = NumPyMpccPlannerWeights(),
         sampling: NumPySamplingOptions = NumPySamplingOptions(),
-        risk_metric: RiskMetric = risk.mean_variance(gamma=0.5, sample_count=10),
+        risk_metric: RiskMetric = risk.mean_variance(gamma=0.1, sample_count=10),
         use_covariance_propagation: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
@@ -749,19 +739,19 @@ class configure:
                                         model.bicycle.estimator.ekf(
                                             time_step_size=dt,
                                             wheelbase=L,
-                                            process_noise_covariance=0.01,
-                                            observation_noise_covariance=0.01,
+                                            process_noise_covariance=1e-4,
+                                            observation_noise_covariance=1e-8,
                                         )
                                         if use_covariance_propagation
                                         else model.bicycle.estimator.finite_difference(
                                             time_step_size=dt, wheelbase=L
                                         )
                                     ),
-                                    prediction=bicycle_to_obstacle_states,
+                                    prediction=BicyclePredictionCreator(),
                                 ),
                                 history=types.obstacle_states_running_history.empty(
                                     creator=types.obstacle_2d_poses,
-                                    horizon=2,
+                                    horizon=10,
                                     obstacle_count=obstacle_simulator.obstacle_count,
                                 ),
                                 id_assignment=create_obstacles.id_assignment.hungarian(
@@ -835,7 +825,7 @@ class configure:
                     "periodic": cyclic_reference,
                 },
             },
-            filter_function=filters.savgol(window_length=11, polynomial_order=3),
+            filter_function=filters.savgol(window_length=15, polynomial_order=3),
         )
 
         planner = (

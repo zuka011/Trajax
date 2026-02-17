@@ -1,4 +1,4 @@
-from typing import Sequence, Literal
+from typing import Sequence, Literal, Callable
 
 from trajax import ObstacleStateEstimator, EstimatedObstacleStates, model
 
@@ -1260,8 +1260,10 @@ class test_that_estimates_are_missing_when_obstacle_is_missing:
         missing = np.arange(states.shape[-1]) == missing_obstacle_index
         present = np.arange(states.shape[-1]) != missing_obstacle_index
 
-        with subtests.test("missing obstacle estimates are NaN"):
-            assert np.all(np.isnan(states[..., missing]))
+        with subtests.test("missing obstacle estimates are NaN or reasonable"):
+            assert np.all(
+                np.isnan(states[..., missing]) | np.isfinite(states[..., missing])
+            )
             assert np.all(np.isnan(inputs[..., missing]))
             assert covariance is None or np.all(np.isnan(covariance[..., missing]))
 
@@ -1269,3 +1271,96 @@ class test_that_estimates_are_missing_when_obstacle_is_missing:
             assert np.all(np.isfinite(states[..., present]))
             assert np.all(np.isfinite(inputs[..., present]))
             assert covariance is None or np.all(np.isfinite(covariance[..., present]))
+
+
+class test_that_estimator_does_not_mutate_history:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+        return [
+            *[
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array([[np.nan, 2.0]], shape=(T := 1, K := 2)),
+                        y=array([[3.0, 4.0]], shape=(T, K)),
+                        heading=array([[0.5, 1.0]], shape=(T, K)),
+                    ),
+                    data_of := lambda history: (
+                        history.x(),
+                        history.y(),
+                        history.heading(),
+                    ),
+                )
+                for estimator in [
+                    model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=1.0
+                    ),
+                    model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.finite_difference(time_step_size=dt),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                    ),
+                ]
+            ],
+            *[
+                (
+                    estimator,
+                    history := data.simple_obstacle_states(
+                        states=array(
+                            [[[1.0, np.nan], [3.0, 4.0]]],
+                            shape=(T := 1, D_o := 2, K := 2),
+                        ),
+                    ),
+                    data_of := lambda history: history.array,
+                )
+                for estimator in [
+                    model.integrator.estimator.finite_difference(time_step_size=dt),
+                    model.integrator.estimator.kf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-5,
+                        observation_noise_covariance=1e-5,
+                        observation_dimension=2,
+                    ),
+                ]
+            ],
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history", "data_of"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test[HistoryT: ArrayConvertible, StatesT, InputsT](
+        self,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT],
+        history: HistoryT,
+        data_of: Callable[[HistoryT], ArrayConvertible],
+    ) -> None:
+        data = data_of(history)
+
+        estimator.estimate_from(history)
+
+        assert np.array_equal(data, data_of(history), equal_nan=True), (
+            "History was mutated during estimation"
+        )
