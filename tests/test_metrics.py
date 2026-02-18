@@ -50,7 +50,7 @@ class test_that_collision_is_detected_when_distance_is_below_threshold:
                                 )
                             ),
                             and_obstacle_states_are=(
-                                obstacle_states := data.obstacle_state_samples(
+                                obstacle_states := data.obstacle_2d_pose_samples(
                                     x=np.random.rand(T, K := 5, N),
                                     y=np.random.rand(T, K, N),
                                 )
@@ -196,7 +196,7 @@ class test_that_metrics_are_recomputed_when_new_data_is_collected:
                                 )
                             ),
                             and_obstacle_states_are=(
-                                obstacle_states := data.obstacle_state_samples(
+                                obstacle_states := data.obstacle_2d_pose_samples(
                                     x=(
                                         obstacles_x_data := np.random.rand(T, K := 5, N)
                                     ),
@@ -207,7 +207,7 @@ class test_that_metrics_are_recomputed_when_new_data_is_collected:
                             # Distances for initial call.
                             data.distance(distance_data[:-1]),
                             when_states_are=data.state_batch(states_data[:-1]),
-                            and_obstacle_states_are=data.obstacle_state_samples(
+                            and_obstacle_states_are=data.obstacle_2d_pose_samples(
                                 x=obstacles_x_data[:-1],
                                 y=obstacles_y_data[:-1],
                             ),

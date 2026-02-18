@@ -1,5 +1,6 @@
-from typing import Never, cast, overload, Self, Sequence, Final, Any
+from typing import cast, overload, Self, Sequence, Final, Any, NamedTuple
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     jaxtyped,
@@ -20,20 +21,41 @@ from trajax.types import (
     BICYCLE_D_X,
     BicycleD_u,
     BICYCLE_D_U,
+    BicycleD_o,
+    BICYCLE_D_O,
+    POSE_D_O,
     DynamicalModel,
     ObstacleModel,
+    ObstacleStateEstimator,
     EstimatedObstacleStates,
 )
+from trajax.filters import (
+    JaxExtendedKalmanFilter,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceDescription,
+    JaxUnscentedKalmanFilter,
+    jax_kalman_filter,
+)
+from trajax.obstacles import JaxObstacle2dPoses
+from trajax.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
+from trajax.models.accelerated import invalid_obstacle_filter_from
 
 from jaxtyping import Array as JaxArray, Float, Scalar
-from numtypes import Array, Dims, D
+from numtypes import Array, Dims, D, shape_of
+
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 
+
 NO_LIMITS: Final = (jnp.asarray(-jnp.inf), jnp.asarray(jnp.inf))
 
+BICYCLE_ESTIMATION_D_X: Final = 6
+BICYCLE_OBSERVATION_D_O: Final = 3
+
+type BicycleEstimationD_x = D[6]
+type BicycleObservationD_o = D[3]
 
 type StateArray = Float[JaxArray, f"{BICYCLE_D_X}"]
 type ControlInputSequenceArray[T: int] = Float[JaxArray, f"T {BICYCLE_D_U}"]
@@ -42,6 +64,25 @@ type ControlInputBatchArray[T: int, M: int] = Float[JaxArray, f"T {BICYCLE_D_U} 
 
 type StatesAtTimeStep[M: int] = Float[JaxArray, f"{BICYCLE_D_X} M"]
 type ControlInputsAtTimeStep[M: int] = Float[JaxArray, f"{BICYCLE_D_U} M"]
+
+type EstimationStateCovarianceArray = Float[
+    JaxArray, f"{BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X}"
+]
+type ProcessNoiseCovarianceArray = Float[
+    JaxArray, f"{BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X}"
+]
+type ObservationNoiseCovarianceArray = Float[
+    JaxArray, f"{BICYCLE_OBSERVATION_D_O} {BICYCLE_OBSERVATION_D_O}"
+]
+type ObservationMatrix = Float[
+    JaxArray, f"{BICYCLE_OBSERVATION_D_O} {BICYCLE_ESTIMATION_D_X}"
+]
+
+type BicycleGaussianBelief[K: int] = JaxGaussianBelief
+type JaxBicycleObstacleCovariances[K: int] = Float[
+    JaxArray, f"{BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"
+]
+type KalmanFilter = JaxExtendedKalmanFilter | JaxUnscentedKalmanFilter
 
 
 @jaxtyped
@@ -375,103 +416,257 @@ class JaxBicycleControlInputBatch[T: int, M: int](
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleStates[K: int]:
-    array: Float[JaxArray, f"{BICYCLE_D_X} K"]
+    _array: Float[JaxArray, f"{BICYCLE_D_O} K"]
+
+    @staticmethod
+    def wrap[K_: int](
+        array: Array[Dims[BicycleD_o, K_]] | Float[JaxArray, f"{BICYCLE_D_O} K"],
+    ) -> "JaxBicycleObstacleStates[K_]":
+        return JaxBicycleObstacleStates(jnp.asarray(array))
 
     @staticmethod
     def create[K_: int](
         *,
-        x: Float[JaxArray, "K"],
-        y: Float[JaxArray, "K"],
-        heading: Float[JaxArray, "K"],
-        speed: Float[JaxArray, "K"],
+        x: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        y: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        heading: Array[Dims[K_]] | Float[JaxArray, "K_"],
+        speed: Array[Dims[K_]] | Float[JaxArray, "K_"],
         count: K_ | None = None,
     ) -> "JaxBicycleObstacleStates[K_]":
+        count = count if count is not None else cast(K_, x.shape[0])
         array = jnp.stack([x, y, heading, speed], axis=0)
+
+        assert array.shape == (expected := (BICYCLE_D_O, count)), (
+            f"Array shape {array.shape} does not match expected shape {expected}."
+        )
+
         return JaxBicycleObstacleStates(array)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_o, K]]:
+        return self._numpy_array
+
+    def x(self) -> Array[Dims[K]]:
+        return self._numpy_array[0, :]
+
+    def y(self) -> Array[Dims[K]]:
+        return self._numpy_array[1, :]
+
+    def heading(self) -> Array[Dims[K]]:
+        return self._numpy_array[2, :]
+
+    def speed(self) -> Array[Dims[K]]:
+        return self._numpy_array[3, :]
+
+    @property
+    def dimension(self) -> BicycleD_o:
+        return cast(BicycleD_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, f"{BICYCLE_D_O} K"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[BicycleD_o, K]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
 @dataclass(frozen=True)
 class JaxBicycleObstacleStateSequences[T: int, K: int]:
-    array: Float[JaxArray, f"T {BICYCLE_D_X} K"]
+    _array: Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} K"]
+    _covariance: Float[
+        JaxArray, f"T {BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"
+    ]
 
     @staticmethod
-    def create(
+    def wrap[T_: int, K_: int](
         *,
-        x: Float[JaxArray, "T K"],
-        y: Float[JaxArray, "T K"],
-        heading: Float[JaxArray, "T K"],
-        speed: Float[JaxArray, "T K"],
-    ) -> "JaxBicycleObstacleStateSequences[int, int]":
-        array = jnp.stack([x, y, heading, speed], axis=1)
-        return JaxBicycleObstacleStateSequences(array)
+        array: Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} K"],
+        covariance: Float[
+            JaxArray, f"T {BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"
+        ],
+        horizon: T_ | None = None,
+        count: K_ | None = None,
+    ) -> "JaxBicycleObstacleStateSequences[T_, K_]":
+        horizon = horizon if horizon is not None else cast(T_, array.shape[0])
+        count = count if count is not None else cast(K_, array.shape[2])
 
-    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, BicycleD_x, K]]:
-        return np.asarray(self.array)
-
-    def single(self) -> Never:
-        # TODO: Fix this!
-        raise NotImplementedError(
-            "single() is not implemented for JaxBicycleObstacleStateSequences."
+        assert array.shape == (expected := (horizon, BICYCLE_ESTIMATION_D_X, count)), (
+            f"Array shape {array.shape} does not match expected shape {expected}."
+        )
+        assert covariance.shape == (
+            expected := (
+                horizon,
+                BICYCLE_ESTIMATION_D_X,
+                BICYCLE_ESTIMATION_D_X,
+                count,
+            )
+        ), (
+            f"Covariance shape {covariance.shape} does not match expected shape {expected}."
         )
 
+        return JaxBicycleObstacleStateSequences(array, covariance)
+
+    @staticmethod
+    def create[T_: int = int, K_: int = int](
+        predictions: Sequence[BicycleGaussianBelief[K_]],
+    ) -> "JaxBicycleObstacleStateSequences[T_, K_]":
+        assert len(predictions) > 0, "Predictions sequence must not be empty."
+
+        array = jnp.stack([belief.mean for belief in predictions], axis=0)
+        covariance = jnp.stack([belief.covariance for belief in predictions], axis=0)
+
+        return JaxBicycleObstacleStateSequences(array, covariance)
+
+    def __array__(
+        self, dtype: DataType | None = None
+    ) -> Array[Dims[T, BicycleEstimationD_x, K]]:
+        return self._numpy_array
+
     def x(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 0, :])
+        return self._numpy_array[:, 0, :]
 
     def y(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 1, :])
+        return self._numpy_array[:, 1, :]
 
     def heading(self) -> Array[Dims[T, K]]:
-        return np.asarray(self.array[:, 2, :])
+        return self._numpy_array[:, 2, :]
+
+    def covariance(
+        self,
+    ) -> Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"]:
+        return self._covariance
+
+    def pose(self) -> JaxObstacle2dPoses[T, K]:
+        return JaxObstacle2dPoses.create(
+            x=self.x_array,
+            y=self.y_array,
+            heading=self.heading_array,
+            covariance=self.pose_covariance_array,
+        )
 
     @property
     def horizon(self) -> T:
         return cast(T, self.array.shape[0])
 
     @property
-    def dimension(self) -> BicycleD_x:
-        return cast(BicycleD_x, self.array.shape[1])
+    def dimension(self) -> BicycleEstimationD_x:
+        return cast(BicycleEstimationD_x, self.array.shape[1])
 
     @property
     def count(self) -> K:
         return cast(K, self.array.shape[2])
 
     @property
+    def array(self) -> Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} K"]:
+        return self._array
+
+    @property
     def x_array(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 0, :]
+        return self._array[:, 0, :]
 
     @property
     def y_array(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 1, :]
+        return self._array[:, 1, :]
 
     @property
     def heading_array(self) -> Float[JaxArray, "T K"]:
-        return self.array[:, 2, :]
+        return self._array[:, 2, :]
+
+    @property
+    def covariance_array(
+        self,
+    ) -> Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"]:
+        return self._covariance
+
+    @property
+    def pose_covariance_array(self) -> Float[JaxArray, f"T {POSE_D_O} {POSE_D_O} K"]:
+        return self._covariance[:, :3, :3, :]
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, BicycleEstimationD_x, K]]:
+        return np.asarray(self._array)
 
 
 @jaxtyped
 @dataclass(frozen=True)
-class JaxBicycleObstacleVelocities[K: int]:
-    steering_angles: Float[JaxArray, "K"]
+class JaxBicycleObstacleInputs[K: int]:
+    _accelerations: Float[JaxArray, "K"]
+    _steering_angles: Float[JaxArray, "K"]
+
+    @staticmethod
+    def wrap[K_: int](
+        inputs: Array[Dims[BicycleD_u, K_]] | Float[JaxArray, f"{BICYCLE_D_U} K"],
+    ) -> "JaxBicycleObstacleInputs[K_]":
+        inputs = jnp.asarray(inputs)
+        return JaxBicycleObstacleInputs(
+            _accelerations=inputs[0], _steering_angles=inputs[1]
+        )
+
+    @staticmethod
+    def create[K_: int](
+        *,
+        accelerations: Array[Dims[K_]] | Float[JaxArray, "K"],
+        steering_angles: Array[Dims[K_]] | Float[JaxArray, "K"],
+    ) -> "JaxBicycleObstacleInputs[int]":
+        return JaxBicycleObstacleInputs(
+            _accelerations=jnp.asarray(accelerations),
+            _steering_angles=jnp.asarray(steering_angles),
+        )
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[BicycleD_u, K]]:
+        return self._numpy_array
+
+    def accelerations(self) -> Array[Dims[K]]:
+        return self._numpy_array[0, :]
+
+    def steering_angles(self) -> Array[Dims[K]]:
+        return self._numpy_array[1, :]
+
+    def zeroed(
+        self, *, acceleration: bool = False, steering_angle: bool = False
+    ) -> "JaxBicycleObstacleInputs[K]":
+        """Returns a version of the inputs with the specified components zeroed out."""
+        return JaxBicycleObstacleInputs(
+            _accelerations=jnp.zeros_like(self._accelerations)
+            if acceleration
+            else self._accelerations,
+            _steering_angles=jnp.zeros_like(self._steering_angles)
+            if steering_angle
+            else self._steering_angles,
+        )
+
+    @property
+    def dimension(self) -> BicycleD_u:
+        return BICYCLE_D_U
 
     @property
     def count(self) -> K:
-        return cast(K, self.steering_angles.shape[0])
+        return cast(K, self._steering_angles.shape[0])
 
+    @property
+    def accelerations_array(self) -> Float[JaxArray, "K"]:
+        return self._accelerations
 
-@jaxtyped
-@dataclass(frozen=True)
-class JaxBicycleObstacleControlInputSequences[T: int, K: int]:
-    array: Float[JaxArray, f"T {BICYCLE_D_U} K"]
+    @property
+    def steering_angles_array(self) -> Float[JaxArray, "K"]:
+        return self._steering_angles
 
-    @staticmethod
-    def create(
-        *,
-        accelerations: Float[JaxArray, "T K"],
-        steering_angles: Float[JaxArray, "T K"],
-    ) -> "JaxBicycleObstacleControlInputSequences[int, int]":
-        array = jnp.stack([accelerations, steering_angles], axis=1)
-        return JaxBicycleObstacleControlInputSequences(array)
+    @property
+    def array(self) -> Float[JaxArray, f"{BICYCLE_D_U} K"]:
+        return jnp.stack([self._accelerations, self._steering_angles], axis=0)
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[BicycleD_u, K]]:
+        array = np.asarray(self.array)
+
+        assert shape_of(array, matches=(BICYCLE_D_U, self.count))
+
+        return array
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -567,37 +762,248 @@ class JaxBicycleModel(
         return self._time_step_size
 
 
+class JaxBicycleStateEstimationModel(NamedTuple):
+    """Kinematic bicycle model used for state estimation."""
+
+    time_step_size: Scalar
+    wheelbase: Scalar
+    initial_state_covariance: EstimationStateCovarianceArray
+
+    @staticmethod
+    def create(
+        *,
+        time_step_size: float,
+        wheelbase: float,
+        initial_state_covariance: Array[
+            Dims[BicycleEstimationD_x, BicycleEstimationD_x]
+        ]
+        | EstimationStateCovarianceArray
+        | None = None,
+    ) -> "JaxBicycleStateEstimationModel":
+        if initial_state_covariance is None:
+            initial_state_covariance = (
+                JaxBicycleStateEstimationModel.default_initial_state_covariance()
+            )
+
+        return JaxBicycleStateEstimationModel(
+            time_step_size=jnp.asarray(time_step_size),
+            wheelbase=jnp.asarray(wheelbase),
+            initial_state_covariance=jnp.asarray(initial_state_covariance),
+        )
+
+    @staticmethod
+    def default_initial_state_covariance() -> EstimationStateCovarianceArray:
+        # NOTE: Sure of pose, unsure of everything else.
+        # Steering angle covariance is kept somewhat smaller (0.1), since it
+        # otherwise messes up UKF.
+        return jnp.diag(
+            jnp.array(
+                [
+                    SMALL_UNCERTAINTY,
+                    SMALL_UNCERTAINTY,
+                    SMALL_UNCERTAINTY,
+                    LARGE_UNCERTAINTY,
+                    LARGE_UNCERTAINTY,
+                    0.1,
+                ]
+            )
+        )
+
+    @jax.jit
+    @jaxtyped
+    def __call__(self, state: Float[JaxArray, "D_x K"]) -> Float[JaxArray, "D_x K"]:
+        return jax.vmap(self.step, in_axes=1, out_axes=1)(state)
+
+    @jax.jit
+    @jaxtyped
+    def jacobian(self, state: Float[JaxArray, "D_x K"]) -> Float[JaxArray, "D_x D_x K"]:
+        return jax.vmap(jax.jacfwd(self.step))(state.T).transpose(1, 2, 0)
+
+    @jax.jit
+    @jaxtyped
+    def step(self, state: Float[JaxArray, "D_x"]) -> Float[JaxArray, "D_x"]:
+        dt = self.time_step_size
+        x, y, theta, v, a, delta = state
+        return jnp.array(
+            [
+                x + v * jnp.cos(theta) * dt,
+                y + v * jnp.sin(theta) * dt,
+                theta + (v / self.wheelbase) * jnp.tan(delta) * dt,
+                v + a * dt,
+                a,
+                delta,
+            ]
+        )
+
+    def observations_from[T: int = int, K: int = int](
+        self, history: JaxBicycleObstacleStatesHistory[T, K]
+    ) -> Float[JaxArray, "T D_z K"]:
+        return jnp.stack(
+            [history.x_array, history.y_array, history.heading_array], axis=1
+        )
+
+    def states_from[K: int = int](
+        self, belief: BicycleGaussianBelief[K]
+    ) -> JaxBicycleObstacleStates[K]:
+        return JaxBicycleObstacleStates.wrap(belief.mean[:4, :])
+
+    def inputs_from[K: int = int](
+        self, belief: BicycleGaussianBelief[K]
+    ) -> JaxBicycleObstacleInputs[K]:
+        return JaxBicycleObstacleInputs.wrap(belief.mean[4:, :])
+
+    def initial_belief_from[K: int](
+        self,
+        *,
+        states: JaxBicycleObstacleStates[K],
+        inputs: JaxBicycleObstacleInputs[K],
+        covariances: JaxBicycleObstacleCovariances[K] | None = None,
+    ) -> BicycleGaussianBelief[K]:
+        augmented = jnp.concatenate([states.array, inputs.array], axis=0)
+
+        if covariances is None:
+            # NOTE: No covariance means we are "certain" about the states.
+            covariances = jnp.broadcast_to(
+                jnp.eye(BICYCLE_ESTIMATION_D_X)[:, :, jnp.newaxis] * SMALL_UNCERTAINTY,
+                (BICYCLE_ESTIMATION_D_X, BICYCLE_ESTIMATION_D_X, states.count),
+            )
+
+        return JaxGaussianBelief(mean=augmented, covariance=covariances)
+
+    @property
+    def observation_matrix(self) -> ObservationMatrix:
+        # NOTE: We observe the pose directly.
+        return jnp.array(
+            [
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            ]
+        )
+
+
 @dataclass(kw_only=True, frozen=True)
 class JaxBicycleObstacleModel(
     ObstacleModel[
         JaxBicycleObstacleStatesHistory,
         JaxBicycleObstacleStates,
-        JaxBicycleObstacleVelocities,
-        JaxBicycleObstacleControlInputSequences,
+        JaxBicycleObstacleInputs,
+        JaxBicycleObstacleCovariances,
         JaxBicycleObstacleStateSequences,
     ]
 ):
-    """Estimates obstacle steering from history and propagates bicycle kinematics forward."""
+    """Propagates bicycle kinematics forward given states and control inputs."""
 
+    model: "JaxBicycleStateEstimationModel"
+    process_noise_covariance: "EstimationStateCovarianceArray"
+    predictor: KalmanFilter
+
+    @staticmethod
+    def unscented(
+        *,
+        time_step_size: float,
+        wheelbase: float = 1.0,
+        process_noise_covariance: JaxNoiseCovarianceDescription = 1e-3,
+        sigma_point_spread: float = 1.0,
+        prior_knowledge: float = 2.0,
+    ) -> "JaxBicycleObstacleModel":
+        """Creates a bicycle obstacle model for obstacle state prediction. This
+        model uses the unscented transform for propagating state information through
+        the nonlinear bicycle dynamics.
+
+        Args:
+            time_step_size: Time step size for state propagation.
+            wheelbase: Distance between front and rear axles.
+            process_noise_covariance: The process noise covariance, either as a
+                full covariance array, a diagonal covariance vector, or a scalar
+                variance representing isotropic noise.
+            sigma_point_spread: Spread of sigma points (α) for the unscented
+                transform, controlling how far the sigma points are from the mean.
+            prior_knowledge: Prior knowledge (β) about the state distribution
+                for the unscented transform.
+        """
+        standardized_covariance = jax_kalman_filter.standardize_noise_covariance(
+            process_noise_covariance, dimension=BICYCLE_ESTIMATION_D_X
+        )
+        return JaxBicycleObstacleModel(
+            model=JaxBicycleStateEstimationModel.create(
+                time_step_size=time_step_size, wheelbase=wheelbase
+            ),
+            process_noise_covariance=standardized_covariance,
+            predictor=JaxUnscentedKalmanFilter.create(
+                alpha=sigma_point_spread, beta=prior_knowledge
+            ),
+        )
+
+    def forward[T: int, K: int](
+        self,
+        *,
+        states: JaxBicycleObstacleStates[K],
+        inputs: JaxBicycleObstacleInputs[K],
+        covariances: JaxBicycleObstacleCovariances[K] | None,
+        horizon: T,
+    ) -> JaxBicycleObstacleStateSequences[T, K]:
+        means, covariance = forward(
+            initial=self.model.initial_belief_from(
+                states=states, inputs=inputs, covariances=covariances
+            ),
+            model=self.model,
+            predictor=self.predictor,
+            process_noise_covariance=self.process_noise_covariance,
+            horizon=horizon,
+        )
+
+        return JaxBicycleObstacleStateSequences.wrap(array=means, covariance=covariance)
+
+
+@dataclass(frozen=True)
+class JaxFiniteDifferenceBicycleStateEstimator(
+    ObstacleStateEstimator[
+        JaxBicycleObstacleStatesHistory,
+        JaxBicycleObstacleStates,
+        JaxBicycleObstacleInputs,
+    ]
+):
     time_step_size: Scalar
     wheelbase: Scalar
 
     @staticmethod
     def create(
-        *, time_step_size: float, wheelbase: float = 1.0
-    ) -> "JaxBicycleObstacleModel":
-        return JaxBicycleObstacleModel(
+        *, time_step_size: float, wheelbase: float
+    ) -> "JaxFiniteDifferenceBicycleStateEstimator":
+        return JaxFiniteDifferenceBicycleStateEstimator(
             time_step_size=jnp.asarray(time_step_size), wheelbase=jnp.asarray(wheelbase)
         )
 
-    def estimate_state_from[K: int](
-        self, history: JaxBicycleObstacleStatesHistory[int, K]
+    def estimate_from[K: int, T: int = int](
+        self, history: JaxBicycleObstacleStatesHistory[T, K]
     ) -> EstimatedObstacleStates[
-        JaxBicycleObstacleStates[K], JaxBicycleObstacleVelocities[K]
+        JaxBicycleObstacleStates[K], JaxBicycleObstacleInputs[K], None
     ]:
-        assert history.horizon > 0, "History must have at least one time step."
+        """Estimates current states and inputs from pose history using finite differences. Zeros
+        are assumed for states that cannot be estimated due to insufficient history length.
 
-        speeds, steering_angles = estimate_velocities(
+        Computes the following quantities from the kinematic bicycle model:
+
+        **Speed** (requires T ≥ 2):
+            Projection of displacement onto the heading direction (negative for reverse):
+            $$v_t = \\frac{(x_t - x_{t-1}) \\cos(\\theta_t) + (y_t - y_{t-1}) \\sin(\\theta_t)}{\\Delta t}$$
+
+        **Acceleration** (requires T ≥ 3):
+            Change in speed over time:
+            $$a_t = \\frac{v_t - v_{t-1}}{\\Delta t}$$
+
+        **Steering angle** (requires T ≥ 2):
+            Derived from the kinematic bicycle model, where $\\omega = \\frac{d\\theta}{dt}$ is the heading rate:
+            $$\\delta_t = \\arctan\\left(\\frac{L \\cdot \\omega_t}{v_t}\\right)$$
+            Zero when $|v_t| < \\epsilon$ (estimate becomes unreliable).
+
+        Args:
+            history: Obstacle pose history containing at least one entry.
+        """
+        assert history.horizon > 0, "History must contain at least one state."
+
+        estimated = estimate_states(
             x_history=history.x_array,
             y_history=history.y_array,
             heading_history=history.heading_array,
@@ -607,45 +1013,156 @@ class JaxBicycleObstacleModel(
 
         return EstimatedObstacleStates(
             states=JaxBicycleObstacleStates.create(
-                x=history.x_array[-1],
-                y=history.y_array[-1],
-                heading=history.heading_array[-1],
-                speed=speeds,
+                x=estimated.x,
+                y=estimated.y,
+                heading=estimated.heading,
+                speed=estimated.speed,
             ),
-            velocities=JaxBicycleObstacleVelocities(steering_angles=steering_angles),
+            inputs=cast(
+                JaxBicycleObstacleInputs[K],
+                JaxBicycleObstacleInputs.create(
+                    accelerations=estimated.accelerations,
+                    steering_angles=estimated.steering_angles,
+                ),
+            ),
+            covariance=None,
         )
 
-    def input_to_maintain[K: int](
-        self,
-        velocities: JaxBicycleObstacleVelocities[K],
+
+@dataclass(frozen=True)
+class JaxKfBicycleStateEstimator(
+    ObstacleStateEstimator[
+        JaxBicycleObstacleStatesHistory,
+        JaxBicycleObstacleStates,
+        JaxBicycleObstacleInputs,
+        JaxBicycleObstacleCovariances,
+    ]
+):
+    """Kalman Filter state estimator for bicycle model obstacles."""
+
+    process_noise_covariance: ProcessNoiseCovarianceArray
+    observation_noise_covariance: ObservationNoiseCovarianceArray
+    model: JaxBicycleStateEstimationModel
+    estimator: KalmanFilter
+
+    @staticmethod
+    def ekf(
         *,
-        states: JaxBicycleObstacleStates[K],
-        horizon: int,
-    ) -> JaxBicycleObstacleControlInputSequences[int, K]:
-        return JaxBicycleObstacleControlInputSequences.create(  # type: ignore[return-value]
-            accelerations=jnp.zeros((horizon, velocities.count)),
-            steering_angles=jnp.tile(
-                velocities.steering_angles[jnp.newaxis, :], (horizon, 1)
+        time_step_size: float,
+        wheelbase: float,
+        process_noise_covariance: JaxNoiseCovarianceDescription[BicycleEstimationD_x],
+        observation_noise_covariance: JaxNoiseCovarianceDescription[
+            BicycleObservationD_o
+        ],
+        initial_state_covariance: Array[
+            Dims[BicycleEstimationD_x, BicycleEstimationD_x]
+        ]
+        | EstimationStateCovarianceArray
+        | None = None,
+    ) -> "JaxKfBicycleStateEstimator":
+        """Creates an EKF state estimator for the bicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            wheelbase: The wheelbase of the bicycle.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            initial_state_covariance: The initial state covariance for the Kalman filter.
+                If not provided, low uncertainty will be assumed for observed states and high
+                uncertainty for speed and inputs.
+        """
+        return JaxKfBicycleStateEstimator(
+            process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=BICYCLE_ESTIMATION_D_X
             ),
+            observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=BICYCLE_OBSERVATION_D_O
+            ),
+            model=JaxBicycleStateEstimationModel.create(
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+                initial_state_covariance=initial_state_covariance,
+            ),
+            estimator=JaxExtendedKalmanFilter.create(),
         )
 
-    def forward[T: int, K: int](
-        self,
+    @staticmethod
+    def ukf(
         *,
-        current: JaxBicycleObstacleStates[K],
-        inputs: JaxBicycleObstacleControlInputSequences[T, K],
-    ) -> JaxBicycleObstacleStateSequences[T, K]:
-        return JaxBicycleObstacleStateSequences(
-            simulate(
-                inputs.array,
-                current.array,
-                time_step_size=self.time_step_size,
-                wheelbase=self.wheelbase,
-                speed_limits=NO_LIMITS,
-                steering_limits=NO_LIMITS,
-                acceleration_limits=NO_LIMITS,
-            )
+        time_step_size: float,
+        wheelbase: float,
+        process_noise_covariance: JaxNoiseCovarianceDescription[BicycleEstimationD_x],
+        observation_noise_covariance: JaxNoiseCovarianceDescription[
+            BicycleObservationD_o
+        ],
+        initial_state_covariance: Array[
+            Dims[BicycleEstimationD_x, BicycleEstimationD_x]
+        ]
+        | EstimationStateCovarianceArray
+        | None = None,
+    ) -> "JaxKfBicycleStateEstimator":
+        """Creates a UKF state estimator for the bicycle model with the specified noise
+        covariances.
+
+        Args:
+            time_step_size: The time step size for the state transition model.
+            wheelbase: The wheelbase of the bicycle.
+            process_noise_covariance: The process noise covariance, either as a full
+                matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            observation_noise_covariance: The observation noise covariance, either as a
+                full matrix, a vector of diagonal entries, or a scalar for isotropic noise.
+            initial_state_covariance: The initial state covariance for the Kalman filter.
+                If not provided, low uncertainty will be assumed for observed states and high
+                uncertainty for speed and inputs.
+        """
+        return JaxKfBicycleStateEstimator(
+            process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                process_noise_covariance, dimension=BICYCLE_ESTIMATION_D_X
+            ),
+            observation_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
+                observation_noise_covariance, dimension=BICYCLE_OBSERVATION_D_O
+            ),
+            model=JaxBicycleStateEstimationModel.create(
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+                initial_state_covariance=initial_state_covariance,
+            ),
+            estimator=JaxUnscentedKalmanFilter.create(),
         )
+
+    def estimate_from[K: int, T: int = int](
+        self, history: JaxBicycleObstacleStatesHistory[T, K]
+    ) -> EstimatedObstacleStates[
+        JaxBicycleObstacleStates[K],
+        JaxBicycleObstacleInputs[K],
+        JaxBicycleObstacleCovariances[K],
+    ]:
+        estimate = self.estimator.filter(
+            self.model.observations_from(history),
+            initial_state_covariance=self.model.initial_state_covariance,
+            state_transition=self.model,
+            process_noise_covariance=self.process_noise_covariance,
+            observation_noise_covariance=self.observation_noise_covariance,
+            observation_matrix=self.model.observation_matrix,
+        )
+
+        return EstimatedObstacleStates(
+            states=self.model.states_from(estimate),
+            inputs=self.model.inputs_from(estimate),
+            covariance=estimate.covariance,
+        )
+
+
+class EstimatedBicycleObstacleStates(NamedTuple):
+    x: Float[JaxArray, "K"]
+    y: Float[JaxArray, "K"]
+    heading: Float[JaxArray, "K"]
+    speed: Float[JaxArray, "K"]
+    accelerations: Float[JaxArray, "K"]
+    steering_angles: Float[JaxArray, "K"]
 
 
 def wrap(limits: tuple[float, float]) -> tuple[Scalar, Scalar]:
@@ -709,50 +1226,189 @@ def step(
 
 @jax.jit
 @jaxtyped
-def estimate_velocities(
+def estimate_states(
     *,
     x_history: Float[JaxArray, "T K"],
     y_history: Float[JaxArray, "T K"],
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
     wheelbase: Scalar,
-) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
-    horizon = x_history.shape[0]
-    count = x_history.shape[1]
-    return jax.lax.cond(
-        horizon > 1,
-        lambda: _estimate_velocities_with_two_points(
-            x_history=x_history,
-            y_history=y_history,
-            heading_history=heading_history,
-            time_step_size=time_step_size,
-            wheelbase=wheelbase,
+) -> EstimatedBicycleObstacleStates:
+    filter_invalid_short = invalid_obstacle_filter_from(
+        x_history, y_history, heading_history, check_recent=2
+    )
+    filter_invalid_long = invalid_obstacle_filter_from(
+        x_history, y_history, heading_history, check_recent=3
+    )
+
+    return EstimatedBicycleObstacleStates(
+        x=x_history[-1],
+        y=y_history[-1],
+        heading=heading_history[-1],
+        speed=filter_invalid_short(
+            speed := estimate_speed(
+                x_history=x_history,
+                y_history=y_history,
+                heading_history=heading_history,
+                time_step_size=time_step_size,
+            )
         ),
-        lambda: (jnp.zeros(count), jnp.zeros(count)),
+        accelerations=filter_invalid_long(
+            estimate_acceleration(
+                x_history=x_history,
+                y_history=y_history,
+                heading_history=heading_history,
+                speed_current=speed,
+                time_step_size=time_step_size,
+            )
+        ),
+        steering_angles=filter_invalid_short(
+            estimate_steering_angle(
+                heading_history=heading_history,
+                speed_current=speed,
+                time_step_size=time_step_size,
+                wheelbase=wheelbase,
+            )
+        ),
     )
 
 
 @jax.jit
 @jaxtyped
-def _estimate_velocities_with_two_points(
+def estimate_speed(
     *,
     x_history: Float[JaxArray, "T K"],
     y_history: Float[JaxArray, "T K"],
     heading_history: Float[JaxArray, "T K"],
     time_step_size: Scalar,
-    wheelbase: Scalar,
-) -> tuple[Float[JaxArray, "K"], Float[JaxArray, "K"]]:
-    delta_x = x_history[-1] - x_history[-2]
-    delta_y = y_history[-1] - y_history[-2]
+) -> Float[JaxArray, "K"]:
 
-    speeds = jnp.sqrt(delta_x**2 + delta_y**2) / time_step_size
+    horizon = x_history.shape[0]
+    obstacle_count = x_history.shape[1]
 
-    heading_velocity = (heading_history[-1] - heading_history[-2]) / time_step_size
+    def estimate(
+        *,
+        x_current: Float[JaxArray, "K"],
+        y_current: Float[JaxArray, "K"],
+        x_previous: Float[JaxArray, "K"],
+        y_previous: Float[JaxArray, "K"],
+        heading: Float[JaxArray, "K"],
+    ) -> Float[JaxArray, "K"]:
+        delta_x = x_current - x_previous
+        delta_y = y_current - y_previous
 
-    steering_angles = jnp.where(
-        speeds > 1e-6,
-        jnp.arctan(heading_velocity * wheelbase / speeds),
-        jnp.zeros_like(speeds),
+        speeds = (
+            delta_x * jnp.cos(heading) + delta_y * jnp.sin(heading)
+        ) / time_step_size
+
+        return speeds
+
+    if horizon < 2:
+        return jnp.zeros(obstacle_count)
+
+    return estimate(
+        x_current=x_history[-1],
+        y_current=y_history[-1],
+        x_previous=x_history[-2],
+        y_previous=y_history[-2],
+        heading=heading_history[-1],
     )
 
-    return speeds, steering_angles
+
+@jax.jit
+@jaxtyped
+def estimate_acceleration(
+    *,
+    x_history: Float[JaxArray, "T K"],
+    y_history: Float[JaxArray, "T K"],
+    heading_history: Float[JaxArray, "T K"],
+    speed_current: Float[JaxArray, "K"],
+    time_step_size: Scalar,
+) -> Float[JaxArray, "K"]:
+    horizon = x_history.shape[0]
+    obstacle_count = x_history.shape[1]
+
+    def estimate(
+        *, speed_current: Float[JaxArray, "K"], speed_previous: Float[JaxArray, "K"]
+    ) -> Float[JaxArray, "K"]:
+        return (speed_current - speed_previous) / time_step_size
+
+    if horizon < 3:
+        return jnp.zeros(obstacle_count)
+
+    return estimate(
+        speed_current=speed_current,
+        speed_previous=estimate_speed(
+            x_history=x_history[:-1],
+            y_history=y_history[:-1],
+            heading_history=heading_history[:-1],
+            time_step_size=time_step_size,
+        ),
+    )
+
+
+@jax.jit
+@jaxtyped
+def estimate_steering_angle(
+    *,
+    heading_history: Float[JaxArray, "T K"],
+    speed_current: Float[JaxArray, "K"],
+    time_step_size: Scalar,
+    wheelbase: Scalar,
+) -> Float[JaxArray, "K"]:
+    horizon = heading_history.shape[0]
+    obstacle_count = heading_history.shape[1]
+
+    def estimate(
+        *,
+        speed_current: Float[JaxArray, "K"],
+        heading_current: Float[JaxArray, "K"],
+        heading_previous: Float[JaxArray, "K"],
+    ) -> Float[JaxArray, "K"]:
+        heading_velocity = (heading_current - heading_previous) / time_step_size
+
+        steering_angles = jnp.where(
+            jnp.abs(speed_current) > 1e-6,
+            jnp.arctan(heading_velocity * wheelbase / speed_current),
+            jnp.zeros_like(speed_current),
+        )
+
+        return steering_angles
+
+    if horizon < 2:
+        return jnp.zeros(obstacle_count)
+
+    return estimate(
+        speed_current=speed_current,
+        heading_current=heading_history[-1],
+        heading_previous=heading_history[-2],
+    )
+
+
+@jax.jit(static_argnames=("horizon",))
+@jaxtyped
+def forward(
+    *,
+    initial: BicycleGaussianBelief,
+    model: JaxBicycleStateEstimationModel,
+    predictor: KalmanFilter,
+    process_noise_covariance: ProcessNoiseCovarianceArray,
+    horizon: int,
+) -> tuple[
+    Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} K"],
+    Float[JaxArray, f"T {BICYCLE_ESTIMATION_D_X} {BICYCLE_ESTIMATION_D_X} K"],
+]:
+    def step(
+        belief: BicycleGaussianBelief, _
+    ) -> tuple[BicycleGaussianBelief, BicycleGaussianBelief]:
+        next_belief = predictor.predict(
+            belief=belief,
+            state_transition=model,
+            process_noise_covariance=process_noise_covariance,
+        )
+
+        return next_belief, next_belief
+
+    _, beliefs = jax.lax.scan(step, initial, xs=None, length=horizon)
+
+    return beliefs.mean, beliefs.covariance

@@ -53,12 +53,18 @@ def heading(states: BicycleStateBatch) -> types.Headings:
     return types.headings(heading=states.heading())
 
 
-def bicycle_to_obstacle_states(
-    states: types.bicycle.ObstacleStateSequences, covariances=None
-) -> ObstacleStates:
-    return types.obstacle_2d_poses.create(
-        x=states.x(), y=states.y(), heading=states.heading(), covariance=covariances
-    )
+class BicyclePredictionCreator:
+    def __call__(
+        self, *, states: types.bicycle.ObstacleStateSequences
+    ) -> ObstacleStates:
+        return states.pose()
+
+    def empty(self, *, horizon: int) -> ObstacleStates:
+        return types.obstacle_2d_poses.create(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
 
 
 class ObstaclePositionExtractor:
@@ -126,7 +132,10 @@ def create():
         predictor=predictor.curvilinear(
             horizon=HORIZON,
             model=model.bicycle.obstacle(time_step_size=DT, wheelbase=WHEELBASE),
-            prediction=bicycle_to_obstacle_states,
+            estimator=model.bicycle.estimator.finite_difference(
+                time_step_size=DT, wheelbase=WHEELBASE
+            ),
+            prediction=BicyclePredictionCreator(),
         ),
         history=types.obstacle_states_running_history.empty(
             creator=types.obstacle_2d_poses,

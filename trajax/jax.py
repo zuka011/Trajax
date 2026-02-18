@@ -15,7 +15,7 @@ from trajax.costs import (
 )
 from trajax.models import model as _model
 from trajax.obstacles import obstacles as _obstacles
-from trajax.predictors import predictor as _predictor, propagator as _propagator
+from trajax.predictors import predictor as _predictor
 from trajax.samplers import sampler as _sampler
 from trajax.trajectories import trajectory as _trajectory
 from trajax.states import extract as _extract
@@ -33,7 +33,6 @@ risk: Final = _risk.jax
 model: Final = _model.jax
 obstacles: Final = _obstacles.jax
 predictor: Final = _predictor.jax
-propagator: Final = _propagator.jax
 sampler: Final = _sampler.jax
 trajectory: Final = _trajectory.jax
 extract: Final = _extract

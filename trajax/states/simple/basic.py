@@ -10,6 +10,9 @@ from trajax.types import (
     NumPyControlInputSequence,
     NumPyControlInputBatch,
     NumPyCosts,
+    NumPySampledObstacleStates,
+    NumPyObstacleStates,
+    NumPyObstacleStatesForTimeStep,
 )
 
 import numpy as np
@@ -294,4 +297,110 @@ class NumPySimpleCosts[T: int, M: int](NumPyCosts[T, M]):
 
     @property
     def array(self) -> Array[Dims[T, M]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleSampledObstacleStates[T: int, D_o: int, K: int, N: int](
+    NumPySampledObstacleStates[T, D_o, K, N]
+):
+    """NumPy sampled obstacle states as a 4D array (time × dimension × obstacles × samples)."""
+
+    _array: Array[Dims[T, D_o, K, N]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
+        return self.array
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
+    @property
+    def sample_count(self) -> N:
+        return self.array.shape[3]
+
+    @property
+    def array(self) -> Array[Dims[T, D_o, K, N]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleStatesForTimeStep[D_o: int, K: int](
+    NumPyObstacleStatesForTimeStep[D_o, K, "NumPySimpleObstacleStates"]
+):
+    """NumPy obstacle states for a single time step as a 2D array (dimension × obstacles)."""
+
+    _array: Array[Dims[D_o, K]]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
+        return self.array
+
+    def replicate(self, *, horizon: int) -> "NumPySimpleObstacleStates":
+        # TODO: Implement replicate method
+        raise NotImplementedError()
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[0]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[1]
+
+    @property
+    def array(self) -> Array[Dims[D_o, K]]:
+        return self._array
+
+
+@dataclass(frozen=True)
+class NumPySimpleObstacleStates[T: int, D_o: int, K: int](
+    NumPyObstacleStates[T, D_o, K, NumPySimpleSampledObstacleStates[T, D_o, K, D[1]]]
+):
+    """NumPy obstacle states as a 3D array (time × dimension × obstacles)."""
+
+    _array: Array[Dims[T, D_o, K]]
+    _covariance: Array[Dims[T, D_o, D_o, K]] | None = None
+
+    @staticmethod
+    def create[T_: int, D_o_: int, K_: int](
+        *,
+        states: Array[Dims[T_, D_o_, K_]],
+        covariance: Array[Dims[T_, D_o_, D_o_, K_]] | None = None,
+    ) -> "NumPySimpleObstacleStates[T_, D_o_, K_]":
+        return NumPySimpleObstacleStates(states, covariance)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
+        return self.array
+
+    def single(self) -> NumPySimpleSampledObstacleStates[T, D_o, K, D[1]]:
+        return NumPySimpleSampledObstacleStates(self.array[..., np.newaxis])
+
+    def last(self) -> NumPySimpleObstacleStatesForTimeStep[D_o, K]:
+        return NumPySimpleObstacleStatesForTimeStep(self.array[-1, :, :])
+
+    def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
+        return self._covariance
+
+    @property
+    def horizon(self) -> T:
+        return self.array.shape[0]
+
+    @property
+    def dimension(self) -> D_o:
+        return self.array.shape[1]
+
+    @property
+    def count(self) -> K:
+        return self.array.shape[2]
+
+    @property
+    def array(self) -> Array[Dims[T, D_o, K]]:
         return self._array

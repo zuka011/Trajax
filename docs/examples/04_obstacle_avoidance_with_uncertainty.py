@@ -7,6 +7,7 @@ evaluating collision costs.
 
 from dataclasses import dataclass
 
+import numpy as np
 from numtypes import array
 
 from trajax import Circles, access, collectors, metrics
@@ -20,7 +21,6 @@ from trajax.numpy import (
     mppi,
     obstacles as create_obstacles,
     predictor,
-    propagator,
     risk,
     sampler,
     trajectory,
@@ -54,12 +54,18 @@ def heading(states: BicycleStateBatch) -> types.Headings:
     return types.headings(heading=states.heading())
 
 
-def bicycle_to_obstacle_states(
-    states: types.bicycle.ObstacleStateSequences, covariances=None
-) -> ObstacleStates:
-    return types.obstacle_2d_poses.create(
-        x=states.x(), y=states.y(), heading=states.heading(), covariance=covariances
-    )
+class BicyclePredictionCreator:
+    def __call__(
+        self, *, states: types.bicycle.ObstacleStateSequences
+    ) -> ObstacleStates:
+        return states.pose()
+
+    def empty(self, *, horizon: int) -> ObstacleStates:
+        return types.obstacle_2d_poses.create(
+            x=np.empty((horizon, 0)),
+            y=np.empty((horizon, 0)),
+            heading=np.empty((horizon, 0)),
+        )
 
 
 class ObstaclePositionExtractor:
@@ -124,7 +130,7 @@ def create():
                 [25.0, 22.5],
                 [55.0, 0.0],
                 [15.0, -5.0],
-                [42.0, 4.0],
+                [42.0, 2.0],
             ],
             shape=(4, 2),
         ),
@@ -143,19 +149,17 @@ def create():
         predictor=predictor.curvilinear(
             horizon=HORIZON,
             model=model.bicycle.obstacle(time_step_size=DT, wheelbase=WHEELBASE),
-            prediction=bicycle_to_obstacle_states,
-            propagator=propagator.linear(
+            estimator=model.bicycle.estimator.ekf(
                 time_step_size=DT,
-                initial_covariance=propagator.covariance.constant_variance(
-                    position_variance=0.01,
-                    velocity_variance=1.0,
-                ),
-                padding=propagator.padding(to_dimension=3, epsilon=1e-9),
+                wheelbase=WHEELBASE,
+                process_noise_covariance=1e-4,
+                observation_noise_covariance=1e-8,
             ),
+            prediction=BicyclePredictionCreator(),
         ),
         history=types.obstacle_states_running_history.empty(
             creator=types.obstacle_2d_poses,
-            horizon=2,
+            horizon=10,
             obstacle_count=obstacle_simulator.obstacle_count,
         ),
         id_assignment=create_obstacles.id_assignment.hungarian(

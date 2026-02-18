@@ -15,7 +15,7 @@ from trajax.costs import (
 )
 from trajax.models import model as _model
 from trajax.obstacles import obstacles as _obstacles
-from trajax.predictors import predictor as _predictor, propagator as _propagator
+from trajax.predictors import predictor as _predictor
 from trajax.samplers import sampler as _sampler
 from trajax.trajectories import trajectory as _trajectory
 from trajax.states import extract as _extract
@@ -33,7 +33,6 @@ risk: Final = _risk.numpy
 model: Final = _model.numpy
 obstacles: Final = _obstacles.numpy
 predictor: Final = _predictor.numpy
-propagator: Final = _propagator.numpy
 sampler: Final = _sampler.numpy
 trajectory: Final = _trajectory.numpy
 extract: Final = _extract

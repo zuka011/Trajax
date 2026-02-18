@@ -95,18 +95,6 @@ class ObstacleStatesForTimeStep[D_o: int, K: int, ObstacleStatesT](Protocol):
         """Returns the mean states of obstacles at a single time step as a NumPy array."""
         ...
 
-    def x(self) -> Array[Dims[K]]:
-        """Returns the x positions of obstacles at a single time step."""
-        ...
-
-    def y(self) -> Array[Dims[K]]:
-        """Returns the y positions of obstacles at a single time step."""
-        ...
-
-    def heading(self) -> Array[Dims[K]]:
-        """Returns the headings of obstacles at a single time step."""
-        ...
-
     def replicate(self, *, horizon: int) -> ObstacleStatesT:
         """Replicates the obstacle states over the given time horizon."""
         ...
@@ -125,18 +113,6 @@ class ObstacleStatesForTimeStep[D_o: int, K: int, ObstacleStatesT](Protocol):
 class ObstacleStates[T: int, D_o: int, K: int, SingleSampleT](Protocol):
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         """Returns the mean states of obstacles as a NumPy array."""
-        ...
-
-    def x(self) -> Array[Dims[T, K]]:
-        """Returns the x positions of obstacles over time."""
-        ...
-
-    def y(self) -> Array[Dims[T, K]]:
-        """Returns the y positions of obstacles over time."""
-        ...
-
-    def heading(self) -> Array[Dims[T, K]]:
-        """Returns the headings of obstacles over time."""
         ...
 
     def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:

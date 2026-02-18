@@ -50,7 +50,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                     )
                 ),
                 # K = 1 Obstacle, N = 1 Sample
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[x_o := 5.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[y_o := 0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -85,7 +85,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[x_o := 3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[y_o := 4.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -119,7 +119,7 @@ class test_that_distance_is_computed_correctly_when_ego_and_obstacle_are_single_
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[x_o := 1.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[y_o := 0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -184,7 +184,7 @@ class test_that_that_distance_is_computed_correctly_when_ego_is_multiple_circles
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[10.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -250,7 +250,7 @@ class test_that_closest_obstacle_circle_is_used_when_obstacle_is_multiple_circle
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -316,7 +316,7 @@ class test_that_ego_circle_offsets_are_applied_when_ego_circles_are_not_centered
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -388,7 +388,7 @@ class test_that_obstacle_circle_offsets_are_applied_when_obstacle_circles_are_no
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -452,7 +452,7 @@ class test_that_closest_across_all_obstacles_is_considered_when_multiple_obstacl
                     )
                 ),
                 # Obstacle A at (9, 0), Obstacle B at (4, 0)
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[9.0], [4.0]]], shape=(T, K := 2, N := 1)),
                     y=array([[[0.0], [0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0], [0.0]]], shape=(T, K, N)),
@@ -523,7 +523,7 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                     )
                 ),
                 # One obstacle at origin
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -558,7 +558,7 @@ class test_that_distances_are_computed_when_there_are_multiple_rollouts:
                         shape=(T := 1, D_x := 3, M := 3),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -628,7 +628,7 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                     )
                 ),
                 # Obstacle moving: t=0 at (5,0), t=1 at (4,0), t=2 at (3,0)
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0]], [[4.0]], [[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
@@ -661,7 +661,7 @@ class test_that_distances_are_computed_when_there_are_multiple_time_steps:
                         shape=(T := 3, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[4.0]], [[3.0]], [[2.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]], [[0.0]], [[0.0]]], shape=(T, K, N)),
@@ -725,7 +725,7 @@ class test_that_distance_is_computed_correctly_when_obstacle_circle_has_zero_rad
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[4.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -788,7 +788,7 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                         )
                     ),
                     # No obstacles means infinite distance (represented as a large value)
-                    obstacle_states := data.obstacle_state_samples(
+                    obstacle_states := data.obstacle_2d_pose_samples(
                         x=np.empty((T, K := 0, N := 1)),
                         y=np.empty((T, K, N)),
                         heading=np.empty((T, K, N)),
@@ -832,7 +832,7 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=np.empty((T, K := 0, N := 1)),
                     y=np.empty((T, K, N)),
                     heading=np.empty((T, K, N)),
@@ -861,7 +861,7 @@ class test_that_distance_is_infinite_when_no_obstacles_are_present:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=np.full((T, K := 3, N := 2), np.nan),
                     y=np.full((T, K, N), np.nan),
                     heading=np.full((T, K, N), np.nan),
@@ -925,7 +925,7 @@ class test_that_distance_accounts_for_obstacle_heading:
                 # Ego at (0,0), obstacle center at (0,3)
                 # Front circle at (0,4), rear circle at (0,2) in global
                 # Distance to rear circle (closest): 2 - 1 - 0.5 = 0.5
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[3.0]]], shape=(T, K, N)),
                     heading=array([[[np.pi / 2]]], shape=(T, K, N)),
@@ -957,7 +957,7 @@ class test_that_distance_accounts_for_obstacle_heading:
                 ),
                 # rear circle at (3 - sqrt(2)/2, -sqrt(2)/2) ≈ (2.293, -0.707)
                 # distance = sqrt(2.293^2 + 0.707^2) - 1.5 ≈ 2.4 - 1.5 = 0.9
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[np.pi / 4]]], shape=(T, K, N)),
@@ -999,7 +999,7 @@ class test_that_distance_accounts_for_obstacle_heading:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[np.pi / 2]]], shape=(T, K, N)),
@@ -1060,7 +1060,7 @@ class test_that_distance_accounts_for_ego_heading:
                         [[[0.0], [0.0], [np.pi / 2]]], shape=(T := 1, D_x := 3, M := 1)
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[3.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1097,7 +1097,7 @@ class test_that_distance_accounts_for_ego_heading:
                         [[[0.0], [0.0], [np.pi / 4]]], shape=(T := 1, D_x := 3, M := 1)
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1152,7 +1152,7 @@ class test_that_distance_accounts_for_ego_heading:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1214,7 +1214,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     # Obstacle sample 0 at (5, 0), sample 1 at (7, 0)
                     x=array([[[5.0, 7.0]]], shape=(T, K := 1, N := 2)),
                     y=array([[[0.0, 0.0]]], shape=(T, K, N)),
@@ -1250,7 +1250,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         shape=(T := 1, D_x := 3, M := 2),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     # Samples of one obstacle at (6, 0) and (8, 0)
                     x=array([[[6.0, 8.0]]], shape=(T, K := 1, N := 2)),
                     y=array([[[0.0, 0.0]]], shape=(T, K, N)),
@@ -1292,7 +1292,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         shape=(T := 3, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=np.empty((T, K := 0, N := 2)),
                     y=np.empty((T, K, N)),
                     heading=np.empty((T, K, N)),
@@ -1319,7 +1319,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0, 5.0]]], shape=(T, K := 1, N := 2)),
                     y=array([[[0.0, 0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
@@ -1346,7 +1346,7 @@ class test_that_distance_is_computed_correctly_when_multiple_samples_of_obstacle
                         shape=(T := 1, D_x := 3, M := 2),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[4.0, 6.0]]], shape=(T, K := 1, N := 2)),
                     y=array([[[0.0, 0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0, 0.0]]], shape=(T, K, N)),
@@ -1414,7 +1414,7 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                         shape=(T := 3, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     # T=0: All obstacle states missing.
                     # T=1: Some states of one sample are not missing.
                     # T=2: All states are present for one sample.
@@ -1480,7 +1480,7 @@ class test_that_distance_is_infinite_for_missing_obstacle_states:
                         shape=(T := 3, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array(
                         [
                             [[np.nan, np.nan], [np.nan, np.nan]],
@@ -1573,7 +1573,7 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[x_o := 3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[y_o := 0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1600,7 +1600,7 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[4.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1627,7 +1627,7 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[3.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1654,7 +1654,7 @@ class test_that_sat_distance_is_computed_correctly_for_axis_aligned_rectangles:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1711,7 +1711,7 @@ class test_that_sat_distance_is_computed_correctly_for_rotated_polygons:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[np.pi / 4]]], shape=(T, K, N)),
@@ -1741,7 +1741,7 @@ class test_that_sat_distance_is_computed_correctly_for_rotated_polygons:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1798,7 +1798,7 @@ class test_that_sat_distance_is_positive_when_separation_exists:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1848,7 +1848,7 @@ class test_that_sat_distance_is_zero_when_polygons_are_touching_edge_to_edge:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[1.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1900,7 +1900,7 @@ class test_that_sat_distance_is_negative_when_polygons_are_penetrating:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.5]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1927,7 +1927,7 @@ class test_that_sat_distance_is_negative_when_polygons_are_penetrating:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[0.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -1989,7 +1989,7 @@ class test_that_sat_works_with_non_rectangular_convex_polygons:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[3.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -2040,7 +2040,7 @@ class test_that_sat_uses_closest_obstacle_when_multiple_obstacles_exist:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[10.0], [3.0]]], shape=(T, K := 2, N := 1)),
                     y=array([[[0.0], [0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0], [0.0]]], shape=(T, K, N)),
@@ -2067,7 +2067,7 @@ class test_that_sat_uses_closest_obstacle_when_multiple_obstacles_exist:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0], [10.0], [2.0]]], shape=(T, K := 3, N := 1)),
                     y=array([[[0.0], [0.0], [0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0], [0.0], [0.0]]], shape=(T, K, N)),
@@ -2126,7 +2126,7 @@ class test_that_sat_works_with_asymmetric_polygons:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[4.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),
@@ -2196,7 +2196,7 @@ class test_that_sat_works_with_complex_convex_polygons:
                         shape=(T := 1, D_x := 3, M := 1),
                     )
                 ),
-                obstacle_states := data.obstacle_state_samples(
+                obstacle_states := data.obstacle_2d_pose_samples(
                     x=array([[[5.0]]], shape=(T, K := 1, N := 1)),
                     y=array([[[0.0]]], shape=(T, K, N)),
                     heading=array([[[0.0]]], shape=(T, K, N)),

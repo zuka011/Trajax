@@ -6,7 +6,7 @@ from trajax.types import (
     Distance,
     DistanceExtractor,
     StateSequence,
-    ObstacleStateSequences,
+    ObstacleStates,
     SimulationData,
     Metric,
 )
@@ -60,7 +60,7 @@ class CollisionMetric[StateBatchT, SampledObstacleStatesT](
         )
         obstacle_states = data(
             access.obstacle_states.assume(
-                ObstacleStateSequences[T, Any, Any, SampledObstacleStatesT]
+                ObstacleStates[T, Any, Any, SampledObstacleStatesT]
             ).require()
         )
 

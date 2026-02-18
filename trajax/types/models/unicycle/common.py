@@ -9,8 +9,13 @@ UNICYCLE_D_U: Final = 2
 UNICYCLE_D_O: Final = 3
 
 type UnicycleD_x = D[3]
+"""State dimension of the unicycle model, consisting of (x position, y position, heading)."""
+
 type UnicycleD_u = D[2]
+"""Control input dimension of the unicycle model, consisting of (linear velocity, angular velocity)."""
+
 type UnicycleD_o = D[3]
+"""Obstacle state dimension of the unicycle model, consisting of (x position, y position, heading)."""
 
 
 class UnicycleState(Protocol):

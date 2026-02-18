@@ -484,13 +484,13 @@ class test_that_cost_increases_with_weight:
                 create_cost := partial(
                     lambda weight, *, expected_states: costs.safety.collision(
                         obstacle_states=stubs.ObstacleStateProvider.returns(
-                            obstacle_states := data.obstacle_states(
+                            obstacle_states := data.obstacle_2d_poses(
                                 x=np.random.uniform(size=(T := 3, K := 3)),
                                 y=np.random.uniform(size=(T, K)),
                             )
                         ),
                         sampler=stubs.ObstacleStateSampler.returns(
-                            obstacle_state_samples := data.obstacle_state_samples(
+                            obstacle_state_samples := data.obstacle_2d_pose_samples(
                                 x=np.random.uniform(size=(T, K, N := 1)),
                                 y=np.random.uniform(size=(T, K, N)),
                             ),
@@ -881,13 +881,13 @@ class test_that_collision_cost_decreases_with_distance:
             (
                 cost := costs.safety.collision(
                     obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
+                        obstacle_states := data.obstacle_2d_poses(
                             x=np.random.uniform(size=(T := 4, K := 1)),
                             y=np.random.uniform(size=(T, K)),
                         )
                     ),
                     sampler=stubs.ObstacleStateSampler.returns(
-                        obstacle_state_samples := data.obstacle_state_samples(
+                        obstacle_state_samples := data.obstacle_2d_pose_samples(
                             x=np.random.uniform(size=(T, K, N := 1)),
                             y=np.random.uniform(size=(T, K, N)),
                         ),
@@ -995,13 +995,13 @@ class test_that_collision_cost_uses_different_thresholds_for_different_parts:
             (
                 cost := costs.safety.collision(
                     obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
+                        obstacle_states := data.obstacle_2d_poses(
                             x=np.random.uniform(size=(T := 4, K := 1)),
                             y=np.random.uniform(size=(T, K)),
                         )
                     ),
                     sampler=stubs.ObstacleStateSampler.returns(
-                        obstacle_state_samples := data.obstacle_state_samples(
+                        obstacle_state_samples := data.obstacle_2d_pose_samples(
                             x=np.random.uniform(size=(T, K, N := 1)),
                             y=np.random.uniform(size=(T, K, N)),
                         ),
@@ -1077,13 +1077,13 @@ class test_that_collision_cost_is_zero_when_no_obstacles_are_present:
             (
                 cost := costs.safety.collision(
                     obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
+                        obstacle_states := data.obstacle_2d_poses(
                             x=np.random.uniform(size=(T := 2, K := 0)),
                             y=np.random.uniform(size=(T, K)),
                         )
                     ),
                     sampler=stubs.ObstacleStateSampler.returns(
-                        obstacle_state_samples := data.obstacle_state_samples(
+                        obstacle_state_samples := data.obstacle_2d_pose_samples(
                             x=np.random.uniform(size=(T, K, N := 1)),
                             y=np.random.uniform(size=(T, K, N)),
                         ),
@@ -1109,13 +1109,13 @@ class test_that_collision_cost_is_zero_when_no_obstacles_are_present:
                 (
                     cost := costs.safety.collision(
                         obstacle_states=stubs.ObstacleStateProvider.returns(
-                            obstacle_states := data.obstacle_states(
+                            obstacle_states := data.obstacle_2d_poses(
                                 x=np.random.uniform(size=(T := 2, K := 0)),
                                 y=np.random.uniform(size=(T, K)),
                             )
                         ),
                         sampler=stubs.ObstacleStateSampler.returns(
-                            obstacle_state_samples := data.obstacle_state_samples(
+                            obstacle_state_samples := data.obstacle_2d_pose_samples(
                                 x=np.random.uniform(size=(T, K, N := 1)),
                                 y=np.random.uniform(size=(T, K, N)),
                             ),
@@ -1198,7 +1198,7 @@ class test_that_collision_cost_with_uncertainty_is_consistent_with_deterministic
                 ),
                 create_cost := lambda metric, variance: costs.safety.collision(
                     obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
+                        obstacle_states := data.obstacle_2d_poses(
                             x=(rng := np.random.default_rng(seed=42)).uniform(
                                 low=-1.0, high=1.0, size=(T := 10, K := 5)
                             ),
@@ -1380,7 +1380,7 @@ class test_that_collision_cost_increases_with_higher_variance_in_obstacle_state_
                 ),
                 create_cost := lambda variance: costs.safety.collision(
                     obstacle_states=stubs.ObstacleStateProvider.returns(
-                        obstacle_states := data.obstacle_states(
+                        obstacle_states := data.obstacle_2d_poses(
                             x=(rng := np.random.default_rng(seed=42)).uniform(
                                 low=-1.0, high=1.0, size=(T := 10, K := 5)
                             ),

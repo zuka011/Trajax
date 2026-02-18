@@ -1,5 +1,6 @@
 from typing import cast, Self, overload, Sequence, Protocol
 from dataclasses import dataclass
+from functools import cached_property
 
 from trajax.types import (
     DataType,
@@ -11,7 +12,11 @@ from trajax.types import (
     JaxControlInputSequence,
     JaxControlInputBatch,
     JaxCosts,
+    JaxSampledObstacleStates,
+    JaxObstacleStates,
+    JaxObstacleStatesForTimeStep,
 )
+from trajax.states.simple.basic import NumPySimpleObstacleStatesForTimeStep
 
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, Dims, D
@@ -44,7 +49,7 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
         return JaxSimpleState(jnp.zeros((dimension,)))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_x]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     @property
     def dimension(self) -> D_x:
@@ -53,6 +58,10 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
     @property
     def array(self) -> Float[JaxArray, "D_x"]:
         return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[D_x]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -80,7 +89,7 @@ class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
         return JaxSimpleStateSequence(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     def batched(self) -> "JaxSimpleStateBatch[T, D_x, D[1]]":
         return JaxSimpleStateBatch.wrap(self.array[..., jnp.newaxis])
@@ -96,6 +105,10 @@ class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
     @property
     def array(self) -> Float[JaxArray, "T D_x"]:
         return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_x]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -128,7 +141,7 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
         return JaxSimpleStateBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_x, M]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     def rollout(self, index: int) -> JaxSimpleStateSequence[T, D_x]:
         return JaxSimpleStateSequence(self.array[..., index])
@@ -151,6 +164,10 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     @property
     def array(self) -> Float[JaxArray, "T D_x M"]:
         return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_x, M]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -179,7 +196,7 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     @overload
     def similar(self, *, array: Float[JaxArray, "T D_u"]) -> Self: ...
@@ -211,6 +228,10 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
     @property
     def array(self) -> Float[JaxArray, "T D_u"]:
         return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_u]]:
+        return np.asarray(self.array)
 
 
 @jaxtyped
@@ -251,7 +272,7 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
         return JaxSimpleControlInputBatch(array)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_u, M]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     @property
     def horizon(self) -> T:
@@ -269,6 +290,10 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
     def array(self) -> Float[JaxArray, "T D_u M"]:
         return self._array
 
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_u, M]]:
+        return np.asarray(self.array)
+
 
 @jaxtyped
 @dataclass(frozen=True)
@@ -278,7 +303,7 @@ class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
     _array: Float[JaxArray, "T M"]
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
-        return np.asarray(self.array)
+        return self._numpy_array
 
     def similar(self, *, array: Float[JaxArray, "T M"]) -> Self:
         return self.__class__(array)
@@ -297,3 +322,161 @@ class JaxSimpleCosts[T: int, M: int](JaxCosts[T, M]):
     @property
     def array(self) -> Float[JaxArray, "T M"]:
         return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, M]]:
+        return np.asarray(self.array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxSimpleSampledObstacleStates[T: int, D_o: int, K: int, N: int](
+    JaxSampledObstacleStates[T, D_o, K, N]
+):
+    """JAX sampled obstacle states as a 4D array (time × dimension × obstacles × samples)."""
+
+    _array: Float[JaxArray, "T D_o K N"]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
+        return self._numpy_array
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+    @property
+    def sample_count(self) -> N:
+        return cast(N, self.array.shape[3])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_o K N"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K, N]]:
+        return np.asarray(self.array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxSimpleObstacleStatesForTimeStep[D_o: int, K: int](
+    JaxObstacleStatesForTimeStep[
+        D_o, K, "JaxSimpleObstacleStates", NumPySimpleObstacleStatesForTimeStep
+    ]
+):
+    """JAX obstacle states for a single time step as a 2D array (dimension × obstacles)."""
+
+    _array: Float[JaxArray, "D_o K"]
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
+        return self._numpy_array
+
+    def replicate[T: int](self, *, horizon: T) -> "JaxSimpleObstacleStates[T, D_o, K]":
+        # TODO: Implement replicate method
+        raise NotImplementedError()
+
+    def numpy(self) -> NumPySimpleObstacleStatesForTimeStep[D_o, K]:
+        return NumPySimpleObstacleStatesForTimeStep(self._numpy_array)
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[0])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[1])
+
+    @property
+    def array(self) -> Float[JaxArray, "D_o K"]:
+        return self._array
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[D_o, K]]:
+        return np.asarray(self.array)
+
+
+@jaxtyped
+@dataclass(frozen=True)
+class JaxSimpleObstacleStates[T: int, D_o: int, K: int](
+    JaxObstacleStates[T, D_o, K, JaxSimpleSampledObstacleStates]
+):
+    """JAX obstacle states as a 3D array (time × dimension × obstacles)."""
+
+    _array: Float[JaxArray, "T D_o K"]
+    _covariance: Float[JaxArray, "T D_o D_o K"] | None = None
+
+    @staticmethod
+    def create[T_: int, D_o_: int, K_: int](
+        *,
+        states: Float[JaxArray, "T D_o K"],
+        covariance: Float[JaxArray, "T D_o D_o K"] | None = None,
+        horizon: T_ | None = None,
+        dimension: D_o_ | None = None,
+        count: K_ | None = None,
+    ) -> "JaxSimpleObstacleStates[T_, D_o_, K_]":
+        horizon = horizon if horizon is not None else cast(T_, states.shape[0])
+        dimension = dimension if dimension is not None else cast(D_o_, states.shape[1])
+        count = count if count is not None else cast(K_, states.shape[2])
+
+        assert states.shape == (horizon, dimension, count), (
+            f"Expected states shape {(horizon, dimension, count)}, but got {states.shape}"
+        )
+        assert covariance is None or covariance.shape == (
+            horizon,
+            dimension,
+            dimension,
+            count,
+        ), (
+            f"Expected covariance shape {(horizon, dimension, dimension, count)}, "
+            f"but got {covariance.shape}"
+        )
+
+        return JaxSimpleObstacleStates(states, covariance)
+
+    def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
+        return self._numpy_array
+
+    def single(self) -> JaxSimpleSampledObstacleStates[T, D_o, K, D[1]]:
+        return JaxSimpleSampledObstacleStates(self.array[..., jnp.newaxis])
+
+    def last(self) -> JaxSimpleObstacleStatesForTimeStep[D_o, K]:
+        return JaxSimpleObstacleStatesForTimeStep(self.array[-1])
+
+    def covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
+        return self._numpy_covariance
+
+    @property
+    def horizon(self) -> T:
+        return cast(T, self.array.shape[0])
+
+    @property
+    def dimension(self) -> D_o:
+        return cast(D_o, self.array.shape[1])
+
+    @property
+    def count(self) -> K:
+        return cast(K, self.array.shape[2])
+
+    @property
+    def array(self) -> Float[JaxArray, "T D_o K"]:
+        return self._array
+
+    @property
+    def covariance_array(self) -> Float[JaxArray, "T D_o D_o K"] | None:
+        return self._covariance
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K]]:
+        return np.asarray(self.array)
+
+    @cached_property
+    def _numpy_covariance(self) -> Array[Dims[T, D_o, D_o, K]] | None:
+        return np.asarray(self._covariance) if self._covariance is not None else None

@@ -4,37 +4,11 @@ from dataclasses import dataclass
 from trajax.types import (
     ObstacleStatesForTimeStep,
     ObstacleStatesHistory,
-    CovariancePropagator,
     ObstacleModel,
+    ObstacleStateEstimator,
     PredictionCreator,
+    InputAssumptionProvider,
 )
-
-
-class NoCovariance:
-    """Stub covariance propagator that returns None, indicating no uncertainty."""
-
-    def propagate(self, *args, **kwargs) -> None:
-        return None
-
-
-@dataclass(kw_only=True, frozen=True)
-class CovariancePadding:
-    """Pads a covariance matrix to a target dimension with a small epsilon diagonal."""
-
-    to_dimension: int
-    epsilon: float
-
-    @staticmethod
-    def create(*, to_dimension: int, epsilon: float) -> "CovariancePadding":
-        return CovariancePadding(to_dimension=to_dimension, epsilon=epsilon)
-
-    def __post_init__(self):
-        assert self.to_dimension > 0, (
-            f"Covariance target dimension must be positive, got {self.to_dimension}."
-        )
-        assert self.epsilon > 0, (
-            f"Covariance padding epsilon must be positive, got {self.epsilon}."
-        )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -44,7 +18,7 @@ class StaticPredictor:
     horizon: int
 
     @staticmethod
-    def create(*, horizon: int) -> "StaticPredictor ":
+    def create(*, horizon: int) -> "StaticPredictor":
         return StaticPredictor(horizon=horizon)
 
     def predict[PredictionT](
@@ -61,51 +35,65 @@ class StaticPredictor:
         return history.last().replicate(horizon=self.horizon)
 
 
+class NoAssumptions[InputsT]:
+    """Identity assumption provider that passes inputs through unchanged."""
+
+    def __call__(self, inputs: InputsT, /) -> InputsT:
+        return inputs
+
+
 @dataclass(kw_only=True, frozen=True)
 class CurvilinearPredictor[
     HistoryT: ObstacleStatesHistory,
     StatesT,
-    VelocitiesT,
-    InputSequencesT,
+    InputsT,
+    CovarianceT,
     StateSequencesT,
-    CovarianceSequencesT,
     PredictionT,
 ]:
-    """Predicts obstacle motion by estimating velocities and propagating forward with a dynamical model."""
+    """Predicts obstacle motion by forward propagating estimated states with a curvilinear model."""
 
     horizon: int
-    model: ObstacleModel[
-        HistoryT, StatesT, VelocitiesT, InputSequencesT, StateSequencesT
-    ]
-    propagator: CovariancePropagator[StateSequencesT, CovarianceSequencesT]
-    prediction: PredictionCreator[StateSequencesT, CovarianceSequencesT, PredictionT]
+    estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, CovarianceT]
+    assumptions: InputAssumptionProvider[InputsT]
+    model: ObstacleModel[HistoryT, StatesT, InputsT, CovarianceT, StateSequencesT]
+    prediction: PredictionCreator[StateSequencesT, PredictionT]
 
     @staticmethod
-    def create[H: ObstacleStatesHistory, S, V, IS, SS, CS, P](
+    def create[H: ObstacleStatesHistory, S, I, C, SS, P](
         *,
         horizon: int,
-        model: ObstacleModel[H, S, V, IS, SS],
-        prediction: PredictionCreator[SS, CS, P],
-        propagator: CovariancePropagator[SS, CS] | None = None,
-    ) -> "CurvilinearPredictor[H, S, V, IS, SS, CS, P]":
+        model: ObstacleModel[H, S, I, C, SS],
+        estimator: ObstacleStateEstimator[H, S, I, C],
+        prediction: PredictionCreator[SS, P],
+        assumptions: InputAssumptionProvider[I] | None = None,
+    ) -> "CurvilinearPredictor[H, S, I, C, SS, P]":
+        assumptions = (
+            assumptions
+            if assumptions is not None
+            else cast(InputAssumptionProvider[I], NoAssumptions())
+        )
+
         return CurvilinearPredictor(
             horizon=horizon,
+            estimator=estimator,
+            assumptions=assumptions,
             model=model,
             prediction=prediction,
-            propagator=propagator
-            if propagator is not None
-            else cast(CovariancePropagator[SS, CS], NoCovariance()),
         )
 
     def predict(self, *, history: HistoryT) -> PredictionT:
         if history.horizon == 0:
             return self.prediction.empty(horizon=self.horizon)
 
-        estimated = self.model.estimate_state_from(history)
-        inputs = self.model.input_to_maintain(
-            estimated.velocities, states=estimated.states, horizon=self.horizon
-        )
-        states = self.model.forward(current=estimated.states, inputs=inputs)
-        covariances = self.propagator.propagate(states=states)
+        estimated = self.estimator.estimate_from(history)
+        inputs = self.assumptions(estimated.inputs)
 
-        return self.prediction(states=states, covariances=covariances)
+        return self.prediction(
+            states=self.model.forward(
+                states=estimated.states,
+                inputs=inputs,
+                covariances=estimated.covariance,
+                horizon=self.horizon,
+            )
+        )

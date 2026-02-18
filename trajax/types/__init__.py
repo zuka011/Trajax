@@ -1,6 +1,7 @@
 from .array import (
     DataType as DataType,
     Device as Device,
+    HasShape as HasShape,
     jaxtyped as jaxtyped,
     place as place,
 )
@@ -49,10 +50,8 @@ from .mppi import (
 from .models import (
     BICYCLE_D_X as BICYCLE_D_X,
     BICYCLE_D_U as BICYCLE_D_U,
-    BICYCLE_D_V as BICYCLE_D_V,
     BICYCLE_D_O as BICYCLE_D_O,
     BicycleD_x as BicycleD_x,
-    BicycleD_v as BicycleD_v,
     BicycleD_u as BicycleD_u,
     BicycleD_o as BicycleD_o,
     BicycleState as BicycleState,
@@ -208,22 +207,13 @@ from .predictors import (
     ObstacleIds as ObstacleIds,
     ObstacleIdAssignment as ObstacleIdAssignment,
     ObstacleStatesRunningHistory as ObstacleStatesRunningHistory,
-    ObstacleStateSequences as ObstacleStateSequences,
-    CovarianceSequences as CovarianceSequences,
+    ObstacleStateEstimator as ObstacleStateEstimator,
+    InputAssumptionProvider as InputAssumptionProvider,
     ObstacleModel as ObstacleModel,
     PredictionCreator as PredictionCreator,
-    CovariancePropagator as CovariancePropagator,
     ObstacleMotionPredictor as ObstacleMotionPredictor,
     NumPyObstacleStatesHistory as NumPyObstacleStatesHistory,
-    NumPyInitialPositionCovariance as NumPyInitialPositionCovariance,
-    NumPyInitialVelocityCovariance as NumPyInitialVelocityCovariance,
-    NumPyPositionCovariance as NumPyPositionCovariance,
-    NumPyInitialCovarianceProvider as NumPyInitialCovarianceProvider,
     JaxObstacleStatesHistory as JaxObstacleStatesHistory,
-    JaxInitialPositionCovariance as JaxInitialPositionCovariance,
-    JaxInitialVelocityCovariance as JaxInitialVelocityCovariance,
-    JaxPositionCovariance as JaxPositionCovariance,
-    JaxInitialCovarianceProvider as JaxInitialCovarianceProvider,
 )
 from .obstacles import (
     ObstaclePositionsForTimeStep as ObstaclePositionsForTimeStep,

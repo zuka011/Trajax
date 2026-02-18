@@ -5,7 +5,7 @@ try:
 except ImportError:
     typechecker = None
 
-from typing import Literal
+from typing import Literal, Protocol, runtime_checkable
 
 from numtypes import Array
 from jaxtyping import jaxtyped as jaxtyping_jaxtyped, Array as JaxArray
@@ -16,6 +16,15 @@ import jax.numpy as jnp
 
 type DataType = np.dtype
 type Device = Literal["cpu", "default"]
+
+
+@runtime_checkable
+class HasShape(Protocol):
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """Returns the shape of the array-like object."""
+        ...
+
 
 jaxtyped = jaxtyping_jaxtyped(typechecker=typechecker)
 """Wrapper around `jaxtyping.jaxtyped` that conditionally applies type checking."""

@@ -126,11 +126,15 @@ class JaxSampledObstacle2dPoses[T: int, K: int, N: int](
 
     @property
     def array(self) -> Float[JaxArray, f"T {D_O} K N"]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Float[JaxArray, f"T {D_O} K N"]:
         return jnp.stack([self._x, self._y, self._heading], axis=1)
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[T, D_o, K, N]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
+        return np.asarray(self._array)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -175,7 +179,7 @@ class JaxObstacle2dPositions[T: int, K: int](JaxObstaclePositions[T, D[2], K]):
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[T, D[2], K]]:
-        return np.stack([np.asarray(self._x), np.asarray(self._y)], axis=1)
+        return np.asarray(self._array)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -217,7 +221,7 @@ class JaxObstacle2dPositionsForTimeStep[K: int](
 
     @cached_property
     def _numpy_array(self) -> Array[Dims[D[2], K]]:
-        return np.stack([np.asarray(self._x), np.asarray(self._y)], axis=0)
+        return np.asarray(self._array)
 
 
 @jaxtyped
@@ -353,7 +357,7 @@ class JaxObstacle2dPoses[T: int, K: int](
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=1)
+        return self._numpy_array
 
     def x(self) -> Array[Dims[T, K]]:
         return np.asarray(self._x)
@@ -389,7 +393,7 @@ class JaxObstacle2dPoses[T: int, K: int](
 
     @property
     def array(self) -> Float[JaxArray, "T D_o K"]:
-        return jnp.stack([self._x, self._y, self._heading], axis=1)
+        return self._array
 
     @property
     def x_array(self) -> Float[JaxArray, "T K"]:
@@ -418,6 +422,14 @@ class JaxObstacle2dPoses[T: int, K: int](
     @property
     def count(self) -> K:
         return cast(K, self._x.shape[1])
+
+    @cached_property
+    def _array(self) -> Float[JaxArray, "T D_o K"]:
+        return jnp.stack([self._x, self._y, self._heading], axis=1)
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[T, D_o, K]]:
+        return np.asarray(self._array)
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -450,7 +462,7 @@ class JaxObstacle2dPosesForTimeStep[K: int](
         return JaxObstacle2dPosesForTimeStep(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
-        return np.stack([self._x, self._y, self._heading], axis=0)
+        return self._numpy_array
 
     def numpy(self) -> NumPyObstacle2dPosesForTimeStep[K]:
         return NumPyObstacle2dPosesForTimeStep.create(
@@ -500,4 +512,12 @@ class JaxObstacle2dPosesForTimeStep[K: int](
 
     @property
     def array(self) -> Float[JaxArray, f"{D_O} K"]:
+        return self._array
+
+    @cached_property
+    def _array(self) -> Float[JaxArray, f"{D_O} K"]:
         return jnp.stack([self._x, self._y, self._heading], axis=0)
+
+    @cached_property
+    def _numpy_array(self) -> Array[Dims[D_o, K]]:
+        return np.asarray(self._array)

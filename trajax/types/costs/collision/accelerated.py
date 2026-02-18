@@ -63,6 +63,11 @@ class JaxObstacleStates[
         """Returns the states of obstacles as a JAX array."""
         ...
 
+    @property
+    def covariance_array(self) -> Float[JaxArray, "T D_o D_o K"] | None:
+        """Returns the covariances of obstacles as a JAX array, or None if not available."""
+        ...
+
 
 @jaxtyped
 @dataclass(frozen=True)

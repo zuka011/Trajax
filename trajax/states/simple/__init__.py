@@ -5,6 +5,9 @@ from .basic import (
     NumPySimpleControlInputSequence as NumPySimpleControlInputSequence,
     NumPySimpleControlInputBatch as NumPySimpleControlInputBatch,
     NumPySimpleCosts as NumPySimpleCosts,
+    NumPySimpleSampledObstacleStates as NumPySimpleSampledObstacleStates,
+    NumPySimpleObstacleStatesForTimeStep as NumPySimpleObstacleStatesForTimeStep,
+    NumPySimpleObstacleStates as NumPySimpleObstacleStates,
 )
 from .accelerated import (
     JaxSimpleState as JaxSimpleState,
@@ -13,4 +16,7 @@ from .accelerated import (
     JaxSimpleControlInputSequence as JaxSimpleControlInputSequence,
     JaxSimpleControlInputBatch as JaxSimpleControlInputBatch,
     JaxSimpleCosts as JaxSimpleCosts,
+    JaxSimpleSampledObstacleStates as JaxSimpleSampledObstacleStates,
+    JaxSimpleObstacleStatesForTimeStep as JaxSimpleObstacleStatesForTimeStep,
+    JaxSimpleObstacleStates as JaxSimpleObstacleStates,
 )

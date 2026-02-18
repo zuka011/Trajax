@@ -4,4 +4,12 @@ from . import (
     costs as costs,
     stubs as stubs,
 )
-from .numeric import estimate as estimate, compute as compute
+from .numeric import (
+    ArrayConvertible as ArrayConvertible,
+    HasObstacleCount as HasObstacleCount,
+    estimate as estimate,
+    compute as compute,
+    check as check,
+)
+from .prediction import prediction_creator as prediction_creator
+from .estimator import ComponentExtractor as ComponentExtractor

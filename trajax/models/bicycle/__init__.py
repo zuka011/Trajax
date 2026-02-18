@@ -5,9 +5,13 @@ from .basic import (
     NumPyBicyclePositions as NumPyBicyclePositions,
     NumPyBicycleControlInputSequence as NumPyBicycleControlInputSequence,
     NumPyBicycleControlInputBatch as NumPyBicycleControlInputBatch,
+    NumPyBicycleObstacleStates as NumPyBicycleObstacleStates,
+    NumPyBicycleObstacleInputs as NumPyBicycleObstacleInputs,
     NumPyBicycleObstacleStateSequences as NumPyBicycleObstacleStateSequences,
     NumPyBicycleModel as NumPyBicycleModel,
     NumPyBicycleObstacleModel as NumPyBicycleObstacleModel,
+    NumPyFiniteDifferenceBicycleStateEstimator as NumPyFiniteDifferenceBicycleStateEstimator,
+    NumPyKfBicycleStateEstimator as NumPyKfBicycleStateEstimator,
 )
 from .accelerated import (
     JaxBicycleState as JaxBicycleState,
@@ -16,7 +20,11 @@ from .accelerated import (
     JaxBicyclePositions as JaxBicyclePositions,
     JaxBicycleControlInputSequence as JaxBicycleControlInputSequence,
     JaxBicycleControlInputBatch as JaxBicycleControlInputBatch,
+    JaxBicycleObstacleStates as JaxBicycleObstacleStates,
+    JaxBicycleObstacleInputs as JaxBicycleObstacleInputs,
     JaxBicycleObstacleStateSequences as JaxBicycleObstacleStateSequences,
     JaxBicycleModel as JaxBicycleModel,
     JaxBicycleObstacleModel as JaxBicycleObstacleModel,
+    JaxFiniteDifferenceBicycleStateEstimator as JaxFiniteDifferenceBicycleStateEstimator,
+    JaxKfBicycleStateEstimator as JaxKfBicycleStateEstimator,
 )

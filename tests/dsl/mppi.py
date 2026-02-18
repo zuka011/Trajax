@@ -21,12 +21,15 @@ type NumPyControlInputSequence[T: int, D_u: int] = (
 type NumPyControlInputBatch[T: int, D_u: int, M: int] = (
     types.numpy.simple.ControlInputBatch[T, D_u, M]
 )
-type NumPySampledObstacleStates[T: int, K: int, N: int] = (
+type NumPySampledObstacle2dPoses[T: int, K: int, N: int] = (
     types.numpy.SampledObstacle2dPoses[T, K, N]
 )
 type NumPyObstacleIds[K: int] = types.numpy.ObstacleIds[K]
-type NumPyObstacleStatesForTimeStep[K: int] = types.numpy.Obstacle2dPosesForTimeStep[K]
-type NumPyObstacleStates[T: int, K: int] = types.numpy.Obstacle2dPoses[T, K]
+type NumPyObstacle2dPosesForTimeStep[K: int] = types.numpy.Obstacle2dPosesForTimeStep[K]
+type NumPyObstacle2dPoses[T: int, K: int] = types.numpy.Obstacle2dPoses[T, K]
+type NumPySimpleObstacleStates[T: int, D_o: int, K: int] = (
+    types.numpy.simple.ObstacleStates[T, D_o, K]
+)
 type NumPyDistance[T: int, V: int, M: int, N: int] = types.numpy.Distance[T, V, M, N]
 type NumPyBoundaryDistance[T: int, M: int] = types.numpy.BoundaryDistance[T, M]
 
@@ -38,12 +41,15 @@ type JaxControlInputSequence[T: int, D_u: int] = types.jax.simple.ControlInputSe
 type JaxControlInputBatch[T: int, D_u: int, M: int] = (
     types.jax.simple.ControlInputBatch[T, D_u, M]
 )
-type JaxSampledObstacleStates[T: int, K: int, N: int] = (
+type JaxSampledObstacle2dPoses[T: int, K: int, N: int] = (
     types.jax.SampledObstacle2dPoses[T, K, N]
 )
 type JaxObstacleIds[K: int] = types.jax.ObstacleIds[K]
-type JaxObstacleStatesForTimeStep[K: int] = types.jax.Obstacle2dPosesForTimeStep[K]
-type JaxObstacleStates[T: int, K: int] = types.jax.Obstacle2dPoses[T, K]
+type JaxObstacle2dPosesForTimeStep[K: int] = types.jax.Obstacle2dPosesForTimeStep[K]
+type JaxObstacle2dPoses[T: int, K: int] = types.jax.Obstacle2dPoses[T, K]
+type JaxSimpleObstacleStates[T: int, D_o: int, K: int] = (
+    types.jax.simple.ObstacleStates[T, D_o, K]
+)
 type JaxDistance[T: int, V: int, M: int, N: int] = types.jax.Distance[T, V, M, N]
 type JaxBoundaryDistance[T: int, M: int] = types.jax.BoundaryDistance[T, M]
 
@@ -78,13 +84,23 @@ class numpy:
         return types.numpy.obstacle_ids.create(ids=np.asarray(array))
 
     @staticmethod
-    def obstacle_states[T: int, K: int](
+    def simple_obstacle_states[T: int, D_o: int, K: int](
+        *,
+        states: Array[Dims[T, D_o, K]],
+        covariance: Array[Dims[T, D_o, D_o, K]] | None = None,
+    ) -> NumPySimpleObstacleStates[T, D_o, K]:
+        return types.numpy.simple.obstacle_states.create(
+            states=states, covariance=covariance
+        )
+
+    @staticmethod
+    def obstacle_2d_poses[T: int, K: int](
         *,
         x: Array[Dims[T, K]],
         y: Array[Dims[T, K]],
         heading: Array[Dims[T, K]] | None = None,
         covariance: Array[Dims[T, D_o, D_o, K]] | None = None,
-    ) -> NumPyObstacleStates[T, K]:
+    ) -> NumPyObstacle2dPoses[T, K]:
         return types.numpy.obstacle_2d_poses.create(
             x=x,
             y=y,
@@ -93,12 +109,12 @@ class numpy:
         )
 
     @staticmethod
-    def obstacle_states_for_time_step[K: int](
+    def obstacle_2d_poses_for_time_step[K: int](
         *,
         x: Array[Dims[K]],
         y: Array[Dims[K]],
         heading: Array[Dims[K]] | None = None,
-    ) -> NumPyObstacleStatesForTimeStep[K]:
+    ) -> NumPyObstacle2dPosesForTimeStep[K]:
         return types.numpy.obstacle_2d_poses_for_time_step.create(
             x=x,
             y=y,
@@ -106,12 +122,12 @@ class numpy:
         )
 
     @staticmethod
-    def obstacle_state_samples[T: int, K: int, N: int](
+    def obstacle_2d_pose_samples[T: int, K: int, N: int](
         *,
         x: Array[Dims[T, K, N]],
         y: Array[Dims[T, K, N]],
         heading: Array[Dims[T, K, N]] | None = None,
-    ) -> NumPySampledObstacleStates[T, K, N]:
+    ) -> NumPySampledObstacle2dPoses[T, K, N]:
         return types.numpy.obstacle_2d_poses.sampled(
             x=x,
             y=y,
@@ -161,7 +177,20 @@ class jax:
         return types.jax.simple.control_input_batch.create(array=jnp.asarray(array))
 
     @staticmethod
-    def obstacle_states[T: int, K: int](
+    def simple_obstacle_states[T: int, D_o: int, K: int](
+        *,
+        states: Array[Dims[T, D_o, K]] | Float[JaxArray, "T D_o K"],
+        covariance: Array[Dims[T, D_o, D_o, K]]
+        | Float[JaxArray, "T D_o D_o K"]
+        | None = None,
+    ) -> JaxSimpleObstacleStates[T, D_o, K]:
+        return types.jax.simple.obstacle_states.create(
+            states=jnp.asarray(states),
+            covariance=jnp.asarray(covariance) if covariance is not None else None,
+        )
+
+    @staticmethod
+    def obstacle_2d_poses[T: int, K: int](
         *,
         x: Array[Dims[T, K]] | Float[JaxArray, "T K"],
         y: Array[Dims[T, K]] | Float[JaxArray, "T K"],
@@ -169,7 +198,7 @@ class jax:
         covariance: Array[Dims[T, D_o, D_o, K]]
         | Float[JaxArray, f"T {D_O} {D_O} K"]
         | None = None,
-    ) -> JaxObstacleStates[T, K]:
+    ) -> JaxObstacle2dPoses[T, K]:
         return types.jax.obstacle_2d_poses.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
@@ -178,12 +207,12 @@ class jax:
         )
 
     @staticmethod
-    def obstacle_states_for_time_step[K: int](
+    def obstacle_2d_poses_for_time_step[K: int](
         *,
         x: Array[Dims[K]] | Float[JaxArray, "K"],
         y: Array[Dims[K]] | Float[JaxArray, "K"],
         heading: Array[Dims[K]] | Float[JaxArray, "K"] | None = None,
-    ) -> JaxObstacleStatesForTimeStep[K]:
+    ) -> JaxObstacle2dPosesForTimeStep[K]:
         return types.jax.obstacle_2d_poses_for_time_step.create(
             x=jnp.asarray(x),
             y=jnp.asarray(y),
@@ -191,12 +220,12 @@ class jax:
         )
 
     @staticmethod
-    def obstacle_state_samples[T: int, K: int, N: int](
+    def obstacle_2d_pose_samples[T: int, K: int, N: int](
         *,
         x: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
         y: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
         heading: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"] | None = None,
-    ) -> JaxSampledObstacleStates[T, K, N]:
+    ) -> JaxSampledObstacle2dPoses[T, K, N]:
         return types.jax.obstacle_2d_poses.sampled(
             x=jnp.asarray(x),
             y=jnp.asarray(y),

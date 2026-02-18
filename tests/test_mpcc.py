@@ -18,9 +18,9 @@ from trajax import (
     CollisionMetric,
     MpccErrorMetric,
     access,
+    risk,
 )
 from trajax_visualizer import MpccSimulationResult, visualizer
-
 
 from tests.utilities import VisualizationData
 from tests.examples import mpcc, reference, obstacles, sampling, weights
@@ -248,7 +248,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             mpcc.numpy.planner_from_mpcc(
                 reference=reference.numpy.short,
                 obstacles=obstacles.numpy.dynamic.short,
-                use_covariance_propagation=True,
+                use_risk_metric=True,
             ),
             "numpy-from-mpcc-dynamic-uncertain",
         ),
@@ -282,7 +282,7 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
             mpcc.jax.planner_from_mpcc(
                 reference=reference.jax.short,
                 obstacles=obstacles.jax.dynamic.short,
-                use_covariance_propagation=True,
+                use_risk_metric=True,
             ),
             "jax-from-mpcc-dynamic-uncertain",
         ),
@@ -292,8 +292,9 @@ def test_that_mpcc_planner_follows_trajectory_without_excessive_deviation[
                 obstacles=obstacles.jax.dynamic.highway,
                 sampling=sampling.jax.modified(steering_standard_deviation=0.025),
                 weights=weights.jax.modified(contouring=75.0),
+                risk_metric=risk.jax.entropic_risk(theta=1.0, sample_count=25),
                 horizon=35,
-                use_covariance_propagation=True,
+                use_risk_metric=True,
                 use_halton=True,
             ),
             "jax-from-mpcc-highway-uncertain",

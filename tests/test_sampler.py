@@ -36,7 +36,7 @@ class test_that_obstacle_state_samplers_produce_same_results_when_seeded_identic
         return [
             (
                 provider := lambda seed: sampler.gaussian(seed=seed),
-                states := data.obstacle_states(
+                states := data.obstacle_2d_poses(
                     x=array([[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]], shape=(T := 2, K := 3)),
                     y=array([[4.0, 2.0, 3.0], [6.0, 4.0, 5.0]], shape=(T, K)),
                     heading=array([[0.0, 0.1, 0.2], [0.3, 0.4, 0.5]], shape=(T, K)),
@@ -95,14 +95,14 @@ class test_that_obstacle_state_sampler_returns_empty_samples_when_no_obstacles_a
         return [
             (
                 sampler.gaussian(seed=42),
-                states := data.obstacle_states(
+                states := data.obstacle_2d_poses(
                     x=np.empty(shape=(T := 4, K := 0)),
                     y=np.empty(shape=(T, K)),
                     heading=np.empty(shape=(T, K)),
                     covariance=np.empty(shape=(T, 3, 3, K)),
                 ),
                 sample_count := 3,
-                expected := data.obstacle_state_samples(
+                expected := data.obstacle_2d_pose_samples(
                     x=np.empty(shape=(T, K, sample_count)),
                     y=np.empty(shape=(T, K, sample_count)),
                     heading=np.empty(shape=(T, K, sample_count)),
@@ -110,7 +110,7 @@ class test_that_obstacle_state_sampler_returns_empty_samples_when_no_obstacles_a
             ),
             (
                 sampler.gaussian(seed=42),
-                states := data.obstacle_states(
+                states := data.obstacle_2d_poses(
                     x=np.empty(shape=(T := 4, K := 0)),
                     y=np.empty(shape=(T, K)),
                     heading=np.empty(shape=(T, K)),
@@ -118,7 +118,7 @@ class test_that_obstacle_state_sampler_returns_empty_samples_when_no_obstacles_a
                     covariance=None,
                 ),
                 sample_count := 3,
-                expected := data.obstacle_state_samples(
+                expected := data.obstacle_2d_pose_samples(
                     x=np.empty(shape=(T, K, sample_count)),
                     y=np.empty(shape=(T, K, sample_count)),
                     heading=np.empty(shape=(T, K, sample_count)),
