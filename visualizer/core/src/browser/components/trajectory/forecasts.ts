@@ -9,52 +9,59 @@ export const forecastsUpdater: TraceUpdateCreator = (data, index) => {
     }
 
     const { maxForecasts, horizonLength } = forecastCountIn(forecasts);
-    const buffers = Array.from({ length: maxForecasts }, () => ({
-        x: new Array<number | null>(horizonLength),
-        y: new Array<number | null>(horizonLength),
-    }));
+    const maxBufferLength = maxForecasts * horizonLength + Math.max(0, maxForecasts - 1);
+    const buffer = {
+        x: new Array<number | null>(maxBufferLength),
+        y: new Array<number | null>(maxBufferLength),
+    };
 
-    const updateBuffers = (t: number) => {
+    const updateBuffer = (t: number) => {
         const forecast = data.obstacles?.forecast;
         const forecastCount = forecast?.x[t]?.[0]?.length ?? 0;
         const currentHorizon = forecast?.x[t]?.length ?? 0;
+        let offset = 0;
 
-        for (let k = 0; k < maxForecasts; k++) {
-            if (k < forecastCount) {
-                for (let h = 0; h < currentHorizon; h++) {
-                    buffers[k].x[h] = forecast!.x[t][h][k];
-                    buffers[k].y[h] = forecast!.y[t][h][k];
-                }
-                buffers[k].x.length = currentHorizon;
-                buffers[k].y.length = currentHorizon;
-            } else {
-                buffers[k].x.length = 0;
-                buffers[k].y.length = 0;
+        for (let k = 0; k < forecastCount; k++) {
+            if (offset > 0) {
+                buffer.x[offset] = null;
+                buffer.y[offset] = null;
+                offset++;
+            }
+
+            for (let h = 0; h < currentHorizon; h++) {
+                buffer.x[offset] = forecast!.x[t][h][k];
+                buffer.y[offset] = forecast!.y[t][h][k];
+                offset++;
             }
         }
+
+        buffer.x.length = offset;
+        buffer.y.length = offset;
     };
 
     return {
         createTemplates(theme) {
-            updateBuffers(0);
-            return buffers.map((buffer, i) => ({
-                x: buffer.x,
-                y: buffer.y,
-                mode: "lines+markers" as const,
-                line: { color: theme.colors.forecast, width: 2 },
-                marker: { color: theme.colors.forecast, size: 4, symbol: "circle" },
-                opacity: 0.6,
-                name: "Forecast",
-                legendgroup: "forecast",
-                showlegend: i === 0,
-            }));
+            updateBuffer(0);
+            return [
+                {
+                    x: buffer.x,
+                    y: buffer.y,
+                    mode: "lines+markers" as const,
+                    line: { color: theme.colors.forecast, width: 2 },
+                    marker: { color: theme.colors.forecast, size: 4, symbol: "circle" },
+                    opacity: 0.6,
+                    name: "Forecast",
+                    legendgroup: "forecast",
+                    showlegend: true,
+                },
+            ];
         },
 
         updateTraces(timeStep) {
-            updateBuffers(timeStep);
+            updateBuffer(timeStep);
             return {
-                data: buffers as { x: number[]; y: number[] }[],
-                updateIndices: buffers.map((_, i) => index + i),
+                data: [buffer as { x: number[]; y: number[] }],
+                updateIndices: [index],
             };
         },
     };
