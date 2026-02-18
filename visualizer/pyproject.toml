@@ -27,7 +27,7 @@ dependencies = [
     "aiopath>=0.7.7",
     "msgspec>=0.20.0",
     "numtypes>=0.5.1",
-    "numpy>=2.0.0",
+    "numpy>=2.4.2",
 ]
 
 [tool.uv.sources]
@@ -37,7 +37,7 @@ trajax = { path = "..", editable = true }
 dev = [
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
-    "ruff>=0.14.11",
+    "ruff>=0.15.1",
 ]
 test = [
     "pytest>=9.0.2",

@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Protocol
 from dataclasses import dataclass
 
 from trajax import (
@@ -6,7 +6,6 @@ from trajax import (
     ExplicitBoundary,
     BoundaryPoints,
     ReferencePoints,
-    ObstacleStates,
     ControlInputSequence,
     Weights,
     Control,
@@ -36,6 +35,24 @@ type AugmentedStateSequence = types.augmented.State[
     PhysicalStateSequence, VirtualStateSequence
 ]
 type PathParameters = types.numpy.PathParameters
+
+
+class ObstacleStates[T: int, D_x: int, K: int](Protocol):
+    def x(self) -> Array[Dims[T, K]]:
+        """Returns the x-coordinates of the obstacles."""
+        ...
+
+    def y(self) -> Array[Dims[T, K]]:
+        """Returns the y-coordinates of the obstacles."""
+        ...
+
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of the obstacles."""
+        ...
+
+    def covariance(self) -> Array[Dims[T, D_x, D_x, K]] | None:
+        """Returns the covariances of the obstacle states, or None if not available."""
+        ...
 
 
 @dataclass(kw_only=True, frozen=True)

@@ -350,10 +350,28 @@ async def export(data: Visualizable.SimulationResult, *, to: AsyncPath) -> None:
         await f.write(serialized)
 
 
+async def check_node_installed() -> bool:
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "node",
+            "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await process.communicate()
+        return process.returncode == 0 and stdout.startswith(b"v")
+    except FileNotFoundError:
+        return False
+
+
 async def html(*, of: AsyncPath, to: AsyncPath, visualizer: AsyncPath) -> None:
     assert await visualizer.exists(), (
         f"Visualizer CLI not found at {visualizer}. "
         "Make sure Node.js is installed and the CLI has been built."
+    )
+    assert await of.exists(), f"Input JSON file not found at {of}."
+    assert await check_node_installed(), (
+        "Node.js is not installed or not found in PATH. Please install Node.js to use the visualizer."
     )
 
     command = ["node", str(visualizer), "generate", str(of), "-o", str(to)]
