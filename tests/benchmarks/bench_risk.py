@@ -39,7 +39,7 @@ class bench_mpcc_risk:
                                 reference=reference.slalom,
                                 obstacles=obstacles.dynamic.slalom,
                                 sampling=sampling(rollout_count=1024),
-                                use_covariance_propagation=True,
+                                use_risk_metric=True,
                                 risk_metric=create_risk_metric(
                                     sample_count=sample_count
                                 ),

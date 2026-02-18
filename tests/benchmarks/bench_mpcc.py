@@ -184,7 +184,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
                     np_configuration := mpcc.numpy.planner_from_mpcc(
                         reference=reference.numpy.slalom,
                         obstacles=obstacles.numpy.dynamic.slalom,
-                        use_covariance_propagation=True,
+                        use_risk_metric=True,
                     )
                 ).planner,
                 initial_state=np_configuration.initial_state,
@@ -200,7 +200,7 @@ def bench_mpcc_dynamic_obstacles_single_step(
                     jax_configuration := mpcc.jax.planner_from_mpcc(
                         reference=reference.jax.slalom,
                         obstacles=obstacles.jax.dynamic.slalom,
-                        use_covariance_propagation=True,
+                        use_risk_metric=True,
                     )
                 ).planner,
                 initial_state=jax_configuration.initial_state,

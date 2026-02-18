@@ -424,7 +424,7 @@ class obstacles:
                 positions=array(
                     [
                         [30.0, 5.0],
-                        [85.0, 4.0],
+                        [95.0, 4.0],
                         [10.0, 7.0],
                     ],
                     shape=(3, 2),
@@ -741,7 +741,7 @@ class configure:
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
         risk_metric: RiskMetric = risk.mean_variance(gamma=0.1, sample_count=10),
-        use_covariance_propagation: bool = False,
+        use_risk_metric: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
         cyclic_reference: bool = False,
@@ -796,7 +796,7 @@ class configure:
                                             process_noise_covariance=1e-4,
                                             observation_noise_covariance=1e-8,
                                         )
-                                        if use_covariance_propagation
+                                        if use_risk_metric
                                         else model.bicycle.estimator.finite_difference(
                                             time_step_size=dt, wheelbase=L
                                         )
@@ -847,7 +847,7 @@ class configure:
                     metric=(
                         risk_collector := (
                             collectors.risk.decorating(risk_metric)
-                            if use_covariance_propagation
+                            if use_risk_metric
                             else None
                         )
                     ),
