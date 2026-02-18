@@ -11,7 +11,7 @@ from numtypes import array
 
 import numpy as np
 
-from tests.dsl import mppi as data, prediction_creator, compute
+from tests.dsl import mppi as data, prediction_creator, compute, model as model_data
 from pytest import mark
 
 
@@ -1319,7 +1319,33 @@ class test_that_input_assumptions_are_applied_during_prediction:
 
 class test_that_covariance_is_more_isotropic_when_turning:
     @staticmethod
-    def cases(create_predictor, model, prediction_creator, data) -> Sequence[tuple]:
+    def cases(
+        create_predictor, model, prediction_creator, data, model_data
+    ) -> Sequence[tuple]:
+        T = 20
+        dt = 0.1
+
+        def history_for(*, wheelbase: float, acceleration: float, steering: float):
+            trajectory = model.bicycle.dynamical(
+                time_step_size=dt, wheelbase=wheelbase
+            ).simulate(
+                inputs=model_data.bicycle.control_input_batch(
+                    time_horizon=T,
+                    rollout_count=1,
+                    acceleration=acceleration,
+                    steering=steering,
+                ),
+                initial_state=model_data.bicycle.state(
+                    x=15.0, y=15.0, heading=np.pi / 4, speed=3.0
+                ),
+            )
+
+            return data.obstacle_2d_poses(
+                x=array(trajectory.positions.x(), shape=(T, 1)),
+                y=array(trajectory.positions.y(), shape=(T, 1)),
+                heading=array(trajectory.heading(), shape=(T, 1)),
+            )
+
         return [
             (
                 predictor := create_predictor.curvilinear(
@@ -1335,15 +1361,11 @@ class test_that_covariance_is_more_isotropic_when_turning:
                     ),
                     prediction=prediction_creator.bicycle(),
                 ),
-                straight_history := data.obstacle_2d_poses(
-                    x=array([[0.0], [1.0]], shape=(2, 1)),
-                    y=array([[0.0], [0.0]], shape=(2, 1)),
-                    heading=array([[0.0], [0.0]], shape=(2, 1)),
+                straight_history := history_for(
+                    wheelbase=L, acceleration=0.0, steering=0.0
                 ),
-                turning_history := data.obstacle_2d_poses(
-                    x=array([[0.0], [1.0]], shape=(2, 1)),
-                    y=array([[0.0], [0.0]], shape=(2, 1)),
-                    heading=array([[0.0], [0.4]], shape=(2, 1)),
+                turning_history := history_for(
+                    wheelbase=L, acceleration=0.0, steering=0.05
                 ),
             ),
         ]
@@ -1356,12 +1378,14 @@ class test_that_covariance_is_more_isotropic_when_turning:
                 model=model.numpy,
                 prediction_creator=prediction_creator.numpy,
                 data=data.numpy,
+                model_data=model_data.numpy,
             ),
             *cases(
                 create_predictor=create_predictor.jax,
                 model=model.jax,
                 prediction_creator=prediction_creator.jax,
                 data=data.jax,
+                model_data=model_data.jax,
             ),
         ],
     )
