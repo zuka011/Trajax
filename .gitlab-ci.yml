@@ -27,7 +27,7 @@ benchmark:
       when: never
     - if: '$CI_COMMIT_MESSAGE =~ /\[skip benchmark\]/'
       when: never
-    - if: '$RUN_BENCHMARKS == "true"'
+    - if: '$RUN_VERIFY == "true" && $RUN_BENCHMARKS == "true"'
   script:
     - curl --proto '=https' --tlsv1.2 -sSfL https://bencher.dev/download/install-cli.sh | bash
     - source $HOME/.cargo/env
@@ -46,6 +46,12 @@ benchmark:
 coverage:
   extends:
     - .coverage-report-base
+  rules:
+    - if: "$CI_COMMIT_TAG"
+      when: never
+    - if: '$CI_COMMIT_MESSAGE =~ /\[skip coverage\]/'
+      when: never
+    - if: '$RUN_VERIFY == "true" && $COLLECT_COVERAGE == "true"'
   script:
     - |
       COVERAGE_FILES=""
@@ -99,7 +105,9 @@ pages:
 
 mirror-github:
   stage: mirror
-  image: alpine/git:latest
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
   needs:
     - job: pages
       artifacts: true
