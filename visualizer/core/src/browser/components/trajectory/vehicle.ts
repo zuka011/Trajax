@@ -1,26 +1,23 @@
+import { write } from "@/utils/geometry";
 import type { TraceUpdateCreator } from "./updater";
-
-const VEHICLE_CORNER_COUNT = 5;
-const LOCAL_CORNERS_X = [-0.5, 0.5, 0.5, -0.5, -0.5];
-const LOCAL_CORNERS_Y = [-0.5, -0.5, 0.5, 0.5, -0.5];
 
 export const vehicleUpdater: TraceUpdateCreator = (data, index) => {
     const buffers = {
-        x: new Array<number>(VEHICLE_CORNER_COUNT),
-        y: new Array<number>(VEHICLE_CORNER_COUNT),
+        x: new Array<number>(write.box.pointCount),
+        y: new Array<number>(write.box.pointCount),
     };
 
     const updateBuffers = (t: number) => {
-        const cos = Math.cos(data.ego.heading[t]);
-        const sin = Math.sin(data.ego.heading[t]);
         const { wheelbase, vehicleWidth } = data.info;
-
-        for (let i = 0; i < VEHICLE_CORNER_COUNT; i++) {
-            const dx = LOCAL_CORNERS_X[i] * wheelbase;
-            const dy = LOCAL_CORNERS_Y[i] * vehicleWidth;
-            buffers.x[i] = data.ego.x[t] + dx * cos - dy * sin;
-            buffers.y[i] = data.ego.y[t] + dx * sin + dy * cos;
-        }
+        write.box(
+            data.ego.x[t],
+            data.ego.y[t],
+            data.ego.heading[t],
+            wheelbase,
+            vehicleWidth,
+            buffers,
+            0,
+        );
     };
 
     return {

@@ -1,9 +1,6 @@
 import type { Visualizable } from "@/core/types";
+import { write } from "@/utils/geometry";
 import { noUpdater, type TraceUpdateCreator } from "./updater";
-
-const VEHICLE_CORNER_COUNT = 5;
-const LOCAL_CORNERS_X = [-0.5, 0.5, 0.5, -0.5, -0.5];
-const LOCAL_CORNERS_Y = [-0.5, -0.5, 0.5, 0.5, -0.5];
 
 export const obstaclesUpdater: TraceUpdateCreator = (data, index) => {
     const obstacles = data.obstacles;
@@ -13,7 +10,7 @@ export const obstaclesUpdater: TraceUpdateCreator = (data, index) => {
     }
 
     const maxObstacles = maxObstaclesIn(obstacles);
-    const maxBufferLength = maxObstacles * VEHICLE_CORNER_COUNT + Math.max(0, maxObstacles - 1);
+    const maxBufferLength = maxObstacles * write.box.pointCount + Math.max(0, maxObstacles - 1);
     const buffer = {
         x: new Array<number | null>(maxBufferLength),
         y: new Array<number | null>(maxBufferLength),
@@ -39,16 +36,7 @@ export const obstaclesUpdater: TraceUpdateCreator = (data, index) => {
                 offset++;
             }
 
-            const cos = Math.cos(heading);
-            const sin = Math.sin(heading);
-
-            for (let j = 0; j < VEHICLE_CORNER_COUNT; j++) {
-                const dx = LOCAL_CORNERS_X[j] * wheelbase;
-                const dy = LOCAL_CORNERS_Y[j] * vehicleWidth;
-                buffer.x[offset + j] = x + dx * cos - dy * sin;
-                buffer.y[offset + j] = y + dx * sin + dy * cos;
-            }
-            offset += VEHICLE_CORNER_COUNT;
+            offset = write.box(x, y, heading, wheelbase, vehicleWidth, buffer, offset);
         }
 
         buffer.x.length = offset;

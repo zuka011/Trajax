@@ -1,19 +1,9 @@
 import { defaults } from "@/core/defaults";
 import type { Arrays } from "@/core/types";
+import { withAlpha } from "@/utils/color";
+import { write } from "@/utils/geometry";
 import { covarianceToEllipse } from "@/utils/math";
 import { noUpdater, type TraceUpdateCreator } from "./updater";
-
-const ELLIPSE_SEGMENTS = 36;
-const POINTS_PER_ELLIPSE = ELLIPSE_SEGMENTS + 1;
-
-const UNIT_ELLIPSE_COS = new Float64Array(POINTS_PER_ELLIPSE);
-const UNIT_ELLIPSE_SIN = new Float64Array(POINTS_PER_ELLIPSE);
-
-for (let i = 0; i < POINTS_PER_ELLIPSE; i++) {
-    const theta = (i / ELLIPSE_SEGMENTS) * 2 * Math.PI;
-    UNIT_ELLIPSE_COS[i] = Math.cos(theta);
-    UNIT_ELLIPSE_SIN[i] = Math.sin(theta);
-}
 
 export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
     const forecasts = data.obstacles?.forecast;
@@ -25,7 +15,7 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
 
     const maxUncertainties = maxUncertaintiesIn(covariances);
     const maxBufferLength =
-        maxUncertainties * POINTS_PER_ELLIPSE + Math.max(0, maxUncertainties - 1);
+        maxUncertainties * write.ellipse.pointCount + Math.max(0, maxUncertainties - 1);
     const buffer = {
         x: new Array<number | null>(maxBufferLength),
         y: new Array<number | null>(maxBufferLength),
@@ -69,7 +59,8 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
                 ];
 
                 const ellipse = covarianceToEllipse(covMatrix, defaults.confidenceScale);
-                writeEllipsePoints(
+
+                offset = write.ellipse(
                     fx,
                     fy,
                     ellipse.width / 2,
@@ -78,7 +69,6 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
                     buffer,
                     offset,
                 );
-                offset += POINTS_PER_ELLIPSE;
             }
         }
 
@@ -95,9 +85,8 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
                     y: buffer.y,
                     mode: "lines" as const,
                     fill: "toself" as const,
-                    fillcolor: theme.colors.forecast,
-                    line: { color: theme.colors.forecast, width: 1 },
-                    opacity: 0.1,
+                    fillcolor: withAlpha(theme.colors.forecast, 0.08),
+                    line: { color: withAlpha(theme.colors.forecast, 0.4), width: 1 },
                     name: "Uncertainty",
                     legendgroup: "uncertainty",
                     showlegend: true,
@@ -114,26 +103,6 @@ export const uncertaintiesUpdater: TraceUpdateCreator = (data, index) => {
         },
     };
 };
-
-function writeEllipsePoints(
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number,
-    angle: number,
-    out: { x: (number | null)[]; y: (number | null)[] },
-    offset: number,
-): void {
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-
-    for (let i = 0; i < POINTS_PER_ELLIPSE; i++) {
-        const ex = rx * UNIT_ELLIPSE_COS[i];
-        const ey = ry * UNIT_ELLIPSE_SIN[i];
-        out.x[offset + i] = cx + ex * cos - ey * sin;
-        out.y[offset + i] = cy + ex * sin + ey * cos;
-    }
-}
 
 function maxUncertaintiesIn(covariances: Arrays.ForecastCovariances): number {
     let max = 0;
