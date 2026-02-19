@@ -1,5 +1,7 @@
 # trajax
 
+> **Primary repository:** [gitlab.com/risk-metrics/trajax](https://gitlab.com/risk-metrics/trajax) — the [GitHub mirror](https://github.com/zuka011/Trajax) exists for Colab notebook support.
+
 [![Pipeline Status](https://gitlab.com/risk-metrics/trajax/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/trajax/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/trajax/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/trajax) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/trajax) [![PyPI](https://img.shields.io/pypi/v/trajax)](https://pypi.org/project/trajax/) [![Python](https://img.shields.io/pypi/pyversions/trajax)](https://pypi.org/project/trajax/) [![License](https://img.shields.io/pypi/l/trajax)](https://gitlab.com/risk-metrics/trajax/-/blob/main/LICENSE)
 
 Sampling-based trajectory planning for autonomous systems. Provides composable building blocks — dynamics models, cost functions, samplers, and risk metrics — so you can assemble a complete MPPI planner in a few lines and iterate on the parts that matter for your problem.

@@ -1371,6 +1371,7 @@ doc = [
     { name = "typi" },
 ]
 test = [
+    { name = "aiopath" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -1412,6 +1413,7 @@ doc = [
     { name = "typi", specifier = ">=0.1.1" },
 ]
 test = [
+    { name = "aiopath", specifier = ">=0.7.7" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },

@@ -50,7 +50,8 @@ doc = [
     "mkdocs-material>=9.7.2",
     "mkdocstrings[python]>=1.0.3",
 ]
-test = [ 
+test = [
+    "aiopath>=0.7.7",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
@@ -112,8 +113,11 @@ markers = [
 addopts = "-m 'not integration and not benchmark and not risk_benchmark'"
 
 [tool.pyright]
-include = ["trajax", "tests/tasks", "tests/utilities", "tests/benchmarks"]
+include = ["trajax", "tests/tasks", "tests/utilities", "tests/benchmarks", "tests/notebooks"]
 exclude = ["**/__pycache__", "tests/benchmarks/bench_risk.py"]
+
+[tool.ruff]
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 extend-select = ["RUF018"]

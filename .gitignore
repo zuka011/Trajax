@@ -28,3 +28,6 @@ node_modules/
 
 # Documentation build
 site/
+
+# Generated notebooks
+notebooks/*.ipynb

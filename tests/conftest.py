@@ -1,12 +1,7 @@
 import pytest
 
 pytest.register_assert_rewrite("tests.dsl")
-pytest.register_assert_rewrite(
-    "docs.examples.01_basic_path_following",
-    "docs.examples.02_path_following_with_boundaries",
-    "docs.examples.03_obstacle_avoidance",
-    "docs.examples.04_obstacle_avoidance_with_uncertainty",
-)
+pytest.register_assert_rewrite("docs.examples")
 
 from typing import AsyncGenerator
 
@@ -18,6 +13,9 @@ from tests.utilities import (
     add_compilation_tracker_option,
     is_compilation_tracker_enabled,
     compilation_tracker,
+    add_notebook_option,
+    is_notebook_generation_enabled,
+    generate_notebooks,
     visualization as visualization,
 )
 from tests.tasks import BackgroundTasks
@@ -27,6 +25,7 @@ from pytest_asyncio import fixture as async_fixture
 def pytest_addoption(parser: pytest.Parser) -> None:
     add_visualizer_option(parser)
     add_compilation_tracker_option(parser)
+    add_notebook_option(parser)
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -41,6 +40,9 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     if is_compilation_tracker_enabled(session):
         print(f"\n\n{compilation_tracker.stop()}")
+
+    if is_notebook_generation_enabled(session) and exitstatus == 0:
+        print(f"\n{generate_notebooks()}")
 
 
 @async_fixture(scope="session")

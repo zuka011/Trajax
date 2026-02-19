@@ -11,6 +11,8 @@ Each example below is a complete MPCC planning loop. Click the **Result** tab to
 
 Bicycle model following an S-curve with contouring, lag, and progress costs.
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zuka011/Trajax/blob/main/notebooks/01_basic_path_following.ipynb){ .colab-badge }
+
 === "Setup"
 
     ```python
@@ -37,6 +39,8 @@ Bicycle model following an S-curve with contouring, lag, and progress costs.
 ## Path Following with Boundaries
 
 Same setup plus a fixed-width corridor (2.5 m each side). The boundary cost activates when the vehicle approaches the corridor edge.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zuka011/Trajax/blob/main/notebooks/02_path_following_with_boundaries.ipynb){ .colab-badge }
 
 === "Setup"
 
@@ -65,6 +69,8 @@ Same setup plus a fixed-width corridor (2.5 m each side). The boundary cost acti
 
 Three static obstacles along the path. Circle-to-circle distance computation with a hinge-loss collision cost and a fixed-width corridor boundary.
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zuka011/Trajax/blob/main/notebooks/03_obstacle_avoidance.ipynb){ .colab-badge }
+
 === "Setup"
 
     ```python
@@ -91,6 +97,8 @@ Three static obstacles along the path. Circle-to-circle distance computation wit
 ## Obstacle Avoidance with Uncertainty
 
 Four moving obstacles with covariance propagation and a mean-variance risk metric. The planner accounts for prediction uncertainty when evaluating collision costs, producing more cautious trajectories.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zuka011/Trajax/blob/main/notebooks/04_obstacle_avoidance_with_uncertainty.ipynb){ .colab-badge }
 
 === "Setup"
 

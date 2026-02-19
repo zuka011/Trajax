@@ -31,6 +31,10 @@ bench-and-report *args: bench
 bench-risk-and-report *args: bench-risk
     uv run python -m tests.benchmarks.report show benchmark_risk.json {{ args }}
 
+# Generate Jupyter notebooks from documentation examples
+notebooks:
+    uv run python -m tests.notebooks
+
 [unix]
 check modules=default_modules:
     for dir in {{modules}}; do \
