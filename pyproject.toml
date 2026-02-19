@@ -110,7 +110,7 @@ markers = [
     "benchmark: Performance benchmarks.",
     "risk_benchmark: Risk metric performance benchmarks.",
 ]
-addopts = "-m 'not integration and not benchmark and not risk_benchmark'"
+addopts = "-m 'not integration and not docs and not benchmark and not risk_benchmark'"
 
 [tool.pyright]
 include = ["trajax", "tests/tasks", "tests/utilities", "tests/benchmarks", "tests/notebooks"]

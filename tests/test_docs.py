@@ -126,7 +126,6 @@ def load(module_path: str) -> ExampleModule:
 )
 @mark.visualize.with_args(visualizer.mpcc(), lambda seed: seed)
 @mark.filterwarnings("ignore:.*'obstacle_states'.*not.*data.*")
-@mark.integration
 def test_that_documentation_example_produces_valid_plan(
     visualization: VisualizationData[MpccSimulationResult], module_path: str
 ) -> None:

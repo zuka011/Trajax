@@ -8,7 +8,7 @@ stages:
 
 include:
   - project: "zurabm/ci-templates"
-    ref: v1.4.5
+    ref: v1.4.6
     file:
       - "/python/verify.yml"
       - "/python/publish.yml"
@@ -88,8 +88,7 @@ pages:
     - .base
   script:
     - apt-get update -qq && apt-get install -qq -y nodejs
-    - uv run pytest -v -m docs --visualize
-    - uv run python -m tests.notebooks
+    - uv run pytest -v -m docs --visualize --notebooks
     - uv run mkdocs build --strict --site-dir public
   artifacts:
     paths:
@@ -98,8 +97,6 @@ pages:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   needs:
-    - job: test-integration
-      optional: true
     - job: build-visualizer-cli
       artifacts: true
 
@@ -121,7 +118,7 @@ mirror-github:
     - git checkout -B main
     - mkdir -p notebooks
     - cp notebooks_copy/*.ipynb notebooks/
-    - git add notebooks/
+    - git add -f notebooks/
     - |
       git diff --cached --quiet || git commit -m "chore: update generated notebooks [skip ci]"
       GITHUB_HOST=$(echo "$GITHUB_REPO_URL" | sed 's|https://||')
