@@ -38,6 +38,24 @@ def notebook_from_example() -> Notebook:
     )
 
 
+def notebook_from_async_example() -> Notebook:
+    return NotebookParser(install_command="!pip install foo").parse(
+        """\
+    \"\"\"Title.\"\"\"
+
+    from foo import bar
+
+    async def visualize(result):
+        await bar(result)
+
+    if __name__ == "__main__":
+        import asyncio
+        result = bar(1, 2)
+        asyncio.run(visualize(result))
+    """,
+    )
+
+
 def json_from_example() -> dict:
     return json.loads(notebook_from_example().json())
 
@@ -230,3 +248,39 @@ async def test_that_generate_processes_multiple_examples_concurrently(
 
     assert len(generated) == 3
     assert all(path.exists() for path in generated)
+
+
+def test_that_notebook_replaces_asyncio_run_with_await_in_run_section() -> None:
+    run_cell = notebook_from_async_example().cells[-1]
+
+    assert "await visualize(result)" in run_cell.content
+    assert "asyncio.run" not in run_cell.content
+
+
+def test_that_notebook_has_no_trailing_cells_by_default() -> None:
+    last_cell = notebook_from_example().cells[-1]
+
+    assert last_cell.content != ""
+    assert "## Run" not in last_cell.content
+
+
+def test_that_notebook_appends_trailing_cells_after_all_sections() -> None:
+    from tests.notebooks.cells import cell as notebook_cell
+
+    trailer = notebook_cell.code("display(visualization)")
+    notebook = NotebookParser(
+        install_command="!pip install foo",
+        trailing_cells=(trailer,),
+    ).parse(
+        '''\
+    """Title."""
+
+    from foo import bar
+
+    if __name__ == "__main__":
+        result = bar(1, 2)
+    ''',
+    )
+
+    assert notebook.cells[-1].content == trailer.content
+    assert notebook.cells[-1].type == CellType.CODE

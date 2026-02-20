@@ -34,7 +34,7 @@ WHEELBASE = 2.5
 VEHICLE_WIDTH = 1.2
 TEMPERATURE = 50.0
 ROLLOUT_COUNT = 256
-MAX_STEPS = 150
+STEP_LIMIT = 150
 
 # ── Extractors ────────────────────────────────────────────────────────────── #
 
@@ -165,7 +165,7 @@ def run(planner, augmented_model, registry, error_metric, corridor) -> Result:
         ),
     )
 
-    for step in range(MAX_STEPS):
+    for step in range(STEP_LIMIT):
         control = planner.step(
             temperature=TEMPERATURE,
             nominal_input=nominal,
@@ -177,7 +177,10 @@ def run(planner, augmented_model, registry, error_metric, corridor) -> Result:
         )
 
         if current_state.virtual.array[0] >= REFERENCE.path_length * 0.9:
+            print(f"Reached goal at step {step + 1}.")
             break
+
+        print(f"Step {step + 1}: progress={current_state.virtual.array[0]:.1f}")
     # --8<-- [end:loop]
 
     trajectories = registry.data(access.trajectories.require())
@@ -207,8 +210,21 @@ MAX_CONTOURING_ERROR = 2.5
 MAX_LAG_ERROR = 5.0
 
 
+# ── Visualization ──────────────────────────────────────────────────────────────────────────── #
+
+
+async def visualize(result: Result) -> None:
+    from trajax_visualizer import configure, visualizer
+
+    configure(output_directory=".")
+    await visualizer.mpcc()(result.visualization, key="visualization")
+
+
 if __name__ == "__main__":
+    import asyncio
+
     planner, augmented_model, registry, error_metric, corridor = create()
     result = run(planner, augmented_model, registry, error_metric, corridor)
     print(f"Path progress: {result.progress:.1f} / {REFERENCE.path_length}")
     print(f"Reached goal: {result.reached_goal}")
+    asyncio.run(visualize(result))

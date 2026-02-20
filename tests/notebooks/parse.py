@@ -1,7 +1,7 @@
 import re
 import textwrap
 from typing import Final, Sequence, NamedTuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .cells import Cell, cell
 from .notebook import Notebook
@@ -11,6 +11,7 @@ SECTION_PATTERN: Final = re.compile(r"^#\s*──\s*(.+?)\s*─+\s*#\s*$")
 SNIPPET_MARKER: Final = re.compile(r"^\s*#\s*--8<--\s*\[(?:start|end):\w+\]\s*$")
 MAIN_GUARD: Final = re.compile(r'^if\s+__name__\s*==\s*["\']__main__["\']\s*:\s*$')
 TEST_CONSTANT: Final = re.compile(r"^(?:SEED|MAX_\w+|HAS_\w+|GOAL_FRACTION)\s*=\s*")
+ASYNCIO_RUN: Final = re.compile(r"^(\s*)asyncio\.run\((.+)\)\s*$")
 
 
 class DocstringParseResult(NamedTuple):
@@ -41,6 +42,10 @@ class transform:
     @staticmethod
     def strip_test_constants(lines: list[str]) -> list[str]:
         return [line for line in lines if not TEST_CONSTANT.match(line)]
+
+    @staticmethod
+    def replace_asyncio_run_with_await(lines: list[str]) -> list[str]:
+        return [ASYNCIO_RUN.sub(r"\1await \2", line) for line in lines]
 
     @staticmethod
     def strip_blanks(lines: list[str]) -> list[str]:
@@ -151,6 +156,7 @@ class parse:
 @dataclass(kw_only=True, frozen=True)
 class NotebookParser:
     install_command: str
+    trailing_cells: Sequence[Cell] = field(default_factory=tuple)
 
     def parse(self, source: str) -> Notebook:
         """Build a notebook from a Python example source file."""
@@ -160,10 +166,13 @@ class NotebookParser:
 
         cells: list[Cell] = [cell.code(self.install_command)]
 
+        def combine(lines: list[str]) -> str:
+            return "\n".join(transform.clean(lines))
+
         for section_name, section_lines in parse.sections(remaining):
             body, main_body = parse.main_block(section_lines)
 
-            if code := "\n".join(transform.clean(body)):
+            if code := combine(body):
                 if section_name:
                     cells.append(cell.markdown(f"## {section_name}"))
 
@@ -171,6 +180,16 @@ class NotebookParser:
 
             if main_body:
                 cells.append(cell.markdown("## Run"))
-                cells.append(cell.code(main_body))
+                cells.append(
+                    cell.code(
+                        combine(
+                            transform.replace_asyncio_run_with_await(
+                                main_body.splitlines()
+                            )
+                        )
+                    )
+                )
+
+        cells.extend(self.trailing_cells)
 
         return Notebook(title=title, description=description, cells=cells)
