@@ -94,6 +94,7 @@ pages:
     paths:
       - public
       - notebooks
+    expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   needs:
@@ -114,16 +115,14 @@ mirror-github:
   script:
     - git config user.name "GitLab CI"
     - git config user.email "ci@gitlab.com"
-    - cp -r notebooks/ notebooks_copy/
-    - git checkout -B main
-    - mkdir -p notebooks
-    - cp notebooks_copy/*.ipynb notebooks/
     - git add -f notebooks/
-    - |
-      git diff --cached --quiet || git commit -m "chore: update generated notebooks [skip ci]"
-      GITHUB_HOST=$(echo "$GITHUB_REPO_URL" | sed 's|https://||')
-      git remote add github "https://oauth2:${GITHUB_PAT}@${GITHUB_HOST}"
-      git push github main --force
+    - echo "python-3.13" > runtime.txt
+    - echo "trajax" >> requirements.txt
+    - echo "trajax_visualizer" >> requirements.txt
+    - git add runtime.txt requirements.txt
+    - "git diff --cached --quiet || git commit -m 'chore: update generated notebooks [skip ci]'"
+    - git remote add github "https://oauth2:${GITHUB_PAT}@${GITHUB_HOST}"
+    - git push github HEAD:main --force
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: on_success
