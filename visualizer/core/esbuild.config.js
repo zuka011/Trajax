@@ -21,7 +21,7 @@ const cli = {
         ".css": "text",
         ".bundle.js": "text",
     },
-    outfile: "../trajax_visualizer/assets/cli.js",
+    outfile: "../faran_visualizer/assets/cli.js",
     banner: {
         js: "#!/usr/bin/env node",
     },

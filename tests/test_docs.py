@@ -5,8 +5,8 @@ from importlib import import_module
 from pathlib import Path
 from functools import lru_cache
 
-from trajax import Trajectory
-from trajax_visualizer import MpccSimulationResult, visualizer
+from faran import Trajectory, MpccErrorMetricResult
+from faran_visualizer import MpccSimulationResult, visualizer
 
 from tests.utilities import VisualizationData, doc_example
 from pytest import mark
@@ -18,6 +18,8 @@ class ExampleResult(Protocol):
     reached_goal: bool
     progress: float
     visualization: MpccSimulationResult
+    tracking_errors: MpccErrorMetricResult
+    collision_detected: bool
 
 
 @dataclass(frozen=True)
@@ -142,14 +144,16 @@ def test_that_documentation_example_produces_valid_plan(
         f"expected >= {example.reference.path_length * example.goal_fraction:.1f}"
     )
 
-    assert (
-        result.visualization.contouring_errors.max() < example.max_contouring_error
-    ), (
-        f"Max contouring error {result.visualization.contouring_errors.max():.2f} m "
+    assert result.tracking_errors.max_contouring < example.max_contouring_error, (
+        f"Max contouring error {result.tracking_errors.max_contouring:.2f} m "
         f"exceeds threshold {example.max_contouring_error:.2f} m"
     )
 
-    assert result.visualization.lag_errors.max() < example.max_lag_error, (
-        f"Max lag error {result.visualization.lag_errors.max():.2f} m "
+    assert result.tracking_errors.max_lag < example.max_lag_error, (
+        f"Max lag error {result.tracking_errors.max_lag:.2f} m "
         f"exceeds threshold {example.max_lag_error:.2f} m"
+    )
+
+    assert not result.collision_detected, (
+        "Vehicle collided with an obstacle during the simulation."
     )

@@ -1,6 +1,6 @@
 from typing import Sequence, Callable, NamedTuple
 
-from trajax import (
+from faran import (
     MetricRegistry,
     CollisionMetric,
     ComfortMetric,

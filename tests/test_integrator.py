@@ -1,6 +1,6 @@
 from typing import Callable, Sequence
 
-from trajax import (
+from faran import (
     model as create_model,
     DynamicalModel,
     State,

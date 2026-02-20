@@ -17,7 +17,7 @@ show_inline(IFrame("mpcc-simulation/visualization.html", width="100%", height=60
 class defaults:
     examples_directory: Final = Path("docs/examples")
     output_directory: Final = Path("notebooks")
-    install_command: Final = "!pip install -q trajax trajax-visualizer"
+    install_command: Final = "!pip install -q faran faran-visualizer"
     visualization_cells: Final[Sequence[Cell]] = (cell.code(DISPLAY_CODE),)
 
 

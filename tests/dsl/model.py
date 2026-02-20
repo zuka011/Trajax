@@ -1,6 +1,6 @@
 from typing import overload
 
-from trajax import types
+from faran import types
 
 from numtypes import array, Array, Dims, shape_of
 

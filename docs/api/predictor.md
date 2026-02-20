@@ -11,7 +11,7 @@ Predictors estimate future obstacle states based on motion models. When using Ka
 === "NumPy"
 
     ```python
-    from trajax import predictor, model
+    from faran import predictor, model
 
     # Create a motion predictor with EKF estimator (includes covariance propagation)
     motion_predictor = predictor.numpy.curvilinear(
@@ -30,7 +30,7 @@ Predictors estimate future obstacle states based on motion models. When using Ka
 === "JAX"
 
     ```python
-    from trajax import predictor, model
+    from faran import predictor, model
 
     motion_predictor = predictor.jax.curvilinear(
         horizon=10,
@@ -47,14 +47,14 @@ Predictors estimate future obstacle states based on motion models. When using Ka
 
 ## Motion Predictor Protocol
 
-::: trajax.types.ObstacleMotionPredictor
+::: faran.types.ObstacleMotionPredictor
     options:
       show_root_heading: true
       heading_level: 3
 
 ## Input Assumption Provider Protocol
 
-::: trajax.types.InputAssumptionProvider
+::: faran.types.InputAssumptionProvider
     options:
       show_root_heading: true
       heading_level: 3
@@ -63,7 +63,7 @@ Predictors estimate future obstacle states based on motion models. When using Ka
 
 Combines prediction with state observation:
 
-::: trajax.obstacles.PredictingObstacleStateProvider
+::: faran.obstacles.PredictingObstacleStateProvider
     options:
       show_root_heading: true
       heading_level: 3

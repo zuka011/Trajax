@@ -1,4 +1,4 @@
-from trajax import ControlInputSequence
+from faran import ControlInputSequence
 
 from tests.examples import mpcc, reference, obstacles
 from tests.benchmarks.runner import (

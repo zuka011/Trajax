@@ -7,9 +7,10 @@ penalises the vehicle when it approaches the corridor edge.
 from dataclasses import dataclass
 
 from numtypes import array
+from tqdm.auto import tqdm
 
-from trajax import access, collectors, metrics
-from trajax.numpy import (
+from faran import MpccErrorMetricResult, access, collectors, metrics
+from faran.numpy import (
     boundary,
     costs,
     extract,
@@ -20,11 +21,13 @@ from trajax.numpy import (
     trajectory,
     types,
 )
-from trajax_visualizer import MpccSimulationResult
+from faran_visualizer import MpccSimulationResult
 
 # ── Type aliases ──────────────────────────────────────────────────────────── #
 
+type BicycleState = types.bicycle.State
 type BicycleStateBatch = types.bicycle.StateBatch
+type AugmentedState = types.augmented.State[BicycleState, types.simple.State]
 
 # ── Constants ─────────────────────────────────────────────────────────────── #
 
@@ -71,8 +74,10 @@ REFERENCE = trajectory.waypoints(
 class Result:
     """Outcome of a planning simulation with boundaries."""
 
-    final_state: object
+    final_state: AugmentedState
     visualization: MpccSimulationResult
+    tracking_errors: MpccErrorMetricResult
+    collision_detected: bool
 
     @property
     def progress(self) -> float:
@@ -165,7 +170,8 @@ def run(planner, augmented_model, registry, error_metric, corridor) -> Result:
         ),
     )
 
-    for step in range(STEP_LIMIT):
+    bar = tqdm(range(STEP_LIMIT), desc="Simulation", unit="step")
+    for step in bar:
         control = planner.step(
             temperature=TEMPERATURE,
             nominal_input=nominal,
@@ -177,10 +183,10 @@ def run(planner, augmented_model, registry, error_metric, corridor) -> Result:
         )
 
         if current_state.virtual.array[0] >= REFERENCE.path_length * 0.9:
-            print(f"Reached goal at step {step + 1}.")
+            bar.write(f"Reached goal at step {step + 1}.")
             break
 
-        print(f"Step {step + 1}: progress={current_state.virtual.array[0]:.1f}")
+        bar.set_postfix(progress=f"{current_state.virtual.array[0]:.1}%")
     # --8<-- [end:loop]
 
     trajectories = registry.data(access.trajectories.require())
@@ -202,6 +208,8 @@ def run(planner, augmented_model, registry, error_metric, corridor) -> Result:
             max_lag_error=5.0,
             boundary=corridor,
         ),
+        tracking_errors=errors,
+        collision_detected=False,
     )
 
 
@@ -213,11 +221,15 @@ MAX_LAG_ERROR = 5.0
 # ── Visualization ──────────────────────────────────────────────────────────────────────────── #
 
 
+# --8<-- [start:visualize]
 async def visualize(result: Result) -> None:
-    from trajax_visualizer import configure, visualizer
+    from faran_visualizer import configure, visualizer
 
     configure(output_directory=".")
     await visualizer.mpcc()(result.visualization, key="visualization")
+
+
+# --8<-- [end:visualize]
 
 
 if __name__ == "__main__":
@@ -227,4 +239,5 @@ if __name__ == "__main__":
     result = run(planner, augmented_model, registry, error_metric, corridor)
     print(f"Path progress: {result.progress:.1f} / {REFERENCE.path_length}")
     print(f"Reached goal: {result.reached_goal}")
+    print(f"Collision detected: {result.collision_detected}")
     asyncio.run(visualize(result))

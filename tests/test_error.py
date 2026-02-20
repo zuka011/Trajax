@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from trajax import costs, trajectory, types, ContouringCost, LagCost, Error
+from faran import costs, trajectory, types, ContouringCost, LagCost, Error
 
 from numtypes import array, Array
 

@@ -1,0 +1,371 @@
+from typing import Sequence, Protocol
+from dataclasses import dataclass
+
+from faran import (
+    Trajectory,
+    ExplicitBoundary,
+    BoundaryPoints,
+    ReferencePoints,
+    ControlInputSequence,
+    Weights,
+    Control,
+    Risk,
+    types,
+)
+
+from faran_visualizer.api.simulation import (
+    Arrays,
+    Plot,
+    Road,
+    Visualizable,
+    SimulationVisualizer,
+)
+
+from numtypes import Array, Dim1, Dims, D
+
+import numpy as np
+
+type PhysicalStateSequence = (
+    types.numpy.bicycle.StateSequence | types.jax.bicycle.StateSequence
+)
+type VirtualStateSequence = (
+    types.numpy.simple.StateSequence | types.jax.simple.StateSequence
+)
+type AugmentedStateSequence = types.augmented.State[
+    PhysicalStateSequence, VirtualStateSequence
+]
+type PathParameters = types.numpy.PathParameters
+
+
+class ObstacleStates[T: int, D_x: int, K: int](Protocol):
+    def x(self) -> Array[Dims[T, K]]:
+        """Returns the x-coordinates of the obstacles."""
+        ...
+
+    def y(self) -> Array[Dims[T, K]]:
+        """Returns the y-coordinates of the obstacles."""
+        ...
+
+    def heading(self) -> Array[Dims[T, K]]:
+        """Returns the headings of the obstacles."""
+        ...
+
+    def covariance(self) -> Array[Dims[T, D_x, D_x, K]] | None:
+        """Returns the covariances of the obstacle states, or None if not available."""
+        ...
+
+
+@dataclass(kw_only=True, frozen=True)
+class MpccSimulationResult:
+    reference: Trajectory[PathParameters, ReferencePoints]
+    states: AugmentedStateSequence
+    contouring_errors: Array[Dim1]
+    lag_errors: Array[Dim1]
+    time_step_size: float
+    wheelbase: float
+    max_contouring_error: float | None = None
+    max_lag_error: float | None = None
+    vehicle_width: float | None = None
+    optimal_trajectories: Sequence[AugmentedStateSequence] | None = None
+    nominal_trajectories: Sequence[AugmentedStateSequence] | None = None
+    obstacles: ObstacleStates | None = None
+    obstacle_forecasts: Sequence[ObstacleStates] | None = None
+    controls: Sequence[Control[ControlInputSequence, Weights]] | None = None
+    risks: Sequence[Risk] | None = None
+    network: Road.Network | None = None
+    boundary: ExplicitBoundary | None = None
+
+
+@dataclass(kw_only=True, frozen=True)
+class MpccVisualizer:
+    """Visualizer for MPCC simulation results."""
+
+    inner: SimulationVisualizer
+    reference_sample_count: int
+    boundary_sample_count: int
+
+    @staticmethod
+    def create(
+        *,
+        output: str = "mpcc-simulation",
+        reference_sample_count: int = 200,
+        boundary_sample_count: int = 100,
+        output_directory: str | None = None,
+    ) -> "MpccVisualizer":
+        return MpccVisualizer(
+            inner=SimulationVisualizer.create(
+                output=output, output_directory=output_directory
+            ),
+            reference_sample_count=reference_sample_count,
+            boundary_sample_count=boundary_sample_count,
+        )
+
+    async def __call__(self, data: MpccSimulationResult, *, key: str) -> None:
+        await self.inner(self.extract(data), key=key)
+
+    async def can_visualize(self, data: object) -> bool:
+        return isinstance(data, MpccSimulationResult)
+
+    def extract(self, result: MpccSimulationResult) -> Visualizable.SimulationResult:
+        return Visualizable.SimulationResult.create(
+            info=self.info_from(result),
+            reference=self.reference_trajectory_from(result),
+            ego=self.ego_from(result),
+            trajectories=self.planned_trajectories_from(result),
+            obstacles=self.obstacles_from(result),
+            network=result.network,
+            additional_plots=self.additional_plots_from(result),
+            boundaries=self.boundaries_from(result),
+        )
+
+    def info_from(self, result: MpccSimulationResult) -> Visualizable.SimulationInfo:
+        return Visualizable.SimulationInfo(
+            path_length=result.reference.path_length,
+            time_step=result.time_step_size,
+            wheelbase=result.wheelbase,
+            vehicle_width=result.vehicle_width,
+            vehicle_type="car",
+        )
+
+    def reference_trajectory_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.ReferenceTrajectory:
+        path_parameters = np.linspace(
+            0, result.reference.path_length, self.reference_sample_count
+        ).reshape(-1, 1)
+
+        reference_points = result.reference.query(
+            types.numpy.path_parameters(path_parameters)
+        )
+
+        return Visualizable.ReferenceTrajectory(
+            x=reference_points.x()[:, 0], y=reference_points.y()[:, 0]
+        )
+
+    def ego_from(self, result: MpccSimulationResult) -> Visualizable.Ego:
+        return Visualizable.Ego(
+            x=result.states.physical.x(),
+            y=result.states.physical.y(),
+            heading=result.states.physical.heading(),
+            path_parameter=(path_parameters := self.path_parameters_from(result)),
+            ghost=self.ego_ghost_from(result, path_parameters),
+        )
+
+    def path_parameters_from(self, result: MpccSimulationResult) -> Array[Dim1]:
+        # NOTE: We assume the first virtual dimension is the path parameter.
+        return np.asarray(result.states.virtual)[:, 0]
+
+    def ego_ghost_from(
+        self, result: MpccSimulationResult, path_parameters: Array[Dim1]
+    ) -> Visualizable.EgoGhost:
+        positions = result.reference.query(
+            types.numpy.path_parameters(path_parameters.reshape(-1, 1))
+        )
+
+        return Visualizable.EgoGhost(x=positions.x()[:, 0], y=positions.y()[:, 0])
+
+    def planned_trajectories_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.PlannedTrajectories | None:
+        if result.optimal_trajectories is None:
+            return
+
+        return Visualizable.PlannedTrajectories(
+            optimal=self.planned_trajectory_from(result.optimal_trajectories),
+            nominal=self.planned_trajectory_from(result.nominal_trajectories),
+        )
+
+    def planned_trajectory_from(
+        self, trajectories: Sequence[AugmentedStateSequence] | None
+    ) -> Visualizable.PlannedTrajectory | None:
+        if trajectories is None:
+            return
+
+        return Visualizable.PlannedTrajectory(
+            x=np.stack([it.physical.x() for it in trajectories], axis=0),
+            y=np.stack([it.physical.y() for it in trajectories], axis=0),
+        )
+
+    def obstacles_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.Obstacles | None:
+        if result.obstacles is None:
+            return
+
+        return Visualizable.Obstacles(
+            x=result.obstacles.x(),
+            y=result.obstacles.y(),
+            heading=result.obstacles.heading(),
+            forecast=self.obstacle_forecast_from(result),
+        )
+
+    def obstacle_forecast_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.ObstacleForecast | None:
+        if result.obstacle_forecasts is None:
+            return
+
+        return Visualizable.ObstacleForecast(
+            x=np.stack([it.x() for it in result.obstacle_forecasts], axis=0),
+            y=np.stack([it.y() for it in result.obstacle_forecasts], axis=0),
+            heading=np.stack(
+                [it.heading() for it in result.obstacle_forecasts], axis=0
+            ),
+            covariance=self.obstacle_forecast_covariance_from(result),
+        )
+
+    def obstacle_forecast_covariance_from(
+        self, result: MpccSimulationResult
+    ) -> Arrays.ObstacleForecastCovariances | None:
+        if (forecasts := result.obstacle_forecasts) is None or (
+            template_covariance := self.template_covariance_from(forecasts)
+        ) is None:
+            return
+
+        no_covariance = np.zeros_like(template_covariance)
+
+        return np.stack(
+            [
+                self.position_covariance_from(covariance)
+                if (covariance := it.covariance()) is not None
+                else no_covariance
+                for it in forecasts
+            ],
+            axis=0,
+        )
+
+    def template_covariance_from(
+        self, forecasts: Sequence[ObstacleStates]
+    ) -> Array | None:
+        for it in forecasts:
+            if (covariance := it.covariance()) is not None:
+                return self.position_covariance_from(covariance)
+
+    def position_covariance_from[T: int = int, D_x: int = int, K: int = int](
+        self, covariance: Array[Dims[T, D_x, D_x, K]]
+    ) -> Array[Dims[T, D[2], D[2], K]]:
+        # NOTE: We assume first two dimensions correspond to covariance of (x, y).
+        return covariance[:, :2, :2, :]
+
+    def boundaries_from(
+        self, result: MpccSimulationResult
+    ) -> Visualizable.Boundaries | None:
+        if result.boundary is None:
+            return
+
+        return Visualizable.Boundaries(
+            left=self.boundary_from(
+                result.boundary.left(sample_count=self.boundary_sample_count)
+            ),
+            right=self.boundary_from(
+                result.boundary.right(sample_count=self.boundary_sample_count)
+            ),
+        )
+
+    def boundary_from(self, points: BoundaryPoints) -> Visualizable.Boundary:
+        return Visualizable.Boundary(x=points[:, 0], y=points[:, 1])
+
+    def additional_plots_from(
+        self, result: MpccSimulationResult
+    ) -> list[Plot.Additional]:
+        path_parameters = self.path_parameters_from(result)
+        plots = [
+            Plot.Additional(
+                id="progress",
+                name="Path Progress",
+                series=[Plot.Series(label="Progress", values=path_parameters)],
+                y_axis_label="Progress (m)",
+                upper_bound=Plot.Bound(
+                    values=result.reference.path_length, label="Path Length"
+                ),
+            ),
+            Plot.Additional(
+                id="contouring-error",
+                name="Contouring Error",
+                series=[
+                    Plot.Series(
+                        label="Contouring Error",
+                        values=np.asarray(result.contouring_errors).flatten(),
+                    )
+                ],
+                y_axis_label="Error (m)",
+                upper_bound=Plot.Bound(values=result.max_contouring_error)
+                if result.max_contouring_error is not None
+                else None,
+                lower_bound=Plot.Bound(values=-result.max_contouring_error)
+                if result.max_contouring_error is not None
+                else None,
+                group="errors",
+            ),
+            Plot.Additional(
+                id="lag-error",
+                name="Lag Error",
+                series=[
+                    Plot.Series(
+                        label="Lag Error",
+                        values=np.asarray(result.lag_errors).flatten(),
+                        color="#9b59b6",
+                    )
+                ],
+                y_axis_label="Error (m)",
+                upper_bound=Plot.Bound(values=result.max_lag_error)
+                if result.max_lag_error is not None
+                else None,
+                lower_bound=Plot.Bound(values=-result.max_lag_error)
+                if result.max_lag_error is not None
+                else None,
+                group="errors",
+            ),
+        ]
+
+        if risk_plot := self.risk_plot_from(result):
+            plots.append(risk_plot)
+
+        return plots
+
+    def risk_plot_from(self, result: MpccSimulationResult) -> Plot.Additional | None:
+        if (
+            result.risks is None
+            or result.controls is None
+            or len(result.risks) == 0
+            or len(result.controls) == 0
+        ):
+            return
+
+        risks = np.stack([np.asarray(risk) for risk in result.risks], axis=0).sum(
+            axis=1
+        )
+        weights = np.stack(
+            [np.asarray(c.debug.trajectory_weights) for c in result.controls], axis=0
+        )
+
+        # NOTE: avoid zero risks for log scale plotting
+        risks = np.maximum(risks, 1e-10)
+        selected = (risks * weights).sum(axis=1)
+
+        return Plot.Additional(
+            id="risk",
+            name="Risk",
+            series=[
+                Plot.Series(label="Selected", values=selected, color="#e63946"),
+                Plot.Series(
+                    label="Median", values=np.median(risks, axis=1), color="#457b9d"
+                ),
+            ],
+            bands=[
+                Plot.Band(
+                    lower=np.percentile(risks, 10, axis=1),
+                    upper=np.percentile(risks, 90, axis=1),
+                    color="#adb5bd",
+                    label="10-90%",
+                ),
+                Plot.Band(
+                    lower=np.percentile(risks, 25, axis=1),
+                    upper=np.percentile(risks, 75, axis=1),
+                    color="#457b9d",
+                    label="25-75%",
+                ),
+            ],
+            y_axis_label="Risk",
+            y_axis_scale="log",
+        )

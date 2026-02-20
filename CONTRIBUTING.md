@@ -1,6 +1,6 @@
-# Contributing to trajax
+# Contributing to faran
 
-Thank you for your interest in contributing to trajax! This guide will help you get started.
+Thank you for your interest in contributing to faran! This guide will help you get started.
 
 ## Development Setup
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing to trajax! This guide will help you 
 
 1. Clone the repository:
    ```bash
-   git clone https://gitlab.com/risk-metrics/trajax.git
-   cd trajax
+   git clone https://gitlab.com/risk-metrics/faran.git
+   cd faran
    ```
 
 2. Create a virtual environment and install dependencies:
@@ -195,7 +195,7 @@ model = stubs.DynamicalModel.returns(
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=trajax --cov-report=term-missing
+uv run pytest --cov=faran --cov-report=term-missing
 
 # Run specific test
 uv run pytest tests/test_mppi.py -k "test_that_mppi_favors"
@@ -224,7 +224,7 @@ We follow TDD principles:
 uv run mkdocs serve
 ```
 
-Visit `http://127.0.0.1:8000/trajax/` to preview.
+Visit `http://127.0.0.1:8000/faran/` to preview.
 
 ### Docstrings
 
@@ -269,7 +269,7 @@ def simulate(
 ## Architecture Overview
 
 ```
-trajax/
+faran/
 ├── __init__.py          # Public API exports
 ├── numpy.py             # NumPy backend namespace
 ├── jax.py               # JAX backend namespace

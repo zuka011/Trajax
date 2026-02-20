@@ -4,12 +4,12 @@ stages:
 
 variables:
   PIPELINE_ROOT: "visualizer"
-  PYPI_PROJECT_NAME: "trajax-visualizer"
+  PYPI_PROJECT_NAME: "faran-visualizer"
   PYPI_PRE_PUBLISH_COMMANDS: |
     apt-get update -qq && apt-get install -qq -y nodejs npm
     npm install -g pnpm
     cd core && pnpm install --frozen-lockfile && pnpm build && cd ..
-    git update-index --assume-unchanged trajax_visualizer/assets/cli.js
+    git update-index --assume-unchanged faran_visualizer/assets/cli.js
 
 include:
   - project: "zurabm/ci-templates"

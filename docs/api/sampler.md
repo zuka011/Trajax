@@ -7,7 +7,7 @@ Samplers generate control input perturbations around a nominal sequence for MPPI
 Draws i.i.d. Gaussian perturbations per timestep with a fixed standard deviation per control dimension.
 
 ```python
-from trajax.numpy import sampler, types
+from faran.numpy import sampler, types
 from numtypes import array
 
 control_sampler = sampler.gaussian(
@@ -18,14 +18,14 @@ control_sampler = sampler.gaussian(
 )
 ```
 
-::: trajax.samplers.gaussian.basic.NumPyGaussianSampler
+::: faran.samplers.gaussian.basic.NumPyGaussianSampler
     options:
       show_root_heading: true
       heading_level: 3
       members:
         - create
 
-::: trajax.samplers.gaussian.accelerated.JaxGaussianSampler
+::: faran.samplers.gaussian.accelerated.JaxGaussianSampler
     options:
       show_root_heading: true
       heading_level: 3
@@ -46,14 +46,14 @@ control_sampler = sampler.halton(
 )
 ```
 
-::: trajax.samplers.halton.basic.NumPyHaltonSplineSampler
+::: faran.samplers.halton.basic.NumPyHaltonSplineSampler
     options:
       show_root_heading: true
       heading_level: 3
       members:
         - create
 
-::: trajax.samplers.halton.accelerated.JaxHaltonSplineSampler
+::: faran.samplers.halton.accelerated.JaxHaltonSplineSampler
     options:
       show_root_heading: true
       heading_level: 3
@@ -64,7 +64,7 @@ control_sampler = sampler.halton(
 
 Obstacle state samplers draw from predicted obstacle state distributions (Gaussian) for risk-aware collision cost evaluation.
 
-::: trajax.obstacles.sampler.basic.NumPyGaussianObstacle2dPoseSampler
+::: faran.obstacles.sampler.basic.NumPyGaussianObstacle2dPoseSampler
     options:
       show_root_heading: true
       heading_level: 3
@@ -73,7 +73,7 @@ Obstacle state samplers draw from predicted obstacle state distributions (Gaussi
 
 ## Sampler Protocol
 
-::: trajax.types.Sampler
+::: faran.types.Sampler
     options:
       show_root_heading: true
       heading_level: 3

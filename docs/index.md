@@ -4,7 +4,7 @@ hide:
   - toc
 ---
 
-# trajax
+# faran
 
 Sampling-based trajectory planning for autonomous systems. The library provides composable building blocks — dynamics models, cost functions, samplers, and risk metrics — that you wire together into an MPPI planner. NumPy and JAX backends expose the same API; switch between them by changing one import line.
 
@@ -15,7 +15,7 @@ An MPCC (Model Predictive Contouring Control) formulation tracking a reference p
 <div class="grid" markdown>
 
 ```python
-from trajax.numpy import mppi, model, sampler, trajectory, types, extract
+from faran.numpy import mppi, model, sampler, trajectory, types, extract
 from numtypes import array
 
 def position(states):
@@ -87,13 +87,13 @@ for _ in range(200):
 
 </div>
 
-To use JAX (GPU), change `from trajax.numpy` to `from trajax.jax`. Everything else stays the same.
+To use JAX (GPU), change `from faran.numpy` to `from faran.jax`. Everything else stays the same.
 
 ## Installation
 
 ```bash
-pip install trajax          # NumPy + JAX (CPU)
-pip install trajax[cuda]    # JAX with GPU support (Linux)
+pip install faran          # NumPy + JAX (CPU)
+pip install faran[cuda]    # JAX with GPU support (Linux)
 ```
 
 Requires Python ≥ 3.13.
@@ -110,7 +110,7 @@ See the [feature overview](guide/features.md) for the full list of supported com
 
     ---
 
-    Install trajax and run your first MPPI planner
+    Install faran and run your first MPPI planner
 
     [:octicons-arrow-right-24: Getting started](guide/getting-started.md)
 

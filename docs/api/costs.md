@@ -14,7 +14,7 @@ $$
 
 where $(x_\phi, y_\phi, \theta_\phi)$ is the reference point at path parameter $\phi$.
 
-::: trajax.costs.basic.NumPyContouringCost
+::: faran.costs.basic.NumPyContouringCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -30,7 +30,7 @@ $$
 J_l = k_l \, e_l^2, \quad e_l = -\cos(\theta_\phi)(x - x_\phi) - \sin(\theta_\phi)(y - y_\phi)
 $$
 
-::: trajax.costs.basic.NumPyLagCost
+::: faran.costs.basic.NumPyLagCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -50,7 +50,7 @@ where $\dot{\phi}$ is the virtual path velocity.
 
 [^1]: A. Liniger, A. Domahidi, M. Morari, "Optimization-based Autonomous Racing of 1:43 Scale RC Cars," Optimal Control Applications and Methods, 2015.
 
-::: trajax.costs.basic.NumPyProgressCost
+::: faran.costs.basic.NumPyProgressCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -74,7 +74,7 @@ where $d_i$ is the signed distance between vehicle part $i$ and the nearest obst
 
 [^2]: J. Schulman et al., "Finding Locally Optimal, Collision-Free Trajectories with Sequential Convex Optimization," RSS, 2013.
 
-::: trajax.costs.collision.basic.NumPyCollisionCost
+::: faran.costs.collision.basic.NumPyCollisionCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -85,7 +85,7 @@ where $d_i$ is the signed distance between vehicle part $i$ and the nearest obst
 
 Same hinge-loss formulation as the collision cost, applied to corridor boundary distances instead of obstacle distances.
 
-::: trajax.costs.boundary.basic.NumPyBoundaryCost
+::: faran.costs.boundary.basic.NumPyBoundaryCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -102,7 +102,7 @@ $$
 J_s = \| K_u \, \Delta \mathbf{u}_t \|^2, \quad \Delta \mathbf{u}_t = \mathbf{u}_t - \mathbf{u}_{t-1}
 $$
 
-::: trajax.costs.basic.NumPyControlSmoothingCost
+::: faran.costs.basic.NumPyControlSmoothingCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -119,7 +119,7 @@ $$
 
 [^3]: G. Williams, N. Wagener et al., "Information Theoretic MPC for Model-Based Reinforcement Learning," IEEE ICRA, 2017.
 
-::: trajax.costs.basic.NumPyControlEffortCost
+::: faran.costs.basic.NumPyControlEffortCost
     options:
       show_root_heading: true
       heading_level: 4
@@ -131,12 +131,12 @@ $$
 The `combined` factory creates a cost function that sums all component costs per timestep:
 
 ```python
-from trajax.numpy import costs
+from faran.numpy import costs
 
 total = costs.combined(contouring, lag, progress, collision, smoothing)
 ```
 
-::: trajax.costs.combined.CombinedCost
+::: faran.costs.combined.CombinedCost
     options:
       show_root_heading: true
       heading_level: 3
@@ -151,7 +151,7 @@ Computes pairwise signed distances between circular vehicle approximations and c
 
 [^4]: L. Tolksdorf et al., "Fast Collision Probability Estimation for Automated Driving using Multi-circular Shape Approximations," IEEE IV, 2024.
 
-::: trajax.costs.distance.circles.basic.NumPyCircleDistanceExtractor
+::: faran.costs.distance.circles.basic.NumPyCircleDistanceExtractor
     options:
       show_root_heading: true
       heading_level: 4
@@ -162,7 +162,7 @@ Computes pairwise signed distances between circular vehicle approximations and c
 
 Computes signed distances between convex polygons using the Separating Axis Theorem.
 
-::: trajax.costs.distance.sat.basic.NumPySatDistanceExtractor
+::: faran.costs.distance.sat.basic.NumPySatDistanceExtractor
     options:
       show_root_heading: true
       heading_level: 4
@@ -173,7 +173,7 @@ Computes signed distances between convex polygons using the Separating Axis Theo
 
 When obstacle positions are uncertain, collision costs can be evaluated under different risk measures via the [riskit](https://pypi.org/project/riskit/) library. Available risk metrics include expected value, mean-variance, VaR, CVaR, and entropic risk.
 
-::: trajax.costs.risk.base.RisKitRiskMetric
+::: faran.costs.risk.base.RisKitRiskMetric
     options:
       show_root_heading: true
       heading_level: 3
@@ -182,7 +182,7 @@ When obstacle positions are uncertain, collision costs can be evaluated under di
 
 ## CostFunction Protocol
 
-::: trajax.types.CostFunction
+::: faran.types.CostFunction
     options:
       show_root_heading: true
       heading_level: 3

@@ -15,7 +15,7 @@ This module handles:
 === "NumPy"
 
     ```python
-    from trajax import obstacles, types
+    from faran import obstacles, types
 
     # Create obstacle states from observed data
     states = types.numpy.obstacle_states(
@@ -33,7 +33,7 @@ This module handles:
 === "JAX"
 
     ```python
-    from trajax import obstacles, types
+    from faran import obstacles, types
 
     states = types.jax.obstacle_states(...)
     sampler = obstacles.jax.sampler.gaussian(seed=42)
@@ -45,14 +45,14 @@ For testing and simulation purposes:
 
 ### Static Obstacle Simulator
 
-::: trajax.obstacles.static.basic.NumPyStaticObstacleSimulator
+::: faran.obstacles.static.basic.NumPyStaticObstacleSimulator
     options:
       show_root_heading: true
       heading_level: 3
 
 ## State Provider
 
-::: trajax.types.ObstacleStateProvider
+::: faran.types.ObstacleStateProvider
     options:
       show_root_heading: true
       heading_level: 3
@@ -63,14 +63,14 @@ For testing and simulation purposes:
 
 Matches detected obstacles to tracked IDs across frames using the Hungarian algorithm on position distances. Detections beyond a configurable cutoff distance are assigned new IDs.
 
-::: trajax.obstacles.assignment.basic.NumPyHungarianObstacleIdAssignment
+::: faran.obstacles.assignment.basic.NumPyHungarianObstacleIdAssignment
     options:
       show_root_heading: true
       heading_level: 4
       members:
         - create
 
-::: trajax.obstacles.assignment.accelerated.JaxHungarianObstacleIdAssignment
+::: faran.obstacles.assignment.accelerated.JaxHungarianObstacleIdAssignment
     options:
       show_root_heading: true
       heading_level: 4
@@ -79,7 +79,7 @@ Matches detected obstacles to tracked IDs across frames using the Hungarian algo
 
 ## ID Assignment
 
-::: trajax.types.ObstacleIdAssignment
+::: faran.types.ObstacleIdAssignment
     options:
       show_root_heading: true
       heading_level: 3

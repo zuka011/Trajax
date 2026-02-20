@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-pip install trajax
+pip install faran
 ```
 
 Requires Python 3.13+.

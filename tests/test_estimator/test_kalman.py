@@ -1,6 +1,6 @@
 from typing import Sequence, Protocol
 
-from trajax import ObstacleStateEstimator, EstimatedObstacleStates, model
+from faran import ObstacleStateEstimator, EstimatedObstacleStates, model
 
 from numtypes import Array, Dims, array
 

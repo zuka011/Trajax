@@ -8,12 +8,12 @@ The metrics module provides evaluation metrics for trajectory planning algorithm
 
 Evaluates collision safety:
 
-::: trajax.metrics.collision.CollisionMetric
+::: faran.metrics.collision.CollisionMetric
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.metrics.collision.CollisionMetricResult
+::: faran.metrics.collision.CollisionMetricResult
     options:
       show_root_heading: true
       heading_level: 3
@@ -22,12 +22,12 @@ Evaluates collision safety:
 
 Evaluates ride comfort based on acceleration profiles:
 
-::: trajax.metrics.comfort.ComfortMetric
+::: faran.metrics.comfort.ComfortMetric
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.metrics.comfort.ComfortMetricResult
+::: faran.metrics.comfort.ComfortMetricResult
     options:
       show_root_heading: true
       heading_level: 3
@@ -36,12 +36,12 @@ Evaluates ride comfort based on acceleration profiles:
 
 Evaluates boundary and constraint adherence:
 
-::: trajax.metrics.constraint.ConstraintViolationMetric
+::: faran.metrics.constraint.ConstraintViolationMetric
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.metrics.constraint.ConstraintViolationMetricResult
+::: faran.metrics.constraint.ConstraintViolationMetricResult
     options:
       show_root_heading: true
       heading_level: 3
@@ -50,12 +50,12 @@ Evaluates boundary and constraint adherence:
 
 Evaluates path-following error for MPCC controllers:
 
-::: trajax.metrics.error.MpccErrorMetric
+::: faran.metrics.error.MpccErrorMetric
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.metrics.error.MpccErrorMetricResult
+::: faran.metrics.error.MpccErrorMetricResult
     options:
       show_root_heading: true
       heading_level: 3
@@ -64,19 +64,19 @@ Evaluates path-following error for MPCC controllers:
 
 Evaluates goal reaching and trajectory progress:
 
-::: trajax.metrics.task.TaskCompletionMetric
+::: faran.metrics.task.TaskCompletionMetric
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.metrics.task.TaskCompletionMetricResult
+::: faran.metrics.task.TaskCompletionMetricResult
     options:
       show_root_heading: true
       heading_level: 3
 
 ## Metric Registry
 
-::: trajax.metrics.registry.MetricRegistry
+::: faran.metrics.registry.MetricRegistry
     options:
       show_root_heading: true
       heading_level: 3

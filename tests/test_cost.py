@@ -1,7 +1,7 @@
 from typing import Callable, Sequence
 from functools import partial
 
-from trajax import (
+from faran import (
     Costs,
     CostFunction,
     Circles,

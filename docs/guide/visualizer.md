@@ -1,11 +1,11 @@
 # Visualizer
 
-`trajax-visualizer` is a separate package that generates interactive HTML visualizations from simulation results.
+`faran-visualizer` is a separate package that generates interactive HTML visualizations from simulation results.
 
 ## Installation
 
 ```bash
-pip install trajax-visualizer
+pip install faran-visualizer
 ```
 
 Requires **Node.js 18+** at runtime.
@@ -13,7 +13,7 @@ Requires **Node.js 18+** at runtime.
 ## MPCC Visualization
 
 ```python
-from trajax_visualizer import visualizer, MpccSimulationResult
+from faran_visualizer import visualizer, MpccSimulationResult
 from numtypes import array
 
 result = MpccSimulationResult(
@@ -36,7 +36,7 @@ await mpcc_viz(result, key="my-simulation")
 For simulations that don't use the MPCC factory:
 
 ```python
-from trajax_visualizer import visualizer, Visualizable
+from faran_visualizer import visualizer, Visualizable
 
 result = Visualizable.SimulationResult.create(
     info=Visualizable.SimulationInfo(
@@ -57,7 +57,7 @@ await sim_viz(result, key="my-simulation")
 Attach additional time-series plots with optional bounds and uncertainty bands:
 
 ```python
-from trajax_visualizer import Plot
+from faran_visualizer import Plot
 
 speed_plot = Plot.Additional(
     id="speed",

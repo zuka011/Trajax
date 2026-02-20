@@ -1,6 +1,6 @@
 from typing import Sequence, Any
 
-from trajax import (
+from faran import (
     Trajectory,
     PathParameters,
     ReferencePoints,

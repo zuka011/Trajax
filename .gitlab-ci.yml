@@ -17,8 +17,8 @@ variables:
   RUN_INTEGRATION_TESTS: "true"
   RUN_BENCHMARKS: "true"
   COLLECT_COVERAGE: "true"
-  PYPI_PROJECT_NAME: "trajax"
-  COVERAGE_SOURCE: "trajax"
+  PYPI_PROJECT_NAME: "faran"
+  COVERAGE_SOURCE: "faran"
 
 benchmark:
   extends: .benchmark-base
@@ -36,7 +36,7 @@ benchmark:
     - uv run pytest -m 'benchmark and not risk_benchmark' --benchmark-json=benchmark.json
     - >-
       bencher run
-      --project trajax
+      --project faran
       --token "$BENCHER_API_TOKEN"
       --branch "$CI_COMMIT_REF_NAME"
       --testbed gitlab-ci
@@ -77,7 +77,7 @@ build-visualizer-cli:
     - pnpm build
   artifacts:
     paths:
-      - visualizer/trajax_visualizer/assets/cli.js
+      - visualizer/faran_visualizer/assets/cli.js
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -117,8 +117,9 @@ mirror-github:
     - git config user.email "ci@gitlab.com"
     - git add -f notebooks/
     - echo "python-3.13" > runtime.txt
-    - echo "trajax" >> requirements.txt
-    - echo "trajax_visualizer" >> requirements.txt
+    - echo "faran" >> requirements.txt
+    - echo "faran_visualizer" >> requirements.txt
+    - echo "tqdm" >> requirements.txt
     - git add runtime.txt requirements.txt
     - "git diff --cached --quiet || git commit -m 'chore: update generated notebooks [skip ci]'"
     - git remote add github "https://oauth2:${GITHUB_PAT}@${GITHUB_HOST}"

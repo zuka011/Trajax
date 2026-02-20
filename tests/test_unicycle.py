@@ -1,6 +1,6 @@
 from typing import Callable, Sequence
 
-from trajax import types, DynamicalModel, model as create_model
+from faran import types, DynamicalModel, model as create_model
 
 from numtypes import array, Array
 

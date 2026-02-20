@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from trajax import (
+from faran import (
     AugmentedState,
     StateSequence,
     StateBatch,
@@ -20,7 +20,7 @@ from trajax import (
     access,
     risk,
 )
-from trajax_visualizer import MpccSimulationResult, visualizer
+from faran_visualizer import MpccSimulationResult, visualizer
 
 from tests.utilities import VisualizationData
 from tests.examples import mpcc, reference, obstacles, sampling, weights

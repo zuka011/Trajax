@@ -1,7 +1,7 @@
 from typing import Protocol, NamedTuple, Sequence, Any
 from dataclasses import dataclass
 
-from trajax import (
+from faran import (
     State,
     StateSequence,
     StateBatch,

@@ -14,7 +14,7 @@ where $\lambda$ is the temperature parameter controlling the sharpness of the so
 ## Factory Functions
 
 ```python
-from trajax.numpy import mppi
+from faran.numpy import mppi
 
 # Base MPPI planner
 planner = mppi.base(model=..., cost_function=..., sampler=...)
@@ -28,7 +28,7 @@ planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., re
 
 ## NumPyMppi
 
-::: trajax.mppi.basic.NumPyMppi
+::: faran.mppi.basic.NumPyMppi
     options:
       show_root_heading: true
       heading_level: 3
@@ -39,7 +39,7 @@ planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., re
 
 ## JaxMppi
 
-::: trajax.mppi.accelerated.JaxMppi
+::: faran.mppi.accelerated.JaxMppi
     options:
       show_root_heading: true
       heading_level: 3
@@ -49,14 +49,14 @@ planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., re
 
 ## MPCC Factory
 
-::: trajax.mpcc.basic.NumPyMpccMppi
+::: faran.mpcc.basic.NumPyMpccMppi
     options:
       show_root_heading: true
       heading_level: 3
       members:
         - create
 
-::: trajax.mpcc.accelerated.JaxMpccMppi
+::: faran.mpcc.accelerated.JaxMpccMppi
     options:
       show_root_heading: true
       heading_level: 3
@@ -65,7 +65,7 @@ planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., re
 
 ## Mppi Protocol
 
-::: trajax.types.Mppi
+::: faran.types.Mppi
     options:
       show_root_heading: true
       heading_level: 3
@@ -74,33 +74,33 @@ planner, augmented_model, contouring, lag = mppi.mpcc(model=..., sampler=..., re
 
 ### Control
 
-::: trajax.types.Control
+::: faran.types.Control
     options:
       show_root_heading: true
       heading_level: 4
 
 ### Update Functions
 
-::: trajax.mppi.common.UseOptimalControlUpdate
+::: faran.mppi.common.UseOptimalControlUpdate
     options:
       show_root_heading: true
       heading_level: 4
 
-::: trajax.mppi.common.NoFilter
+::: faran.mppi.common.NoFilter
     options:
       show_root_heading: true
       heading_level: 4
 
 ### Savitzky-Golay Filter
 
-::: trajax.mppi.savgol.basic.NumPySavGolFilter
+::: faran.mppi.savgol.basic.NumPySavGolFilter
     options:
       show_root_heading: true
       heading_level: 4
       members:
         - create
 
-::: trajax.mppi.savgol.accelerated.JaxSavGolFilter
+::: faran.mppi.savgol.accelerated.JaxSavGolFilter
     options:
       show_root_heading: true
       heading_level: 4

@@ -1,4 +1,4 @@
-from trajax import types
+from faran import types
 
 from numtypes import shape_of
 

@@ -1,7 +1,7 @@
 from typing import Final, Callable
 from dataclasses import dataclass, field
 
-from trajax import (
+from faran import (
     Mppi,
     AugmentedModel,
     DynamicalModel,
@@ -19,7 +19,7 @@ from trajax import (
     collectors,
     metrics,
 )
-from trajax.numpy import (
+from faran.numpy import (
     mppi,
     filters,
     model,

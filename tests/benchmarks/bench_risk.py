@@ -1,7 +1,7 @@
 from typing import Sequence, Protocol
 from functools import partial
 
-from trajax import ControlInputSequence, risk
+from faran import ControlInputSequence, risk
 
 from tests.examples import mpcc, reference, obstacles, sampling
 from tests.benchmarks.runner import (

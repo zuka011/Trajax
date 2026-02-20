@@ -9,9 +9,10 @@ from dataclasses import dataclass
 
 import numpy as np
 from numtypes import array
+from tqdm.auto import tqdm
 
-from trajax import Circles, access, collectors, metrics
-from trajax.numpy import (
+from faran import Circles, MpccErrorMetricResult, access, collectors, metrics
+from faran.numpy import (
     boundary,
     costs,
     distance,
@@ -26,12 +27,17 @@ from trajax.numpy import (
     trajectory,
     types,
 )
-from trajax_visualizer import MpccSimulationResult
+from faran_visualizer import MpccSimulationResult
 
 # ── Type aliases ──────────────────────────────────────────────────────────── #
 
+type BicycleState = types.bicycle.State
 type BicycleStateBatch = types.bicycle.StateBatch
+type AugmentedState = types.augmented.State[BicycleState, types.simple.State]
 type ObstacleStates = types.Obstacle2dPoses
+type ObstacleStatesForTimeStep = types.Obstacle2dPosesForTimeStep
+type ObstaclePositions = types.Obstacle2dPositions
+type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
 
 # ── Constants ─────────────────────────────────────────────────────────────── #
 
@@ -68,11 +74,13 @@ class BicyclePredictionCreator:
         )
 
 
-class ObstaclePositionExtractor:
-    def of_states_for_time_step(self, states, /):
+class NumPyObstaclePositionExtractor:
+    def of_states_for_time_step(
+        self, states: ObstacleStatesForTimeStep, /
+    ) -> ObstaclePositionsForTimeStep:
         return states.positions()
 
-    def of_states(self, states, /):
+    def of_states(self, states: ObstacleStates, /) -> ObstaclePositions:
         return states.positions()
 
 
@@ -105,8 +113,10 @@ REFERENCE = trajectory.waypoints(
 class Result:
     """Outcome of a planning simulation with uncertain obstacles."""
 
-    final_state: object
+    final_state: AugmentedState
     visualization: MpccSimulationResult
+    tracking_errors: MpccErrorMetricResult
+    collision_detected: bool
 
     @property
     def progress(self) -> float:
@@ -163,7 +173,7 @@ def create():
             obstacle_count=obstacle_simulator.obstacle_count,
         ),
         id_assignment=create_obstacles.id_assignment.hungarian(
-            position_extractor=ObstaclePositionExtractor(),
+            position_extractor=NumPyObstaclePositionExtractor(),
             cutoff=10.0,
         ),
     )
@@ -305,7 +315,8 @@ def run(
         ),
     )
 
-    for step in range(STEP_LIMIT):
+    bar = tqdm(range(STEP_LIMIT), desc="Simulation", unit="step")
+    for step in bar:
         control = planner.step(
             temperature=TEMPERATURE,
             nominal_input=nominal,
@@ -318,10 +329,10 @@ def run(
         obstacle_observer.observe(obstacle_simulator.step())
 
         if current_state.virtual.array[0] >= REFERENCE.path_length * 0.7:
-            print(f"Reached goal at step {step + 1}.")
+            bar.write(f"Reached goal at step {step + 1}.")
             break
 
-        print(f"Step {step + 1}: progress={current_state.virtual.array[0]:.1f}")
+        bar.set_postfix(progress=f"{current_state.virtual.array[0]:.1}%")
     # --8<-- [end:loop]
 
     trajectories = registry.data(access.trajectories.require())
@@ -347,6 +358,8 @@ def run(
             risks=registry.data(access.risks),
             boundary=corridor,
         ),
+        tracking_errors=errors,
+        collision_detected=registry.get(collision_metric).collision_detected,
     )
 
 
@@ -360,11 +373,15 @@ GOAL_FRACTION = 0.7
 # ── Visualization ──────────────────────────────────────────────────────────────────────────── #
 
 
+# --8<-- [start:visualize]
 async def visualize(result: Result) -> None:
-    from trajax_visualizer import configure, visualizer
+    from faran_visualizer import configure, visualizer
 
     configure(output_directory=".")
     await visualizer.mpcc()(result.visualization, key="visualization")
+
+
+# --8<-- [end:visualize]
 
 
 if __name__ == "__main__":
@@ -374,4 +391,5 @@ if __name__ == "__main__":
     result = run(*components)
     print(f"Path progress: {result.progress:.1f} / {REFERENCE.path_length}")
     print(f"Reached goal: {result.reached_goal}")
+    print(f"Collision detected: {result.collision_detected}")
     asyncio.run(visualize(result))

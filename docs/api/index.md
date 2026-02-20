@@ -23,10 +23,10 @@ All factory functions are accessed through backend namespaces:
 
 ```python
 # NumPy backend
-from trajax.numpy import mppi, model, sampler, costs, trajectory, boundary, types
+from faran.numpy import mppi, model, sampler, costs, trajectory, boundary, types
 
 # JAX backend
-from trajax.jax import mppi, model, sampler, costs, trajectory, boundary, types
+from faran.jax import mppi, model, sampler, costs, trajectory, boundary, types
 ```
 
 Both namespaces expose identical APIs. See [Backends](../guide/backends.md) for details.

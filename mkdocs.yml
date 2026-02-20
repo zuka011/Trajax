@@ -1,9 +1,9 @@
-site_name: trajax
-site_url: https://risk-metrics.gitlab.io/trajax/
+site_name: faran
+site_url: https://risk-metrics.gitlab.io/faran/
 site_description: A library providing performant NumPy & JAX implementations of an MPPI planner
 site_author: Zurab Mujirishvili
-repo_url: https://gitlab.com/risk-metrics/trajax
-repo_name: risk-metrics/trajax
+repo_url: https://gitlab.com/risk-metrics/faran
+repo_name: risk-metrics/faran
 
 # Exclude unused visualization files from build
 exclude_docs: |

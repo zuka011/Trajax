@@ -1,4 +1,4 @@
-from trajax import ObstacleIdAssignment, ObstacleIds, types, obstacles
+from faran import ObstacleIdAssignment, ObstacleIds, types, obstacles
 
 from numtypes import array
 

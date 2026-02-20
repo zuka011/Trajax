@@ -293,7 +293,7 @@ Both backends expose identical factory functions. Switching requires changing on
 | Constraint Violation | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
 | Comfort | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
 | **Visualization** | | | |
-| Interactive HTML (trajax-visualizer) | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
+| Interactive HTML (faran-visualizer) | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
 
 ### Planned
 

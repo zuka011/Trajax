@@ -6,14 +6,14 @@ Boundaries define drivable corridors around a reference trajectory and compute s
 
 Constant corridor width on each side of the reference path.
 
-::: trajax.costs.boundary.basic.NumPyFixedWidthBoundary
+::: faran.costs.boundary.basic.NumPyFixedWidthBoundary
     options:
       show_root_heading: true
       heading_level: 3
       members:
         - create
 
-::: trajax.costs.boundary.accelerated.JaxFixedWidthBoundary
+::: faran.costs.boundary.accelerated.JaxFixedWidthBoundary
     options:
       show_root_heading: true
       heading_level: 3
@@ -24,14 +24,14 @@ Constant corridor width on each side of the reference path.
 
 Corridor width varies at arc-length breakpoints along the reference.
 
-::: trajax.costs.boundary.basic.NumPyPiecewiseFixedWidthBoundary
+::: faran.costs.boundary.basic.NumPyPiecewiseFixedWidthBoundary
     options:
       show_root_heading: true
       heading_level: 3
       members:
         - create
 
-::: trajax.costs.boundary.accelerated.JaxPiecewiseFixedWidthBoundary
+::: faran.costs.boundary.accelerated.JaxPiecewiseFixedWidthBoundary
     options:
       show_root_heading: true
       heading_level: 3
@@ -40,12 +40,12 @@ Corridor width varies at arc-length breakpoints along the reference.
 
 ## Boundary Protocols
 
-::: trajax.types.BoundaryDistanceExtractor
+::: faran.types.BoundaryDistanceExtractor
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.types.ExplicitBoundary
+::: faran.types.ExplicitBoundary
     options:
       show_root_heading: true
       heading_level: 3
@@ -55,12 +55,12 @@ Corridor width varies at arc-length breakpoints along the reference.
 
 ## Width Types
 
-::: trajax.types.BoundaryWidths
+::: faran.types.BoundaryWidths
     options:
       show_root_heading: true
       heading_level: 3
 
-::: trajax.types.BoundaryWidthsDescription
+::: faran.types.BoundaryWidthsDescription
     options:
       show_root_heading: true
       heading_level: 3

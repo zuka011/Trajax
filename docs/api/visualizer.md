@@ -1,20 +1,20 @@
 # visualizer
 
-The trajax-visualizer package provides interactive HTML visualizations for MPCC simulation results.
+The faran-visualizer package provides interactive HTML visualizations for MPCC simulation results.
 
 !!! note "Separate Package"
-    The visualizer is distributed as a separate package: `trajax-visualizer`
+    The visualizer is distributed as a separate package: `faran-visualizer`
 
 ## Installation
 
 ```bash
-pip install trajax-visualizer
+pip install faran-visualizer
 ```
 
 ## Factory Functions
 
 ```python
-from trajax_visualizer import visualizer
+from faran_visualizer import visualizer
 
 # Create an MPCC visualizer
 mpcc_viz = visualizer.mpcc(
@@ -25,14 +25,14 @@ mpcc_viz = visualizer.mpcc(
 
 ## MpccSimulationResult
 
-::: trajax_visualizer.api.mpcc.MpccSimulationResult
+::: faran_visualizer.api.mpcc.MpccSimulationResult
     options:
       show_root_heading: true
       heading_level: 3
 
 ## MpccVisualizer
 
-::: trajax_visualizer.api.mpcc.MpccVisualizer
+::: faran_visualizer.api.mpcc.MpccVisualizer
     options:
       show_root_heading: true
       heading_level: 3
@@ -46,28 +46,28 @@ Helper classes for adding custom plots:
 
 ### Plot.Series
 
-::: trajax_visualizer.api.simulation.Plot.Series
+::: faran_visualizer.api.simulation.Plot.Series
     options:
       show_root_heading: true
       heading_level: 3
 
 ### Plot.Additional
 
-::: trajax_visualizer.api.simulation.Plot.Additional
+::: faran_visualizer.api.simulation.Plot.Additional
     options:
       show_root_heading: true
       heading_level: 3
 
 ### Plot.Bound
 
-::: trajax_visualizer.api.simulation.Plot.Bound
+::: faran_visualizer.api.simulation.Plot.Bound
     options:
       show_root_heading: true
       heading_level: 3
 
 ### Plot.Band
 
-::: trajax_visualizer.api.simulation.Plot.Band
+::: faran_visualizer.api.simulation.Plot.Band
     options:
       show_root_heading: true
       heading_level: 3
@@ -78,14 +78,14 @@ For visualizing road networks:
 
 ### Road.Lane
 
-::: trajax_visualizer.api.simulation.Road.Lane
+::: faran_visualizer.api.simulation.Road.Lane
     options:
       show_root_heading: true
       heading_level: 3
 
 ### Road.Network
 
-::: trajax_visualizer.api.simulation.Road.Network
+::: faran_visualizer.api.simulation.Road.Network
     options:
       show_root_heading: true
       heading_level: 3

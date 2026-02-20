@@ -1,6 +1,6 @@
 from typing import Sequence, Callable
 
-from trajax import (
+from faran import (
     CollectorRegistry,
     Mppi,
     ObstacleStateObserver,

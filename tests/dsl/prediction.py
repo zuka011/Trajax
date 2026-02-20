@@ -1,6 +1,6 @@
 from typing import Final
 
-from trajax import types
+from faran import types
 
 import tests.dsl.mppi as data
 

@@ -23,7 +23,7 @@ The temperature $\lambda$ controls how aggressively the planner favors low-cost 
 | Cost function | Scores each rollout (lower is better) |
 | Sampler | Generates perturbations around the nominal control sequence |
 
-trajax provides concrete implementations for each of these (see [Feature Overview](features.md)), and you compose them into a planner via factory functions.
+faran provides concrete implementations for each of these (see [Feature Overview](features.md)), and you compose them into a planner via factory functions.
 
 ### Factory Functions
 
@@ -34,7 +34,7 @@ trajax provides concrete implementations for each of these (see [Feature Overvie
 | `mppi.mpcc` | Path following with the MPCC formulation (see below) |
 
 ```python
-from trajax.numpy import mppi
+from faran.numpy import mppi
 
 # Lowest-level: bring your own model, cost, sampler
 planner = mppi.base(model=..., cost_function=..., sampler=...)
@@ -92,7 +92,7 @@ Extractors decouple cost functions from specific state representations. A cost f
 This lets you reuse the same cost function implementation with different models:
 
 ```python
-from trajax.numpy import extract, types
+from faran.numpy import extract, types
 
 # For augmented states: extract position from the physical sub-state
 position_extractor = extract.from_physical(

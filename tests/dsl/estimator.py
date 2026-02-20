@@ -1,6 +1,6 @@
 from typing import Any, Protocol
 
-from trajax import EstimatedObstacleStates
+from faran import EstimatedObstacleStates
 
 from numtypes import Array
 

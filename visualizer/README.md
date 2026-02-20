@@ -1,17 +1,17 @@
-# trajax-visualizer
+# faran-visualizer
 
-Interactive visualization tool for [trajax](https://gitlab.com/risk-metrics/trajax) trajectory planning simulations.
+Interactive visualization tool for [faran](https://gitlab.com/risk-metrics/faran) trajectory planning simulations.
 
 ## Installation
 
 ```bash
-pip install trajax-visualizer
+pip install faran-visualizer
 ```
 
 Or with uv:
 
 ```bash
-uv add trajax-visualizer
+uv add faran-visualizer
 ```
 
 ## Requirements
@@ -24,7 +24,7 @@ uv add trajax-visualizer
 ### Basic Usage
 
 ```python
-from trajax_visualizer import visualizer, MpccSimulationResult
+from faran_visualizer import visualizer, MpccSimulationResult
 
 # Create a visualizer instance
 mpcc_viz = visualizer.mpcc()
@@ -54,10 +54,10 @@ Visualizations are saved as:
 
 ## Development
 
-The bundled CLI (`visualizer/trajax_visualizer/assets/cli.js`) is included in the package distribution. See `visualizer/core/README.md` for build instructions.
+The bundled CLI (`visualizer/faran_visualizer/assets/cli.js`) is included in the package distribution. See `visualizer/core/README.md` for build instructions.
 
 To make sure the CLI bundle is ignored by VCS, run:
 
 ```bash
-git update-index --skip-worktree visualizer/trajax_visualizer/assets/cli.js
+git update-index --skip-worktree visualizer/faran_visualizer/assets/cli.js
 ``` 

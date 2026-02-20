@@ -1,6 +1,6 @@
 from typing import Protocol, Sequence
 
-from trajax import (
+from faran import (
     ObstacleStateSampler,
     SampledObstacleStates,
     Sampler,

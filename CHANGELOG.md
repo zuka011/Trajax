@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial public release of trajax
+- Initial public release of faran
 - Dual-backend support: NumPy (prototyping) and JAX (GPU acceleration)
 - MPPI (Model Predictive Path Integral) trajectory planning
 - MPCC (Model Predictive Contouring Control) for path-following

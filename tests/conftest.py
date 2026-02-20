@@ -5,7 +5,7 @@ pytest.register_assert_rewrite("docs.examples")
 
 from typing import AsyncGenerator
 
-from trajax_visualizer import configure as configure_visualizer
+from faran_visualizer import configure as configure_visualizer
 
 from tests.utilities import (
     project_root,

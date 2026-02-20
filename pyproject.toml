@@ -1,5 +1,5 @@
 [project]
-name = "trajax"
+name = "faran"
 dynamic = ["version"]
 description = "A library providing performant NumPy & JAX implementations of an MPPI planner, along with implementation of related algorithms/tools."
 authors = [{ name = "Zurab Mujirishvili", email = "zurab.mujirishvili@fau.de" }]
@@ -50,7 +50,7 @@ doc = [
     "mkdocs-material>=9.7.2",
     "mkdocstrings[python]>=1.0.3",
     "ipython>=9.10.0",
-
+    "tqdm>=4.67.0",
 ]
 test = [
     "aiopath>=0.7.7",
@@ -59,7 +59,7 @@ test = [
     "pytest-cov>=7.0.0",
     "pytest-subtests>=0.15.0",
     "pytest-watcher>=0.6.3",
-    "trajax-visualizer",
+    "faran-visualizer",
 ]
 benchmark = [
     "msgspec>=0.20.0",
@@ -76,7 +76,7 @@ link-mode = "copy"
 default-groups = ["dev", "test", "benchmark", "doc"]
 
 [tool.uv.sources]
-trajax-visualizer = { path = "visualizer", editable = true }
+faran-visualizer = { path = "visualizer", editable = true }
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -90,14 +90,14 @@ local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "trajax/",
+  "faran/",
   "LICENSE",
   "README.md",
   "pyproject.toml",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["trajax"]
+packages = ["faran"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -115,7 +115,7 @@ markers = [
 addopts = "-m 'not integration and not docs and not benchmark and not risk_benchmark'"
 
 [tool.pyright]
-include = ["trajax", "tests/tasks", "tests/utilities", "tests/benchmarks", "tests/notebooks"]
+include = ["faran", "tests/tasks", "tests/utilities", "tests/benchmarks", "tests/notebooks"]
 exclude = ["**/__pycache__", "tests/benchmarks/bench_risk.py"]
 
 [tool.ruff]

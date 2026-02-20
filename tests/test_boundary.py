@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from trajax import (
+from faran import (
     BoundaryDistanceExtractor,
     ExplicitBoundary,
     types,

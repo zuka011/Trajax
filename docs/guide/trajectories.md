@@ -7,7 +7,7 @@ Trajectories define reference paths for path-following formulations like MPCC.
 Piecewise linear path through a sequence of 2D points:
 
 ```python
-from trajax.numpy import trajectory
+from faran.numpy import trajectory
 from numtypes import array
 
 reference = trajectory.waypoints(
@@ -33,7 +33,7 @@ reference = trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0)
 Query a trajectory at specific path parameters to get reference points (position and heading):
 
 ```python
-from trajax.numpy import types
+from faran.numpy import types
 
 path_params = types.path_parameters(
     array([[0.0, 5.0], [2.5, 7.5]], shape=(2, 2))

@@ -1,16 +1,16 @@
-# trajax
+# faran
 
-> **Primary repository:** [gitlab.com/risk-metrics/trajax](https://gitlab.com/risk-metrics/trajax) — the [GitHub mirror](https://github.com/zuka011/Trajax) exists for Colab notebook support.
+> **Primary repository:** [gitlab.com/risk-metrics/faran](https://gitlab.com/risk-metrics/faran) — the [GitHub mirror](https://github.com/zuka011/faran) exists for Colab notebook support.
 
-[![Pipeline Status](https://gitlab.com/risk-metrics/trajax/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/trajax/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/trajax/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/trajax) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/trajax) [![PyPI](https://img.shields.io/pypi/v/trajax)](https://pypi.org/project/trajax/) [![Python](https://img.shields.io/pypi/pyversions/trajax)](https://pypi.org/project/trajax/) [![License](https://img.shields.io/pypi/l/trajax)](https://gitlab.com/risk-metrics/trajax/-/blob/main/LICENSE)
+[![Pipeline Status](https://gitlab.com/risk-metrics/faran/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/faran/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/faran/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/faran) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/faran) [![PyPI](https://img.shields.io/pypi/v/faran)](https://pypi.org/project/faran/) [![Python](https://img.shields.io/pypi/pyversions/faran)](https://pypi.org/project/faran/) [![License](https://img.shields.io/pypi/l/faran)](https://gitlab.com/risk-metrics/faran/-/blob/main/LICENSE)
 
 Sampling-based trajectory planning for autonomous systems. Provides composable building blocks — dynamics models, cost functions, samplers, and risk metrics — so you can assemble a complete MPPI planner in a few lines and iterate on the parts that matter for your problem.
 
 ## Installation
 
 ```bash
-pip install trajax          # NumPy + JAX (CPU)
-pip install trajax[cuda]    # JAX with GPU support (Linux)
+pip install faran          # NumPy + JAX (CPU)
+pip install faran[cuda]    # JAX with GPU support (Linux)
 ```
 
 Requires Python ≥ 3.13.
@@ -20,7 +20,7 @@ Requires Python ≥ 3.13.
 MPPI planner with MPCC (Model Predictive Contouring Control) for path tracking, using a kinematic bicycle model:
 
 ```python
-from trajax.numpy import mppi, model, sampler, trajectory, types, extract
+from faran.numpy import mppi, model, sampler, trajectory, types, extract
 from numtypes import array
 
 def position(states):
@@ -67,20 +67,20 @@ for _ in range(200):
 
 <!-- TODO: Replace with simulation GIF -->
 
-To use JAX (GPU), change `from trajax.numpy` to `from trajax.jax`. The API is identical.
+To use JAX (GPU), change `from faran.numpy` to `from faran.jax`. The API is identical.
 
 ## Features
 
-See the [feature overview](https://risk-metrics.gitlab.io/trajax/guide/features/) for the full list of supported components, backend coverage, and roadmap.
+See the [feature overview](https://risk-metrics.gitlab.io/faran/guide/features/) for the full list of supported components, backend coverage, and roadmap.
 
 ## Documentation
 
 | | |
 |---|---|
-| [Getting Started](https://risk-metrics.gitlab.io/trajax/guide/getting-started/) | Installation, first planner, simulation loop |
-| [User Guide](https://risk-metrics.gitlab.io/trajax/guide/concepts/) | MPPI concepts, cost design, obstacles, boundaries, risk metrics |
-| [Examples](https://risk-metrics.gitlab.io/trajax/guide/examples/) | Interactive visualizations of MPCC scenarios |
-| [API Reference](https://risk-metrics.gitlab.io/trajax/api/) | Factory functions and protocol documentation |
+| [Getting Started](https://risk-metrics.gitlab.io/faran/guide/getting-started/) | Installation, first planner, simulation loop |
+| [User Guide](https://risk-metrics.gitlab.io/faran/guide/concepts/) | MPPI concepts, cost design, obstacles, boundaries, risk metrics |
+| [Examples](https://risk-metrics.gitlab.io/faran/guide/examples/) | Interactive visualizations of MPCC scenarios |
+| [API Reference](https://risk-metrics.gitlab.io/faran/api/) | Factory functions and protocol documentation |
 
 ## Contributing
 

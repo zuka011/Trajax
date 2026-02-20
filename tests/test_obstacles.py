@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 from functools import partial
 
-from trajax import (
+from faran import (
     PredictingObstacleStateProvider,
     ObstacleStates,
     ObstacleStatesRunningHistory,

@@ -11,7 +11,7 @@ Each example below is a complete MPCC planning loop. Click the **Result** tab to
 
 Bicycle model following an S-curve with contouring, lag, and progress costs.
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/Trajax/main?filepath=notebooks/01_basic_path_following.ipynb){ .binder-badge }
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/faran/main?filepath=notebooks/01_basic_path_following.ipynb){ .binder-badge }
 
 === "Setup"
 
@@ -23,6 +23,12 @@ Bicycle model following an S-curve with contouring, lag, and progress costs.
 
     ```python
     --8<-- "docs/examples/01_basic_path_following.py:loop"
+    ```
+
+=== "Visualization"
+
+    ```python
+    --8<-- "docs/examples/01_basic_path_following.py:visualize"
     ```
 
 === "Result"
@@ -40,7 +46,7 @@ Bicycle model following an S-curve with contouring, lag, and progress costs.
 
 Same setup plus a fixed-width corridor (2.5 m each side). The boundary cost activates when the vehicle approaches the corridor edge.
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/Trajax/main?filepath=notebooks/02_path_following_with_boundaries.ipynb){ .binder-badge }
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/faran/main?filepath=notebooks/02_path_following_with_boundaries.ipynb){ .binder-badge }
 
 === "Setup"
 
@@ -52,6 +58,12 @@ Same setup plus a fixed-width corridor (2.5 m each side). The boundary cost acti
 
     ```python
     --8<-- "docs/examples/02_path_following_with_boundaries.py:loop"
+    ```
+
+=== "Visualization"
+
+    ```python
+    --8<-- "docs/examples/02_path_following_with_boundaries.py:visualize"
     ```
 
 === "Result"
@@ -69,7 +81,7 @@ Same setup plus a fixed-width corridor (2.5 m each side). The boundary cost acti
 
 Three static obstacles along the path. Circle-to-circle distance computation with a hinge-loss collision cost and a fixed-width corridor boundary.
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/Trajax/main?filepath=notebooks/03_obstacle_avoidance.ipynb){ .binder-badge }
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/faran/main?filepath=notebooks/03_obstacle_avoidance.ipynb){ .binder-badge }
 
 === "Setup"
 
@@ -81,6 +93,12 @@ Three static obstacles along the path. Circle-to-circle distance computation wit
 
     ```python
     --8<-- "docs/examples/03_obstacle_avoidance.py:loop"
+    ```
+
+=== "Visualization"
+
+    ```python
+    --8<-- "docs/examples/03_obstacle_avoidance.py:visualize"
     ```
 
 === "Result"
@@ -98,7 +116,7 @@ Three static obstacles along the path. Circle-to-circle distance computation wit
 
 Four moving obstacles with covariance propagation and a mean-variance risk metric. The planner accounts for prediction uncertainty when evaluating collision costs, producing more cautious trajectories.
 
-[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/Trajax/main?filepath=notebooks/04_obstacle_avoidance_with_uncertainty.ipynb){ .binder-badge }
+[![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/faran/main?filepath=notebooks/04_obstacle_avoidance_with_uncertainty.ipynb){ .binder-badge }
 
 === "Setup"
 
@@ -110,6 +128,12 @@ Four moving obstacles with covariance propagation and a mean-variance risk metri
 
     ```python
     --8<-- "docs/examples/04_obstacle_avoidance_with_uncertainty.py:loop"
+    ```
+
+=== "Visualization"
+
+    ```python
+    --8<-- "docs/examples/04_obstacle_avoidance_with_uncertainty.py:visualize"
     ```
 
 === "Result"

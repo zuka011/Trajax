@@ -17,8 +17,8 @@ Two methods are available for computing signed distances between the ego vehicle
 Represents both the ego and obstacles as collections of circles. Fast, suitable when precise geometry is not needed.
 
 ```python
-from trajax.numpy import distance
-from trajax import Circles
+from faran.numpy import distance
+from faran import Circles
 from numtypes import array
 
 distance_extractor = distance.circles(
@@ -44,7 +44,7 @@ Distance is center-to-center minus both radii. Negative values indicate overlap.
 Represents both the ego and obstacles as convex polygons. Computes exact signed separation distance.
 
 ```python
-from trajax import ConvexPolygon
+from faran import ConvexPolygon
 
 distance_extractor = distance.sat(
     ego=ConvexPolygon.rectangle(length=2.5, width=1.2),
@@ -61,7 +61,7 @@ distance_extractor = distance.sat(
 The obstacle state provider supplies predicted obstacle positions to the collision cost at each planning step. It wraps a motion predictor and maintains a running history of observations.
 
 ```python
-from trajax.numpy import obstacles, predictor, model, types
+from faran.numpy import obstacles, predictor, model, types
 
 motion_predictor = predictor.curvilinear(
     horizon=30,
@@ -85,7 +85,7 @@ By default the curvilinear predictor assumes **all** estimated input components 
 Pass an `assumptions` callable to override specific components. The callable receives the model-specific input object and must return the same type:
 
 ```python
-from trajax.models.bicycle.basic import NumPyBicycleObstacleInputs
+from faran.models.bicycle.basic import NumPyBicycleObstacleInputs
 import numpy as np
 
 # Bicycle: keep acceleration, zero out steering angle (CSAA with straight motion)
@@ -101,7 +101,7 @@ motion_predictor = predictor.curvilinear(
 ```
 
 ```python
-from trajax.models.bicycle.basic import NumPyBicycleObstacleInputs
+from faran.models.bicycle.basic import NumPyBicycleObstacleInputs
 import numpy as np
 
 # Bicycle: zero out acceleration, keep steering angle (constant velocity turn)
@@ -117,7 +117,7 @@ motion_predictor = predictor.curvilinear(
 ```
 
 ```python
-from trajax.models.unicycle.basic import NumPyUnicycleObstacleInputs
+from faran.models.unicycle.basic import NumPyUnicycleObstacleInputs
 
 # Unicycle: keep linear velocity, zero out angular velocity
 motion_predictor = predictor.curvilinear(
@@ -132,7 +132,7 @@ motion_predictor = predictor.curvilinear(
 ```
 
 ```python
-from trajax.models.integrator.basic import NumPyIntegratorObstacleInputs
+from faran.models.integrator.basic import NumPyIntegratorObstacleInputs
 
 # Integrator: keep first two inputs, zero out the rest
 motion_predictor = predictor.curvilinear(
@@ -189,7 +189,7 @@ The `distance_threshold` array has one entry per ego part (e.g., one per circle)
 When obstacle positions are uncertain, you can replace the default deterministic evaluation with a risk metric. The collision cost draws $N$ obstacle samples and evaluates the risk measure over the per-sample costs.
 
 ```python
-from trajax.numpy import risk
+from faran.numpy import risk
 
 collision = costs.safety.collision(
     obstacle_states=provider,

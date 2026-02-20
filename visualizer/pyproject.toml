@@ -1,7 +1,7 @@
 [project]
-name = "trajax-visualizer"
+name = "faran-visualizer"
 dynamic = ["version"]
-description = "Interactive visualization tool for trajax trajectory planning simulations"
+description = "Interactive visualization tool for faran trajectory planning simulations"
 authors = [{ name = "Zurab Mujirishvili", email = "zurab.mujirishvili@fau.de" }]
 readme = "README.md"
 requires-python = ">=3.13"
@@ -22,7 +22,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "trajax",
+    "faran",
     "aiofiles>=25.1.0",
     "aiopath>=0.7.7",
     "msgspec>=0.20.0",
@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-trajax = { path = "..", editable = true }
+faran = { path = "..", editable = true }
 
 [dependency-groups]
 dev = [
@@ -62,7 +62,7 @@ root = ".."
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "trajax_visualizer/",
+    "faran_visualizer/",
     "LICENSE",
     "README.md",
     "pyproject.toml",
@@ -70,16 +70,16 @@ include = [
 exclude = ["core/"]
 
 [tool.hatch.build.targets.sdist.force-include]
-"trajax_visualizer/assets/cli.js" = "trajax_visualizer/assets/cli.js"
+"faran_visualizer/assets/cli.js" = "faran_visualizer/assets/cli.js"
 
 [tool.hatch.build.targets.wheel]
-packages = ["trajax_visualizer"]
+packages = ["faran_visualizer"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"trajax_visualizer/assets/cli.js" = "trajax_visualizer/assets/cli.js"
+"faran_visualizer/assets/cli.js" = "faran_visualizer/assets/cli.js"
 
 [tool.pyright]
-include = ["trajax_visualizer"]
+include = ["faran_visualizer"]
 exclude = ["**/__pycache__"]
 
 [tool.ruff.lint]

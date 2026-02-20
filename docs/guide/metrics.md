@@ -7,7 +7,7 @@ Evaluation metrics measure planning performance after (or during) a simulation. 
 Wrap the planner and obstacle observer with collectors, then register the metrics you want:
 
 ```python
-from trajax import collectors, metrics
+from faran import collectors, metrics
 
 mppi_collector = collectors.states.decorating(
     planner,

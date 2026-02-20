@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from trajax import FilterFunction, ControlInputSequence, filters
+from faran import FilterFunction, ControlInputSequence, filters
 
 from numtypes import array, Array
 

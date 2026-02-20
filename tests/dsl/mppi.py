@@ -1,6 +1,6 @@
 from typing import Final, Sequence
 
-from trajax import types
+from faran import types
 
 from jaxtyping import Array as JaxArray, Float
 from numtypes import Array, NumberArray, Dims

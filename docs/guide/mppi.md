@@ -11,7 +11,7 @@
 ### `mppi.base`
 
 ```python
-from trajax.numpy import mppi, model, sampler, costs, types, filters
+from faran.numpy import mppi, model, sampler, costs, types, filters
 from numtypes import array
 
 planner = mppi.base(
@@ -35,7 +35,7 @@ planner = mppi.base(
 Composes multiple sub-models (e.g., bicycle + integrator) and samplers into one planner:
 
 ```python
-from trajax.states import AugmentedModel, AugmentedSampler
+from faran.states import AugmentedModel, AugmentedSampler
 
 planner, augmented_model = mppi.augmented(
     models=(bicycle_model, integrator_model),
@@ -108,7 +108,7 @@ The right value depends on the cost scale. If costs are large, you need higher t
 A Savitzky-Golay filter smooths the optimal control sequence:
 
 ```python
-from trajax.numpy import filters
+from faran.numpy import filters
 
 planner = mppi.base(
     ...,

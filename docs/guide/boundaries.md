@@ -7,7 +7,7 @@ Boundaries define drivable corridors around a reference trajectory. They produce
 Constant width on each side of the reference path:
 
 ```python
-from trajax.numpy import boundary, trajectory, types
+from faran.numpy import boundary, trajectory, types
 
 reference = trajectory.line(start=(0.0, 0.0), end=(10.0, 0.0), path_length=10.0)
 
@@ -54,7 +54,7 @@ distances = corridor(states=states)
 ## Boundary Cost
 
 ```python
-from trajax.numpy import costs
+from faran.numpy import costs
 
 boundary_cost = costs.safety.boundary(
     distance=corridor,

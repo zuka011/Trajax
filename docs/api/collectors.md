@@ -9,7 +9,7 @@ Collectors capture data during MPPI simulation runs for later analysis and visua
 ## Usage
 
 ```python
-from trajax import collectors, access
+from faran import collectors, access
 
 # Create a registry for data collection
 registry = collectors.CollectorRegistry()
@@ -20,21 +20,21 @@ data = access(registry)
 
 ## CollectorRegistry
 
-::: trajax.collectors.registry.CollectorRegistry
+::: faran.collectors.registry.CollectorRegistry
     options:
       show_root_heading: true
       heading_level: 3
 
 ## Data Access
 
-::: trajax.collectors.access
+::: faran.collectors.access
     options:
       show_root_heading: true
       heading_level: 3
 
 ## Warning Types
 
-::: trajax.collectors.NoCollectedDataWarning
+::: faran.collectors.NoCollectedDataWarning
     options:
       show_root_heading: true
       heading_level: 3

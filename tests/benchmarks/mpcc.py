@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from trajax import (
+from faran import (
     State,
     ControlInputSequence,
     Mppi,
