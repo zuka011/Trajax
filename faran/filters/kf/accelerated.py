@@ -239,13 +239,16 @@ class jax_kalman_filter:
             ).transpose(2, 1, 0)
 
             innovation = observation - H @ mean
-            KH = jnp.einsum("ijk,jl->ilk", K, H)
+            IKH = jnp.eye(D_x)[..., jnp.newaxis] - jnp.einsum("ijk,jl->ilk", K, H)
+
+            joseph_term = jnp.einsum(
+                "ijk,jlk->ilk", IKH, jnp.einsum("ijk,ljk->ilk", covariance, IKH)
+            )
+            kalman_noise_term = jnp.einsum("ijk,jl,mlk->imk", K, Q, K)
 
             return JaxGaussianBelief(
                 mean=mean + jnp.einsum("ijk,jk->ik", K, innovation),
-                covariance=jnp.einsum(
-                    "ijk,jlk->ilk", jnp.eye(D_x)[..., jnp.newaxis] - KH, covariance
-                ),
+                covariance=joseph_term + kalman_noise_term,
             )
 
         def initialize_from(

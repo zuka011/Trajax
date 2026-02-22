@@ -212,7 +212,11 @@ class numpy_kalman_filter:
 
             innovation = observation - H @ mean
             updated_mean = mean + (K_t @ innovation.T[:, :, np.newaxis]).squeeze(-1).T
-            updated_covariance = ((np.eye(D_x) - K_t @ H) @ sigma_t).transpose(1, 2, 0)
+
+            IKH = np.eye(D_x) - K_t @ H
+            joseph_term = IKH @ sigma_t @ IKH.transpose(0, 2, 1)
+            kalman_noise_term = K_t @ Q @ K_t.transpose(0, 2, 1)
+            updated_covariance = (joseph_term + kalman_noise_term).transpose(1, 2, 0)
 
             return NumPyGaussianBelief(mean=updated_mean, covariance=updated_covariance)
 

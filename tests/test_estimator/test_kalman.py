@@ -760,3 +760,126 @@ class test_that_estimator_uses_observations_when_there_are_gaps_in_history:
             ), (
                 f"Deviation in covariance: {np.abs(result.covariance - reference.covariance)}"
             )
+
+
+class test_that_estimated_covariance_is_symmetric:
+    @staticmethod
+    def cases(model, data) -> Sequence[tuple]:
+        dt = 0.1
+
+        # Create a covariance with off-diagonal terms that can lose symmetry
+        initial_bicycle_covariance = array(
+            [
+                [0.01, 0.002, 0.001, 0.003, 0.004, 0.0001],
+                [0.002, 0.012, 0.001, 0.001, 0.002, 0.0001],
+                [0.001, 0.001, 0.010, 0.001, 0.001, 0.0001],
+                [0.003, 0.001, 0.001, 1.010, 0.050, 0.0010],
+                [0.004, 0.002, 0.001, 0.050, 1.020, 0.0010],
+                [0.0001, 0.0001, 0.0001, 0.0010, 0.0010, 0.1001],
+            ],
+            shape=(D_x := 6, D_x),
+            dtype=np.float32,
+        )
+        initial_unicycle_covariance = array(
+            [
+                [0.01, 0.002, 0.001, 0.003, 0.004],
+                [0.002, 0.012, 0.001, 0.001, 0.002],
+                [0.001, 0.001, 0.010, 0.001, 0.001],
+                [0.003, 0.001, 0.001, 1.010, 0.050],
+                [0.004, 0.002, 0.001, 0.050, 1.020],
+            ],
+            shape=(D_x := 5, D_x),
+            dtype=np.float32,
+        )
+        initial_integrator_covariance = initial_bicycle_covariance
+
+        # Very low observation noise exposes numerical instability
+        observation_noise_covariance = np.eye(3, dtype=np.float32) * 1e-8
+
+        # Many time steps with varying observations accumulate asymmetry
+        # when not using the Joseph form for the covariance update.
+        rng = np.random.default_rng(seed=42)
+
+        return [
+            *[
+                (
+                    estimator,
+                    history := data.obstacle_2d_poses(
+                        x=array(
+                            rng.standard_normal((T := 200, K := 1)),
+                            shape=(T, K),
+                            dtype=np.float32,
+                        ),
+                        y=array(
+                            rng.standard_normal((T, K)),
+                            shape=(T, K),
+                            dtype=np.float32,
+                        ),
+                        heading=array(
+                            rng.standard_normal((T, K)),
+                            shape=(T, K),
+                            dtype=np.float32,
+                        ),
+                    ),
+                )
+                for estimator in [
+                    model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=observation_noise_covariance,
+                        initial_state_covariance=initial_bicycle_covariance,
+                    ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=observation_noise_covariance,
+                        initial_state_covariance=initial_bicycle_covariance,
+                    ),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=observation_noise_covariance,
+                        initial_state_covariance=initial_unicycle_covariance,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-8,
+                        observation_noise_covariance=observation_noise_covariance,
+                        initial_state_covariance=initial_unicycle_covariance,
+                    ),
+                ]
+            ],
+            (
+                estimator := model.integrator.estimator.kf(
+                    time_step_size=dt,
+                    process_noise_covariance=1e-8,
+                    observation_noise_covariance=observation_noise_covariance,
+                    initial_state_covariance=initial_integrator_covariance,
+                    observation_dimension=(D_o := 3),
+                ),
+                history := data.simple_obstacle_states(
+                    states=array(
+                        rng.standard_normal((T := 200, D_o, K := 1)),
+                        shape=(T, D_o, K),
+                        dtype=np.float32,
+                    ),
+                ),
+            ),
+        ]
+
+    @mark.parametrize(
+        ["estimator", "history"],
+        [
+            *cases(model=model.numpy, data=data.numpy),
+            *cases(model=model.jax, data=data.jax),
+        ],
+    )
+    def test_numpy_update_preserves_symmetry[HistoryT, StatesT, InputsT](
+        self,
+        estimator: ObstacleStateEstimator[HistoryT, StatesT, InputsT, ArrayConvertible],
+        history: HistoryT,
+    ) -> None:
+        result = estimator.estimate_from(history)
+        assert check.is_spd(np.asarray(result.covariance), atol=1e-10)
