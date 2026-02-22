@@ -104,7 +104,9 @@ class bench_mpcc_risk:
         ],
     )
     @mark.parametrize(
-        "sample_count", [10, 50, 100, 250, 500, 1000], ids=lambda it: f"samples={it}"
+        "sample_count",
+        [8, 16, 32, 64, 128, 256, 512, 1024],
+        ids=lambda it: f"samples={it}",
     )
     def bench(
         self,
