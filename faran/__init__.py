@@ -80,6 +80,7 @@ from .types import (
     ObstacleMotionPredictor as ObstacleMotionPredictor,
     ObstacleStateEstimator as ObstacleStateEstimator,
     ObstaclePositionExtractor as ObstaclePositionExtractor,
+    ObstacleOrientationExtractor as ObstacleOrientationExtractor,
     ObstacleIdAssignment as ObstacleIdAssignment,
     BoundaryPoints as BoundaryPoints,
     BoundaryDistance as BoundaryDistance,
