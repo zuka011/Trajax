@@ -370,21 +370,9 @@ class JaxUnicycleControlInputBatch[T: int, M: int](
 
     @staticmethod
     def create[T_: int = int, M_: int = int](
-        *,
-        array: ControlInputBatchArray[T_, M_],
-        horizon: T_ | None = None,
-        rollout_count: M_ | None = None,
+        *, array: Array[Dims[T_, UnicycleD_u, M_]] | ControlInputBatchArray[T_, M_]
     ) -> "JaxUnicycleControlInputBatch[T_, M_]":
-        horizon = horizon if horizon is not None else cast(T_, array.shape[0])
-        rollout_count = (
-            rollout_count if rollout_count is not None else cast(M_, array.shape[2])
-        )
-
-        assert array.shape == (expected := (horizon, UNICYCLE_D_U, rollout_count)), (
-            f"Array shape {array.shape} does not match expected shape {expected}."
-        )
-
-        return JaxUnicycleControlInputBatch(array)
+        return JaxUnicycleControlInputBatch(jnp.asarray(array))
 
     @staticmethod
     def of[T_: int = int](

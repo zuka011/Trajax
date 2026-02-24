@@ -50,8 +50,5 @@ class JaxGaussianObstacle2dPoseSampler(
         samples = samples.reshape(T, K, D_O, count).transpose(0, 2, 1, 3)
 
         return states.sampled(
-            x=samples[:, 0, :, :],
-            y=samples[:, 1, :, :],
-            heading=samples[:, 2, :, :],  # type: ignore
-            sample_count=count,
+            x=samples[:, 0, :, :], y=samples[:, 1, :, :], heading=samples[:, 2, :, :]
         )

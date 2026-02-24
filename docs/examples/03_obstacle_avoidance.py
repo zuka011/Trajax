@@ -7,7 +7,7 @@ predictor for obstacle motion forecasting.
 
 from dataclasses import dataclass
 
-import numpy as np
+from math import pi
 from numtypes import array
 from tqdm.auto import tqdm
 
@@ -66,11 +66,7 @@ class BicyclePredictionCreator:
         return states.pose()
 
     def empty(self, *, horizon: int) -> ObstacleStates:
-        return types.obstacle_2d_poses.create(
-            x=np.empty((horizon, 0)),
-            y=np.empty((horizon, 0)),
-            heading=np.empty((horizon, 0)),
-        )
+        return types.obstacle_2d_poses.empty(horizon=horizon)
 
 
 class NumPyObstaclePositionExtractor:
@@ -135,7 +131,7 @@ def create():
             [[20.0, 2.5], [35.0, 7.5], [50.0, 2.5]],
             shape=(3, 2),
         ),
-        headings=array([0.0, np.pi / 4, -np.pi / 6], shape=(3,)),
+        headings=array([0.0, pi / 4, -pi / 6], shape=(3,)),
     )
 
     obstacles_provider = create_obstacles.provider.predicting(

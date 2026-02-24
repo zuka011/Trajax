@@ -16,6 +16,13 @@ class NumPyBoundaryDistanceExtractor[StateBatchT, DistanceT](
 class NumPyBoundaryDistance[T: int, M: int]:
     _array: Array[Dims[T, M]]
 
+    @staticmethod
+    def create[T_: int, M_: int](
+        *, array: Array[Dims[T_, M_]]
+    ) -> "NumPyBoundaryDistance[T_, M_]":
+        """Creates a NumPy boundary distance from the given array."""
+        return NumPyBoundaryDistance(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
         return self._array
 

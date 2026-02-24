@@ -37,6 +37,11 @@ class NumPySimpleState[D_x: int](NumPyState[D_x]):
     _array: Array[Dims[D_x]]
 
     @staticmethod
+    def create[D_x_: int](*, array: Array[Dims[D_x_]]) -> "NumPySimpleState[D_x_]":
+        """Creates a NumPy simple state from the given array."""
+        return NumPySimpleState(array)
+
+    @staticmethod
     def zeroes[D_x_: int](*, dimension: D_x_) -> "NumPySimpleState[D_x_]":
         """Creates a zeroed simple state for the given dimension."""
         array = np.zeros((dimension,))
@@ -158,6 +163,13 @@ class NumPySimpleControlInputSequence[T: int, D_u: int](
     """NumPy control input sequence as a 2D array (time × dimension)."""
 
     _array: Array[Dims[T, D_u]]
+
+    @staticmethod
+    def create[T_: int, D_u_: int](
+        *, array: Array[Dims[T_, D_u_]]
+    ) -> "NumPySimpleControlInputSequence[T_, D_u_]":
+        """Creates a NumPy simple control input sequence from the given array."""
+        return NumPySimpleControlInputSequence(array)
 
     @staticmethod
     def constant[T_: int, D_u_: int](

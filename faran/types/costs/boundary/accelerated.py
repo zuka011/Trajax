@@ -9,6 +9,7 @@ from numtypes import Array, Dims
 from jaxtyping import Array as JaxArray, Float
 
 import numpy as np
+import jax.numpy as jnp
 
 
 class JaxBoundaryDistanceExtractor[StateBatchT, DistanceT](
@@ -20,6 +21,13 @@ class JaxBoundaryDistanceExtractor[StateBatchT, DistanceT](
 @dataclass(frozen=True)
 class JaxBoundaryDistance[T: int, M: int]:
     _array: Float[JaxArray, "T M"]
+
+    @staticmethod
+    def create[T_: int, M_: int](
+        *, array: Array[Dims[T_, M_]] | Float[JaxArray, "T M"]
+    ) -> "JaxBoundaryDistance[T_, M_]":
+        """Creates a JAX boundary distance from the given array."""
+        return JaxBoundaryDistance(jnp.asarray(array))
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, M]]:
         return self._numpy_array

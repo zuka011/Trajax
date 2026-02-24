@@ -131,13 +131,10 @@ class JaxHeadings[T: int, M: int]:
 
     @staticmethod
     def create[T_: int, M_: int](
-        *,
-        heading: Float[JaxArray, "T M"],
-        horizon: T_ | None = None,
-        rollout_count: M_ | None = None,
+        *, heading: Array[Dims[T_, M_]] | Float[JaxArray, "T M"]
     ) -> "JaxHeadings[T_, M_]":
         """Creates a JAX headings instance from an array of headings."""
-        return JaxHeadings(heading)
+        return JaxHeadings(jnp.asarray(heading))
 
     def __array__(self) -> Array[Dims[T, M]]:
         return self._numpy_heading

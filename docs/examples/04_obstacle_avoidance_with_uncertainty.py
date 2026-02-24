@@ -7,7 +7,6 @@ evaluating collision costs.
 
 from dataclasses import dataclass
 
-import numpy as np
 from numtypes import array
 from tqdm.auto import tqdm
 
@@ -67,11 +66,7 @@ class BicyclePredictionCreator:
         return states.pose()
 
     def empty(self, *, horizon: int) -> ObstacleStates:
-        return types.obstacle_2d_poses.create(
-            x=np.empty((horizon, 0)),
-            y=np.empty((horizon, 0)),
-            heading=np.empty((horizon, 0)),
-        )
+        return types.obstacle_2d_poses.empty(horizon=horizon)
 
 
 class NumPyObstaclePositionExtractor:

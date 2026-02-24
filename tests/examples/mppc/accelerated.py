@@ -109,11 +109,7 @@ class BicyclePredictionCreator:
         return states.pose()
 
     def empty(self, *, horizon: int) -> ObstacleStates:
-        return types.obstacle_2d_poses.create(
-            x=jnp.empty((horizon, 0)),
-            y=jnp.empty((horizon, 0)),
-            heading=jnp.empty((horizon, 0)),
-        )
+        return types.obstacle_2d_poses.empty(horizon=horizon)
 
 
 @dataclass(kw_only=True, frozen=True)

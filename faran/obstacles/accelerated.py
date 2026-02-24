@@ -46,32 +46,13 @@ class JaxSampledObstacle2dPoses[T: int, K: int, N: int](
     @staticmethod
     def create[T_: int, K_: int, N_: int](
         *,
-        x: Float[JaxArray, "T K N"],
-        y: Float[JaxArray, "T K N"],
-        heading: Float[JaxArray, "T K N"],
-        horizon: T_ | None = None,
-        obstacle_count: K_ | None = None,
-        sample_count: N_ | None = None,
+        x: Array[Dims[T_, K_, N_]] | Float[JaxArray, "T K N"],
+        y: Array[Dims[T_, K_, N_]] | Float[JaxArray, "T K N"],
+        heading: Array[Dims[T_, K_, N_]] | Float[JaxArray, "T K N"],
     ) -> "JaxSampledObstacle2dPoses[T_, K_, N_]":
-        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
-        obstacle_count = (
-            obstacle_count if obstacle_count is not None else cast(K_, x.shape[1])
+        return JaxSampledObstacle2dPoses(
+            _x=jnp.asarray(x), _y=jnp.asarray(y), _heading=jnp.asarray(heading)
         )
-        sample_count = (
-            sample_count if sample_count is not None else cast(N_, x.shape[2])
-        )
-
-        assert (
-            x.shape
-            == y.shape
-            == heading.shape
-            == (horizon, obstacle_count, sample_count)
-        ), (
-            f"Expected shapes (T={horizon}, K={obstacle_count}, N={sample_count}), "
-            f"but got x: {x.shape}, y: {y.shape}, heading: {heading.shape}."
-        )
-
-        return JaxSampledObstacle2dPoses(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K, N]]:
         return self._numpy_array
@@ -332,24 +313,17 @@ class JaxObstacle2dPoses[T: int, K: int](
         """Creates obstacle states for zero obstacles over the given time horizon."""
         empty = jnp.full((horizon, obstacle_count), fill_value=jnp.nan)
 
-        return JaxObstacle2dPoses.create(
-            x=empty,
-            y=empty,
-            heading=empty,
-            horizon=horizon,
-            obstacle_count=obstacle_count,
-        )
+        return JaxObstacle2dPoses.create(x=empty, y=empty, heading=empty)
 
     @staticmethod
     def sampled[N: int](  # type: ignore
         *,
-        x: Float[JaxArray, "T K N"],
-        y: Float[JaxArray, "T K N"],
-        heading: Float[JaxArray, "T K N"],
-        sample_count: N | None = None,
+        x: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
+        y: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
+        heading: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"],
     ) -> JaxSampledObstacle2dPoses[T, K, N]:
         return JaxSampledObstacle2dPoses.create(
-            x=x, y=y, heading=heading, sample_count=sample_count
+            x=jnp.asarray(x), y=jnp.asarray(y), heading=jnp.asarray(heading)
         )
 
     @staticmethod
@@ -376,24 +350,20 @@ class JaxObstacle2dPoses[T: int, K: int](
     @staticmethod
     def create[T_: int, K_: int](
         *,
-        x: Float[JaxArray, "T K"],
-        y: Float[JaxArray, "T K"],
-        heading: Float[JaxArray, "T K"],
-        covariance: ObstacleCovarianceArray[T_, K_] | None = None,
-        horizon: T_ | None = None,
-        obstacle_count: K_ | None = None,
+        x: Array[Dims[T_, K_]] | Float[JaxArray, "T K"],
+        y: Array[Dims[T_, K_]] | Float[JaxArray, "T K"],
+        heading: Array[Dims[T_, K_]] | Float[JaxArray, "T K"],
+        covariance: Array[Dims[T_, D_o, D_o, K_]]
+        | ObstacleCovarianceArray[T_, K_]
+        | None = None,
     ) -> "JaxObstacle2dPoses[T_, K_]":
-        horizon = horizon if horizon is not None else cast(T_, x.shape[0])
-        obstacle_count = (
-            obstacle_count if obstacle_count is not None else cast(K_, x.shape[1])
-        )
 
-        assert x.shape == y.shape == heading.shape == (horizon, obstacle_count), (
-            f"Expected shapes (T={horizon}, K={obstacle_count}), "
-            f"but got x: {x.shape}, y: {y.shape}, heading: {heading.shape}."
+        return JaxObstacle2dPoses(
+            _x=jnp.asarray(x),
+            _y=jnp.asarray(y),
+            _heading=jnp.asarray(heading),
+            _covariance=jnp.asarray(covariance) if covariance is not None else None,
         )
-
-        return JaxObstacle2dPoses(_x=x, _y=y, _heading=heading, _covariance=covariance)
 
     @staticmethod
     def of_states[T_: int, K_: int](
@@ -415,7 +385,7 @@ class JaxObstacle2dPoses[T: int, K: int](
         y = jnp.stack([pad(states.y_array) for states in obstacle_states])
         heading = jnp.stack([pad(states.heading_array) for states in obstacle_states])
 
-        return JaxObstacle2dPoses.create(x=x, y=y, heading=heading, horizon=horizon)
+        return JaxObstacle2dPoses.create(x=x, y=y, heading=heading)
 
     @staticmethod
     def for_time_step[K_: int](
@@ -423,7 +393,6 @@ class JaxObstacle2dPoses[T: int, K: int](
         x: Array[Dims[K_]] | Float[JaxArray, "K"],
         y: Array[Dims[K_]] | Float[JaxArray, "K"],
         heading: Array[Dims[K_]] | Float[JaxArray, "K"],
-        obstacle_count: K_ | None = None,
         device: Device = "cpu",
     ) -> "JaxObstacle2dPosesForTimeStep[K_]":
         """Creates obstacle states for a single time step.
@@ -436,7 +405,6 @@ class JaxObstacle2dPoses[T: int, K: int](
             x=place(x, device=device),
             y=place(y, device=device),
             heading=place(heading, device=device),
-            obstacle_count=obstacle_count,
         )
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
@@ -531,21 +499,14 @@ class JaxObstacle2dPosesForTimeStep[K: int](
     @staticmethod
     def create[K_: int](
         *,
-        x: Float[JaxArray, "K"],
-        y: Float[JaxArray, "K"],
-        heading: Float[JaxArray, "K"],
-        obstacle_count: K_ | None = None,
+        x: Array[Dims[K_]] | Float[JaxArray, "K"],
+        y: Array[Dims[K_]] | Float[JaxArray, "K"],
+        heading: Array[Dims[K_]] | Float[JaxArray, "K"],
     ) -> "JaxObstacle2dPosesForTimeStep[K_]":
-        obstacle_count = (
-            obstacle_count if obstacle_count is not None else cast(K_, x.shape[0])
-        )
 
-        assert x.shape == y.shape == heading.shape == (obstacle_count,), (
-            f"Expected shape (K={obstacle_count}), "
-            f"but got x: {x.shape}, y: {y.shape}, heading: {heading.shape}."
+        return JaxObstacle2dPosesForTimeStep(
+            _x=jnp.asarray(x), _y=jnp.asarray(y), _heading=jnp.asarray(heading)
         )
-
-        return JaxObstacle2dPosesForTimeStep(_x=x, _y=y, _heading=heading)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[D_o, K]]:
         return self._numpy_array

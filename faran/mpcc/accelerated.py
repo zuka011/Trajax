@@ -230,7 +230,7 @@ class JaxMpccMppi:
                     key=jrandom.key(full_config["virtual"]["sampling_seed"]),
                 ),
             ),
-            cost=create_costs.jax.combined(
+            cost=create_costs.jax.combined(  # type: ignore
                 contouring_cost := create_costs.jax.tracking.contouring(
                     reference=reference,
                     path_parameter_extractor=(

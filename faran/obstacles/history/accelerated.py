@@ -14,7 +14,7 @@ from faran.obstacles.history.basic import (
     NumPyObstacleStatesRunningHistory,
 )
 
-from numtypes import IndexArray, Array, Dims
+from numtypes import IndexArray, NumberArray, Array, Dims
 from jaxtyping import Array as JaxArray, Float, Int, Num
 
 import numpy as np
@@ -57,11 +57,9 @@ class JaxObstacleIds[K: int]:
 
     @staticmethod
     def create[K_: int](
-        *,
-        ids: Num[JaxArray, "K"],
-        obstacle_count: K_ | None = None,
+        *, ids: NumberArray[Dims[K_]] | Num[JaxArray, "K"]
     ) -> "JaxObstacleIds[K_]":
-        return JaxObstacleIds(_ids=ids.astype(jnp.int32))
+        return JaxObstacleIds(_ids=jnp.asarray(ids).astype(jnp.int32))
 
     def __array__(self, dtype: DataType | None = None) -> IndexArray[Dims[K]]:
         return self._numpy_array
@@ -160,6 +158,4 @@ class JaxObstacleStatesRunningHistory[
 
     @cached_property
     def _ids(self) -> JaxObstacleIds:
-        return JaxObstacleIds.create(
-            ids=jnp.asarray(self.history.ids().array), obstacle_count=self.count
-        )
+        return JaxObstacleIds.create(ids=jnp.asarray(self.history.ids().array))

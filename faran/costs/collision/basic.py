@@ -29,6 +29,13 @@ class NumPyDistance[T: int, V: int, M: int, N: int](Distance[T, V, M, N]):
 
     _array: Array[Dims[T, V, M, N]]
 
+    @staticmethod
+    def create[T_: int, V_: int, M_: int, N_: int](
+        array: Array[Dims[T_, V_, M_, N_]],
+    ) -> "NumPyDistance[T_, V_, M_, N_]":
+        """Creates a NumPy distance from the given array."""
+        return NumPyDistance(array)
+
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, V, M, N]]:
         return self.array
 

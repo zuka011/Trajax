@@ -150,31 +150,31 @@ class numpy:
 class jax:
     @staticmethod
     def state[D_x: int](array: Array[Dims[D_x]]) -> JaxState[D_x]:
-        return types.jax.simple.state(jnp.asarray(array))
+        return types.jax.simple.state.create(array=array)
 
     @staticmethod
     def obstacle_ids[K: int](
         array: NumberArray[Dims[K]] | Sequence[int],
     ) -> JaxObstacleIds[K]:
-        return types.jax.obstacle_ids.create(ids=jnp.asarray(array))
+        return types.jax.obstacle_ids.create(ids=np.asarray(array))
 
     @staticmethod
     def state_batch[T: int, D_x: int, M: int](
         array: Array[Dims[T, D_x, M]],
     ) -> JaxStateBatch[T, D_x, M]:
-        return types.jax.simple.state_batch(jnp.asarray(array))
+        return types.jax.simple.state_batch.wrap(array=array)
 
     @staticmethod
     def control_input_sequence[T: int, D_u: int](
         array: Array[Dims[T, D_u]],
     ) -> JaxControlInputSequence[T, D_u]:
-        return types.jax.simple.control_input_sequence(jnp.asarray(array))
+        return types.jax.simple.control_input_sequence.create(array=array)
 
     @staticmethod
     def control_input_batch[T: int, D_u: int, M: int](
         array: Array[Dims[T, D_u, M]] | Float[JaxArray, "T D_u M"],
     ) -> JaxControlInputBatch[T, D_u, M]:
-        return types.jax.simple.control_input_batch.create(array=jnp.asarray(array))
+        return types.jax.simple.control_input_batch.create(array=array)
 
     @staticmethod
     def simple_obstacle_states[T: int, D_o: int, K: int](
@@ -185,8 +185,7 @@ class jax:
         | None = None,
     ) -> JaxSimpleObstacleStates[T, D_o, K]:
         return types.jax.simple.obstacle_states.create(
-            states=jnp.asarray(states),
-            covariance=jnp.asarray(covariance) if covariance is not None else None,
+            states=states, covariance=covariance
         )
 
     @staticmethod
@@ -200,10 +199,10 @@ class jax:
         | None = None,
     ) -> JaxObstacle2dPoses[T, K]:
         return types.jax.obstacle_2d_poses.create(
-            x=jnp.asarray(x),
-            y=jnp.asarray(y),
-            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
-            covariance=jnp.asarray(covariance) if covariance is not None else None,
+            x=x,
+            y=y,
+            heading=heading if heading is not None else jnp.zeros_like(x),
+            covariance=covariance,
         )
 
     @staticmethod
@@ -214,9 +213,9 @@ class jax:
         heading: Array[Dims[K]] | Float[JaxArray, "K"] | None = None,
     ) -> JaxObstacle2dPosesForTimeStep[K]:
         return types.jax.obstacle_2d_poses_for_time_step.create(
-            x=jnp.asarray(x),
-            y=jnp.asarray(y),
-            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
+            x=x,
+            y=y,
+            heading=heading if heading is not None else jnp.zeros_like(x),
         )
 
     @staticmethod
@@ -227,19 +226,19 @@ class jax:
         heading: Array[Dims[T, K, N]] | Float[JaxArray, "T K N"] | None = None,
     ) -> JaxSampledObstacle2dPoses[T, K, N]:
         return types.jax.obstacle_2d_poses.sampled(
-            x=jnp.asarray(x),
-            y=jnp.asarray(y),
-            heading=jnp.asarray(heading) if heading is not None else jnp.zeros_like(x),
+            x=x,
+            y=y,
+            heading=heading if heading is not None else jnp.zeros_like(x),
         )
 
     @staticmethod
     def distance[T: int, V: int, M: int, N: int](
         array: Array[Dims[T, V, M, N]] | Float[JaxArray, "T V M N"],
     ) -> JaxDistance[T, V, M, N]:
-        return types.jax.distance(jnp.asarray(array))
+        return types.jax.distance.create(array=array)
 
     @staticmethod
     def boundary_distance[T: int, M: int](
         array: Array[Dims[T, M]] | Float[JaxArray, "T M"],
     ) -> JaxBoundaryDistance[T, M]:
-        return types.jax.boundary_distance(jnp.asarray(array))
+        return types.jax.boundary_distance.create(array=array)

@@ -44,6 +44,13 @@ class JaxSimpleState[D_x: int](JaxState[D_x]):
     _array: Float[JaxArray, "D_x"]
 
     @staticmethod
+    def create[D_x_: int](
+        *, array: Array[Dims[D_x_]] | Float[JaxArray, "D_x"]
+    ) -> "JaxSimpleState[D_x_]":
+        """Creates a JAX simple state from the given array."""
+        return JaxSimpleState(jnp.asarray(array))
+
+    @staticmethod
     def zeroes[D_x_: int](*, dimension: D_x_) -> "JaxSimpleState[D_x_]":
         """Creates a zeroed simple state for the given dimension."""
         return JaxSimpleState(jnp.zeros((dimension,)))
@@ -92,7 +99,7 @@ class JaxSimpleStateSequence[T: int, D_x: int](JaxStateSequence[T, D_x]):
         return self._numpy_array
 
     def batched(self) -> "JaxSimpleStateBatch[T, D_x, D[1]]":
-        return JaxSimpleStateBatch.wrap(self.array[..., jnp.newaxis])
+        return JaxSimpleStateBatch.wrap(array=self.array[..., jnp.newaxis])
 
     @property
     def horizon(self) -> T:
@@ -119,9 +126,11 @@ class JaxSimpleStateBatch[T: int, D_x: int, M: int](JaxStateBatch[T, D_x, M]):
     _array: Float[JaxArray, "T D_x M"]
 
     @staticmethod
-    def wrap(array: Float[JaxArray, "T D_x M"]) -> "JaxSimpleStateBatch[T, D_x, M]":
+    def wrap[T_: int, D_x_: int, M_: int](
+        *, array: Array[Dims[T_, D_x_, M_]] | Float[JaxArray, "T D_x M"]
+    ) -> "JaxSimpleStateBatch[T_, D_x_, M_]":
         """Creates a JAX simple state batch from the given array."""
-        return JaxSimpleStateBatch(array)
+        return JaxSimpleStateBatch(jnp.asarray(array))
 
     @staticmethod
     def of_states[D_x_: int, T_: int = int](
@@ -176,6 +185,13 @@ class JaxSimpleControlInputSequence[T: int, D_u: int](JaxControlInputSequence[T,
     """JAX control input sequence as a 2D array (time × dimension)."""
 
     _array: Float[JaxArray, "T D_u"]
+
+    @staticmethod
+    def create[T_: int, D_u_: int](
+        *, array: Array[Dims[T_, D_u_]] | Float[JaxArray, "T D_u"]
+    ) -> "JaxSimpleControlInputSequence[T_, D_u_]":
+        """Creates a JAX simple control input sequence from the given array."""
+        return JaxSimpleControlInputSequence(jnp.asarray(array))
 
     @staticmethod
     def constant[T_: int, D_u_: int](
@@ -244,9 +260,11 @@ class JaxSimpleControlInputBatch[T: int, D_u: int, M: int](
     _array: Float[JaxArray, "T D_u M"]
 
     @staticmethod
-    def create(*, array: Float[JaxArray, "T D_u M"]) -> "JaxSimpleControlInputBatch":
+    def create[T_: int, D_u_: int, M_: int](
+        *, array: Array[Dims[T_, D_u_, M_]] | Float[JaxArray, "T D_u M"]
+    ) -> "JaxSimpleControlInputBatch[T_, D_u_, M_]":
         """Factory method to create a JAX simple control input batch from an array."""
-        return JaxSimpleControlInputBatch(array)
+        return JaxSimpleControlInputBatch(jnp.asarray(array))
 
     @staticmethod
     def zero[T_: int, D_u_: int, M_: int](
@@ -416,30 +434,16 @@ class JaxSimpleObstacleStates[T: int, D_o: int, K: int](
     @staticmethod
     def create[T_: int, D_o_: int, K_: int](
         *,
-        states: Float[JaxArray, "T D_o K"],
-        covariance: Float[JaxArray, "T D_o D_o K"] | None = None,
-        horizon: T_ | None = None,
-        dimension: D_o_ | None = None,
-        count: K_ | None = None,
+        states: Array[Dims[T_, D_o_, K_]] | Float[JaxArray, "T D_o K"],
+        covariance: Array[Dims[T_, D_o_, D_o_, K_]]
+        | Float[JaxArray, "T D_o D_o K"]
+        | None = None,
     ) -> "JaxSimpleObstacleStates[T_, D_o_, K_]":
-        horizon = horizon if horizon is not None else cast(T_, states.shape[0])
-        dimension = dimension if dimension is not None else cast(D_o_, states.shape[1])
-        count = count if count is not None else cast(K_, states.shape[2])
 
-        assert states.shape == (horizon, dimension, count), (
-            f"Expected states shape {(horizon, dimension, count)}, but got {states.shape}"
+        return JaxSimpleObstacleStates(
+            jnp.asarray(states),
+            jnp.asarray(covariance) if covariance is not None else None,
         )
-        assert covariance is None or covariance.shape == (
-            horizon,
-            dimension,
-            dimension,
-            count,
-        ), (
-            f"Expected covariance shape {(horizon, dimension, dimension, count)}, "
-            f"but got {covariance.shape}"
-        )
-
-        return JaxSimpleObstacleStates(states, covariance)
 
     def __array__(self, dtype: DataType | None = None) -> Array[Dims[T, D_o, K]]:
         return self._numpy_array
