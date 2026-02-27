@@ -41,32 +41,55 @@ from jaxtyping import Array as JaxArray, Float
 import numpy as np
 
 
-type PhysicalState = types.bicycle.State
-type PhysicalStateBatch = types.bicycle.StateBatch
-type PhysicalInputSequence = types.bicycle.ControlInputSequence
-type PhysicalInputBatch = types.bicycle.ControlInputBatch
+type PhysicalBicycleState = types.bicycle.State
+type PhysicalBicycleStateBatch = types.bicycle.StateBatch
+type PhysicalBicycleInputSequence = types.bicycle.ControlInputSequence
+type PhysicalBicycleInputBatch = types.bicycle.ControlInputBatch
+type PhysicalUnicycleState = types.unicycle.State
+type PhysicalUnicycleStateBatch = types.unicycle.StateBatch
+type PhysicalUnicycleInputSequence = types.unicycle.ControlInputSequence
+type PhysicalUnicycleInputBatch = types.unicycle.ControlInputBatch
+
 type VirtualState = types.simple.State
 type VirtualStateBatch = types.simple.StateBatch
 type VirtualInputSequence = types.simple.ControlInputSequence
 type VirtualInputBatch = types.simple.ControlInputBatch
-type MpccState = types.augmented.State[PhysicalState, VirtualState]
-type MpccStateBatch = types.augmented.StateBatch[PhysicalStateBatch, VirtualStateBatch]
-type MpccInputSequence = types.augmented.ControlInputSequence[
-    PhysicalInputSequence, VirtualInputSequence
+
+type MpccBicycleState = types.augmented.State[PhysicalBicycleState, VirtualState]
+type MpccBicycleStateBatch = types.augmented.StateBatch[
+    PhysicalBicycleStateBatch, VirtualStateBatch
 ]
-type MpccInputBatch = types.augmented.ControlInputBatch[
-    PhysicalInputBatch, VirtualInputBatch
+type MpccBicycleInputSequence = types.augmented.ControlInputSequence[
+    PhysicalBicycleInputSequence, VirtualInputSequence
 ]
-type Planner = Mppi[MpccState, MpccInputSequence]
+type MpccBicycleInputBatch = types.augmented.ControlInputBatch[
+    PhysicalBicycleInputBatch, VirtualInputBatch
+]
+type BicycleRiskMetric = types.RiskMetric[
+    MpccBicycleStateBatch, ObstacleStatesForTimeStep, SampledObstacleStates
+]
+type BicyclePlanner = Mppi[MpccBicycleState, MpccBicycleInputSequence]
+
+type MpccUnicycleState = types.augmented.State[PhysicalUnicycleState, VirtualState]
+type MpccUnicycleStateBatch = types.augmented.StateBatch[
+    PhysicalUnicycleStateBatch, VirtualStateBatch
+]
+type MpccUnicycleInputSequence = types.augmented.ControlInputSequence[
+    PhysicalUnicycleInputSequence, VirtualInputSequence
+]
+type MpccUnicycleInputBatch = types.augmented.ControlInputBatch[
+    PhysicalUnicycleInputBatch, VirtualInputBatch
+]
+type UnicyclePlanner = Mppi[MpccUnicycleState, MpccUnicycleInputSequence]
+type UnicycleRiskMetric = types.RiskMetric[
+    MpccUnicycleStateBatch, ObstacleStatesForTimeStep, SampledObstacleStates
+]
 type ObstacleStates = types.Obstacle2dPoses
 type ObstacleStatesForTimeStep = types.Obstacle2dPosesForTimeStep
 type SampledObstacleStates = types.SampledObstacle2dPoses
 type ObstaclePositions = types.Obstacle2dPositions
 type ObstaclePositionsForTimeStep = types.Obstacle2dPositionsForTimeStep
 type ObstacleSimulatorProvider = Callable[[], ObstacleSimulator]
-type RiskMetric = types.RiskMetric[
-    MpccStateBatch, ObstacleStatesForTimeStep, SampledObstacleStates
-]
 
 
 class JaxObstaclePositionExtractor(
@@ -94,11 +117,19 @@ def path_velocity(inputs: VirtualInputBatch) -> Float[JaxArray, "T M"]:
     return inputs.array[:, 0, :]
 
 
-def position(states: PhysicalStateBatch) -> types.Positions:
+def bicycle_position(states: PhysicalBicycleStateBatch) -> types.Positions:
     return types.positions(x=states.positions.x_array, y=states.positions.y_array)
 
 
-def heading(states: PhysicalStateBatch) -> types.Headings:
+def bicycle_heading(states: PhysicalBicycleStateBatch) -> types.Headings:
+    return types.headings(heading=states.heading_array)
+
+
+def unicycle_position(states: PhysicalUnicycleStateBatch) -> types.Positions:
+    return types.positions(x=states.positions.x_array, y=states.positions.y_array)
+
+
+def unicycle_heading(states: PhysicalUnicycleStateBatch) -> types.Headings:
     return types.headings(heading=states.heading_array)
 
 
@@ -112,12 +143,27 @@ class BicyclePredictionCreator:
         return types.obstacle_2d_poses.empty(horizon=horizon)
 
 
+class IntegratorPredictionCreator:
+    def __call__(
+        self, *, states: types.integrator.ObstacleStateSequences
+    ) -> ObstacleStates:
+        return types.obstacle_2d_poses.create(
+            x=states.array[:, 0, :],
+            y=states.array[:, 1, :],
+            heading=states.array[:, 2, :],
+            covariance=states.covariance_array[:, :3, :3],
+        )
+
+    def empty(self, *, horizon: int) -> ObstacleStates:
+        return types.obstacle_2d_poses.empty(horizon=horizon)
+
+
 @dataclass(kw_only=True, frozen=True)
-class JaxMpccPlannerConfiguration:
+class JaxMpccBicyclePlannerConfiguration:
     horizon: int
 
     reference: Trajectory
-    planner: Planner
+    planner: BicyclePlanner
     model: DynamicalModel
     temperature: float
     wheelbase: float
@@ -130,16 +176,50 @@ class JaxMpccPlannerConfiguration:
     boundary: ExplicitBoundary | None = None
 
     @property
-    def initial_state(self) -> MpccState:
+    def initial_state(self) -> MpccBicycleState:
         return types.augmented.state.of(
             physical=types.bicycle.state.create(x=0.0, y=0.0, heading=0.0, speed=0.0),
             virtual=types.simple.state.zeroes(dimension=1),
         )
 
     @property
-    def nominal_input(self) -> MpccInputSequence:
+    def nominal_input(self) -> MpccBicycleInputSequence:
         return types.augmented.control_input_sequence.of(
             physical=types.bicycle.control_input_sequence.zeroes(horizon=self.horizon),
+            virtual=types.simple.control_input_sequence.zeroes(
+                horizon=self.horizon, dimension=1
+            ),
+        )
+
+
+@dataclass(kw_only=True, frozen=True)
+class JaxMpccUnicyclePlannerConfiguration:
+    horizon: int
+
+    reference: Trajectory
+    planner: UnicyclePlanner
+    model: DynamicalModel
+    temperature: float
+    vehicle_radius: float
+    obstacle_radius: float
+    registry: MetricRegistry
+    metrics: tuple[MpccErrorMetric, CollisionMetric | None]
+
+    obstacle_simulator: ObstacleSimulator | None = None
+    obstacle_state_observer: ObstacleStateObserver | None = None
+    boundary: ExplicitBoundary | None = None
+
+    @property
+    def initial_state(self) -> MpccUnicycleState:
+        return types.augmented.state.of(
+            physical=types.unicycle.state.create(x=0.0, y=0.0, heading=0.0),
+            virtual=types.simple.state.zeroes(dimension=1),
+        )
+
+    @property
+    def nominal_input(self) -> MpccUnicycleInputSequence:
+        return types.augmented.control_input_sequence.of(
+            physical=types.unicycle.control_input_sequence.zeroes(horizon=self.horizon),
             virtual=types.simple.control_input_sequence.zeroes(
                 horizon=self.horizon, dimension=1
             ),
@@ -435,6 +515,26 @@ class obstacles:
                 ),
             )
 
+    class pedestrian:
+        @staticmethod
+        def crossing() -> ObstacleSimulator:
+            return create_obstacles.dynamic(
+                positions=array(
+                    [
+                        [8.0, 5.0],
+                        [18.0, -3.0],
+                    ],
+                    shape=(2, 2),
+                ),
+                velocities=array(
+                    [
+                        [0.0, -1.2],
+                        [0.0, 1.0],
+                    ],
+                    shape=(2, 2),
+                ),
+            )
+
 
 class configure:
     @staticmethod
@@ -445,10 +545,10 @@ class configure:
         reference: Trajectory = reference.small_circle,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
-    ) -> JaxMpccPlannerConfiguration:
+    ) -> JaxMpccBicyclePlannerConfiguration:
         # NOTE: Type Checkers like Pyright won't be able to infer complex types, so you may
         # need to help them with an explicit annotation.
-        planner: Planner = mppi.base(
+        planner: BicyclePlanner = mppi.base(
             model=(
                 augmented_model := AugmentedModel.of(
                     physical=model.bicycle.dynamical(
@@ -475,7 +575,7 @@ class configure:
                         path_extractor := extract.from_virtual(path_parameter)
                     ),
                     position_extractor=(
-                        position_extractor := extract.from_physical(position)
+                        position_extractor := extract.from_physical(bicycle_position)
                     ),
                     weight=weights.contouring,
                 ),
@@ -527,7 +627,7 @@ class configure:
             )
         )
 
-        return JaxMpccPlannerConfiguration(
+        return JaxMpccBicyclePlannerConfiguration(
             horizon=horizon,
             temperature=temperature,
             reference=reference,
@@ -555,7 +655,7 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
-    ) -> JaxMpccPlannerConfiguration:
+    ) -> JaxMpccBicyclePlannerConfiguration:
         obstacle_simulator = obstacles()
 
         planner, augmented_model = mppi.augmented(
@@ -596,7 +696,7 @@ class configure:
                         path_extractor := extract.from_virtual(path_parameter)
                     ),
                     position_extractor=(
-                        position_extractor := extract.from_physical(position)
+                        position_extractor := extract.from_physical(bicycle_position)
                     ),
                     weight=weights.contouring,
                 ),
@@ -660,7 +760,7 @@ class configure:
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
                             position_extractor=position_extractor,
-                            heading_extractor=extract.from_physical(heading),
+                            heading_extractor=extract.from_physical(bicycle_heading),
                             obstacle_position_extractor=lambda states: (
                                 states.positions()
                             ),
@@ -698,7 +798,7 @@ class configure:
             obstacles_provider, transformer=types.obstacle_2d_poses.of_states
         )
 
-        return JaxMpccPlannerConfiguration(
+        return JaxMpccBicyclePlannerConfiguration(
             horizon=horizon,
             temperature=temperature,
             reference=reference,
@@ -736,14 +836,14 @@ class configure:
         obstacles: ObstacleSimulatorProvider = obstacles.none,
         weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
         sampling: JaxSamplingOptions = JaxSamplingOptions(),
-        risk_metric: RiskMetric = risk.mean_variance(gamma=0.1, sample_count=10),
+        risk_metric: BicycleRiskMetric = risk.mean_variance(gamma=0.1, sample_count=10),
         use_risk_metric: bool = False,
         use_boundary: bool = False,
         use_halton: bool = False,
         cyclic_reference: bool = False,
-    ) -> JaxMpccPlannerConfiguration:
+    ) -> JaxMpccBicyclePlannerConfiguration:
         obstacle_simulator = obstacles()
-        position_extractor = extract.from_physical(position)
+        position_extractor = extract.from_physical(bicycle_position)
         fixed_boundary = boundary.fixed_width(
             reference=reference,
             position_extractor=position_extractor,
@@ -831,7 +931,7 @@ class configure:
                                 radii=array([0.8, 0.8, 0.8], shape=(C,)),
                             ),
                             position_extractor=position_extractor,
-                            heading_extractor=extract.from_physical(heading),
+                            heading_extractor=extract.from_physical(bicycle_heading),
                             obstacle_position_extractor=lambda states: (
                                 states.positions()
                             ),
@@ -897,7 +997,7 @@ class configure:
             obstacles_provider, transformer=types.obstacle_2d_poses.of_states
         )
 
-        return JaxMpccPlannerConfiguration(
+        return JaxMpccBicyclePlannerConfiguration(
             horizon=horizon,
             temperature=temperature,
             reference=reference,
@@ -915,7 +1015,7 @@ class configure:
                         ego=ConvexPolygon.rectangle(length=L, width=W),
                         obstacle=ConvexPolygon.rectangle(length=L, width=W),
                         position_extractor=position_extractor,
-                        heading_extractor=extract.from_physical(heading),
+                        heading_extractor=extract.from_physical(bicycle_heading),
                         obstacle_position_extractor=lambda states: states.positions(),
                         obstacle_heading_extractor=lambda states: states.headings(),
                     ),
@@ -933,4 +1033,157 @@ class configure:
             obstacle_simulator=obstacle_simulator.with_time_step_size(dt),
             obstacle_state_observer=obstacle_collector,
             boundary=fixed_boundary if use_boundary else None,
+        )
+
+    @staticmethod
+    def planner_from_mpcc_unicycle(
+        *,
+        horizon: int = 30,
+        temperature: float = 50.0,
+        reference: Trajectory = reference.small_circle,
+        obstacles: ObstacleSimulatorProvider = obstacles.none,
+        weights: JaxMpccPlannerWeights = JaxMpccPlannerWeights(),
+        sampling: JaxSamplingOptions = JaxSamplingOptions(),
+        risk_metric: UnicycleRiskMetric = risk.mean_variance(
+            gamma=0.1, sample_count=10
+        ),
+    ) -> JaxMpccUnicyclePlannerConfiguration:
+        obstacle_simulator = obstacles()
+        position_extractor = extract.from_physical(unicycle_position)
+
+        planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
+            model=model.unicycle.dynamical(
+                time_step_size=(dt := 0.1),
+                speed_limits=(0.0, 5.0),
+                angular_velocity_limits=(-1.5, 1.5),
+            ),
+            sampler=sampler.gaussian(
+                standard_deviation=sampling.physical_standard_deviation,
+                rollout_count=sampling.rollout_count,
+                to_batch=types.unicycle.control_input_batch.create,
+                seed=sampling.physical_seed,
+            ),
+            costs=(
+                costs.comfort.control_smoothing(weights=weights.control_smoothing),
+                costs.comfort.control_effort(weights=weights.control_effort),
+                costs.safety.collision(
+                    obstacle_states=(
+                        forecasts_collector := collectors.obstacle_forecasts.decorating(
+                            obstacles_provider := create_obstacles.provider.predicting(
+                                predictor=predictor.curvilinear(
+                                    horizon=horizon,
+                                    model=model.integrator.obstacle(
+                                        time_step_size=dt, state_dimension=3
+                                    ),
+                                    estimator=(
+                                        model.integrator.estimator.kf(
+                                            time_step_size=dt,
+                                            process_noise_covariance=1e-4,
+                                            observation_noise_covariance=1e-8,
+                                            observation_dimension=3,
+                                        )
+                                    ),
+                                    prediction=IntegratorPredictionCreator(),
+                                ),
+                                history=types.obstacle_states_running_history.empty(
+                                    creator=types.obstacle_2d_poses,
+                                    horizon=10,
+                                    obstacle_count=obstacle_simulator.obstacle_count,
+                                ),
+                                id_assignment=create_obstacles.id_assignment.hungarian(
+                                    position_extractor=JaxObstaclePositionExtractor(),
+                                    cutoff=10.0,
+                                ),
+                            )
+                        )
+                    ),
+                    sampler=create_obstacles.sampler.gaussian(
+                        seed=sampling.obstacle_seed
+                    ),
+                    distance=(
+                        circles_distance := distance.circles(
+                            ego=Circles(
+                                origins=array([[0.0, 0.0]], shape=(V := 1, 2)),
+                                radii=array([vehicle_radius := 0.25], shape=(V,)),
+                            ),
+                            obstacle=Circles(
+                                origins=array([[0.0, 0.0]], shape=(C := 1, 2)),
+                                radii=array([obstacle_radius := 0.15], shape=(C,)),
+                            ),
+                            position_extractor=position_extractor,
+                            heading_extractor=extract.from_physical(unicycle_heading),
+                            obstacle_position_extractor=lambda states: (
+                                states.positions()
+                            ),
+                            obstacle_heading_extractor=lambda states: states.headings(),
+                        )
+                    ),
+                    distance_threshold=array([0.5], shape=(V,)),
+                    weight=weights.collision,
+                    metric=(risk_collector := collectors.risk.decorating(risk_metric)),
+                ),
+            ),
+            reference=reference,
+            position_extractor=position_extractor,
+            config={
+                "weights": {
+                    "contouring": weights.contouring,
+                    "lag": weights.lag,
+                    "progress": weights.progress,
+                },
+                "virtual": {
+                    "velocity_limits": (0.5, 5.0),
+                    "sampling_standard_deviation": sampling.virtual_standard_deviation,
+                    "sampling_seed": sampling.virtual_seed,
+                },
+            },
+            filter_function=filters.savgol(window_length=15, polynomial_order=3),
+        )
+
+        planner = (
+            trajectories_collector := collectors.trajectories.decorating(
+                control_collector := collectors.controls.decorating(
+                    state_collector := collectors.states.decorating(
+                        planner,
+                        transformer=types.augmented.state_sequence.of_states(
+                            physical=types.unicycle.state_sequence.of_states,
+                            virtual=types.simple.state_sequence.of_states,
+                        ),
+                    )
+                ),
+                model=augmented_model,
+            )
+        )
+
+        obstacle_collector = collectors.obstacle_states.decorating(
+            obstacles_provider, transformer=types.obstacle_2d_poses.of_states
+        )
+
+        return JaxMpccUnicyclePlannerConfiguration(
+            horizon=horizon,
+            temperature=temperature,
+            reference=reference,
+            planner=planner,
+            model=augmented_model,
+            vehicle_radius=vehicle_radius,
+            obstacle_radius=obstacle_radius,
+            registry=metrics.registry(
+                mpcc_error_metrics := metrics.mpcc_error(
+                    contouring=contouring_cost, lag=lag_cost
+                ),
+                collision_metrics := metrics.collision(
+                    distance_threshold=0.0, distance=circles_distance
+                ),
+                collectors=collectors.registry(
+                    state_collector,
+                    control_collector,
+                    risk_collector,
+                    trajectories_collector,
+                    obstacle_collector,
+                    forecasts_collector,
+                ),
+            ),
+            metrics=(mpcc_error_metrics, collision_metrics),
+            obstacle_simulator=obstacle_simulator.with_time_step_size(dt),
+            obstacle_state_observer=obstacle_collector,
         )

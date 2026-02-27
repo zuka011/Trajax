@@ -1,5 +1,6 @@
 export namespace Types {
-    export type Vehicle = "triangle" | "car";
+    export type Vehicle = "triangle" | "car" | "circle";
+    export type ObstacleShape = "rectangle" | "circle";
     export type Scale = "linear" | "log";
     export type MarkingType = "solid" | "dashed" | "none";
 }
@@ -73,8 +74,11 @@ export namespace Visualizable {
         pathLength: number;
         timeStep: number;
         wheelbase: number;
-        vehicleWidth: number;
+        vehicleWidth?: number;
         vehicleType: Types.Vehicle;
+        vehicleRadius?: number;
+        obstacleShape: Types.ObstacleShape;
+        obstacleRadius?: number;
     }
 
     export interface EgoGhost {

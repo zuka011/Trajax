@@ -191,3 +191,58 @@ describe("write.ellipse", () => {
         expect(newOffset).toBe(10 + write.ellipse.pointCount);
     });
 });
+
+describe("write.headingLine", () => {
+    it("draws a line from center to edge along a zero heading", () => {
+        const out = {
+            x: new Array(write.headingLine.pointCount).fill(null),
+            y: new Array(write.headingLine.pointCount).fill(null),
+        };
+
+        write.headingLine(5, 10, 2, 0, out, 0);
+
+        expect(out.x[0]).toBeCloseTo(5);
+        expect(out.y[0]).toBeCloseTo(10);
+        expect(out.x[1]).toBeCloseTo(7);
+        expect(out.y[1]).toBeCloseTo(10);
+    });
+
+    it("rotates the line according to the heading angle", () => {
+        const out = {
+            x: new Array(write.headingLine.pointCount).fill(null),
+            y: new Array(write.headingLine.pointCount).fill(null),
+        };
+
+        write.headingLine(0, 0, 1, Math.PI / 2, out, 0);
+
+        expect(out.x[0]).toBeCloseTo(0);
+        expect(out.y[0]).toBeCloseTo(0);
+        expect(out.x[1]).toBeCloseTo(0, 4);
+        expect(out.y[1]).toBeCloseTo(1, 4);
+    });
+
+    it("writes at the specified buffer offset", () => {
+        const size = write.headingLine.pointCount + 5;
+        const out = {
+            x: new Array(size).fill(null),
+            y: new Array(size).fill(null),
+        };
+
+        write.headingLine(0, 0, 1, 0, out, 5);
+
+        expect(out.x[4]).toBeNull();
+        expect(out.x[5]).not.toBeNull();
+    });
+
+    it("writes exactly two points", () => {
+        expect(write.headingLine.pointCount).toBe(2);
+    });
+
+    it("returns the new offset after writing", () => {
+        const out = { x: new Array(20), y: new Array(20) };
+
+        const newOffset = write.headingLine(0, 0, 1, 0, out, 10);
+
+        expect(newOffset).toBe(10 + write.headingLine.pointCount);
+    });
+});

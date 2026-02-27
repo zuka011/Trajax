@@ -35,7 +35,8 @@ class Struct(msgspec.Struct, rename="camel", omit_defaults=True):
 
 
 class Types:
-    type Vehicle = Literal["triangle", "car"]
+    type Vehicle = Literal["triangle", "car", "circle"]
+    type ObstacleShape = Literal["rectangle", "circle"]
     type Scale = Literal["linear", "log"]
     type Marking = Literal["solid", "dashed", "none"]
 
@@ -144,6 +145,9 @@ class Visualizable:
         wheelbase: float | None = None
         vehicle_width: float | None = None
         vehicle_type: Types.Vehicle | None = None
+        obstacle_shape: Types.ObstacleShape | None = None
+        vehicle_radius: float | None = None
+        obstacle_radius: float | None = None
 
     class EgoGhost(Struct):
         x: Array[Dim1]

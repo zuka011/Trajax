@@ -1,6 +1,7 @@
 const BOX_POINT_COUNT = 5;
 const ELLIPSE_SEGMENTS = 36;
 const ELLIPSE_POINT_COUNT = ELLIPSE_SEGMENTS + 1;
+const HEADING_LINE_POINT_COUNT = 2;
 
 const CORNERS_X = [-0.5, 0.5, 0.5, -0.5, -0.5] as const;
 const CORNERS_Y = [-0.5, -0.5, 0.5, 0.5, -0.5] as const;
@@ -69,5 +70,26 @@ export const write = {
             return offset + ELLIPSE_POINT_COUNT;
         },
         { pointCount: ELLIPSE_POINT_COUNT },
+    ),
+
+    headingLine: Object.assign(
+        (
+            cx: number,
+            cy: number,
+            radius: number,
+            heading: number,
+            out: { x: (number | null)[]; y: (number | null)[] },
+            offset: number,
+        ): number => {
+            const cos = Math.cos(heading);
+            const sin = Math.sin(heading);
+            out.x[offset] = cx;
+            out.y[offset] = cy;
+            out.x[offset + 1] = cx + radius * cos;
+            out.y[offset + 1] = cy + radius * sin;
+
+            return offset + HEADING_LINE_POINT_COUNT;
+        },
+        { pointCount: HEADING_LINE_POINT_COUNT },
     ),
 };

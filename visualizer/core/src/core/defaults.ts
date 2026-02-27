@@ -46,7 +46,8 @@ export interface Theme {
 
 export interface Defaults {
     timeStep: number;
-    vehicleType: "triangle" | "rectangle";
+    vehicleType: "triangle" | "car" | "circle";
+    obstacleShape: "rectangle" | "circle";
     wheelbase: number;
     vehicleWidth: number;
     title: string;
@@ -105,6 +106,7 @@ export const theme: Theme = {
 export const defaults: Defaults = {
     timeStep: 0.1,
     vehicleType: "triangle" as const,
+    obstacleShape: "rectangle" as const,
     wheelbase: 2.5,
     vehicleWidth: 1.2,
     title: "Simulation Visualization",

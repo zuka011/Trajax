@@ -6,7 +6,7 @@ export interface TraceUpdates {
     /**
      * Reference to the data arrays containing the updated trace data.
      */
-    data: { x: number[]; y: number[] }[];
+    data: { x: (number | null)[]; y: (number | null)[] }[];
 
     /**
      * The indices of the traces to be updated.

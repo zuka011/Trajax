@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export namespace Types {
-    export const Vehicle = z.enum(["triangle", "car"]);
+    export const Vehicle = z.enum(["triangle", "car", "circle"]);
+    export const ObstacleShape = z.enum(["rectangle", "circle"]);
     export const Scale = z.enum(["linear", "log"]);
 }
 
@@ -64,6 +65,9 @@ export namespace Visualizable {
         wheelbase: z.number().optional().default(2.5),
         vehicleWidth: z.number().optional().default(1.2),
         vehicleType: Types.Vehicle.optional().default("triangle"),
+        vehicleRadius: z.number().optional(),
+        obstacleShape: Types.ObstacleShape.optional().default("rectangle"),
+        obstacleRadius: z.number().optional(),
     });
 
     export const EgoGhost = z.object({

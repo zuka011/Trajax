@@ -17,6 +17,7 @@ from faran_visualizer.api.simulation import (
     Arrays,
     Plot,
     Road,
+    Types,
     Visualizable,
     SimulationVisualizer,
 )
@@ -62,10 +63,14 @@ class MpccSimulationResult:
     contouring_errors: Array[Dim1]
     lag_errors: Array[Dim1]
     time_step_size: float
-    wheelbase: float
+    wheelbase: float | None = None
     max_contouring_error: float | None = None
     max_lag_error: float | None = None
     vehicle_width: float | None = None
+    vehicle_type: Types.Vehicle = "car"
+    obstacle_shape: Types.ObstacleShape = "rectangle"
+    vehicle_radius: float | None = None
+    obstacle_radius: float | None = None
     optimal_trajectories: Sequence[AugmentedStateSequence] | None = None
     nominal_trajectories: Sequence[AugmentedStateSequence] | None = None
     obstacles: ObstacleStates | None = None
@@ -124,7 +129,10 @@ class MpccVisualizer:
             time_step=result.time_step_size,
             wheelbase=result.wheelbase,
             vehicle_width=result.vehicle_width,
-            vehicle_type="car",
+            vehicle_type=result.vehicle_type,
+            obstacle_shape=result.obstacle_shape,
+            vehicle_radius=result.vehicle_radius,
+            obstacle_radius=result.obstacle_radius,
         )
 
     def reference_trajectory_from(
