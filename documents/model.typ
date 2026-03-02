@@ -990,6 +990,12 @@ Alternatively, we can use the constant turn rate and velocity (CTRV) model (@ctr
   name: $overline(sans(z))$,
   sub: at,
 )
+#let covariance-predicted-observation-(at: none) = function(
+  name: $overline(Sigma)$,
+  sub: if at != none { $#observed-state-single, #at$ } else {
+    $#observed-state-single$
+  },
+)
 #let innovation-covariance(at: none) = function(
   name: $sans(S)$,
   sub: at,
@@ -1109,6 +1115,102 @@ The above algorithm is slightly more complex, since it accounts for nonlinear ob
       + $#kalman-gain-(at: $t$) arrow.l #covariance-state-single-(at: $t$, prediction: true) #observation-matrix-(at: $t$) ^top (#observation-matrix-(at: $t$) #covariance-state-single-(at: $t$, prediction: true) #observation-matrix-(at: $t$) ^top + #observation-noise-covariance-(at: $t$))^(-1)$ #h(1fr) ➤ Compute Kalman gain
       + $#mean-state-single-(at: $t$) arrow.l #mean-state-single-(at: $t$, prediction: true) + #kalman-gain-(at: $t$) (#observed-state-single-(at: $t$) - #observation-matrix-(at: $t$) #mean-state-single-(at: $t$, prediction: true))$ #h(1fr) ➤ Update mean
       + $#covariance-state-single-(at: $t$) arrow.l (I - #kalman-gain-(at: $t$) #observation-matrix-(at: $t$)) #covariance-state-single-(at: $t$, prediction: true)$ #h(1fr) ➤ Update covariance
+      - *return* $#belief-state-single-(at: $t$) = #gaussian-(mean-state-single-(at: $t$), covariance-state-single-(at: $t$))$.
+  ]
+]
+
+== Joseph Form for Covariance Update
+
+The covariance update step in the KF algorithms (with linear observations) computes:
+
+$
+  #covariance-state-single-(at: $t$) = (I - #kalman-gain-(at: $t$) #observation-matrix-(at: $t$)) #covariance-state-single-(at: $t$, prediction: true)
+$
+
+This is numerically fragile, since floating-point errors can break the symmetry or positive semi-definiteness of the resulting covariance matrix, causing the filter to diverge. The Joseph form @Bucy1968 replaces this with an equivalent expression that preserves both properties by construction:
+
+$
+  #covariance-state-single-(at: $t$) = (I - #kalman-gain-(at: $t$) #observation-matrix-(at: $t$)) #covariance-state-single-(at: $t$, prediction: true) (I - #kalman-gain-(at: $t$) #observation-matrix-(at: $t$))^top + #kalman-gain-(at: $t$) #observation-noise-covariance-(at: $t$) #kalman-gain-(at: $t$)^top
+$
+
+This is a direct replacement for the final covariance update lines in the KF algorithms.
+
+== Innovation-based Adaptive Kalman Filtering
+
+#let innovation-(at: $t$) = function(
+  name: $sans(v)$,
+  sub: at,
+)
+#let innovation-window = $w$
+#let innovation-matrix-(at: $t$) = function(
+  name: $sans(V)$,
+  sub: at,
+)
+#let adapted-process-noise-covariance-(at: $t$) = function(
+  name: $hat(sans(R))$,
+  sub: at,
+)
+#let adapted-observation-noise-covariance-(at: $t$) = function(
+  name: $hat(sans(Q))$,
+  sub: at,
+)
+
+The noise covariances of the KF algorithms are important parameters that can notably affect the performance of the filter. However, they are often difficult to tune in a way that avoids failures of the filter. For example, if the process noise covariance is set too low or too high, then the filter will be overconfident or too uncertain in its predictions and will not converge to the correct state. Furthermore, the definition of too low or too high depend on the specific meanings of the state variables, e.g. the uncertainty in the acceleration of an obstacle may need to be on a different scale, compared to that of the heading.
+
+One way to address this issue is to adapt the noise covariances online based on the observed performance of the filter over a fixed time window.
+
+#definition(title: [Innovation-based Adaptive Estimation (IAE) @Mohamed1999])[
+  Let $#innovation-(at: $t$) := #observed-state-single-(at: $t$) - #mean-predicted-observation-(at: $t$)$ denote the innovation at time step $t$. This is the difference between the observed state #observed-state-single-(at: $t$) and the predicted observation #mean-predicted-observation-(at: $t$), with the predicted observation computed as $#mean-predicted-observation-(at: $t$) := #observation-matrix-(at: $t$) #mean-state-single-(at: $t$, prediction: true)$. Let $#covariance-predicted-observation-(at: $t$) := #observation-matrix-(at: $t$) #covariance-state-single-(at: $t$, prediction: true)$ be the corresponding predicted observation covariance and #innovation-window be the size of the time window over which we want to adapt the noise covariances. Then the innovation matrix is defined as:
+
+  $
+    #innovation-matrix-(at: $t$) := 1 / #innovation-window sum_(i=t_0)^t #innovation-(at: $i$) #innovation-(at: $i$)^top, quad t_0 = t - #innovation-window + 1
+  $
+
+  Using the innovation matrix, we can adapt the noise covariances as follows:
+
+  $
+    #adapted-process-noise-covariance-(at: $t$) := #kalman-gain-(at: $t$) #innovation-matrix-(at: $t$) #kalman-gain-(at: $t$)^top, quad #adapted-observation-noise-covariance-(at: $t$) := #innovation-matrix-(at: $t$) - #observation-matrix-(at: $t$) #covariance-predicted-observation-(at: $t$) #observation-matrix-(at: $t$)^top
+  $
+]
+
+Using this idea, we can now formulate the innovation-based adaptation algorithm as follows:
+
+#algorithm(title: "Innovation-based Noise Covariance Adaptation")[
+  #pseudocode-list(hooks: .5em)[
+    + *Given:*
+      - Observation #observed-state-single-(at: $t$), predicted mean #mean-state-single-(at: $t$, prediction: true), predicted covariance #covariance-state-single-(at: $t$, prediction: true), observation matrix #observation-matrix-(at: $t$)
+      - Past innovations #innovation-(at: $i$) for $i = 0, ..., t-1$
+
+    + *Adapt:*
+      + $#mean-predicted-observation-(at: $t$) arrow.l #observation-matrix-(at: $t$) #mean-state-single-(at: $t$, prediction: true)$ #h(1fr) ➤ Compute predicted observation
+      + $#covariance-predicted-observation-(at: $t$) arrow.l #observation-matrix-(at: $t$) #covariance-state-single-(at: $t$, prediction: true) #observation-matrix-(at: $t$)^top$ #h(1fr) ➤ Compute predicted observation covariance
+      + $#innovation-(at: $t$) arrow.l #observed-state-single-(at: $t$) - #mean-predicted-observation-(at: $t$)$ #h(1fr) ➤ Compute innovation
+      + $t_0 arrow.l t - #innovation-window + 1$ #h(1fr) ➤ Start of time window
+      + *if* $t_0 < 0$ *then* *return* #adapted-process-noise-covariance-(at: $t$) = #process-noise-covariance-(at: $t$), #adapted-observation-noise-covariance-(at: $t$) = #observation-noise-covariance-(at: $t$) #h(1fr) ➤ Insufficient data
+      + $#innovation-matrix-(at: $t$) arrow.l 1 / #innovation-window sum_(i=t_0)^t #innovation-(at: $i$) #innovation-(at: $i$)^top$ #h(1fr) ➤ Compute innovation matrix
+      + $#kalman-gain-(at: $t$) arrow.l #covariance-state-single-(at: $t$, prediction: true) #observation-matrix-(at: $t$) ^top (#observation-matrix-(at: $t$) #covariance-state-single-(at: $t$, prediction: true) #observation-matrix-(at: $t$) ^top + #observation-noise-covariance-(at: $t$))^(-1)$ #h(1fr) ➤ Compute Kalman gain
+      + $#adapted-process-noise-covariance-(at: $t$) arrow.l #kalman-gain-(at: $t$) #innovation-matrix-(at: $t$) #kalman-gain-(at: $t$)^top$ #h(1fr) ➤ Adapt process noise covariance
+      + $#adapted-observation-noise-covariance-(at: $t$) arrow.l #innovation-matrix-(at: $t$) - #observation-matrix-(at: $t$) #covariance-predicted-observation-(at: $t$) #observation-matrix-(at: $t$)^top$ #h(1fr) ➤ Adapt observation noise covariance
+      - *return* #adapted-process-noise-covariance-(at: $t$), #adapted-observation-noise-covariance-(at: $t$)
+  ]
+]
+
+Considering the general structure of the KF algorithms, we can integrate this adaptation step as follows:
+
+#algorithm(title: "KF with Noise Covariance Adaptation")[
+  #pseudocode-list(hooks: .5em)[
+    + *Given:*
+      - KF algorithm steps $"predict"(#process-noise-covariance-(at: $t$))$ and $"update"(#observation-noise-covariance-(at: $t$))$
+      - Adaptation algorithm $"adapt"(#observed-state-single-(at: $t$), #mean-state-single-(at: $t$, prediction: true), #covariance-state-single-(at: $t$, prediction: true), #process-noise-covariance-(at: $t$), #observation-noise-covariance-(at: $t$))$
+      - Observation #observed-state-single-(at: $t$), noise covariances #process-noise-covariance-(at: $t$), #observation-noise-covariance-(at: $t$)
+
+    + *Predict:*
+      + $#mean-state-single-(at: $t$, prediction: true), #covariance-state-single-(at: $t$, prediction: true) arrow.l "predict"(#process-noise-covariance-(at: $t$))$ #h(1fr) ➤ Predict state
+    + *Adapt Noise Covariances:*
+      + $#adapted-process-noise-covariance-(at: $t$), #adapted-observation-noise-covariance-(at: $t$) arrow.l "adapt"(#observed-state-single-(at: $t$), #mean-state-single-(at: $t$, prediction: true), #covariance-state-single-(at: $t$, prediction: true), #process-noise-covariance-(at: $t$), #observation-noise-covariance-(at: $t$))$ #h(1fr) ➤ Adapt noise covariances
+      + $#process-noise-covariance-(at: $t$), #observation-noise-covariance-(at: $t$) arrow.l #adapted-process-noise-covariance-(at: $t$), #adapted-observation-noise-covariance-(at: $t$)$ #h(1fr) ➤ Update noise covariances (for next iteration)
+    + *Update:*
+      + $#mean-state-single-(at: $t$), #covariance-state-single-(at: $t$) arrow.l "update"(#observation-noise-covariance-(at: $t$))$ #h(1fr) ➤ Update with adapted noise covariance
       - *return* $#belief-state-single-(at: $t$) = #gaussian-(mean-state-single-(at: $t$), covariance-state-single-(at: $t$))$.
   ]
 ]
