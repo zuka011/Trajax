@@ -15,6 +15,10 @@ from faran.types import (
     NumPyIntegratorControlInputBatch,
     NumPyIntegratorObstacleStatesHistory,
     EstimatedObstacleStates,
+    NumPyGaussianBelief,
+    NumPyNoiseCovarianceArrayDescription,
+    NumPyNoiseCovarianceDescription,
+    NumPyNoiseModelProvider,
 )
 from faran.states import (
     NumPySimpleState as SimpleState,
@@ -22,13 +26,7 @@ from faran.states import (
     NumPySimpleStateBatch as SimpleStateBatch,
     NumPySimpleControlInputBatch as SimpleControlInputBatch,
 )
-from faran.filters import (
-    NumPyKalmanFilter,
-    NumPyGaussianBelief,
-    NumPyNoiseCovarianceArrayDescription,
-    NumPyNoiseCovarianceDescription,
-    numpy_kalman_filter,
-)
+from faran.filters import NumPyKalmanFilter, numpy_kalman_filter
 from faran.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
 from faran.models.basic import invalid_obstacle_filter_from
 from faran.models.integrator.common import (
@@ -509,6 +507,7 @@ class NumPyKfIntegratorStateEstimator(
         observation_noise_covariance: NumPyNoiseCovarianceArrayDescription,
         initial_state_covariance: Float[Array, "D_x D_x"] | None = None,
         observation_dimension: int | None = None,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyKfIntegratorStateEstimator":
         """Creates an integrator state estimator based on the Kalman Filter with the
         specified noise covariances.
@@ -547,7 +546,7 @@ class NumPyKfIntegratorStateEstimator(
                 observation_dimension=observation_dimension,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=NumPyKalmanFilter.create(),
+            estimator=NumPyKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(

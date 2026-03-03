@@ -4,6 +4,7 @@ from faran import (
     ObstacleStates,
     ObstacleMotionPredictor,
     model,
+    noise,
     predictor as create_predictor,
 )
 
@@ -1795,4 +1796,126 @@ class test_that_prediction_is_not_created_for_obstacle_when_obstacle_history_is_
         assert np.all(np.isnan(prediction[..., missing_obstacle_index])), (
             f"Expected no prediction for obstacle with missing history, "
             f"but got {prediction[..., missing_obstacle_index]}"
+        )
+
+
+class test_that_predictor_correctly_predicts_circular_motion_when_steering_angle_changes:
+    @staticmethod
+    def cases(
+        create_predictor, model, noise, prediction_creator, data, model_data
+    ) -> Sequence[tuple]:
+        dt = 0.1
+        L = 5.0
+        radius = 24.0
+
+        def trajectory_for(inputs):
+            return model.bicycle.dynamical(time_step_size=dt, wheelbase=L).simulate(
+                inputs=inputs,
+                initial_state=model_data.bicycle.state(
+                    x=0.0, y=0.0, heading=0.0, speed=12.0
+                ),
+            )
+
+        trajectory = trajectory_for(
+            model_data.bicycle.control_input_batch(
+                rollout_count=1,
+                acceleration=np.zeros(
+                    (T_h := (T_straight := 10) + (T_turn := 11)) + (T_p := 30)
+                ),
+                steering=np.where(
+                    np.arange(T_h + T_p) < T_straight, 0.0, np.arctan(L / radius)
+                ),
+            )
+        )
+
+        return [
+            (
+                predictor := create_predictor.curvilinear(
+                    horizon=T_p,
+                    model=model.bicycle.obstacle(
+                        time_step_size=dt,
+                        wheelbase=L,
+                        process_noise_covariance=0.0,
+                    ),
+                    estimator=estimator,
+                    prediction=prediction_creator.bicycle(),
+                ),
+                history := data.obstacle_2d_poses(
+                    x=array(trajectory.positions.x()[:T_h], shape=(T_h, 1)),
+                    y=array(trajectory.positions.y()[:T_h], shape=(T_h, 1)),
+                    heading=array(trajectory.heading()[:T_h], shape=(T_h, 1)),
+                ),
+                expected := data.obstacle_2d_poses(
+                    x=array(trajectory.positions.x()[-T_p:], shape=(T_p, 1)),
+                    y=array(trajectory.positions.y()[-T_p:], shape=(T_p, 1)),
+                    heading=array(trajectory.heading()[-T_p:], shape=(T_p, 1)),
+                ),
+            )
+            for estimator in [
+                model.bicycle.estimator.finite_difference(
+                    time_step_size=dt, wheelbase=L
+                ),
+                model.bicycle.estimator.ekf(
+                    time_step_size=dt,
+                    wheelbase=L,
+                    process_noise_covariance=array(
+                        [1e-8, 1e-8, 1e-8, 1e-8, 1e-4, 1e-4], shape=(6,)
+                    ),
+                    observation_noise_covariance=1e-8,
+                    noise_model=noise.adaptive(window_size=15),
+                ),
+                model.bicycle.estimator.ukf(
+                    time_step_size=dt,
+                    wheelbase=L,
+                    process_noise_covariance=array(
+                        [1e-6, 1e-6, 1e-6, 1e-6, 1e-4, 1e-4], shape=(6,)
+                    ),
+                    observation_noise_covariance=1e-6,
+                    noise_model=noise.adaptive(window_size=15),
+                ),
+            ]
+        ]
+
+    @mark.parametrize(
+        ["predictor", "history", "expected"],
+        [
+            *cases(
+                create_predictor=create_predictor.numpy,
+                model=model.numpy,
+                noise=noise.numpy,
+                prediction_creator=prediction_creator.numpy,
+                data=data.numpy,
+                model_data=model_data.numpy,
+            ),
+            *cases(
+                create_predictor=create_predictor.jax,
+                model=model.jax,
+                noise=noise.jax,
+                prediction_creator=prediction_creator.jax,
+                data=data.jax,
+                model_data=model_data.jax,
+            ),
+        ],
+    )
+    def test[HistoryT, PredictionT: ObstacleStates](
+        self,
+        predictor: ObstacleMotionPredictor[HistoryT, PredictionT],
+        history: HistoryT,
+        expected: PredictionT,
+    ) -> None:
+        actual = predictor.predict(history=history)
+
+        assert np.allclose(actual.x(), expected.x(), rtol=1e-2, atol=1e-3), (
+            f"Predicted X positions should match expected for circular motion, but got "
+            f"max error {np.max(np.abs(np.asarray(actual.x()) - np.asarray(expected.x()))):.3f} m"
+        )
+        assert np.allclose(actual.y(), expected.y(), rtol=1e-2, atol=1e-3), (
+            f"Predicted Y positions should match expected for circular motion, but got "
+            f"max error {np.max(np.abs(np.asarray(actual.y()) - np.asarray(expected.y()))):.3f} m"
+        )
+        assert np.allclose(
+            actual.heading(), expected.heading(), rtol=1e-2, atol=1e-4
+        ), (
+            f"Predicted headings should match expected for circular motion, but got "
+            f"max error {np.max(np.abs(np.asarray(actual.heading()) - np.asarray(expected.heading())) * 180 / np.pi):.1f}°"
         )

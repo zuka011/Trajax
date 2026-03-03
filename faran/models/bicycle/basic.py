@@ -27,11 +27,12 @@ from faran.types import (
     ObstacleModel,
     ObstacleStateEstimator,
     EstimatedObstacleStates,
+    NumPyGaussianBelief,
+    NumPyNoiseModelProvider,
+    NumPyNoiseCovarianceDescription,
 )
 from faran.filters import (
-    NumPyGaussianBelief,
     NumPyExtendedKalmanFilter,
-    NumPyNoiseCovarianceDescription,
     NumPyUnscentedKalmanFilter,
     numpy_kalman_filter,
 )
@@ -1019,6 +1020,7 @@ class NumPyKfBicycleStateEstimator(
     observation_noise_covariance: ObservationNoiseCovarianceArray
     model: NumPyBicycleStateEstimationModel
     estimator: KalmanFilter
+    noise_model: NumPyNoiseModelProvider | None = None
 
     @staticmethod
     def ekf(
@@ -1028,6 +1030,7 @@ class NumPyKfBicycleStateEstimator(
         process_noise_covariance: NumPyNoiseCovarianceDescription,
         observation_noise_covariance: NumPyNoiseCovarianceDescription,
         initial_state_covariance: EstimationStateCovarianceArray | None = None,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyKfBicycleStateEstimator":
         """Creates an EKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -1042,6 +1045,7 @@ class NumPyKfBicycleStateEstimator(
             initial_state_covariance: The initial state covariance for the Kalman filter.
                 If not provided, low uncertainty will be assumed for observed states and high
                 uncertainty for speed and inputs.
+            noise_model: Optional noise model provider for adaptive noise estimation.
         """
         return NumPyKfBicycleStateEstimator(
             process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
@@ -1055,7 +1059,7 @@ class NumPyKfBicycleStateEstimator(
                 wheelbase=wheelbase,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=NumPyExtendedKalmanFilter.create(),
+            estimator=NumPyExtendedKalmanFilter.create(noise_model=noise_model),
         )
 
     @staticmethod
@@ -1066,6 +1070,7 @@ class NumPyKfBicycleStateEstimator(
         process_noise_covariance: NumPyNoiseCovarianceDescription,
         observation_noise_covariance: NumPyNoiseCovarianceDescription,
         initial_state_covariance: EstimationStateCovarianceArray | None = None,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyKfBicycleStateEstimator":
         """Creates a UKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -1080,6 +1085,7 @@ class NumPyKfBicycleStateEstimator(
             initial_state_covariance: The initial state covariance for the Kalman filter.
                 If not provided, low uncertainty will be assumed for observed states and high
                 uncertainty for speed and inputs.
+            noise_model: Optional noise model provider for adaptive noise estimation.
         """
         return NumPyKfBicycleStateEstimator(
             process_noise_covariance=numpy_kalman_filter.standardize_noise_covariance(
@@ -1093,7 +1099,7 @@ class NumPyKfBicycleStateEstimator(
                 wheelbase=wheelbase,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=NumPyUnscentedKalmanFilter.create(),
+            estimator=NumPyUnscentedKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(

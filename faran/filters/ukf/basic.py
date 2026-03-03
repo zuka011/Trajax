@@ -1,7 +1,13 @@
 from typing import Protocol, NamedTuple, runtime_checkable, cast
 
-from faran.types.array import Array
-from faran.filters.kf import NumPyGaussianBelief, numpy_kalman_filter
+from faran.types import (
+    Array,
+    NumPyGaussianBelief,
+    NumPyNoiseCovariances,
+    NumPyNoiseModelProvider,
+)
+from faran.filters.noise import IdentityNoiseModelProvider
+from faran.filters.kf import numpy_kalman_filter
 
 from jaxtyping import Float, Int
 
@@ -20,18 +26,29 @@ class NumPyUnscentedKalmanFilter(NamedTuple):
 
     alpha: float
     beta: float
+    noise_model: NumPyNoiseModelProvider
 
     @staticmethod
     def create(
-        *, alpha: float = 1.0, beta: float = 2.0
+        *,
+        alpha: float = 1.0,
+        beta: float = 2.0,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyUnscentedKalmanFilter":
         """Create an Unscented Kalman Filter.
 
         Args:
             alpha: Controls spread of sigma points - λ = (α² - 1)n.
             beta: Incorporates prior knowledge (2 is optimal for Gaussian).
+            noise_model: An optional noise model provider for adaptive noise estimation.
         """
-        return NumPyUnscentedKalmanFilter(alpha=alpha, beta=beta)
+        return NumPyUnscentedKalmanFilter(
+            alpha=alpha,
+            beta=beta,
+            noise_model=IdentityNoiseModelProvider()
+            if noise_model is None
+            else noise_model,
+        )
 
     def filter(
         self,
@@ -56,18 +73,31 @@ class NumPyUnscentedKalmanFilter(NamedTuple):
         belief = self.initial_belief_from(
             observations, initial_state_covariance=initial_state_covariance
         )
+        noise = NumPyNoiseCovariances(
+            process_noise_covariance, observation_noise_covariance
+        )
+        adapt = self.noise_model(observation_matrix=observation_matrix, noise=noise)
+        noise_state = adapt.state
 
         for observation in observations:
             belief = self.predict(
                 belief=belief,
                 state_transition=state_transition,
-                process_noise_covariance=process_noise_covariance,
+                process_noise_covariance=noise.process_noise_covariance,
             )
+
+            noise, noise_state = adapt(
+                noise=noise,
+                prediction=belief,
+                observation=observation,
+                state=noise_state,
+            )
+
             belief = self.update(
                 observation=observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
-                observation_noise_covariance=observation_noise_covariance,
+                observation_noise_covariance=noise.observation_noise_covariance,
                 initial_state_covariance=initial_state_covariance,
             )
 

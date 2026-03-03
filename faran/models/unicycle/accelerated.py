@@ -29,11 +29,12 @@ from faran.types import (
     ObstacleModel,
     ObstacleStateEstimator,
     EstimatedObstacleStates,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceDescription,
+    JaxNoiseModelProvider,
 )
 from faran.filters import (
     JaxExtendedKalmanFilter,
-    JaxGaussianBelief,
-    JaxNoiseCovarianceDescription,
     JaxUnscentedKalmanFilter,
     jax_kalman_filter,
 )
@@ -936,6 +937,7 @@ class JaxKfUnicycleStateEstimator(
         ]
         | EstimationStateCovarianceArray
         | None = None,
+        noise_model: JaxNoiseModelProvider | None = None,
     ) -> "JaxKfUnicycleStateEstimator":
         """Creates an EKF state estimator for the unicycle model with the specified noise
         covariances.
@@ -961,7 +963,7 @@ class JaxKfUnicycleStateEstimator(
                 time_step_size=time_step_size,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=JaxExtendedKalmanFilter.create(),
+            estimator=JaxExtendedKalmanFilter.create(noise_model=noise_model),
         )
 
     @staticmethod
@@ -975,6 +977,7 @@ class JaxKfUnicycleStateEstimator(
         ]
         | EstimationStateCovarianceArray
         | None = None,
+        noise_model: JaxNoiseModelProvider | None = None,
     ) -> "JaxKfUnicycleStateEstimator":
         """Creates a UKF state estimator for the unicycle model with the specified noise
         covariances.
@@ -1000,7 +1003,7 @@ class JaxKfUnicycleStateEstimator(
                 time_step_size=time_step_size,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=JaxUnscentedKalmanFilter.create(),
+            estimator=JaxUnscentedKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(
@@ -1184,7 +1187,7 @@ def estimate_angular_velocities(
     )
 
 
-@jax.jit(static_argnames=("horizon",))
+@jax.jit(static_argnames=("horizon", "predictor"))
 @jaxtyped
 def forward(
     *,

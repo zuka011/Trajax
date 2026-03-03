@@ -1,5 +1,4 @@
-from faran.types import HasShape
-from faran.filters import JaxNoiseCovarianceDescription
+from faran.types import HasShape, JaxNoiseCovarianceDescription
 
 
 def observation_dimension_from(

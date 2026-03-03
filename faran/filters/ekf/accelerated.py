@@ -1,13 +1,18 @@
 from typing import Protocol, NamedTuple, runtime_checkable
 
-from faran.types import jaxtyped
+from faran.types import (
+    jaxtyped,
+    JaxGaussianBelief,
+    JaxNoiseCovariances,
+    JaxNoiseModelProvider,
+)
+from faran.filters.noise import IdentityNoiseModelProvider
+from faran.filters.kf import jax_kalman_filter
 
 from jaxtyping import Array as JaxArray, Float
 
 import jax
 import jax.numpy as jnp
-
-from faran.filters.kf import JaxGaussianBelief, jax_kalman_filter
 
 
 @runtime_checkable
@@ -24,11 +29,19 @@ class StateTransitionFunction(Protocol):
 class JaxExtendedKalmanFilter(NamedTuple):
     """Extended Kalman Filter for nonlinear systems with linear observations."""
 
-    @staticmethod
-    def create() -> "JaxExtendedKalmanFilter":
-        return JaxExtendedKalmanFilter()
+    noise_model: JaxNoiseModelProvider
 
-    @jax.jit
+    @staticmethod
+    def create(
+        *, noise_model: JaxNoiseModelProvider | None = None
+    ) -> "JaxExtendedKalmanFilter":
+        return JaxExtendedKalmanFilter(
+            noise_model=IdentityNoiseModelProvider()
+            if noise_model is None
+            else noise_model
+        )
+
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def filter(
         self,
@@ -53,28 +66,40 @@ class JaxExtendedKalmanFilter(NamedTuple):
         belief = self.initial_belief_from(
             observations, initial_state_covariance=initial_state_covariance
         )
+        noise = JaxNoiseCovariances(
+            process_noise_covariance, observation_noise_covariance
+        )
+        adapt = self.noise_model(observation_matrix=observation_matrix, noise=noise)
+        noise_state = adapt.state
 
-        def step(
-            belief: JaxGaussianBelief, observation: Float[JaxArray, "D_z K"]
-        ) -> tuple[JaxGaussianBelief, None]:
+        def step(carry, observation):
+            belief, noise, noise_state = carry
             belief = self.predict(
                 belief=belief,
                 state_transition=state_transition,
-                process_noise_covariance=process_noise_covariance,
+                process_noise_covariance=noise.process_noise_covariance,
+            )
+            noise, noise_state = adapt(
+                noise=noise,
+                prediction=belief,
+                observation=observation,
+                state=noise_state,
             )
             belief = self.update(
                 observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
-                observation_noise_covariance=observation_noise_covariance,
+                observation_noise_covariance=noise.observation_noise_covariance,
                 initial_state_covariance=initial_state_covariance,
             )
-            return belief, None
+            return (belief, noise, noise_state), None
 
-        belief, _ = jax.lax.scan(step, belief, observations)
+        (belief, _, _), _ = jax.lax.scan(
+            step, (belief, noise, noise_state), observations
+        )
         return belief
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def predict(
         self,
@@ -101,7 +126,7 @@ class JaxExtendedKalmanFilter(NamedTuple):
             + R[..., jnp.newaxis],
         )
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def update(
         self,
@@ -129,7 +154,7 @@ class JaxExtendedKalmanFilter(NamedTuple):
             initial_state_covariance=initial_state_covariance,
         )
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def initial_belief_from(
         self,

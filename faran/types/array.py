@@ -20,6 +20,13 @@ type Device = Literal["cpu", "default"]
 
 
 @runtime_checkable
+class ArrayConvertible(Protocol):
+    def __array__(self, dtype: DataType | None = None) -> Array:
+        """Returns an array representation of the object, optionally with the specified dtype."""
+        ...
+
+
+@runtime_checkable
 class HasShape(Protocol):
     @property
     def shape(self) -> tuple[int, ...]:

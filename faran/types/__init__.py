@@ -250,3 +250,20 @@ from .collectors import (
 from .metrics import (
     Metric as Metric,
 )
+from .filters import (
+    Noise as Noise,
+    NoiseModel as NoiseModel,
+    NoiseModelProvider as NoiseModelProvider,
+    NumPyNoiseCovarianceArrayDescription as NumPyNoiseCovarianceArrayDescription,
+    NumPyNoiseCovarianceDescription as NumPyNoiseCovarianceDescription,
+    NumPyGaussianBelief as NumPyGaussianBelief,
+    NumPyNoiseCovariances as NumPyNoiseCovariances,
+    NumPyNoiseModel as NumPyNoiseModel,
+    NumPyNoiseModelProvider as NumPyNoiseModelProvider,
+    JaxNoiseCovarianceArrayDescription as JaxNoiseCovarianceArrayDescription,
+    JaxNoiseCovarianceDescription as JaxNoiseCovarianceDescription,
+    JaxGaussianBelief as JaxGaussianBelief,
+    JaxNoiseCovariances as JaxNoiseCovariances,
+    JaxNoiseModel as JaxNoiseModel,
+    JaxNoiseModelProvider as JaxNoiseModelProvider,
+)

@@ -95,6 +95,24 @@ from .types import (
     StateSequenceCreator as StateSequenceCreator,
     ObstacleStateSequencesCreator as ObstacleStateSequencesCreator,
     ObstacleStateObserver as ObstacleStateObserver,
+    NumPyGaussianBelief as NumPyGaussianBelief,
+    NumPyNoiseCovariances as NumPyNoiseCovariances,
+    NumPyNoiseModel as NumPyNoiseModel,
+    NumPyNoiseModelProvider as NumPyNoiseModelProvider,
+    JaxGaussianBelief as JaxGaussianBelief,
+    JaxNoiseCovariances as JaxNoiseCovariances,
+    JaxNoiseModel as JaxNoiseModel,
+    JaxNoiseModelProvider as JaxNoiseModelProvider,
+    Noise as Noise,
+    NoiseModel as NoiseModel,
+    NoiseModelProvider as NoiseModelProvider,
+)
+from .filters.noise import (
+    NumPyAdaptiveNoiseProvider as NumPyAdaptiveNoiseProvider,
+    NumPyClampedNoiseProvider as NumPyClampedNoiseProvider,
+    JaxAdaptiveNoiseProvider as JaxAdaptiveNoiseProvider,
+    JaxClampedNoiseProvider as JaxClampedNoiseProvider,
+    IdentityNoiseModelProvider as IdentityNoiseModelProvider,
 )
 from .namespace import types as types, classes as classes
 from .factory import (
@@ -103,6 +121,7 @@ from .factory import (
     padding as padding,
     filters as filters,
 )
+from .filters import noise as noise
 from .collectors import (
     CollectorRegistry as CollectorRegistry,
     NoCollectedDataWarning as NoCollectedDataWarning,

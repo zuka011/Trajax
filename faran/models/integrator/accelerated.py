@@ -16,6 +16,10 @@ from faran.types import (
     JaxIntegratorControlInputBatch,
     JaxIntegratorObstacleStatesHistory,
     EstimatedObstacleStates,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceArrayDescription,
+    JaxNoiseCovarianceDescription,
+    JaxNoiseModelProvider,
 )
 from faran.states import (
     JaxSimpleState as SimpleState,
@@ -23,13 +27,7 @@ from faran.states import (
     JaxSimpleStateBatch as SimpleStateBatch,
     JaxSimpleControlInputBatch as SimpleControlInputBatch,
 )
-from faran.filters import (
-    JaxKalmanFilter,
-    JaxGaussianBelief,
-    JaxNoiseCovarianceArrayDescription,
-    JaxNoiseCovarianceDescription,
-    jax_kalman_filter,
-)
+from faran.filters import JaxKalmanFilter, jax_kalman_filter
 from faran.models.common import SMALL_UNCERTAINTY, LARGE_UNCERTAINTY
 from faran.models.accelerated import invalid_obstacle_filter_from
 from faran.models.integrator.common import (
@@ -497,6 +495,7 @@ class JaxKfIntegratorStateEstimator(
         | Float[JaxArray, "D_x D_x"]
         | None = None,
         observation_dimension: int | None = None,
+        noise_model: JaxNoiseModelProvider | None = None,
     ) -> "JaxKfIntegratorStateEstimator":
         """Creates an integrator state estimator based on the Kalman Filter with the
         specified noise covariances.
@@ -535,7 +534,7 @@ class JaxKfIntegratorStateEstimator(
                 observation_dimension=observation_dimension,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=JaxKalmanFilter.create(),
+            estimator=JaxKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(
@@ -713,7 +712,7 @@ def estimate_velocities(
     return (history[-1] - history[-2]) / time_step
 
 
-@jax.jit(static_argnames=("horizon",))
+@jax.jit(static_argnames=("horizon", "predictor"))
 @jaxtyped
 def forward(
     *,

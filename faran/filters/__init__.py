@@ -1,13 +1,7 @@
 from .kf import (
-    NumPyGaussianBelief as NumPyGaussianBelief,
     NumPyKalmanFilter as NumPyKalmanFilter,
-    NumPyNoiseCovarianceArrayDescription as NumPyNoiseCovarianceArrayDescription,
-    NumPyNoiseCovarianceDescription as NumPyNoiseCovarianceDescription,
     numpy_kalman_filter as numpy_kalman_filter,
-    JaxGaussianBelief as JaxGaussianBelief,
     JaxKalmanFilter as JaxKalmanFilter,
-    JaxNoiseCovarianceArrayDescription as JaxNoiseCovarianceArrayDescription,
-    JaxNoiseCovarianceDescription as JaxNoiseCovarianceDescription,
     jax_kalman_filter as jax_kalman_filter,
 )
 from .ekf import (
@@ -17,4 +11,12 @@ from .ekf import (
 from .ukf import (
     NumPyUnscentedKalmanFilter as NumPyUnscentedKalmanFilter,
     JaxUnscentedKalmanFilter as JaxUnscentedKalmanFilter,
+)
+from .noise import (
+    NumPyAdaptiveNoise as NumPyAdaptiveNoise,
+    NumPyAdaptiveNoiseProvider as NumPyAdaptiveNoiseProvider,
+    JaxAdaptiveNoise as JaxAdaptiveNoise,
+    JaxAdaptiveNoiseProvider as JaxAdaptiveNoiseProvider,
+    IdentityNoiseModelProvider as IdentityNoiseModelProvider,
+    noise as noise,
 )

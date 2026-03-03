@@ -98,10 +98,14 @@ class compute:
 class check:
     @staticmethod
     def is_spd(
-        matrices: Float[Array, "T D D K"] | Float[Array, "D D K"], atol: float = 1e-6
+        matrices: Float[Array, "T D D K"] | Float[Array, "D D K"] | Float[Array, "D D"],
+        atol: float = 1e-6,
     ) -> bool:
         """Check if matrices are symmetric positive semi-definite."""
-        if matrices.ndim == 3:
+        if matrices.ndim == 2:
+            matrices = matrices[np.newaxis, ..., np.newaxis]
+
+        elif matrices.ndim == 3:
             matrices = matrices[np.newaxis, ...]
 
         T, D1, D2, K = matrices.shape

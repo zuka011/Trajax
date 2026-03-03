@@ -27,11 +27,12 @@ from faran.types import (
     ObstacleModel,
     ObstacleStateEstimator,
     EstimatedObstacleStates,
+    NumPyGaussianBelief,
+    NumPyNoiseCovarianceDescription,
+    NumPyNoiseModelProvider,
 )
 from faran.filters import (
     NumPyExtendedKalmanFilter,
-    NumPyGaussianBelief,
-    NumPyNoiseCovarianceDescription,
     NumPyUnscentedKalmanFilter,
     numpy_kalman_filter,
 )
@@ -917,6 +918,7 @@ class NumPyKfUnicycleStateEstimator(
         process_noise_covariance: NumPyNoiseCovarianceDescription,
         observation_noise_covariance: NumPyNoiseCovarianceDescription,
         initial_state_covariance: EstimationStateCovarianceArray | None = None,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyKfUnicycleStateEstimator":
         """Creates an EKF state estimator for the unicycle model with the specified noise
         covariances.
@@ -942,7 +944,7 @@ class NumPyKfUnicycleStateEstimator(
                 time_step_size=time_step_size,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=NumPyExtendedKalmanFilter.create(),
+            estimator=NumPyExtendedKalmanFilter.create(noise_model=noise_model),
         )
 
     @staticmethod
@@ -952,6 +954,7 @@ class NumPyKfUnicycleStateEstimator(
         process_noise_covariance: NumPyNoiseCovarianceDescription,
         observation_noise_covariance: NumPyNoiseCovarianceDescription,
         initial_state_covariance: EstimationStateCovarianceArray | None = None,
+        noise_model: NumPyNoiseModelProvider | None = None,
     ) -> "NumPyKfUnicycleStateEstimator":
         """Creates a UKF state estimator for the unicycle model with the specified noise
         covariances.
@@ -977,7 +980,7 @@ class NumPyKfUnicycleStateEstimator(
                 time_step_size=time_step_size,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=NumPyUnscentedKalmanFilter.create(),
+            estimator=NumPyUnscentedKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(

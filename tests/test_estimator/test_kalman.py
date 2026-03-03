@@ -1,6 +1,6 @@
 from typing import Sequence, Protocol
 
-from faran import ObstacleStateEstimator, EstimatedObstacleStates, model
+from faran import ObstacleStateEstimator, EstimatedObstacleStates, model, noise
 
 from numtypes import Array, array
 from jaxtyping import Float
@@ -882,3 +882,108 @@ class test_that_estimated_covariance_is_symmetric:
     ) -> None:
         result = estimator.estimate_from(history)
         assert check.is_spd(np.asarray(result.covariance), atol=1e-10)
+
+
+class test_that_estimator_uses_specified_noise_model:
+    @staticmethod
+    def cases(model, data, noise) -> Sequence[tuple]:
+        dt = 0.1
+        window = 5
+        T = 10
+        K = 2
+        rng = np.random.default_rng(seed=99)
+
+        def random_2d_poses():
+            return data.obstacle_2d_poses(
+                x=array(rng.standard_normal((T, K)), shape=(T, K)),
+                y=array(rng.standard_normal((T, K)), shape=(T, K)),
+                heading=array(0.1 * rng.standard_normal((T, K)), shape=(T, K)),
+            )
+
+        def random_simple_states(D_o: int):
+            return data.simple_obstacle_states(
+                states=array(rng.standard_normal((T, D_o, K)), shape=(T, D_o, K)),
+            )
+
+        return [
+            (
+                base_estimator := model.integrator.estimator.kf(
+                    time_step_size=dt,
+                    process_noise_covariance=1e-3,
+                    observation_noise_covariance=1e-3,
+                    observation_dimension=(D_o := 3),
+                ),
+                adapted_estimator := model.integrator.estimator.kf(
+                    time_step_size=dt,
+                    process_noise_covariance=1e-3,
+                    observation_noise_covariance=1e-3,
+                    observation_dimension=(D_o := 3),
+                    noise_model=noise.adaptive(window_size=window),
+                ),
+                random_simple_states(D_o),
+            ),
+            *[
+                (
+                    base_estimator := estimator(noise_model=None),
+                    adapted_estimator := estimator(
+                        noise_model=noise.adaptive(window_size=window)
+                    ),
+                    random_2d_poses(),
+                )
+                for estimator in [
+                    lambda *, noise_model, dt=dt: model.bicycle.estimator.ekf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-3,
+                        observation_noise_covariance=1e-3,
+                        noise_model=noise_model,
+                    ),
+                    lambda *, noise_model, dt=dt: model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=1.0,
+                        process_noise_covariance=1e-3,
+                        observation_noise_covariance=1e-3,
+                        noise_model=noise_model,
+                    ),
+                    lambda *, noise_model, dt=dt: model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-3,
+                        observation_noise_covariance=1e-3,
+                        noise_model=noise_model,
+                    ),
+                    lambda *, noise_model, dt=dt: model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=1e-3,
+                        observation_noise_covariance=1e-3,
+                        noise_model=noise_model,
+                    ),
+                ]
+            ],
+        ]
+
+    @mark.parametrize(
+        ["base_estimator", "adapted_estimator", "history"],
+        [
+            *cases(model=model.numpy, data=data.numpy, noise=noise.numpy),
+            *cases(model=model.jax, data=data.jax, noise=noise.jax),
+        ],
+    )
+    def test[HistoryT, StatesT, InputsT](
+        self,
+        subtests: Subtests,
+        base_estimator: ObstacleStateEstimator[
+            HistoryT, StatesT, InputsT, ArrayConvertible
+        ],
+        adapted_estimator: ObstacleStateEstimator[
+            HistoryT, StatesT, InputsT, ArrayConvertible
+        ],
+        history: HistoryT,
+    ) -> None:
+        base = np.asarray(base_estimator.estimate_from(history).covariance)
+        adapted = np.asarray(adapted_estimator.estimate_from(history).covariance)
+
+        with subtests.test("adapted covariance is different from original"):
+            assert not np.allclose(base, adapted)
+
+        with subtests.test("covariance is symmetric positive definite"):
+            assert check.is_spd(adapted, atol=1e-4)

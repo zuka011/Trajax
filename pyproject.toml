@@ -119,7 +119,7 @@ include = ["faran", "tests/tasks", "tests/utilities", "tests/benchmarks", "tests
 exclude = ["**/__pycache__", "tests/benchmarks/bench_risk.py"]
 
 [tool.ruff]
-extend-exclude = ["notebooks"]
+extend-exclude = ["notebooks", "scripts"]
 
 [tool.ruff.lint]
 extend-select = ["RUF018"]

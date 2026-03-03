@@ -1,26 +1,18 @@
 from typing import NamedTuple
 
-from faran.types import Array, jaxtyped
+from faran.types import (
+    jaxtyped,
+    JaxGaussianBelief,
+    JaxNoiseCovariances,
+    JaxNoiseModelProvider,
+    JaxNoiseCovarianceDescription,
+)
+from faran.filters.noise import IdentityNoiseModelProvider
 
-from jaxtyping import Array as JaxArray, Float, Scalar
+from jaxtyping import Array as JaxArray, Float
 
 import jax
 import jax.numpy as jnp
-
-
-type JaxNoiseCovarianceArrayDescription = (
-    Float[Array, "D_c D_c"]
-    | Float[Array, " D_c"]
-    | Float[JaxArray, "D_c D_c"]
-    | Float[JaxArray, " D_c"]
-)
-
-type JaxNoiseCovarianceDescription = JaxNoiseCovarianceArrayDescription | Scalar | float
-
-
-class JaxGaussianBelief(NamedTuple):
-    mean: Float[JaxArray, "D_x K"]
-    covariance: Float[JaxArray, "D_x D_x K"]
 
 
 class ObstaclePartitioning(NamedTuple):
@@ -31,11 +23,24 @@ class ObstaclePartitioning(NamedTuple):
 class JaxKalmanFilter(NamedTuple):
     """Kalman Filter for linear systems."""
 
-    @staticmethod
-    def create() -> "JaxKalmanFilter":
-        return JaxKalmanFilter()
+    noise_model: JaxNoiseModelProvider
 
-    @jax.jit
+    @staticmethod
+    def create(
+        *, noise_model: JaxNoiseModelProvider | None = None
+    ) -> "JaxKalmanFilter":
+        """Creates a Kalman filter for linear systems.
+
+        Args:
+            noise_model: An optional noise model provider for adaptive noise estimation.
+        """
+        return JaxKalmanFilter(
+            noise_model=IdentityNoiseModelProvider()
+            if noise_model is None
+            else noise_model
+        )
+
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def filter(
         self,
@@ -61,28 +66,40 @@ class JaxKalmanFilter(NamedTuple):
             observations,
             initial_state_covariance=initial_state_covariance,
         )
+        noise = JaxNoiseCovariances(
+            process_noise_covariance, observation_noise_covariance
+        )
+        adapt = self.noise_model(observation_matrix=observation_matrix, noise=noise)
+        noise_state = adapt.state
 
-        def step(
-            belief: JaxGaussianBelief, observation: Float[JaxArray, "D_z K"]
-        ) -> tuple[JaxGaussianBelief, None]:
+        def step(carry, observation):
+            belief, noise, noise_state = carry
             belief = self.predict(
                 belief=belief,
                 state_transition_matrix=state_transition_matrix,
-                process_noise_covariance=process_noise_covariance,
+                process_noise_covariance=noise.process_noise_covariance,
+            )
+            noise, noise_state = adapt(
+                noise=noise,
+                prediction=belief,
+                observation=observation,
+                state=noise_state,
             )
             belief = self.update(
                 observation,
                 prediction=belief,
                 observation_matrix=observation_matrix,
-                observation_noise_covariance=observation_noise_covariance,
+                observation_noise_covariance=noise.observation_noise_covariance,
                 initial_state_covariance=initial_state_covariance,
             )
-            return belief, None
+            return (belief, noise, noise_state), None
 
-        belief, _ = jax.lax.scan(step, belief, observations)
+        (belief, _, _), _ = jax.lax.scan(
+            step, (belief, noise, noise_state), observations
+        )
         return belief
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def predict(
         self,
@@ -104,7 +121,7 @@ class JaxKalmanFilter(NamedTuple):
             process_noise_covariance=process_noise_covariance,
         )
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def update(
         self,
@@ -132,7 +149,7 @@ class JaxKalmanFilter(NamedTuple):
             initial_state_covariance=initial_state_covariance,
         )
 
-    @jax.jit
+    @jax.jit(static_argnums=(0,))
     @jaxtyped
     def initial_belief_from(
         self,

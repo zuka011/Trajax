@@ -29,11 +29,12 @@ from faran.types import (
     ObstacleModel,
     ObstacleStateEstimator,
     EstimatedObstacleStates,
+    JaxGaussianBelief,
+    JaxNoiseCovarianceDescription,
+    JaxNoiseModelProvider,
 )
 from faran.filters import (
     JaxExtendedKalmanFilter,
-    JaxGaussianBelief,
-    JaxNoiseCovarianceDescription,
     JaxUnscentedKalmanFilter,
     jax_kalman_filter,
 )
@@ -957,6 +958,7 @@ class JaxKfBicycleStateEstimator(
     observation_noise_covariance: ObservationNoiseCovarianceArray
     model: JaxBicycleStateEstimationModel
     estimator: KalmanFilter
+    noise_model: JaxNoiseModelProvider | None = None
 
     @staticmethod
     def ekf(
@@ -970,6 +972,7 @@ class JaxKfBicycleStateEstimator(
         ]
         | EstimationStateCovarianceArray
         | None = None,
+        noise_model: JaxNoiseModelProvider | None = None,
     ) -> "JaxKfBicycleStateEstimator":
         """Creates an EKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -984,6 +987,7 @@ class JaxKfBicycleStateEstimator(
             initial_state_covariance: The initial state covariance for the Kalman filter.
                 If not provided, low uncertainty will be assumed for observed states and high
                 uncertainty for speed and inputs.
+            noise_model: Optional noise model provider for adaptive noise estimation.
         """
         return JaxKfBicycleStateEstimator(
             process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
@@ -997,7 +1001,7 @@ class JaxKfBicycleStateEstimator(
                 wheelbase=wheelbase,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=JaxExtendedKalmanFilter.create(),
+            estimator=JaxExtendedKalmanFilter.create(noise_model=noise_model),
         )
 
     @staticmethod
@@ -1012,6 +1016,7 @@ class JaxKfBicycleStateEstimator(
         ]
         | EstimationStateCovarianceArray
         | None = None,
+        noise_model: JaxNoiseModelProvider | None = None,
     ) -> "JaxKfBicycleStateEstimator":
         """Creates a UKF state estimator for the bicycle model with the specified noise
         covariances.
@@ -1026,6 +1031,7 @@ class JaxKfBicycleStateEstimator(
             initial_state_covariance: The initial state covariance for the Kalman filter.
                 If not provided, low uncertainty will be assumed for observed states and high
                 uncertainty for speed and inputs.
+            noise_model: Optional noise model provider for adaptive noise estimation.
         """
         return JaxKfBicycleStateEstimator(
             process_noise_covariance=jax_kalman_filter.standardize_noise_covariance(
@@ -1039,7 +1045,7 @@ class JaxKfBicycleStateEstimator(
                 wheelbase=wheelbase,
                 initial_state_covariance=initial_state_covariance,
             ),
-            estimator=JaxUnscentedKalmanFilter.create(),
+            estimator=JaxUnscentedKalmanFilter.create(noise_model=noise_model),
         )
 
     def estimate_from(
@@ -1294,7 +1300,7 @@ def estimate_steering_angle(
     )
 
 
-@jax.jit(static_argnames=("horizon",))
+@jax.jit(static_argnames=("horizon", "predictor"))
 @jaxtyped
 def forward(
     *,
