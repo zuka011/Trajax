@@ -2,7 +2,7 @@
 
 This document describes the design principles, code style, and testing philosophy used in Faran. It's intended as a reference for contributors who want to understand the "why" behind our conventions. It's important to note that there could exist cases where deviating from these guidelines is justified, so use your judgement and feel free to discuss any such cases in an MR or issue.
 
-This is **not** a checklist of rules to follow, so you don't need to read the whole thing.
+This is **not** a checklist of rules to follow, so you don't need to read the whole thing! See the [contributing guide](CONTRIBUTING.md) if you just want to get started with contributing.
 
 ## Code Style
 

@@ -1,6 +1,6 @@
 # Faran
 
-> This is the [GitHub mirror](https://github.com/zuka011/faran) of project Faran. The main repository can be found at [gitlab.com/risk-metrics/faran](https://gitlab.com/risk-metrics/faran)
+> The [GitHub mirror](https://github.com/zuka011/faran) of Faran exists to make the project easier to discover. The main repository for issues and contributions can be found at [gitlab.com/risk-metrics/faran](https://gitlab.com/risk-metrics/faran)
 
 [![Pipeline Status](https://gitlab.com/risk-metrics/faran/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/faran/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/faran/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/faran) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/faran) [![PyPI](https://img.shields.io/pypi/v/faran)](https://pypi.org/project/faran/) [![Python](https://img.shields.io/pypi/pyversions/faran)](https://pypi.org/project/faran/) [![License](https://img.shields.io/pypi/l/faran)](https://gitlab.com/risk-metrics/faran/-/blob/main/LICENSE)
 
@@ -130,7 +130,11 @@ See the [feature overview](https://risk-metrics.gitlab.io/faran/guide/features/)
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [DESIGN.md](DESIGN.md).
+
+## Code of Conduct
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 
