@@ -1,5 +1,8 @@
 # Cost Function Design
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 A cost function receives batched states and control inputs and returns a cost per rollout per time step. The MPPI algorithm sums costs over time, then uses softmax weighting to combine rollouts. Lower cost is better.
 
 ```python

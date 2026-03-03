@@ -1,5 +1,8 @@
 # metrics
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 The metrics module provides evaluation metrics for trajectory planning algorithms.
 
 ## Available Metrics

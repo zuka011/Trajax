@@ -1,5 +1,8 @@
 # mppi
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 MPPI (Model Predictive Path Integral) is a sampling-based stochastic optimal control algorithm [^1] [^2]. At each planning step, it samples $M$ control input perturbations around a nominal sequence, simulates rollouts through a dynamical model, evaluates a cost function, and computes a cost-weighted average as the optimal control:
 
 $$

@@ -5,6 +5,9 @@ hide:
 
 # Examples
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Each example below is a complete MPCC planning loop. Click the **Result** tab to see the interactive visualization, or expand **Full code** to see the entire script.
 
 ## Basic Path Following

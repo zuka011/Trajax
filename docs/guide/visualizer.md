@@ -1,5 +1,8 @@
 # Visualizer
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 `faran-visualizer` is a separate package that generates interactive HTML visualizations from simulation results.
 
 ## Installation

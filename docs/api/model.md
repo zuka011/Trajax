@@ -1,5 +1,8 @@
 # model
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Dynamical models define the state transition function $f(\mathbf{u}, \mathbf{x})$ used to simulate rollouts during MPPI planning.
 
 ## Kinematic Bicycle Model

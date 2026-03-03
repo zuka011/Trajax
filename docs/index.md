@@ -82,8 +82,7 @@ for _ in range(200):
     nominal = control.nominal
 ```
 
-<!-- TODO: Replace with simulation GIF -->
-![MPCC simulation placeholder](https://via.placeholder.com/480x400?text=MPCC+Simulation)
+![MPCC simulation](../assets/quickstart.gif)
 
 </div>
 

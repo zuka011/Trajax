@@ -1,5 +1,8 @@
 # MPPI Planning
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 ## Factory Functions
 
 | Factory | Use case |

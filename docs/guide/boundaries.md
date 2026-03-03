@@ -1,5 +1,8 @@
 # Boundaries
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Boundaries define drivable corridors around a reference trajectory. They produce signed distances that feed into a boundary cost.
 
 ## Fixed-Width Corridor

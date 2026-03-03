@@ -1,5 +1,8 @@
 # Defining Trajectories
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Trajectories define reference paths for path-following formulations like MPCC.
 
 ## Waypoint Trajectories

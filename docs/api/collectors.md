@@ -1,5 +1,8 @@
 # collectors
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 The collectors module provides data collection utilities for simulation and analysis.
 
 ## Overview

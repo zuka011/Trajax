@@ -1,5 +1,8 @@
 # Feature Overview
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Everything listed below is implemented, tested, and available in both the NumPy and JAX backends unless noted otherwise.
 
 ---

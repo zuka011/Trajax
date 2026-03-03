@@ -1,5 +1,8 @@
 # Notation and Conventions
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Quick reference for dimension symbols and array shapes used throughout the API.
 
 ## Index Dimensions

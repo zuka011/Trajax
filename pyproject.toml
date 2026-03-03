@@ -1,7 +1,7 @@
 [project]
 name = "faran"
 dynamic = ["version"]
-description = "A library providing performant NumPy & JAX implementations of an MPPI planner, along with implementation of related algorithms/tools."
+description = "Composable building blocks for creating trajectory planners for autonomous systems, with NumPy and JAX implementations of the MPPI algorithm."
 authors = [{ name = "Zurab Mujirishvili", email = "zurab.mujirishvili@fau.de" }]
 readme = "README.md"
 requires-python = ">=3.13"
@@ -25,21 +25,31 @@ classifiers = [
 ]
 dependencies = [
     "numtypes>=0.5.1",
-    "jax>=0.9.0.1",
+    "jax>=0.9.1",
     "jaxtyping>=0.3.9",
     "riskit>=0.3.0",
     "scipy>=1.17.1",
-    "beartype>=0.22.9",
     "deepmerge>=2.0",
 ]
 
+[project.urls]
+Homepage = "https://risk-metrics.gitlab.io/faran/"
+Repository = "https://gitlab.com/risk-metrics/faran"
+Documentation = "https://risk-metrics.gitlab.io/faran/"
+"Bug Tracker" = "https://gitlab.com/risk-metrics/faran/-/issues"
+Changelog = "https://gitlab.com/risk-metrics/faran/-/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 cuda = [
-    "jax[cuda]>=0.9.0.1"
+    "jax[cuda]>=0.9.1"
+]
+typechecking = [
+    "beartype>=0.22.9",
 ]
 
 [dependency-groups]
 dev = [
+    "beartype>=0.22.9",
     "pre-commit>=4.5.1",
     "pyright>=1.1.408",
     "ruff>=0.15.4",
@@ -68,7 +78,7 @@ benchmark = [
     "typer>=0.24.1",
 ]
 benchmark-cuda = [
-    "jax[cuda]>=0.9.0.1",
+    "jax[cuda]>=0.9.1",
 ]
 
 [tool.uv]

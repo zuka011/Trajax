@@ -1,6 +1,15 @@
-# Faran
+<p align="center">
+    <a href="https://risk-metrics.gitlab.io/faran/">
+        <img src="./assets/logo.svg" width="250" alt="Faran Logo">
+    </a>
+</p>
 
-> The [GitHub mirror](https://github.com/zuka011/faran) of Faran exists to make the project easier to discover. The main repository for issues and contributions can be found at [gitlab.com/risk-metrics/faran](https://gitlab.com/risk-metrics/faran)
+# Faran: A Trajectory Planning Library for Autonomous Systems
+
+> 
+> The [GitHub mirror](https://github.com/zuka011/faran) of Faran exists to make the project easier to discover.  
+> The main repository for issues and contributions can be found at [gitlab.com/risk-metrics/faran](https://gitlab.com/risk-metrics/faran)
+> 
 
 [![Pipeline Status](https://gitlab.com/risk-metrics/faran/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/faran/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/faran/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/faran) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/faran) [![PyPI](https://img.shields.io/pypi/v/faran)](https://pypi.org/project/faran/) [![Python](https://img.shields.io/pypi/pyversions/faran)](https://pypi.org/project/faran/) [![License](https://img.shields.io/pypi/l/faran)](https://gitlab.com/risk-metrics/faran/-/blob/main/LICENSE)
 
@@ -29,9 +38,6 @@ from faran.numpy import mppi, model, sampler, trajectory, types, extract
 
 import numpy as np
 
-def position(states):
-    return types.positions(x=states.positions.x(), y=states.positions.y())
-
 reference = trajectory.waypoints(
     points=np.array([[0, 0], [10, 0], [20, 5], [30, 0], [40, -5], [50, 0]]),
     path_length=35.0,
@@ -49,7 +55,7 @@ planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
         to_batch=types.bicycle.control_input_batch.create, seed=42,
     ),
     reference=reference,
-    position_extractor=extract.from_physical(position),
+    position_extractor=extract.from_physical(lambda states: states.positions),
     config={
         "weights": {"contouring": 100.0, "lag": 100.0, "progress": 1000.0},
         "virtual": {"velocity_limits": (0.0, 15.0)},

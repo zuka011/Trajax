@@ -1,5 +1,8 @@
 # Metrics and Evaluation
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 Evaluation metrics measure planning performance after (or during) a simulation. They operate on data collected by decorating the planner and obstacle observer.
 
 ## Setup
@@ -64,15 +67,53 @@ result.completed_part   # float — fraction of reference completed (0 to 1+)
 
 ### MPCC Error
 
-Reports contouring and lag error over the trajectory. Requires the `contouring_cost` and `lag_cost` objects returned by `mppi.mpcc`.
+Reports contouring and lag error over the trajectory. Requires the `contouring_cost` and `lag_cost` objects returned by `mppi.mpcc`:
+
+```python
+planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(...)
+
+error_metric = metrics.mpcc_error(contouring=contouring_cost, lag=lag_cost)
+# ... register and run simulation ...
+result = registry.get(error_metric)
+result.contouring      # (T,) — contouring error at each time step
+result.lag             # (T,) — lag error at each time step
+result.max_contouring  # float — peak absolute contouring error
+result.max_lag         # float — peak absolute lag error
+```
 
 ### Constraint Violation
 
-Reports boundary and input limit violations.
+Reports boundary distances and flags violations where the vehicle leaves the corridor:
+
+```python
+violation_metric = metrics.constraint_violation(
+    reference=reference,
+    boundary=corridor,
+    position_extractor=position_extractor,
+)
+# ... register and run simulation ...
+result = registry.get(violation_metric)
+result.lateral_deviations  # (T,) — lateral offset from the reference
+result.boundary_distances  # (T,) — signed distance to corridor edge
+result.violations          # (T,) — boolean flags where boundary_distance ≤ 0
+result.violation_detected  # bool — True if any violation occurred
+```
 
 ### Comfort
 
-Reports jerk, lateral acceleration, and smoothness metrics.
+Reports lateral acceleration and jerk relative to the reference trajectory:
+
+```python
+comfort_metric = metrics.comfort(
+    reference=reference,
+    time_step_size=0.1,
+    position_extractor=position_extractor,
+)
+# ... register and run simulation ...
+result = registry.get(comfort_metric)
+result.lateral_acceleration  # (T,) — lateral acceleration at each step
+result.lateral_jerk          # (T,) — lateral jerk at each step
+```
 
 ## Live Evaluation
 

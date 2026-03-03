@@ -1,5 +1,8 @@
 # obstacles
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 The obstacles module provides obstacle representation and handling for risk-aware planning.
 
 ## Overview

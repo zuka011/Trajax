@@ -1,5 +1,8 @@
 # Core Concepts
 
+!!! warning "Work in Progress"
+    This page is under active development and may be incomplete or subject to change.
+
 ## MPPI
 
 MPPI (Model Predictive Path Integral) is a sampling-based trajectory optimization algorithm. At each planning step it:

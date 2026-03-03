@@ -7,6 +7,10 @@ wheels/
 *.egg-info
 .coverage
 
+# Environment files
+.env
+.env.*
+
 # Virtual environments, caches, and IDE settings
 .venv
 .vscode

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="optPath" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" /> 
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="invOptPath" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" /> 
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Dark Canvas Background -->
+  <rect width="400" height="400" rx="80" fill="url(#bg)" />
+
+  <!-- MPPI Rollout Samples -->
+  <g stroke="#475569" fill="none" stroke-width="2" opacity="0.35" stroke-linecap="round">
+    <path d="M 120 280 C 95 220, 95 150, 140 100 C 170 65, 220 75, 260 95" />
+    <path d="M 120 280 C 145 220, 150 160, 135 120 C 120 80, 190 120, 255 105" />
+    <path d="M 120 280 C 105 230, 110 170, 125 115 C 135 80, 200 70, 250 105" />
+    <path d="M 120 280 C 135 240, 160 180, 145 130 C 130 80, 240 160, 260 105" />
+  </g>
+  
+  <!-- A single unbroken mathematical bezier curve forming the letters "aran" -->
+  <g transform="translate(-20, 0)">
+    <path d="M 140 280 
+          C 121 280, 133 280, 140 280 
+          C 141 280, 158 280, 167 272 
+          C 171 252, 185 232, 194 232 
+          C 161 232, 167 280, 194 280 
+          C 201 280, 203 232, 203 232 
+          C 201 272, 212 280, 221 280 
+          C 221 280, 235 232, 244 232 
+          C 251 232, 262 240, 257 248 
+          C 251 260, 253 280, 266 280 
+          C 271 280, 284 232, 293 232 
+          C 261 232, 266 280, 293 280 
+          C 301 280, 302 232, 302 232 
+          C 301 272, 311 280, 320 280 
+          C 321 280, 334 232, 338 232 
+          C 331 260, 338 280, 338 280 
+          C 331 232, 374 232, 374 280"
+          stroke="#475569" stroke-width="1.5" opacity="0.65" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <!-- Main "F" Trajectories -->
+  <g fill="none" stroke-linecap="round">
+    <!-- Middle bar -->
+    <path d="M 120 220 Q 120 180 160 180 L 240 180"
+      stroke="#8b5cf6" stroke-width="16" filter="url(#glow)" />
+
+    <!-- Main Stem & Top Curve -->
+    <path d="M 120 280 L 120 160 Q 120 100 180 100 L 260 100"
+      stroke="url(#optPath)" stroke-width="24" filter="url(#glow)" />
+  </g>
+
+  <!-- The High-Weight Sample -->
+  <path d="M 120 280 C 127 240, 113 200, 120 160 C 126 120, 152 104, 180 102 C 212 100, 235 103, 260 100" 
+        stroke="url(#invOptPath)" fill="none" stroke-width="2.5" opacity="0.75" stroke-linecap="round" />
+
+  <!-- Waypoints (Negative Space) along the optimal path -->
+  <circle cx="120" cy="220" r="4" fill="#0f172a" />
+  <circle cx="120" cy="160" r="4" fill="#0f172a" />
+  <circle cx="135" cy="115" r="4" fill="#0f172a" />
+  <circle cx="210" cy="100" r="4" fill="#0f172a" />
+
+  <!-- Target/Goal State -->
+  <circle cx="260" cy="100" r="10" fill="#e0e7ff" />
+  <circle cx="260" cy="100" r="5" fill="#8b5cf6" />
+</svg>
