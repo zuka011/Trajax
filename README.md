@@ -29,7 +29,6 @@ from faran.numpy import mppi, model, sampler, trajectory, types, extract
 
 import numpy as np
 
-# 
 def position(states):
     return types.positions(x=states.positions.x(), y=states.positions.y())
 
