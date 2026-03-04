@@ -433,3 +433,27 @@ class ObstacleStateObserver[ObstacleStatesForTimeStepT](
         return ObstacleStateObserver()
 
     def observe(self, states: ObstacleStatesForTimeStepT) -> None: ...
+
+
+class NoiseModel[NoiseT](NamedTuple):
+    noise: NoiseT
+
+    def __call__(
+        self, *, noise: NoiseT, prediction: Any, observation: Any, state: None
+    ) -> tuple[NoiseT, None]:
+        return self.noise, None
+
+    @property
+    def state(self) -> None:
+        return None
+
+
+class NoiseModelProvider[NoiseT](NamedTuple):
+    noise: NoiseT
+
+    @staticmethod
+    def returning[N](noise: N) -> "NoiseModelProvider[N]":
+        return NoiseModelProvider(noise)
+
+    def __call__(self, *, observation_matrix: Any, noise: NoiseT) -> NoiseModel[NoiseT]:
+        return NoiseModel(noise)

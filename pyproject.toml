@@ -30,6 +30,7 @@ dependencies = [
     "riskit>=0.3.0",
     "scipy>=1.17.1",
     "deepmerge>=2.0",
+    "equinox>=0.13.4",
 ]
 
 [project.urls]

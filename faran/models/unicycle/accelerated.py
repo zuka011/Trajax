@@ -45,6 +45,7 @@ from faran.models.accelerated import invalid_obstacle_filter_from
 from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import D
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -1187,7 +1188,7 @@ def estimate_angular_velocities(
     )
 
 
-@jax.jit(static_argnames=("horizon", "predictor"))
+@eqx.filter_jit
 @jaxtyped
 def forward(
     *,

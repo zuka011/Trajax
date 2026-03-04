@@ -19,6 +19,7 @@ from faran.predictors import predictor as _predictor
 from faran.samplers import sampler as _sampler
 from faran.trajectories import trajectory as _trajectory
 from faran.states import extract as _extract
+from faran.filters import noise as _noise
 
 types: TypeAlias = _types.jax
 classes: Final = _classes.jax
@@ -35,4 +36,5 @@ obstacles: Final = _obstacles.jax
 predictor: Final = _predictor.jax
 sampler: Final = _sampler.jax
 trajectory: Final = _trajectory.jax
+noise: Final = _noise.jax
 extract: Final = _extract

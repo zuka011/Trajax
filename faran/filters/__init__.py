@@ -18,5 +18,5 @@ from .noise import (
     JaxAdaptiveNoise as JaxAdaptiveNoise,
     JaxAdaptiveNoiseProvider as JaxAdaptiveNoiseProvider,
     IdentityNoiseModelProvider as IdentityNoiseModelProvider,
-    noise as noise,
 )
+from .factory import noise as noise

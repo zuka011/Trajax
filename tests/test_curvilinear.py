@@ -971,31 +971,93 @@ class test_that_uncertainty_is_small_when_estimator_does_not_provide_it:
         )
 
 
-class test_that_position_covariance_information_is_provided_when_estimator_provides_covariance:
+class test_that_covariance_information_is_provided:
     @staticmethod
     def cases(create_predictor, model, data, prediction_creator) -> Sequence[tuple]:
+        dt = 0.1
+        L = 1.0
+
         return [
-            (
-                predictor := create_predictor.curvilinear(
-                    horizon=(T_p := 4),
-                    model=model.bicycle.obstacle(
-                        time_step_size=(dt := 0.1), wheelbase=(L := 1.0)
+            *[
+                (
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.bicycle.obstacle(time_step_size=dt, wheelbase=L),
+                        estimator=model.bicycle.estimator.ekf(
+                            time_step_size=dt,
+                            wheelbase=L,
+                            process_noise_covariance=0.01,
+                            observation_noise_covariance=0.01,
+                        ),
+                        prediction=prediction_creator.bicycle(),
                     ),
-                    estimator=model.bicycle.estimator.ekf(
+                    prediction_horizon := T_p,
+                    history := data.obstacle_2d_poses(
+                        x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
+                        y=array([[1.0], [1.0]], shape=(T_h, K)),
+                        heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
+                    ),
+                )
+                for estimator in [
+                    model.bicycle.estimator.ekf(
                         time_step_size=dt,
                         wheelbase=L,
                         process_noise_covariance=0.01,
                         observation_noise_covariance=0.01,
                     ),
-                    prediction=prediction_creator.bicycle(),
-                ),
-                prediction_horizon := T_p,
-                history := data.obstacle_2d_poses(
-                    x=array([[0.0], [0.0]], shape=(T_h := 2, K := 1)),
-                    y=array([[1.0], [1.0]], shape=(T_h, K)),
-                    heading=array([[np.pi / 2], [np.pi / 2]], shape=(T_h, K)),
-                ),
-            ),
+                    model.bicycle.estimator.ukf(
+                        time_step_size=dt,
+                        wheelbase=L,
+                        process_noise_covariance=0.01,
+                        observation_noise_covariance=0.01,
+                    ),
+                    model.bicycle.estimator.finite_difference(
+                        time_step_size=dt, wheelbase=L
+                    ),
+                    model.unicycle.estimator.ekf(
+                        time_step_size=dt,
+                        process_noise_covariance=0.01,
+                        observation_noise_covariance=0.01,
+                    ),
+                    model.unicycle.estimator.ukf(
+                        time_step_size=dt,
+                        process_noise_covariance=0.01,
+                        observation_noise_covariance=0.01,
+                    ),
+                    model.unicycle.estimator.finite_difference(time_step_size=dt),
+                ]
+            ],
+            *[
+                (
+                    predictor := create_predictor.curvilinear(
+                        horizon=(T_p := 4),
+                        model=model.integrator.obstacle(
+                            time_step_size=dt, state_dimension=3
+                        ),
+                        estimator=estimator,
+                        prediction=prediction_creator.integrator(),
+                    ),
+                    prediction_horizon := T_p,
+                    history := data.simple_obstacle_states(
+                        states=array(
+                            [
+                                [[0.0], [1.0], [np.pi / 2]],
+                                [[0.0], [1.0], [np.pi / 2]],
+                            ],
+                            shape=(T_h := 2, 3, K := 1),
+                        )
+                    ),
+                )
+                for estimator in [
+                    model.integrator.estimator.kf(
+                        time_step_size=dt,
+                        process_noise_covariance=0.01,
+                        observation_noise_covariance=0.01,
+                        observation_dimension=3,
+                    ),
+                    model.integrator.estimator.finite_difference(time_step_size=dt),
+                ]
+            ],
         ]
 
     @mark.parametrize(
@@ -1859,7 +1921,7 @@ class test_that_predictor_correctly_predicts_circular_motion_when_steering_angle
                     time_step_size=dt,
                     wheelbase=L,
                     process_noise_covariance=array(
-                        [1e-8, 1e-8, 1e-8, 1e-8, 1e-4, 1e-4], shape=(6,)
+                        [1e-8, 1e-8, 1e-8, 1e-8, 1e-3, 1e-4], shape=(6,)
                     ),
                     observation_noise_covariance=1e-8,
                     noise_model=noise.adaptive(window_size=15),
@@ -1868,7 +1930,7 @@ class test_that_predictor_correctly_predicts_circular_motion_when_steering_angle
                     time_step_size=dt,
                     wheelbase=L,
                     process_noise_covariance=array(
-                        [1e-6, 1e-6, 1e-6, 1e-6, 1e-4, 1e-4], shape=(6,)
+                        [1e-6, 1e-6, 1e-6, 1e-6, 1e-3, 1e-4], shape=(6,)
                     ),
                     observation_noise_covariance=1e-6,
                     noise_model=noise.adaptive(window_size=15),

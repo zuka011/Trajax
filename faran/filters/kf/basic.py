@@ -324,9 +324,12 @@ class numpy_kalman_filter:
 
     @staticmethod
     def standardize_noise_covariance(
-        covariance: NumPyNoiseCovarianceDescription, *, dimension: int
+        covariance: NumPyNoiseCovarianceDescription, *, dimension: int | None = None
     ) -> Float[Array, "D_c D_c"]:
         if isinstance(covariance, (int, float)):
+            assert dimension is not None, (
+                "Dimension must be provided for scalar covariance."
+            )
             return covariance * np.eye(dimension)
 
         match covariance.ndim:

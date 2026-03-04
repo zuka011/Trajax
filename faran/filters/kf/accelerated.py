@@ -11,6 +11,7 @@ from faran.filters.noise import IdentityNoiseModelProvider
 
 from jaxtyping import Array as JaxArray, Float
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 
@@ -20,7 +21,7 @@ class ObstaclePartitioning(NamedTuple):
     should_initialize: Float[JaxArray, " K"]
 
 
-class JaxKalmanFilter(NamedTuple):
+class JaxKalmanFilter(eqx.Module):
     """Kalman Filter for linear systems."""
 
     noise_model: JaxNoiseModelProvider
@@ -40,7 +41,7 @@ class JaxKalmanFilter(NamedTuple):
             else noise_model
         )
 
-    @jax.jit(static_argnums=(0,))
+    @eqx.filter_jit
     @jaxtyped
     def filter(
         self,
@@ -99,7 +100,7 @@ class JaxKalmanFilter(NamedTuple):
         )
         return belief
 
-    @jax.jit(static_argnums=(0,))
+    @eqx.filter_jit
     @jaxtyped
     def predict(
         self,
@@ -121,7 +122,7 @@ class JaxKalmanFilter(NamedTuple):
             process_noise_covariance=process_noise_covariance,
         )
 
-    @jax.jit(static_argnums=(0,))
+    @eqx.filter_jit
     @jaxtyped
     def update(
         self,
@@ -149,7 +150,7 @@ class JaxKalmanFilter(NamedTuple):
             initial_state_covariance=initial_state_covariance,
         )
 
-    @jax.jit(static_argnums=(0,))
+    @eqx.filter_jit
     @jaxtyped
     def initial_belief_from(
         self,
@@ -330,9 +331,12 @@ class jax_kalman_filter:
 
     @staticmethod
     def standardize_noise_covariance(
-        covariance: JaxNoiseCovarianceDescription, *, dimension: int
+        covariance: JaxNoiseCovarianceDescription, *, dimension: int | None = None
     ) -> Float[JaxArray, "D_c D_c"]:
         if isinstance(covariance, (int, float)):
+            assert dimension is not None, (
+                "Dimension must be provided for scalar covariance."
+            )
             return covariance * jnp.eye(dimension)
 
         covariance = jnp.asarray(covariance)

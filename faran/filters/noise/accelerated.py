@@ -10,20 +10,19 @@ from faran.types import (
 
 from jaxtyping import Array as JaxArray, Float, Int
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 
 
-class JaxClampedNoiseModel[StateT](NamedTuple):
+class JaxClampedNoiseModel[StateT](eqx.Module):
     """Decorator that clamps an inner noise model's output diagonals to a floor."""
 
     inner: JaxNoiseModel[StateT]
     floor: JaxNoiseCovariances
 
-    @property
-    def state(self) -> StateT:
-        return self.inner.state
-
+    @eqx.filter_jit
+    @jaxtyped
     def __call__(
         self,
         *,
@@ -46,8 +45,12 @@ class JaxClampedNoiseModel[StateT](NamedTuple):
             ),
         ), state
 
+    @property
+    def state(self) -> StateT:
+        return self.inner.state
 
-class JaxClampedNoiseProvider[StateT](NamedTuple):
+
+class JaxClampedNoiseProvider[StateT](eqx.Module):
     floor: JaxNoiseCovariances
     inner: JaxNoiseModelProvider[StateT]
 
@@ -65,6 +68,7 @@ class JaxClampedNoiseProvider[StateT](NamedTuple):
         """
         return JaxClampedNoiseProvider(inner=inner, floor=floor)
 
+    @eqx.filter_jit
     def __call__(
         self,
         *,
@@ -82,21 +86,13 @@ class JaxAdaptiveNoiseState(NamedTuple):
     entry_count: Int[JaxArray, ""]
 
 
-class JaxAdaptiveNoise(NamedTuple):
+class JaxAdaptiveNoise(eqx.Module):
     """Innovation-Based Adaptive Estimation (IAE) for noise covariances."""
 
     observation_matrix: Float[JaxArray, "D_z D_x"]
-    window_size: int
+    window_size: int = eqx.field(static=True)
 
-    @property
-    def state(self) -> JaxAdaptiveNoiseState:
-        observation_dimension = self.observation_matrix.shape[0]
-        return JaxAdaptiveNoiseState(
-            buffer=jnp.zeros((self.window_size, observation_dimension)),
-            entry_count=jnp.array(0, dtype=jnp.int32),
-        )
-
-    @jax.jit
+    @eqx.filter_jit
     @jaxtyped
     def __call__(
         self,
@@ -119,7 +115,7 @@ class JaxAdaptiveNoise(NamedTuple):
             None,
         )
 
-    @jax.jit
+    @eqx.filter_jit
     @jaxtyped
     def adapt(
         self,
@@ -170,12 +166,20 @@ class JaxAdaptiveNoise(NamedTuple):
 
         return jax.lax.cond(buffer_full, compute_adapted, return_original, None)
 
+    @property
+    def state(self) -> JaxAdaptiveNoiseState:
+        observation_dimension = self.observation_matrix.shape[0]
+        return JaxAdaptiveNoiseState(
+            buffer=jnp.zeros((self.window_size, observation_dimension)),
+            entry_count=jnp.array(0, dtype=jnp.int32),
+        )
 
-class JaxAdaptiveNoiseProvider(NamedTuple):
-    window_size: int = 20
+
+class JaxAdaptiveNoiseProvider(eqx.Module):
+    window_size: int = eqx.field(static=True)
 
     @staticmethod
-    def create(*, window_size: int = 20) -> "JaxAdaptiveNoiseProvider":
+    def create(*, window_size: int) -> "JaxAdaptiveNoiseProvider":
         """Creates an innovation-based adaptive estimation model for noise.
 
         Args:

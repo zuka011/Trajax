@@ -19,6 +19,7 @@ from faran.predictors import predictor as _predictor
 from faran.samplers import sampler as _sampler
 from faran.trajectories import trajectory as _trajectory
 from faran.states import extract as _extract
+from faran.filters import noise as _noise
 
 types: TypeAlias = _types.numpy
 classes: Final = _classes.numpy
@@ -35,4 +36,5 @@ obstacles: Final = _obstacles.numpy
 predictor: Final = _predictor.numpy
 sampler: Final = _sampler.numpy
 trajectory: Final = _trajectory.numpy
+noise: Final = _noise.numpy
 extract: Final = _extract

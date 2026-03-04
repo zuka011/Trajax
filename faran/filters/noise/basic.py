@@ -19,10 +19,6 @@ class NumPyClampedNoiseModel[StateT](NamedTuple):
     inner: NumPyNoiseModel
     floor: NumPyNoiseCovariances
 
-    @property
-    def state(self) -> StateT:
-        return self.inner.state
-
     def __call__(
         self,
         *,
@@ -44,6 +40,10 @@ class NumPyClampedNoiseModel[StateT](NamedTuple):
                 floor=self.floor.observation_noise_covariance,
             ),
         ), state
+
+    @property
+    def state(self) -> StateT:
+        return self.inner.state
 
 
 class NumPyClampedNoiseProvider[StateT](NamedTuple):
@@ -83,10 +83,6 @@ class NumPyAdaptiveNoise(NamedTuple):
 
     observation_matrix: Float[Array, "D_z D_x"]
     window_size: int
-
-    @property
-    def state(self) -> NumPyAdaptiveNoiseState:
-        return NumPyAdaptiveNoiseState(buffer=[])
 
     def __call__(
         self,
@@ -128,12 +124,16 @@ class NumPyAdaptiveNoise(NamedTuple):
 
         return adapted_noise, state
 
+    @property
+    def state(self) -> NumPyAdaptiveNoiseState:
+        return NumPyAdaptiveNoiseState(buffer=[])
+
 
 class NumPyAdaptiveNoiseProvider(NamedTuple):
-    window_size: int = 20
+    window_size: int
 
     @staticmethod
-    def create(*, window_size: int = 20) -> "NumPyAdaptiveNoiseProvider":
+    def create(*, window_size: int) -> "NumPyAdaptiveNoiseProvider":
         """Creates an innovation-based adaptive estimation model for noise.
 
         Args:

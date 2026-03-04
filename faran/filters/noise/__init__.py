@@ -14,4 +14,3 @@ from .accelerated import (
     JaxClampedNoiseModel as JaxClampedNoiseModel,
     JaxClampedNoiseProvider as JaxClampedNoiseProvider,
 )
-from .factory import noise as noise

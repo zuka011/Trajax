@@ -1,7 +1,7 @@
-from typing import Any
+from typing import Any, NamedTuple
 
 
-class IdentityNoiseModel:
+class IdentityNoiseModel(NamedTuple):
     @property
     def state(self) -> None:
         return None
@@ -12,6 +12,6 @@ class IdentityNoiseModel:
         return noise, state
 
 
-class IdentityNoiseModelProvider:
+class IdentityNoiseModelProvider(NamedTuple):
     def __call__(self, *, observation_matrix: Any, noise: Any) -> IdentityNoiseModel:
         return IdentityNoiseModel()

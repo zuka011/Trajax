@@ -1,4 +1,4 @@
-from typing import Protocol, NamedTuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from faran.types import (
     jaxtyped,
@@ -11,6 +11,7 @@ from faran.filters.kf import jax_kalman_filter
 
 from jaxtyping import Array as JaxArray, Float
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 
@@ -22,11 +23,11 @@ class StateTransitionFunction(Protocol):
         ...
 
 
-class JaxUnscentedKalmanFilter(NamedTuple):
+class JaxUnscentedKalmanFilter(eqx.Module):
     """Unscented Kalman Filter for nonlinear systems with linear observations."""
 
-    alpha: float
-    beta: float
+    alpha: float = eqx.field(static=True)
+    beta: float = eqx.field(static=True)
     noise_model: JaxNoiseModelProvider
 
     @staticmethod
@@ -51,7 +52,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             else noise_model,
         )
 
-    @jax.jit(static_argnums=(0,))
+    @jax.jit
     @jaxtyped
     def filter(
         self,
@@ -109,7 +110,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
         )
         return belief
 
-    @jax.jit(static_argnums=(0,))
+    @jax.jit
     @jaxtyped
     def predict(
         self,
@@ -210,7 +211,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             predicted_covariance=predicted_covariances,
         )
 
-    @jax.jit(static_argnums=(0,))
+    @jax.jit
     @jaxtyped
     def update(
         self,
@@ -238,7 +239,7 @@ class JaxUnscentedKalmanFilter(NamedTuple):
             initial_state_covariance=initial_state_covariance,
         )
 
-    @jax.jit(static_argnums=(0,))
+    @jax.jit
     @jaxtyped
     def initial_belief_from(
         self,

@@ -46,6 +46,7 @@ from jaxtyping import Array as JaxArray, Float, Scalar
 from numtypes import D
 
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -1300,7 +1301,7 @@ def estimate_steering_angle(
     )
 
 
-@jax.jit(static_argnames=("horizon", "predictor"))
+@eqx.filter_jit
 @jaxtyped
 def forward(
     *,
