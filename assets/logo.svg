@@ -12,286 +12,291 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview26"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="1.5763767"
-     inkscape:cx="340.33743"
-     inkscape:cy="110.69689"
-     inkscape:window-width="1920"
-     inkscape:window-height="1009"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="g3"
-     showgrid="false">
-    <inkscape:grid
-       id="grid29"
-       units="px"
-       originx="0"
-       originy="0"
-       spacingx="1"
-       spacingy="1"
-       empcolor="#0099e5"
-       empopacity="0.30196078"
-       color="#0099e5"
-       opacity="0.14901961"
-       empspacing="5"
-       enabled="true"
-       visible="false" />
-  </sodipodi:namedview>
-  <defs
-     id="defs2">
-    <linearGradient
-       id="linearGradient4"
-       x1="80.315315"
-       y1="417.38315"
-       x2="416.08508"
-       y2="289.06277"
-       gradientTransform="scale(1.4897682,0.67124536)"
-       gradientUnits="userSpaceOnUse"
-       spreadMethod="pad">
-      <stop
-         offset="0"
-         style="stop-color:#0ea5e9;stop-opacity:1"
-         id="stop3" />
-      <stop
-         offset="1"
-         style="stop-color:#8b5cf6;stop-opacity:1"
-         id="stop4" />
-    </linearGradient>
-    <linearGradient
-       id="linearGradient27"
-       x1="80.315315"
-       y1="417.38315"
-       x2="416.08508"
-       y2="289.06277"
-       gradientTransform="scale(1.4897682,0.67124536)"
-       gradientUnits="userSpaceOnUse">
-      <stop
-         offset="0%"
-         style="stop-color:#0ea5e9;stop-opacity:1"
-         id="stop26" />
-      <stop
-         offset="100%"
-         style="stop-color:#8b5cf6;stop-opacity:1"
-         id="stop27" />
-    </linearGradient>
-    <linearGradient
-       id="optPath"
-       x1="80.315315"
-       y1="417.38315"
-       x2="416.08508"
-       y2="289.06277"
-       gradientTransform="scale(1.4897682,0.67124536)"
-       gradientUnits="userSpaceOnUse"
-       spreadMethod="pad">
-      <stop
-         offset="0.37765184"
-         style="stop-color:#8b5cf6;stop-opacity:1"
-         id="stop2" />
-      <stop
-         offset="1"
-         style="stop-color:#0ea5e9;stop-opacity:1"
-         id="stop1" />
-    </linearGradient>
-    <filter
-       id="glow"
-       x="-0.156"
-       y="-0.29"
-       width="1.312"
-       height="1.58">
-      <feGaussianBlur
-         stdDeviation="1.5"
-         result="blur"
-         id="feGaussianBlur2" />
-      <feComposite
-         in="SourceGraphic"
-         in2="blur"
-         operator="over"
-         id="feComposite2" />
-    </filter>
-    <linearGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient4"
-       id="linearGradient30"
-       gradientUnits="userSpaceOnUse"
-       gradientTransform="scale(1.4897682,0.67124536)"
-       x1="80.315315"
-       y1="417.38315"
-       x2="180.60922"
-       y2="416.64566"
-       spreadMethod="reflect" />
-    <radialGradient
-       inkscape:collect="always"
-       xlink:href="#optPath"
-       id="radialGradient6"
-       cx="269.16711"
-       cy="148.73463"
-       fx="269.16711"
-       fy="148.73463"
-       r="65.599998"
-       gradientTransform="matrix(-4.0874464,0.00487855,-0.00584708,-4.8993636,1371.0759,827.94634)"
-       gradientUnits="userSpaceOnUse"
-       spreadMethod="pad" />
-  </defs>
-  <g
-     fill="none"
-     stroke-linecap="round"
-     stroke-linejoin="round"
-     id="g3">
-    <!-- Thin Purple Inner Structure (Horizontal Middle Bar) -->
-    <path
-       d="m 120,220 c 0,-27 13,-40 40,-40 h 409.25071"
-       stroke="#8b5cf6"
-       stroke-width="16"
-       filter="url(#glow)"
-       id="path2"
-       transform="matrix(1,0,0,-1,0,374.62535)"
-       style="display:inline"
-       sodipodi:nodetypes="csc" />
-    <!-- The Thick Gradient Road (Seamlessly Aligned) -->
-    <path
-       d="M 120,280 V 150 c 0,-27.61424 22.38576,-50 50,-50 h 200 c 27.61424,0 50,22.38576 50,50 v 80 c 0,27.61424 -2.38173,50 25.23251,50 27.61424,0 24.75254,-22.38576 24.75254,-50 v -80 c 0,-27.61424 22.38576,-50 50,-50 27.61424,0 50,22.38576 50,50 V 280 M 561.10392,121.56845 669.98505,280 V 100"
-       stroke="url(#optPath)"
-       stroke-width="24"
-       filter="url(#glow)"
-       id="path3"
-       sodipodi:nodetypes="csssssssssscccc"
-       style="display:inline;stroke:url(#linearGradient30)" />
-    <path
-       d="M 220,280 V 150 c 0,-27.61424 22.38576,-50 50,-50 27.61424,0 50,22.38576 50,50 v 130"
-       stroke="url(#optPath)"
-       stroke-width="24"
-       filter="url(#glow)"
-       id="path26"
-       sodipodi:nodetypes="csssc"
-       style="stroke:url(#radialGradient6)"
-       inkscape:label="path26" />
-  </g>
-  <!-- Waypoints (Negative Space effect dots along the exact center paths) -->
-  <g
-     fill="#0f172a"
-     id="g22">
-    <!-- F Stem -->
-    <circle
-       cy="220"
-       cx="120"
-       r="2.5"
-       id="circle3" />
-    <circle
-       cy="150"
-       cx="120"
-       r="2.5"
-       id="circle4" />
-    <!-- Top Bar & F's Curve -->
-    <circle
-       cy="100"
-       cx="170"
-       r="2.5"
-       id="circle5" />
-    <!-- 'n' Shape (A1 & R1 left stems) -->
-    <circle
-       cy="100"
-       cx="270"
-       r="2.5"
-       id="circle8" />
-    <!-- Top Bar curving down to R1 -->
-    <circle
-       cy="100"
-       cx="370"
-       r="2.5"
-       id="circle11" />
-    <circle
-       cy="150"
-       cx="420"
-       r="2.5"
-       id="circle12" />
-    <circle
-       cy="230"
-       cx="420"
-       r="2.5"
-       id="circle13" />
-    <!-- A2 Underloop -->
-    <circle
-       cy="280"
-       cx="444.88037"
-       r="2.5"
-       id="circle14" />
-    <!-- A2 Middle Leg -->
-    <circle
-       cy="230"
-       cx="470.20932"
-       r="2.5"
-       id="circle15" />
-    <circle
-       cy="150"
-       cx="470.20932"
-       r="2.5"
-       id="circle16" />
-    <!-- A2 Overloop -->
-    <circle
-       cy="100"
-       cx="520.20935"
-       r="2.5"
-       id="circle17" />
-    <!-- A2 Right Leg / N Left Leg -->
-    <circle
-       cy="134.97696"
-       cx="570.20935"
-       r="2.5"
-       id="circle18" />
-    <!-- N Diagonal & Right Leg -->
-    <circle
-       cy="206.8107"
-       cx="620.20935"
-       r="2.5"
-       id="circle20" />
-    <circle
-       cy="230"
-       cx="670.20935"
-       r="2.5"
-       id="circle21" />
-    <circle
-       cy="150"
-       cx="670.20935"
-       r="2.5"
-       id="circle22" />
-  </g>
-  <!-- Start Circle -->
-  <circle
-     cx="120"
-     cy="280"
-     r="7"
-     fill="#e0e7ff"
-     opacity="0.8"
-     id="circle23" />
-  <circle
-     cx="120"
-     cy="280"
-     r="3"
-     fill="#8b5cf6"
-     opacity="0.8"
-     id="circle24" />
-  <!-- End Circle -->
-  <circle
-     cx="670.20935"
-     cy="100"
-     r="10"
-     fill="#e0e7ff"
-     opacity="0.8"
-     id="circle25" />
-  <circle
-     cx="670.20935"
-     cy="100"
-     r="5"
-     fill="#0ca1e9"
-     opacity="0.8"
-     id="circle26" />
+   <sodipodi:namedview
+      id="namedview26"
+      pagecolor="#ffffff"
+      bordercolor="#000000"
+      borderopacity="0.25"
+      inkscape:showpageshadow="2"
+      inkscape:pageopacity="0.0"
+      inkscape:pagecheckerboard="0"
+      inkscape:deskcolor="#d1d1d1"
+      inkscape:zoom="0.78818835"
+      inkscape:cx="215.68449"
+      inkscape:cy="42.502531"
+      inkscape:window-width="1920"
+      inkscape:window-height="1009"
+      inkscape:window-x="-8"
+      inkscape:window-y="-8"
+      inkscape:window-maximized="1"
+      inkscape:current-layer="g3"
+      showgrid="true">
+      <inkscape:grid
+         id="grid29"
+         units="px"
+         originx="0"
+         originy="0"
+         spacingx="1"
+         spacingy="1"
+         empcolor="#0099e5"
+         empopacity="0.30196078"
+         color="#0099e5"
+         opacity="0.14901961"
+         empspacing="5"
+         enabled="true"
+         visible="true" />
+   </sodipodi:namedview>
+   <defs
+      id="defs2">
+      <linearGradient
+         id="linearGradient4"
+         x1="80.315315"
+         y1="417.38315"
+         x2="416.08508"
+         y2="289.06277"
+         gradientTransform="scale(1.4897682,0.67124536)"
+         gradientUnits="userSpaceOnUse"
+         spreadMethod="pad">
+         <stop
+            offset="0"
+            style="stop-color:#0ea5e9;stop-opacity:1"
+            id="stop3" />
+         <stop
+            offset="1"
+            style="stop-color:#8b5cf6;stop-opacity:1"
+            id="stop4" />
+      </linearGradient>
+      <linearGradient
+         id="linearGradient27"
+         x1="80.315315"
+         y1="417.38315"
+         x2="416.08508"
+         y2="289.06277"
+         gradientTransform="scale(1.4897682,0.67124536)"
+         gradientUnits="userSpaceOnUse">
+         <stop
+            offset="0%"
+            style="stop-color:#0ea5e9;stop-opacity:1"
+            id="stop26" />
+         <stop
+            offset="100%"
+            style="stop-color:#8b5cf6;stop-opacity:1"
+            id="stop27" />
+      </linearGradient>
+      <linearGradient
+         id="optPath"
+         x1="80.315315"
+         y1="417.38315"
+         x2="416.08508"
+         y2="289.06277"
+         gradientTransform="scale(1.4897682,0.67124536)"
+         gradientUnits="userSpaceOnUse"
+         spreadMethod="pad">
+         <stop
+            offset="0.37765184"
+            style="stop-color:#8b5cf6;stop-opacity:1"
+            id="stop2" />
+         <stop
+            offset="1"
+            style="stop-color:#0ea5e9;stop-opacity:1"
+            id="stop1" />
+      </linearGradient>
+      <filter
+         id="glow"
+         x="-0.156"
+         y="-0.29"
+         width="1.312"
+         height="1.58">
+         <feGaussianBlur
+            stdDeviation="1.5"
+            result="blur"
+            id="feGaussianBlur2" />
+         <feComposite
+            in="SourceGraphic"
+            in2="blur"
+            operator="over"
+            id="feComposite2" />
+      </filter>
+      <linearGradient
+         inkscape:collect="always"
+         xlink:href="#linearGradient4"
+         id="linearGradient30"
+         gradientUnits="userSpaceOnUse"
+         gradientTransform="scale(1.4897682,0.67124536)"
+         x1="80.315315"
+         y1="417.38315"
+         x2="180.60922"
+         y2="416.64566"
+         spreadMethod="reflect" />
+      <radialGradient
+         inkscape:collect="always"
+         xlink:href="#optPath"
+         id="radialGradient6"
+         cx="269.16711"
+         cy="148.73463"
+         fx="269.16711"
+         fy="148.73463"
+         r="65.599998"
+         gradientTransform="matrix(-4.0874464,0.00487855,-0.00584708,-4.8993636,1371.0759,827.94634)"
+         gradientUnits="userSpaceOnUse"
+         spreadMethod="pad" />
+   </defs>
+   <g
+      fill="none"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      id="g3">
+      <!-- Thin Purple Inner Structure (Horizontal Middle Bar) -->
+      <path
+         d="m 120,220 c 0,-27 13,-40 40,-40 h 409.25071"
+         stroke="#8b5cf6"
+         stroke-width="16"
+         filter="url(#glow)"
+         id="path2"
+         transform="matrix(1,0,0,-1,0,374.62535)"
+         style="display:inline"
+         sodipodi:nodetypes="csc" />
+      <!-- The Thick Gradient Road (Seamlessly Aligned) -->
+      <path
+         d="M 120,280 V 150 c 0,-27.61424 22.38576,-50 50,-50 h 200 c 27.61424,0 50,22.38576 50,50 0,27.3762 -50.50577,45.17634 -50.50577,45.17634 0,0 50.50577,7.22559 50.50577,34.82366 0,27.59807 -2.38173,50 25.23251,50 27.61424,0 24.75254,-22.38576 24.75254,-50 v -80 c 0,-27.61424 22.38576,-50 50,-50 27.61424,0 50,22.38576 50,50 V 280 M 561.10392,121.56845 669.98505,280 V 100"
+         stroke="url(#optPath)"
+         stroke-width="24"
+         filter="url(#glow)"
+         id="path3"
+         sodipodi:nodetypes="cssszczssssscccc"
+         style="display:inline;stroke:url(#linearGradient30)" />
+      <path
+         d="M 220,280 V 150 c 0,-27.61424 22.38576,-50 50,-50 27.61424,0 50,22.38576 50,50 v 130"
+         stroke="url(#optPath)"
+         stroke-width="24"
+         filter="url(#glow)"
+         id="path26"
+         sodipodi:nodetypes="csssc"
+         style="stroke:url(#radialGradient6)"
+         inkscape:label="path26" />
+   </g>
+   <!-- Waypoints (Negative Space effect dots along the exact center paths) -->
+   <g
+      fill="#0f172a"
+      id="g22">
+      <!-- F Stem -->
+      <circle
+         cy="220"
+         cx="120"
+         r="2.5"
+         id="circle3" />
+      <circle
+         cy="150"
+         cx="120"
+         r="2.5"
+         id="circle4" />
+      <!-- Top Bar & F's Curve -->
+      <circle
+         cy="100"
+         cx="170"
+         r="2.5"
+         id="circle5" />
+      <!-- 'n' Shape (A1 & R1 left stems) -->
+      <circle
+         cy="100"
+         cx="270"
+         r="2.5"
+         id="circle8" />
+      <!-- Top Bar curving down to R1 -->
+      <circle
+         cy="100"
+         cx="370"
+         r="2.5"
+         id="circle11" />
+      <circle
+         cy="150"
+         cx="420"
+         r="2.5"
+         id="circle12" />
+      <circle
+         cy="195.07655"
+         cx="369.70932"
+         r="2.5"
+         id="circle12-0" />
+      <circle
+         cy="230"
+         cx="420"
+         r="2.5"
+         id="circle13" />
+      <!-- A2 Underloop -->
+      <circle
+         cy="280"
+         cx="444.88037"
+         r="2.5"
+         id="circle14" />
+      <!-- A2 Middle Leg -->
+      <circle
+         cy="230"
+         cx="470.20932"
+         r="2.5"
+         id="circle15" />
+      <circle
+         cy="150"
+         cx="470.20932"
+         r="2.5"
+         id="circle16" />
+      <!-- A2 Overloop -->
+      <circle
+         cy="100"
+         cx="520.20935"
+         r="2.5"
+         id="circle17" />
+      <!-- A2 Right Leg / N Left Leg -->
+      <circle
+         cy="134.97696"
+         cx="570.20935"
+         r="2.5"
+         id="circle18" />
+      <!-- N Diagonal & Right Leg -->
+      <circle
+         cy="206.8107"
+         cx="620.20935"
+         r="2.5"
+         id="circle20" />
+      <circle
+         cy="230"
+         cx="670.20935"
+         r="2.5"
+         id="circle21" />
+      <circle
+         cy="150"
+         cx="670.20935"
+         r="2.5"
+         id="circle22" />
+   </g>
+   <!-- Start Circle -->
+   <circle
+      cx="120"
+      cy="280"
+      r="7"
+      fill="#e0e7ff"
+      opacity="0.8"
+      id="circle23" />
+   <circle
+      cx="120"
+      cy="280"
+      r="3"
+      fill="#8b5cf6"
+      opacity="0.8"
+      id="circle24" />
+   <!-- End Circle -->
+   <circle
+      cx="670.20935"
+      cy="100"
+      r="10"
+      fill="#e0e7ff"
+      opacity="0.8"
+      id="circle25" />
+   <circle
+      cx="670.20935"
+      cy="100"
+      r="5"
+      fill="#0ca1e9"
+      opacity="0.8"
+      id="circle26" />
 </svg>
