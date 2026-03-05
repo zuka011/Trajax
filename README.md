@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://risk-metrics.gitlab.io/faran/">
-        <img src="./assets/logo.svg" width="250" alt="Faran Logo">
+        <img src="./assets/logo.png" width="500" alt="Faran Logo">
     </a>
 </p>
 
@@ -13,7 +13,7 @@
 
 [![Pipeline Status](https://gitlab.com/risk-metrics/faran/badges/main/pipeline.svg)](https://gitlab.com/risk-metrics/faran/-/pipelines) [![Coverage](https://codecov.io/gl/risk-metrics/faran/graph/badge.svg?token=7O08BEVTAA)](https://codecov.io/gl/risk-metrics/faran) [![Benchmarks](https://img.shields.io/badge/benchmarks-bencher.dev-blue)](https://bencher.dev/perf/faran) [![PyPI](https://img.shields.io/pypi/v/faran)](https://pypi.org/project/faran/) [![Python](https://img.shields.io/pypi/pyversions/faran)](https://pypi.org/project/faran/) [![License](https://img.shields.io/pypi/l/faran)](https://gitlab.com/risk-metrics/faran/-/blob/main/LICENSE)
 
-This library provides composable building blocks for creating trajectory planners for autonomous systems. Currently, Faran provides implementations of the Model-Predictive Path Integral (MPPI) algorithm for NumPy and JAX. Gradient-based methods, such as iLQR are not yet available, but in the roadmap. An additional package - `faran-visualizer` - provides a CLI for generating interactive HTML visualizations of planner behavior.
+Faran provides composable building blocks for creating trajectory planners for autonomous systems. Currently, implementations of the Model-Predictive Path Integral (MPPI) algorithm are available for NumPy and JAX. Gradient-based methods, such as iLQR are not yet implemented, but are on the roadmap. An additional package - `faran-visualizer` - provides a CLI for generating interactive HTML visualizations of planner behavior.
 
 ## Installation
 
@@ -55,8 +55,10 @@ planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
         to_batch=types.bicycle.control_input_batch.create, seed=42,
     ),
     reference=reference,
+    # Components do not implicitly assume any semantic meaning for state dimensions.
     position_extractor=extract.from_physical(lambda states: states.positions),
-    config={
+    # Configs are typically typed dicts, so you get IDE support without many imports.
+    config={  
         "weights": {"contouring": 100.0, "lag": 100.0, "progress": 1000.0},
         "virtual": {"velocity_limits": (0.0, 15.0)},
     },
