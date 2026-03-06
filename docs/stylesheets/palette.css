@@ -1,0 +1,39 @@
+/* ── Brand palette ──────────────────────────────────────────── */
+/* Soft Teal-Sky → Dusty Violet gradient theme                 */
+
+:root {
+  /* Softer, muted sky blue/teal */
+  --faran-sky: #45a1b8;
+  --faran-sky-light: #6dbdd2;
+  --faran-sky-dark: #2d7a8f;
+
+  /* Softer, dusty lavender/violet */
+  --faran-violet: #8472c8;
+  --faran-violet-light: #a698da;
+  --faran-violet-dark: #62539c;
+
+  /* Slate remains identical */
+  --faran-slate: #0f172a;
+  --faran-slate-light: #1e293b;
+  --faran-slate-dark: #020617;
+}
+
+/* ── Scheme: Light ─────────────────────────────────────────── */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--faran-slate);
+  --md-primary-fg-color--light: var(--faran-slate-light);
+  --md-primary-fg-color--dark: var(--faran-slate-dark);
+  --md-accent-fg-color: var(--faran-violet);
+  --md-accent-fg-color--transparent: rgba(132, 114, 200, 0.1);
+  --md-typeset-a-color: var(--faran-sky-dark);
+}
+
+/* ── Scheme: Dark ──────────────────────────────────────────── */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--faran-slate);
+  --md-primary-fg-color--light: var(--faran-slate-light);
+  --md-primary-fg-color--dark: var(--faran-slate-dark);
+  --md-accent-fg-color: var(--faran-violet);
+  --md-accent-fg-color--transparent: rgba(132, 114, 200, 0.1);
+  --md-typeset-a-color: var(--faran-sky-light);
+}

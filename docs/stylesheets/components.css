@@ -1,0 +1,116 @@
+/* ── Link hover — gradient underline transition ────────────── */
+.md-typeset a:not(.md-button):not(.headerlink) {
+  background-image: linear-gradient(135deg, var(--faran-sky), var(--faran-violet));
+  background-size: 0% 2px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.3s ease;
+}
+
+.md-typeset a:not(.md-button):not(.headerlink):hover {
+  background-size: 100% 2px;
+}
+
+/* ── Buttons — brand colored ───────────────────────────────── */
+.md-button--primary {
+  background: linear-gradient(135deg, var(--faran-sky) 0%, var(--faran-violet) 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+.md-button--primary:hover {
+  background: linear-gradient(135deg, var(--faran-sky-dark) 0%, var(--faran-violet-dark) 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+[data-md-color-scheme="slate"] .md-button:not(.md-button--primary) {
+  border-color: var(--faran-sky-light);
+  color: var(--faran-sky-light);
+}
+
+[data-md-color-scheme="slate"] .md-button:not(.md-button--primary):hover {
+  background-color: rgba(109, 189, 210, 0.1);
+  border-color: var(--faran-sky);
+  color: var(--faran-sky);
+}
+
+/* ── Admonitions — brand-colored info & tip ────────────────── */
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: var(--faran-sky);
+}
+
+.md-typeset .info>.admonition-title,
+.md-typeset .info>summary {
+  background-color: rgba(69, 161, 184, 0.1);
+}
+
+.md-typeset .info>.admonition-title::before,
+.md-typeset .info>summary::before {
+  background-color: var(--faran-sky);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: var(--faran-violet);
+}
+
+.md-typeset .tip>.admonition-title,
+.md-typeset .tip>summary {
+  background-color: rgba(132, 114, 200, 0.1);
+}
+
+.md-typeset .tip>.admonition-title::before,
+.md-typeset .tip>summary::before {
+  background-color: var(--faran-violet);
+}
+
+/* ── mkdocstrings — API doc styling ────────────────────────── */
+.doc-heading {
+  border-left: 3px solid transparent;
+  border-image: linear-gradient(180deg, var(--faran-sky), var(--faran-violet)) 1;
+  padding-left: 0.5em;
+}
+
+.doc-label {
+  background-color: rgba(69, 161, 184, 0.15);
+  color: var(--faran-sky-dark);
+  border: 1px solid rgba(69, 161, 184, 0.3);
+  padding: 0.1em 0.5em;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+[data-md-color-scheme="slate"] .doc-label {
+  color: var(--faran-sky-light);
+}
+
+.doc-symbol {
+  background-color: rgba(132, 114, 200, 0.15);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+}
+
+/* ── KaTeX math blocks ─────────────────────────────────────── */
+.katex-display {
+  padding: 1em 1.5em;
+  border-radius: 6px;
+  background: rgba(69, 161, 184, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+[data-md-color-scheme="slate"] .katex-display {
+  background: rgba(69, 161, 184, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Colored status icons for the roadmap table ────────────── */
+.green {
+  color: #4caf50;
+}
+
+.amber {
+  color: #ff9800;
+}

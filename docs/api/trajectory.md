@@ -1,6 +1,6 @@
 # trajectory
 
-Reference trajectories define the path to be followed by MPCC. A trajectory is parameterized by $\phi \in [0, L]$ and can be queried to return position $(x_\phi, y_\phi)$ and heading $\theta_\phi$ at any path parameter value. For usage guidance, see [Defining Trajectories](../guide/trajectories.md).
+Reference trajectories define the path to be followed by [MPCC](../guide/concepts.md#mpcc-model-predictive-contouring-control). A trajectory is parameterized by $\phi \in [0, L]$ and can be queried to return position $(x_\phi, y_\phi)$ and heading $\theta_\phi$ at any path parameter value. For usage guidance, see [Defining Trajectories](../guide/trajectories.md).
 
 ## Waypoints Trajectory
 

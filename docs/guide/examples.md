@@ -5,13 +5,13 @@ hide:
 
 # Examples
 
-Complete MPCC planning scenarios, each building on the previous one. Click the **Result** tab to see the interactive visualization, or expand **Full code** to see the entire script.
+Complete [MPCC](concepts.md#mpcc-model-predictive-contouring-control) planning scenarios, each building on the previous one. Click the **Result** tab to see the interactive visualization, or expand **Full code** to see the entire script.
 
 Each example can also be run as a Jupyter notebook via the Binder badge.
 
 ## Basic Path Following
 
-The simplest case: a bicycle model following an S-curve using contouring, lag, and progress costs. This example introduces the core planning loop and demonstrates how MPCC tracks a reference trajectory.
+The simplest case: a [bicycle model](models.md#kinematic-bicycle-model) following an S-curve using contouring, lag, and progress costs. This example introduces the core planning loop and demonstrates how [MPCC](concepts.md#mpcc-model-predictive-contouring-control) tracks a reference trajectory.
 
 [![Launch Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/zuka011/faran/main?filepath=notebooks/01_basic_path_following.ipynb){ .binder-badge }
 

@@ -64,7 +64,7 @@ result.completed_part   # float — fraction of reference completed (0 to 1+)
 
 ### MPCC Error
 
-Reports contouring and lag error over the trajectory. Requires the `contouring_cost` and `lag_cost` objects returned by `mppi.mpcc`:
+Reports contouring and lag error over the trajectory. Requires the `contouring_cost` and `lag_cost` objects returned by [`mppi.mpcc`](concepts.md#mpcc-model-predictive-contouring-control):
 
 ```python
 planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(...)

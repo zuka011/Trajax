@@ -14,9 +14,9 @@ Everything listed below is implemented, tested, and available in both the NumPy 
 
     Sampling-based trajectory optimizer. Configurable temperature, rollout count, horizon, and filtering.
 
-    Three factory levels: [`mppi.base`](../api/mppi.md) (custom MPC), [`mppi.augmented`](../api/mppi.md) (physical + virtual states), [`mppi.mpcc`](../api/mppi.md) (path following).
+    Three factory levels: [`mppi.base`](../api/mppi.md) (custom MPC), [`mppi.augmented`](../api/mppi.md) (physical + virtual states), [`mppi.mpcc`](../api/mppi.md) (MPCC path following).
 
-    :material-check-all: NumPy  · :material-check-all: JAX
+    [:octicons-arrow-right-24: MPPI guide](mppi.md)
 
 </div>
 
@@ -32,9 +32,8 @@ Everything listed below is implemented, tested, and available in both the NumPy 
 
     MPC formulation that decomposes tracking error into contouring (lateral) and lag (longitudinal) components, with a virtual path parameter driving progress.
 
-    [:octicons-arrow-right-24: Cost design](costs.md) · [:octicons-arrow-right-24: Concepts](concepts.md#mpcc-model-predictive-contouring-control)
-
-    :material-check-all: NumPy · :material-check-all: JAX
+    [:octicons-arrow-right-24: Cost design](costs.md) ·
+    [:octicons-arrow-right-24: Concepts](concepts.md#mpcc-model-predictive-contouring-control)
 
 </div>
 
@@ -70,8 +69,6 @@ Everything listed below is implemented, tested, and available in both the NumPy 
 
 </div>
 
-All models are available in both backends and support configurable state/input limits.
-
 ---
 
 ## :material-dice-multiple: Samplers
@@ -90,7 +87,7 @@ All models are available in both backends and support configurable state/input l
 
     ---
 
-    Halton quasi-random sequences mapped through an inverse normal CDF and interpolated with cubic splines. Provides temporally smooth, low-discrepancy perturbations.
+    Halton quasi-random sequences mapped through an inverse normal CDF and interpolated with cubic splines. Temporally smooth, low-discrepancy perturbations.
 
     [:octicons-arrow-right-24: API](../api/sampler.md)
 
@@ -100,16 +97,14 @@ All models are available in both backends and support configurable state/input l
 
 ## :material-function-variant: Cost Functions
 
-All costs operate on batched state/input tensors of shape $(T, D, M)$ and return per-rollout costs.
-
 <div class="grid cards" markdown>
 
 -   **Tracking**
 
     ---
 
-    - **Contouring** — penalizes lateral deviation from the reference path
-    - **Lag** — penalizes longitudinal deviation from the reference point
+    - **Contouring** — lateral deviation from the reference path
+    - **Lag** — longitudinal deviation from the reference point
     - **Progress** — rewards forward motion along the path
 
     [:octicons-arrow-right-24: Cost design](costs.md)
@@ -118,17 +113,18 @@ All costs operate on batched state/input tensors of shape $(T, D, M)$ and return
 
     ---
 
-    - **Collision** — penalizes proximity to obstacles using signed distance computation
-    - **Boundary** — penalizes states approaching corridor edges
+    - **Collision** — proximity to obstacles via signed distance
+    - **Boundary** — states approaching corridor edges
 
-    [:octicons-arrow-right-24: Obstacles](obstacles.md) · [:octicons-arrow-right-24: Boundaries](boundaries.md)
+    [:octicons-arrow-right-24: Obstacles](obstacles.md) ·
+    [:octicons-arrow-right-24: Boundaries](boundaries.md)
 
 -   **Comfort**
 
     ---
 
-    - **Control smoothing** — penalizes rate of change between consecutive inputs
-    - **Control effort** — penalizes input magnitude
+    - **Control smoothing** — rate of change between consecutive inputs
+    - **Control effort** — input magnitude
 
     [:octicons-arrow-right-24: Cost design](costs.md)
 
@@ -152,8 +148,8 @@ All costs operate on batched state/input tensors of shape $(T, D, M)$ and return
 
     ---
 
-    - **Circle-to-circle** — fast distance between circle-based vehicle and obstacle representations
-    - **SAT (Separating Axis Theorem)** — exact signed distance between convex polygons
+    - **Circle-to-circle** — fast distance between circular representations
+    - **SAT** — exact signed distance between convex polygons
 
     [:octicons-arrow-right-24: API](../api/obstacles.md)
 
@@ -161,11 +157,10 @@ All costs operate on batched state/input tensors of shape $(T, D, M)$ and return
 
     ---
 
-    - Static obstacles (fixed positions and headings)
-    - Dynamic obstacles with constant-velocity prediction
-    - Gaussian sampling for uncertainty propagation
-    - Running history with ID-based tracking
     - Hungarian algorithm for obstacle ID assignment across frames
+    - Running history with ID-based tracking
+    - State prediction with model assumptions (e.g. constant velocity)
+    - Gaussian sampling of predicted obstacle states for risk-aware planning
 
     [:octicons-arrow-right-24: Obstacle guide](obstacles.md)
 
@@ -175,7 +170,7 @@ All costs operate on batched state/input tensors of shape $(T, D, M)$ and return
 
 ## :material-chart-bell-curve: Risk Metrics
 
-Risk-aware collision costs via the [riskit](https://gitlab.com/risk-metrics/riskit) library. The risk metric replaces the expected cost with a risk measure over sampled obstacle predictions.
+Risk-aware collision costs via the [riskit](https://gitlab.com/risk-metrics/riskit) library. The risk metric defines how a stochastic cost distribution is aggregated into a scalar cost for optimization. 
 
 | Metric             | Description                                      |
 |--------------------|--------------------------------------------------|
@@ -184,8 +179,6 @@ Risk-aware collision costs via the [riskit](https://gitlab.com/risk-metrics/risk
 | **VaR**            | Value at Risk at confidence $\alpha$             |
 | **CVaR**           | Conditional Value at Risk at confidence $\alpha$ |
 | **Entropic risk**  | Exponential risk measure with parameter $\theta$ |
-
-:material-check-all: NumPy · :material-check-all: JAX
 
 ---
 
@@ -197,19 +190,19 @@ Risk-aware collision costs via the [riskit](https://gitlab.com/risk-metrics/risk
 
     ---
 
-    - **Waypoints** — piecewise linear path through a sequence of 2D points
+    - **Waypoints** — a B-spline path defined by a sequence of waypoints
     - **Line** — straight path between two endpoints
 
-    [:octicons-arrow-right-24: Trajectories](trajectories.md) · [:octicons-arrow-right-24: API](../api/trajectory.md)
+    [:octicons-arrow-right-24: API](../api/trajectory.md)
 
 -   **Boundaries**
 
     ---
 
     - **Fixed-width corridor** — symmetric or asymmetric constant width
-    - **Piecewise fixed-width** — segment-varying corridor widths defined at arc-length breakpoints
+    - **Piecewise fixed-width** — segment-varying widths at arc-length breakpoints
 
-    [:octicons-arrow-right-24: Boundaries](boundaries.md) · [:octicons-arrow-right-24: API](../api/boundary.md)
+    [:octicons-arrow-right-24: API](../api/boundary.md)
 
 </div>
 
@@ -227,78 +220,15 @@ Post-simulation evaluation for benchmarking and analysis.
 | **Constraint violation** | Boundary and limit violations                                   |
 | **Comfort**              | Jerk, lateral acceleration, smoothness                          |
 
-[:octicons-arrow-right-24: Metrics guide](metrics.md) · [:octicons-arrow-right-24: API](../api/metrics.md)
-
----
-
-## :material-swap-horizontal: Backend Support
-
-Both backends expose identical factory functions. Switching requires changing one import line.
-
-|                         |      NumPy       |              JAX               |
-|-------------------------|:----------------:|:------------------------------:|
-| All planning components | :material-check: |        :material-check:        |
-| All cost functions      | :material-check: |        :material-check:        |
-| All evaluation metrics  | :material-check: |        :material-check:        |
-| GPU acceleration        |        —         | :material-check: (Linux, CUDA) |
-| JIT compilation         |        —         |        :material-check:        |
-
-[:octicons-arrow-right-24: Backend guide](backends.md)
+[:octicons-arrow-right-24: Metrics guide](metrics.md) ·
+[:octicons-arrow-right-24: API](../api/metrics.md)
 
 ---
 
 ## :material-map-marker-path: Roadmap
 
-### Current Coverage
-
-| Component                           |             NumPy              |              JAX               | Status                |
-|-------------------------------------|:------------------------------:|:------------------------------:|-----------------------|
-| **Planning**                        |                                |                                |                       |
-| MPPI (`mppi.base`)                  | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| MPPI Augmented (`mppi.augmented`)   | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| MPCC (`mppi.mpcc`)                  | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Dynamics Models**                 |                                |                                |                       |
-| Kinematic Bicycle                   | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Unicycle                            | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Integrator                          | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Samplers**                        |                                |                                |                       |
-| Gaussian                            | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Halton + Spline                     | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Cost Functions**                  |                                |                                |                       |
-| Contouring / Lag / Progress         | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Collision (hinge-loss)              | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Boundary                            | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Control Smoothing / Effort          | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Collision Avoidance**             |                                |                                |                       |
-| Circle-to-Circle Distance           | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| SAT Distance                        | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Static Obstacles                    | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Dynamic Obstacles                   | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Hungarian ID Assignment             | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Risk Metrics**                    |                                |                                |                       |
-| Expected Value                      | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Mean-Variance                       | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| VaR                                 | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| CVaR                                | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Entropic Risk                       | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Trajectories & Boundaries**       |                                |                                |                       |
-| Waypoints                           | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Line                                | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Fixed-Width Boundary                | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Piecewise Fixed-Width Boundary      | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Evaluation Metrics**              |                                |                                |                       |
-| Collision                           | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| MPCC Error                          | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Task Completion                     | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Constraint Violation                | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| Comfort                             | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-| **Visualization**                   |                                |                                |                       |
-| Interactive HTML (faran-visualizer) | :material-check-all:{ .green } | :material-check-all:{ .green } | :material-tag: Stable |
-
-### Planned
-
-| Feature                               |                NumPy                |                 JAX                 | Status                           |
-|---------------------------------------|:-----------------------------------:|:-----------------------------------:|----------------------------------|
-| Additional planning algorithms (iLQR) | :material-progress-clock:{ .amber } | :material-progress-clock:{ .amber } | :material-hammer-wrench: Planned |
-| Spline-based reference trajectories   | :material-progress-clock:{ .amber } | :material-progress-clock:{ .amber } | :material-hammer-wrench: Planned |
-| Multi-agent / human environments      | :material-progress-clock:{ .amber } | :material-progress-clock:{ .amber } | :material-wrench: Partial        |
+| Feature                               | Status  |
+|---------------------------------------|---------|
+| Additional planning algorithms (iLQR) | Planned |
+| Waypoint formulation of MPC           | Planned |
+| Multi-agent / human environments      | Partial |

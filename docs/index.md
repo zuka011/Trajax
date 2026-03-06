@@ -4,19 +4,18 @@ hide:
   - toc
 ---
 
-<div class="hero" markdown>
+<div class="hero" markdown="1">
+<img src="assets/logo.svg" alt="Faran Logo">
+<h1>Composable Trajectory Planning for Python</h1>
+<p>Build trajectory planners from modular, interchangeable components. Set up a working pipeline in minutes, then customize as needed.</p>
 
-# Composable Trajectory Planning for Python
-
-Faran provides building blocks for sampling-based trajectory planning — dynamics models, samplers, cost functions, state estimation, obstacle tracking, and more — with a consistent API across **NumPy** and **JAX** backends.
-
-<p align="center">
-    <iframe src="visualizations/mpcc-simulation/doc-dynamic-obstacles-uncertain.html" width="100%" height="750px" frameborder="0"></iframe>
-</p>
-
-[Get Started](guide/getting-started.md){ .md-button .md-button--primary }
-[API Reference](api/index.md){ .md-button }
-
+<div class="hero-buttons" markdown="1">
+<a href="guide/getting-started/" class="md-button md-button--primary">Get Started</a>
+<a href="guide/examples/" class="md-button">Examples</a>
+<a href="https://gitlab.com/risk-metrics/faran" class="md-button">
+  :simple-gitlab: Repository
+</a>
+</div>
 </div>
 
 ---
@@ -29,25 +28,25 @@ Faran provides building blocks for sampling-based trajectory planning — dynami
 
     ---
 
-    Swap a cost function, sampler, or dynamics model without rewriting the rest of your planner. Components are decoupled by design.
+    Swap a cost function, sampler, or dynamics model without touching the rest of your pipeline. If two components can logically work together, they will.
 
 -   :material-package-variant-closed: **Comprehensive**
 
     ---
 
-    Includes everything you need for a working planner: dynamics models, samplers, state estimation (KF/EKF/UKF), cost functions, obstacle tracking, risk metrics, and motion prediction.
+    Includes everything for a working planner: dynamics models, samplers, state estimation (KF/EKF/UKF), cost functions, obstacle tracking, risk metrics, and motion prediction.
 
 -   :material-swap-horizontal: **Backend-Agnostic**
 
     ---
 
-    Set up your planner with NumPy, then switch to JAX by changing one import line. Same API, no code rewrite.
+    Set up your planner with NumPy, then switch to JAX by changing one import line. Same API, no code rewrite. The shared interface makes it possible to add new backends in the future.
 
 -   :material-test-tube: **Tested**
 
     ---
 
-    Extensive test suite covering every component on both backends. Runtime type checking with `jaxtyping` + `beartype` catches shape errors early.
+    Extensive test suite on both backends. Shape errors are caught early via `jaxtyping` + `beartype` — misconfigured pipelines fail fast with clear messages, not silent wrong results.
 
 </div>
 
@@ -55,7 +54,7 @@ Faran provides building blocks for sampling-based trajectory planning — dynami
 
 ## Quick Start
 
-An MPCC planner tracking a reference path with a kinematic bicycle model:
+An [MPCC](guide/concepts.md#mpcc-model-predictive-contouring-control) planner tracking a reference path with a [kinematic bicycle model](guide/models.md#kinematic-bicycle-model):
 
 ```python
 from faran.numpy import mppi, model, sampler, trajectory, types, extract
@@ -66,7 +65,7 @@ reference = trajectory.waypoints(
     path_length=35.0,
 )
 
-planner, augmented_model, _, _ = mppi.mpcc(
+planner, augmented_model, contouring_cost, lag_cost = mppi.mpcc(
     model=model.bicycle.dynamical(
         time_step_size=0.1, wheelbase=2.5,
         speed_limits=(0.0, 15.0), steering_limits=(-0.5, 0.5),
@@ -84,6 +83,7 @@ planner, augmented_model, _, _ = mppi.mpcc(
         "virtual": {"velocity_limits": (0.0, 15.0)},
     },
 )
+# contouring_cost and lag_cost are used for error metrics — see the full example.
 ```
 
 To use JAX, change `from faran.numpy` to `from faran.jax`. Everything else stays the same.
@@ -128,21 +128,39 @@ To use JAX, change `from faran.numpy` to `from faran.jax`. Everything else stays
 
     [:octicons-arrow-right-24: Reference](api/index.md)
 
+-   :material-alert-circle-outline: **Gotchas & FAQ**
+
+    ---
+
+    Known limitations, common pitfalls, and workarounds.
+
+    [:octicons-arrow-right-24: Gotchas](guide/gotchas.md)
+
 </div>
 
 ---
 
 ## Backends
 
+Write your planner once. Switch between NumPy and JAX by changing a single import — no code rewrite needed.
+
 | Backend   | Import                        | Best for                                                |
 |-----------|-------------------------------|---------------------------------------------------------|
 | **NumPy** | `from faran.numpy import ...` | Prototyping, debugging, environments without GPU        |
 | **JAX**   | `from faran.jax import ...`   | GPU acceleration, JIT compilation, large rollout counts |
 
-Both expose the same API. See [Backend Selection](guide/backends.md) for details.
+Both backends expose the same API. The shared interface is designed to support additional backends — see [Backend Architecture](guide/backends.md) for details.
 
 ---
 
 !!! info "Under Active Development"
 
     Faran is being actively developed — expect missing features, [some gotchas](guide/gotchas.md), and possible API changes. See the [feature overview](guide/features.md) for what's available and what's coming.
+
+---
+
+<div class="acknowledgements" markdown>
+
+**Acknowledgements** · Logo developed with input from Ilia Valian.
+
+</div>

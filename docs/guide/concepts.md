@@ -25,7 +25,7 @@ The temperature $\lambda$ controls how aggressively the planner favors low-cost 
 | Cost function  | Scores each rollout (lower is better)                         |
 | Sampler        | Generates perturbations around the nominal control sequence   |
 
-faran provides concrete implementations for each of these (see [Feature Overview](features.md)), and you compose them into a planner via factory functions.
+Faran provides concrete implementations for each of these (see [Feature Overview](features.md)), and you compose them into a planner via factory functions.
 
 ### Factory Functions
 
@@ -117,6 +117,7 @@ for step in range(max_steps):
         initial_state=state,
     )
 
+    # You can also simulate a step with a different library or system.
     state = model.step(inputs=control.optimal, state=state)
     nominal = control.nominal  # warm-start for next iteration
 ```

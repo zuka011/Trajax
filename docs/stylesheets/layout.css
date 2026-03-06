@@ -1,0 +1,103 @@
+/* ── Header & Tabs — frosted glass ─────────────────────────── */
+.md-header,
+.md-tabs {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Hero Section Layout ───────────────────────────────────── */
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.5rem 1rem 1rem;
+}
+
+.hero img {
+    max-width: 280px;
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.hero h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.25rem;
+    background: linear-gradient(135deg, var(--faran-sky) 0%, var(--faran-violet) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+[data-md-color-scheme="slate"] .hero h1 {
+    background: linear-gradient(135deg, var(--faran-sky-light) 0%, var(--faran-violet-light) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    font-size: 1rem;
+    max-width: 550px;
+    margin: 0.5rem 0 0 0;
+    opacity: 0.85;
+    line-height: 1.5;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1.25rem;
+}
+
+.hero-buttons .md-button {
+    white-space: nowrap;
+}
+
+.hero-buttons p {
+    display: contents;
+}
+
+.hero-buttons .md-button svg {
+    margin-right: 0.3em;
+    width: 1.1em;
+    height: 1.1em;
+}
+
+/* ── Sidebar follows header autohide ────────────────────────── */
+.md-sidebar {
+    transition: top 0.25s cubic-bezier(0.1, 0.7, 0.1, 1),
+        height 0.25s cubic-bezier(0.1, 0.7, 0.1, 1) !important;
+}
+
+body:has(.md-header[data-md-state="hidden"]) .md-sidebar,
+body:has(.md-header[hidden]) .md-sidebar {
+    top: 0.5rem !important;
+    height: calc(100vh - 0.5rem) !important;
+    transition: top 0.25s cubic-bezier(0.1, 0.7, 0.1, 1) 0.25s,
+        height 0.25s cubic-bezier(0.1, 0.7, 0.1, 1) 0.25s !important;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--faran-slate-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--faran-violet-dark);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--faran-violet);
+}

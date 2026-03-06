@@ -48,7 +48,7 @@ Evaluates boundary and constraint adherence:
 
 ### MPCC Error Metric
 
-Evaluates path-following error for MPCC controllers:
+Evaluates path-following error for [MPCC](../guide/concepts.md#mpcc-model-predictive-contouring-control) controllers:
 
 ::: faran.metrics.error.MpccErrorMetric
     options:

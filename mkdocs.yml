@@ -1,4 +1,4 @@
-site_name: faran
+site_name: Faran
 site_url: https://risk-metrics.gitlab.io/faran/
 site_description: A library providing performant NumPy & JAX implementations of an MPPI planner
 site_author: Zurab Mujirishvili
@@ -17,28 +17,40 @@ exclude_docs: |
 
 theme:
   name: material
+  logo: assets/logo-alt.svg
+  favicon: assets/logo-alt.png
+  font:
+    text: Inter
+    code: JetBrains Mono
   palette:
     - scheme: default
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - content.code.copy
     - content.code.annotate
+    - content.code.select
+    - content.tabs.link
+    - header.autohide
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
+    - navigation.tracking
+    - navigation.indexes
     - navigation.top
     - search.suggest
     - search.highlight
+    - search.share
     - toc.follow
 
 plugins:
@@ -108,7 +120,9 @@ extra_javascript:
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/palette.css
+  - stylesheets/layout.css
+  - stylesheets/components.css
   - https://unpkg.com/katex@0/dist/katex.min.css
 
 nav:

@@ -6,9 +6,9 @@ State estimation recovers unobserved state variables (speed, acceleration, steer
 
 A typical obstacle detector provides position $(x, y)$ and heading $\theta$ at each time step. But prediction models need additional variables:
 
-- **Bicycle model** needs speed $v$, acceleration $a$, and steering angle $\delta$
-- **Unicycle model** needs speed $v$ and angular velocity $\omega$
-- **Integrator model** needs velocity components
+- **[Bicycle model](models.md#kinematic-bicycle-model)** needs speed $v$, acceleration $a$, and steering angle $\delta$
+- **[Unicycle model](models.md#unicycle-model)** needs speed $v$ and angular velocity $\omega$
+- **[Integrator model](models.md#integrator-model)** needs velocity components
 
 Estimation fills in these unobserved variables and provides a covariance matrix that captures how uncertain each state component is. This uncertainty propagates through motion prediction and feeds into [risk-aware collision costs](obstacles.md#risk-aware-collision-cost).
 

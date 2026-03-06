@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through installing Faran, building a planner, and running your first simulation loop.
+By the end of this page you'll have a working MPPI planner tracking a reference path. This will take about 10 minutes.
 
 ## Installation
 
@@ -9,15 +9,25 @@ pip install faran          # NumPy + JAX (CPU)
 pip install faran[cuda]    # JAX with GPU support (Linux)
 ```
 
-Requires Python 3.13+. The visualizer is a separate optional package:
+Requires Python 3.13+. 
+
+The visualizer is a separate optional package:
 
 ```bash
 pip install faran-visualizer
 ```
 
+Verify the installation:
+
+```bash
+python -c "import faran; print(faran.__version__)"
+```
+
 ## Your First Planner
 
-The fastest way to a working planner is `mppi.mpcc()`. It assembles an MPPI planner with contouring, lag, and progress costs for path following using the [MPCC formulation](concepts.md#mpcc-model-predictive-contouring-control).
+We'll build a planner that follows a curved reference path using a [kinematic bicycle model](models.md) — the same setup shown in the README.
+
+The fastest way to get there is [`mppi.mpcc()`](../api/mppi.md). It assembles an [MPPI](mppi.md) planner with contouring, lag, and progress costs for path following using the [MPCC formulation](concepts.md#mpcc-model-predictive-contouring-control).
 
 ### Setup
 
@@ -27,19 +37,37 @@ The fastest way to a working planner is `mppi.mpcc()`. It assembles an MPPI plan
 
 This creates four objects:
 
-- **`planner`** — the MPPI planner, ready to call `.step()`
-- **`augmented_model`** — the combined physical + virtual dynamics model
-- **`contouring_cost`** and **`lag_cost`** — cost objects you can use later for [evaluation metrics](metrics.md)
+| Object            | What it is                                                      |
+|-------------------|-----------------------------------------------------------------|
+| `planner`         | The MPPI planner — call `.step()` to get controls               |
+| `augmented_model` | Combined physical + virtual dynamics model                      |
+| `contouring_cost` | Contouring cost component, for [evaluation metrics](metrics.md) |
+| `lag_cost`        | Lag cost component, for [evaluation metrics](metrics.md)        |
 
 ### Simulation Loop
 
-Run the planner in a loop. Each iteration samples control sequences, evaluates their costs, and returns the weighted-average optimal control:
+Run the planner in a loop. Each call to `planner.step()` samples control sequences, evaluates their costs, and returns:
+
+- `control.optimal` — the best control sequence for this step
+- `control.nominal` — the shifted sequence used as the sampling center
+  for the next step (warm-starting)
 
 ```python
 --8<-- "docs/examples/01_basic_path_following.py:loop"
 ```
 
-`control.optimal` is the best control sequence from this step. `control.nominal` is the shifted sequence used as the sampling center for the next step (warm-starting).
+### Result
+
+After 100 steps the vehicle will have tracked the reference path. If you have [`faran-visualizer`](visualizer.md) installed, you can generate an interactive visualization:
+
+```python
+--8<-- "docs/examples/01_basic_path_following.py:visualize"
+```
+
+This produces a standalone HTML file you can open in any browser:
+
+<iframe src="../../visualizations/mpcc-simulation/doc-basic-path-following.html"
+        width="100%" height="500px" frameborder="0"></iframe>
 
 ??? note "Full example"
 
@@ -47,16 +75,16 @@ Run the planner in a loop. Each iteration samples control sequences, evaluates t
     --8<-- "docs/examples/01_basic_path_following.py"
     ```
 
-## What `mppi.mpcc()` Sets Up
+## How MPCC Works
 
-MPCC augments the vehicle state with a virtual path parameter $\phi$ that tracks progress along a reference trajectory:
+MPCC augments the vehicle state with a virtual path parameter $\phi$ that tracks progress along a [reference trajectory](trajectories.md):
 
-| Component | State | Controls |
-|-----------|-------|----------|
-| Physical | $[x, y, \theta, v]$ | $[a, \delta]$ |
-| Virtual | $[\phi]$ | $[\dot{\phi}]$ |
+| Component | State                | Controls         |
+|-----------|----------------------|------------------|
+| Physical  | $[x, y, \theta, v]$ | $[a, \delta]$   |
+| Virtual   | $[\phi]$            | $[\dot{\phi}]$ |
 
-Three costs drive path following:
+Three [costs](costs.md) drive path following:
 
 - **Contouring** — penalizes lateral deviation from the reference
 - **Lag** — penalizes longitudinal offset between $\phi$ and the vehicle's projection
@@ -64,12 +92,14 @@ Three costs drive path following:
 
 The balance between these three costs determines tracking behavior. High contouring weight keeps the vehicle close to the path; high progress weight makes it drive faster.
 
-For manual assembly with custom models, additional costs, or mixed samplers, see [Core Concepts](concepts.md).
+!!! tip "Need more control?"
+
+    For manual assembly with custom models, additional costs, or mixed samplers, see [Core Concepts](concepts.md).
 
 ## Next Steps
 
-- [Core Concepts](concepts.md) — MPPI algorithm and MPCC formulation
-- [MPPI Planning](mppi.md) — Temperature, filtering, seeding
-- [Cost Function Design](costs.md) — Tracking, safety, and comfort objectives
-- [Obstacle Handling](obstacles.md) — Collision avoidance with distance functions
-- [Examples](examples.md) — Complete scenarios with interactive visualizations
+- **[Core Concepts](concepts.md)** — Understand how MPPI and MPCC work under the hood, and how to assemble a planner manually.
+- **[MPPI Planning](mppi.md)** — Tune temperature, filtering, and seeding for better planner performance.
+- **[Cost Function Design](costs.md)** — Add safety, comfort, or custom objectives beyond basic path tracking.
+- **[Obstacle Handling](obstacles.md)** — Add collision avoidance with distance functions and boundary constraints.
+- **[Examples](examples.md)** — See complete scenarios with interactive visualizations.

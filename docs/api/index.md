@@ -9,7 +9,7 @@ This section documents the factory functions, protocols, and types for every Far
 
 | Module | Purpose |
 |--------|---------|
-| [`mppi`](mppi.md) | MPPI planner factories |
+| [`mppi`](mppi.md) | [MPPI](../guide/concepts.md#mppi) planner factories |
 | [`model`](model.md) | Dynamical models (bicycle, unicycle, integrator) |
 | [`costs`](costs.md) | Cost functions (tracking, safety, comfort) |
 | [`sampler`](sampler.md) | Control input samplers |
