@@ -309,8 +309,10 @@ class NumPySimpleObstacleStatesForTimeStep(
         return self.array
 
     def replicate(self, *, horizon: int) -> "NumPySimpleObstacleStates":
-        # TODO: Implement replicate method
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Currently cannot be triggered by any component or test. Please "
+            "implement once this functionality is actually needed."
+        )
 
     @property
     def dimension(self) -> int:

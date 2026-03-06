@@ -54,9 +54,6 @@ class RiskCollector[
                 sampler=sampler,
             )
         )
-
-        # TODO: Missing notify call.
-
         return risk
 
     @property

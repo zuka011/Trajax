@@ -351,8 +351,10 @@ class JaxSimpleObstacleStatesForTimeStep(
         return self._numpy_array
 
     def replicate(self, *, horizon: int) -> "JaxSimpleObstacleStates":
-        # TODO: Implement replicate method
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Currently cannot be triggered by any component or test. Please "
+            "implement once this functionality is actually needed."
+        )
 
     def numpy(self) -> NumPySimpleObstacleStatesForTimeStep:
         return NumPySimpleObstacleStatesForTimeStep(self._numpy_array)

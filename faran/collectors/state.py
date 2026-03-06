@@ -103,9 +103,6 @@ class ControlCollector[
                 initial_state=initial_state,
             )
         )
-
-        # TODO: Missing notify call.
-
         return control
 
     @property
@@ -159,8 +156,6 @@ class TrajectoryCollector[
         )
 
         self._collected.append(self._lazy_trajectories(control, initial_state))
-
-        # TODO: Missing notify call.
 
         return control
 
